@@ -290,6 +290,8 @@ void DlgMap::DrawMenu() {
 void DlgMap::Show() {
     if(!show) return; 
 
+    ImGui::SetNextWindowPos(ImVec2(330, 370), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(640, 398), ImGuiCond_FirstUseEver);
     if(ImGui::Begin("Map", &show)) {
         DrawMenu();
         DrawMap();

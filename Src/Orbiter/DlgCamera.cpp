@@ -38,6 +38,8 @@ void DlgCamera::Show() {
         &DlgCamera::DrawControl, &DlgCamera::DrawTarget, &DlgCamera::DrawTrack, &DlgCamera::DrawGround, &DlgCamera::DrawFoV, &DlgCamera::DrawPreset
     };
 
+    ImGui::SetNextWindowPos(ImVec2(380, 310), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(480, 340), ImGuiCond_FirstUseEver);
     ImGui::Begin("Camera", &show);
 
     ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_None;

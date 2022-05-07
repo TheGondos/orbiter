@@ -17,6 +17,8 @@ DlgFocus::DlgFocus(const std::string &name) : GUIElement(name, "DlgFocus") {
 
 void DlgFocus::Show() {
 	if(show) {
+        ImGui::SetNextWindowPos(ImVec2(60, 60), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize(ImVec2(300, 320), ImGuiCond_FirstUseEver);
 		ImGui::Begin("Select Spacecraft", &show);
         const char *tabs[] = {
             "All", "Nearby", "Location", "Class"

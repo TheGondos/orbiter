@@ -27,6 +27,8 @@ void DlgLaunchpad::Show() {
             &DlgLaunchpad::DrawVideo, &DlgLaunchpad::DrawJoystick, &DlgLaunchpad::DrawExtra, &DlgLaunchpad::DrawAbout
         };
 
+        ImGui::SetNextWindowPos(ImVec2(170, 100), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize(ImVec2(870, 540), ImGuiCond_FirstUseEver);
         ImGui::Begin("Launchpad", &show);
 
         ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_None;

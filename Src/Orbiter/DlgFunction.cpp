@@ -11,6 +11,8 @@ DlgFunction::DlgFunction(const std::string &name) : GUIElement(name, "DlgFunctio
 
 void DlgFunction::Show() {
 	if(show) {
+        ImGui::SetNextWindowPos(ImVec2(880, 145), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize(ImVec2(340, 290), ImGuiCond_FirstUseEver);
 		ImGui::Begin("Custom Functions", &show);
 
     	for (int i = 0; i < g_pOrbiter->ncustomcmd; i++) {

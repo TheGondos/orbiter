@@ -11,6 +11,8 @@ DlgVishelper::DlgVishelper(const std::string &name) : GUIElement(name, "DlgVishe
 
 void DlgVishelper::Show() {
 	if(show) {
+        ImGui::SetNextWindowPos(ImVec2(60, 60), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize(ImVec2(140, 390), ImGuiCond_FirstUseEver);
 		ImGui::Begin("Visual Helpers", &show);
         const char *tabs[] = {
             "Planetarium",// "Forces", "Axes"

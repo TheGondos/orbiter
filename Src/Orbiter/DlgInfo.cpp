@@ -868,6 +868,8 @@ void DlgInfo::DrawInfoBase(Base *base) {
 
 void DlgInfo::Show() {
 	if(show) {
+        ImGui::SetNextWindowPos(ImVec2(880, 145), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize(ImVec2(340, 290), ImGuiCond_FirstUseEver);
 		ImGui::Begin(name.c_str(), &show);
 
         ImGuiWindowFlags window_flags = ImGuiWindowFlags_HorizontalScrollbar;

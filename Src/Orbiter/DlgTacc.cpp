@@ -13,6 +13,8 @@ DlgTacc::DlgTacc(const std::string &name) : GUIElement(name, "DlgTacc") {
 
 void DlgTacc::Show() {
     if(!show) return;
+    ImGui::SetNextWindowPos(ImVec2(60, 60), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(330, 100), ImGuiCond_FirstUseEver);
     ImGui::Begin("Time Acceleration", &show);
     const ImVec2 button_sz(ImVec2(50, 20));
 

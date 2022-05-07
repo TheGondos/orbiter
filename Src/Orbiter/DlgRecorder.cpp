@@ -14,6 +14,8 @@ DlgRecorder::DlgRecorder(const std::string &name) : GUIElement(name, "DlgRecorde
 
 void DlgRecorder::Show() {
 	if(show) {
+        ImGui::SetNextWindowPos(ImVec2(60, 60), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize(ImVec2(330, 320), ImGuiCond_FirstUseEver);
 		ImGui::Begin("Recorder", &show);
         int status = g_pOrbiter->RecorderStatus();
         static const char *statestr[3] = {"Status: Normal", "Status: Recording", "Status: Playing"};
