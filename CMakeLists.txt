@@ -136,10 +136,6 @@ target_include_directories(imgui
         "${GLAD_INC_PATH}"
 )
 
-# zlib-ng
-
-
-
 # We don't query Qt with find_package because we need the 64-bit version here
 set(Qt5_x64_DIR
 	"Qt5_x64_DIR_NOTFOUND"
