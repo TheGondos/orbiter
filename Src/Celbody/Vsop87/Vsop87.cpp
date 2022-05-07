@@ -3,8 +3,9 @@
 
 #include "Vsop87.h"
 #include <stdio.h>
+#include <cstring>
 
-#define DLLCLBK extern "C" __declspec(dllexport)
+//#define DLLCLBK extern "C" __declspec(dllexport)
 
 using namespace std;
 
@@ -57,17 +58,19 @@ void VSOPOBJ::SetSeries (char series)
 	if (sid == 'E')               fmtflag |= EPHEM_PARENTBARY;
 }
 
-bool VSOPOBJ::ReadData (char *name)
+bool VSOPOBJ::ReadData (const char *name)
 {
 	int nterm, cooidx, alpha, i, iused, nused = 0, ntot = 0;
 	double a, b, c, tfac, err;
 	TERM3 **ppterm, *pterm;
 
 	char cbuf[256];
-	sprintf (cbuf, "Config\\%s\\Data\\Vsop87%c.dat", name, sid);
+	sprintf (cbuf, "Config/%s/Data/Vsop87%c.dat", name, sid);
 	ifstream ifs (cbuf);
 	if (!ifs) {
 		oapiWriteLogError("VSOP87 %s: Data file not found: %s", name, cbuf);
+		printf("VSOP87 %s: Data file not found: %s\n", name, cbuf);
+		exit(-1);
 		return false;
 	}
 
@@ -166,9 +169,7 @@ void VSOPOBJ::VsopEphem (double mjd, double *ret)
 
 	// term summation
 	for (cooidx = 0; cooidx < 3; ++cooidx) { // loop over spatial dimensions
-
 		for (alpha = 0; termlen[alpha][cooidx]; ++alpha) { // loop over powers of time
-
 			pterm = term+termidx[alpha][cooidx];
 			tm = termdot = 0.0;
 		    for (i = 0; i < termlen[alpha][cooidx]; ++i) {

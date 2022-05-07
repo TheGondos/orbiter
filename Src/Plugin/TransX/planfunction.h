@@ -24,6 +24,7 @@
 #include "mfdvarhandler.h"
 #include "mfdvartypes.h"
 #include "orbitelements.h"
+#include <cstring>
 
 class basefunction;
 

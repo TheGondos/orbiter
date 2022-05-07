@@ -131,7 +131,7 @@ void D3D7ParticleStream::SetSpecs (PARTICLESTREAMSPEC *pss)
 void D3D7ParticleStream::SetParticleHalflife (double pht)
 {
 	exp_rate = RAND_MAX/pht;
-	stride = max (1, min (20,(int)pht));
+	stride = std::max (1, std::min (20,(int)pht));
 	ipht2 = 0.5/pht;
 }
 
@@ -165,7 +165,7 @@ double D3D7ParticleStream::Level2Alpha (double level) const
 	case PARTICLESTREAMSPEC::LVL_SQRT:
 		return sqrt (level);
 	case PARTICLESTREAMSPEC::LVL_PLIN:
-		return max (0, min (1, (level-lmin)/(lmax-lmin)));
+		return std::max (0.0, std::min (1.0, (level-lmin)/(lmax-lmin)));
 	case PARTICLESTREAMSPEC::LVL_PSQRT:
 		return (level <= lmin ? 0 : level >= lmax ? 1 : sqrt ((level-lmin)/(lmax-lmin)));
 	}
@@ -178,9 +178,9 @@ double D3D7ParticleStream::Atm2Alpha (double prm) const
 	case PARTICLESTREAMSPEC::ATM_FLAT:
 		return amin;
 	case PARTICLESTREAMSPEC::ATM_PLIN:
-		return max (0, min (1, (prm-amin)*afac));
+		return std::max (0.0, std::min (1.0, (prm-amin)*afac));
 	case PARTICLESTREAMSPEC::ATM_PLOG:
-		return max (0, min (1, log(prm/amin)*afac));
+		return std::max (0.0, std::min (1.0, log(prm/amin)*afac));
 	}
 	return 0; // should not happen
 }
@@ -452,7 +452,7 @@ void D3D7ParticleStream::RenderDiffuse (LPDIRECT3DDEVICE7 dev)
 			vtx->tv = v[j];
 		}
 		if (++n == stride || n+i0 == np) {
-			smokemat.diffuse.a = (float)max (0.1, p->alpha0*(1.0-(oapiGetSimTime()-p->t0)*ipht2));
+			smokemat.diffuse.a = (float)std::max (0.1, p->alpha0*(1.0-(oapiGetSimTime()-p->t0)*ipht2));
 			dev->SetMaterial (&smokemat);
 			dev->DrawIndexedPrimitive (D3DPT_TRIANGLELIST, D3DFVF_VERTEX ,
 				dvtx+i0*4, n*4, idx, n*6, 0);
@@ -493,7 +493,7 @@ void D3D7ParticleStream::RenderEmissive (LPDIRECT3DDEVICE7 dev)
 			vtx->tu = u[j];
 			vtx->tv = v[j];
 		}
-		smokemat.diffuse.a = (float)max (0.1, p->alpha0*(1.0-(oapiGetSimTime()-p->t0)*ipht2));
+		smokemat.diffuse.a = (float)std::max (0.1, p->alpha0*(1.0-(oapiGetSimTime()-p->t0)*ipht2));
 		SetMaterial (smokemat.emissive);
 		dev->SetMaterial (&smokemat);
 		if (++n == stride || n+i0 == np) {
@@ -630,7 +630,7 @@ void ExhaustStream::Update ()
 				// determine next interval (pretty hacky)
 				t0 += interval;
 				if (speed > 10) {
-					interval = max (0.015, size0 / (pdensity * (0.1*vessel->GetAirspeed() + size0)));
+					interval = std::max (0.015, size0 / (pdensity * (0.1*vessel->GetAirspeed() + size0)));
 				} else {
 					interval = 1.0/pdensity;
 				}
@@ -706,7 +706,7 @@ void ExhaustStream::RenderGroundShadow (LPDIRECT3DDEVICE7 dev, LPDIRECTDRAWSURFA
 			vtx->tv = v[j];
 		}
 		if (++n == stride || n+i0 == np) {
-			alpha = (float)max (0.1, 0.60 * p->alpha0*(1.0-(oapiGetSimTime()-p->t0)*ipht2));
+			alpha = (float)std::max (0.1, 0.60 * p->alpha0*(1.0-(oapiGetSimTime()-p->t0)*ipht2));
 			dev->SetRenderState (D3DRENDERSTATE_TEXTUREFACTOR, D3DRGBA(0,0,0,alpha));
 			dev->DrawIndexedPrimitive (D3DPT_TRIANGLELIST, FVF_XYZ_TEX,
 				evtx+i0*4, n*4, idx, n*6, 0);
@@ -806,7 +806,7 @@ void ReentryStream::Update ()
 				CreateParticle (vp + dx - vv*dt, (vv+dv-av)*ebt + av, size0, alpha0);
 				// determine next interval
 				t0 += interval;
-				interval = max (0.015, size0 / (pdensity * (0.1*vessel->GetAirspeed() + size0)));
+				interval = std::max (0.015, size0 / (pdensity * (0.1*vessel->GetAirspeed() + size0)));
 				interval *= (double)rand()/(double)RAND_MAX + 0.5;
 			}
 		}

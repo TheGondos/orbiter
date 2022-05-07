@@ -18,13 +18,10 @@
 ** OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 ** THE SOFTWARE.*/
 
-#define STRICT
-
-#include <windows.h>
 #include <stdio.h>
 #include <math.h>
 #include "parser.h"
-
+#include <cstring>
 
 void Parser::parseline(char *buffer)//Parses the line
 {

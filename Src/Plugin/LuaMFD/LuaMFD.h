@@ -11,20 +11,20 @@
 
 class ScriptMFD: public MFD {
 public:
-	ScriptMFD (DWORD w, DWORD h, VESSEL *vessel);
+	ScriptMFD (int w, int h, VESSEL *vessel);
 	~ScriptMFD();
-	char *ButtonLabel (int bt);
+	const char *ButtonLabel (int bt);
 	int ButtonMenu (const MFDBUTTONMENU **menu) const;
-	bool ConsumeKeyBuffered (DWORD key);
+	bool ConsumeKeyBuffered (int key);
 	bool ConsumeButton (int bt, int event);
-	void Update (HDC hDC);
+	bool Update (oapi::Sketchpad *skp);
 	bool Input (const char *line);
 	void QueryCommand ();
 	void CreateInterpreter ();
 	void DeleteInterpreter ();
-	void SetPage (DWORD newpg);
-	static bool ScriptInput (void *id, char *str, void *data);
-	static OAPI_MSGTYPE MsgProc (UINT msg, UINT mfd, WPARAM wparam, LPARAM lparam);
+	void SetPage (int newpg);
+	static bool ScriptInput (void *id, const char *str, void *data);
+	static OAPI_MSGTYPE MsgProc (MFD_msg msg, MfdId mfd,  MFDMODEOPENSPEC *param, VESSEL *vessel);
 
 protected:
 	void SetFontSize (double size);
@@ -32,12 +32,12 @@ protected:
 private:
 	InterpreterList::VesselInterp *vi;
 	OBJHANDLE hVessel;      // vessel object handle
-	HANDLE interpTh;        // interpreter thread handle
-	HFONT hFont;            // font handle
-	DWORD pg;               // current page   
-	DWORD fw, fh;           // character width, height
-	DWORD nchar;            // characters per line displayed
-	DWORD nline;            // max number of lines displayed
+	std::thread interpTh;        // interpreter thread handle
+	oapi::Font *hFont;            // font handle
+	int pg;               // current page   
+	int fw, fh;           // character width, height
+	int nchar;            // characters per line displayed
+	int nline;            // max number of lines displayed
 };
 
 #endif // !__LUAMFD_H

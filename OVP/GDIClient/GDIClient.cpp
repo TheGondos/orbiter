@@ -132,7 +132,7 @@ bool GDIClient::clbkSaveSurfaceToImage (SURFHANDLE surf, const char *fname, Imag
 
 		int res = GetDIBits(hdc, hbm, 0, imgdata.height, imgdata.data, (BITMAPINFO*)&bi, DIB_RGB_COLORS);
 
-		WriteImageDataToFile (imgdata, fname, fmt, quality);
+		//WriteImageDataToFile (imgdata, fname, fmt, quality);
 
 		GlobalUnlock(hDIB);    
 		GlobalFree(hDIB);
@@ -142,6 +142,7 @@ bool GDIClient::clbkSaveSurfaceToImage (SURFHANDLE surf, const char *fname, Imag
 
 	clbkReleaseSurfaceDC (surf, hdc);
 	return true;
+	
 }
 
 // ======================================================================
@@ -347,6 +348,8 @@ void GDIPad::PolyPolyline (const IVECTOR2 *pt, const int *npt, const int nline)
 // class GDIFont
 // ======================================================================
 
+#define _stricmp strcasecmp
+
 GDIFont::GDIFont (int height, bool prop, const char *face, Style style, int orientation): oapi::Font (height, prop, face, style, orientation)
 {
 	char *def_fixedface = "Courier New";
@@ -367,7 +370,8 @@ GDIFont::GDIFont (int height, bool prop, const char *face, Style style, int orie
 	int weight = (style & BOLD ? FW_BOLD : FW_NORMAL);
 	DWORD italic = (style & ITALIC ? TRUE : FALSE);
 	DWORD underline = (style & UNDERLINE ? TRUE : FALSE);
-	hFont = CreateFont (height, 0, orientation, orientation, weight, italic, underline, 0, 0, 3, 2, 1, 49, face);
+//	hFont = CreateFont (height, 0, orientation, orientation, weight, italic, underline, 0, 0, 3, 2, 1, 49, face);
+	hFont = CreateFont (height, 0, orientation, orientation, weight, italic, underline, 0, 0, 3, 2, 4, 49, face);
 }
 
 GDIFont::~GDIFont ()

@@ -11,7 +11,7 @@ extern Camera *g_camera;
 // ======================================================================
 // class ExternalCameraControl
 
-ExternalCameraControl::ExternalCameraControl (DWORD dmode, DWORD cmode)
+ExternalCameraControl::ExternalCameraControl (int dmode, int cmode)
 {
 	SetDataMode (dmode);
 	SetCameraMode (cmode);
@@ -30,22 +30,22 @@ ExternalCameraControl::ExternalCameraControl (DWORD dmode, DWORD cmode)
 	trkmode.speed = 2.0;
 }
 
-void ExternalCameraControl::SetDataMode (DWORD mode)
+void ExternalCameraControl::SetDataMode (int mode)
 {
 	datamode = mode & 0x2F;
 }
 
-DWORD ExternalCameraControl::GetDataMode () const
+int ExternalCameraControl::GetDataMode () const
 {
 	return datamode;
 }
 
-void ExternalCameraControl::SetCameraMode (DWORD mode)
+void ExternalCameraControl::SetCameraMode (int mode)
 {
 	cameramode = mode & 0x1F;
 }
 
-DWORD ExternalCameraControl::GetCameraMode () const
+int ExternalCameraControl::GetCameraMode () const
 {
 	return cameramode;
 }

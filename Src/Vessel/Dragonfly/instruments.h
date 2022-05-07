@@ -5,9 +5,8 @@
 #define __INSTRUMENTS_H_
 
 #include <stdlib.h>
-#include <windows.h>
 #include "vectors.h"
-#include "orbitersdk.h"
+#include "Orbitersdk.h"
 
 
 class Panel;
@@ -73,7 +72,7 @@ class SFSwitch:public Switch
 	void LBD(int x, int y);
 private:
 	SURFHANDLE temps;
-	HDC hTEMPDC;			//SFSwitch needs a back-surface
+	SURFHANDLE hTEMPDC;		//SFSwitch needs a back-surface
 	int safed;				//is the switch safed or not?
 };
 
@@ -251,9 +250,9 @@ class Docker:public instrument
 class NAVFRQ:public instrument
 {public:
     int nav;					//selecting nav 1 or 2
-    DWORD frq1;					//frequency1
-	DWORD frq2;					//frequency2
-	DWORD step;
+    uint32_t frq1;					//frequency1
+	uint32_t frq2;					//frequency2
+	uint32_t step;
 	double timer;
 	int frswitch;				//up or down
 	NAVFRQ(int x,int y, Panel *i_parent);

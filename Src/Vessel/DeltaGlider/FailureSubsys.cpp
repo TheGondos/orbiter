@@ -38,7 +38,7 @@ void FailureSubsystem::clbkPostStep (double simt, double simdt, double mjd)
 
 // --------------------------------------------------------------
 
-bool FailureSubsystem::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH)
+bool FailureSubsystem::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH)
 {
 	if (panelid != 0) return false;
 	SURFHANDLE panel2dtex = oapiGetTextureHandle(DG()->panelmesh0,1);
@@ -118,7 +118,7 @@ bool MwsButton::RedrawVC (DEVMESHHANDLE hMesh, SURFHANDLE surf)
 
 	if (light != islit) {
 		NTVERTEX vtx[4];
-		static WORD vidx[4] = {0,1,2,3};
+		static uint16_t vidx[4] = {0,1,2,3};
 		GROUPEDITSPEC ges;
 		ges.flags = GRPEDIT_VTXTEXU;
 		ges.nVtx = 4;

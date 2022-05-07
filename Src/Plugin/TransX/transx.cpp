@@ -18,12 +18,10 @@
 ** OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 ** THE SOFTWARE.*/
 
-#define STRICT
 #define ORBITER_MODULE
-#include <windows.h>
 #include <stdio.h>
 #include <math.h>
-#include "orbitersdk.h"
+#include "Orbitersdk.h"
 
 #include "mfd.h"
 #include "graph.h"
@@ -38,7 +36,7 @@ int TransxMFD::MfdCount=0;
 
 double debug;
 
-TransxMFD::TransxMFD (DWORD w, DWORD h, VESSEL *vessel, UINT mfd)
+TransxMFD::TransxMFD (int w, int h, VESSEL *vessel, MfdId mfd)
 : MFD2 (w, h, vessel)
 
 // Initialise TransXMFD
@@ -46,7 +44,7 @@ TransxMFD::TransxMFD (DWORD w, DWORD h, VESSEL *vessel, UINT mfd)
 	//Check to see if new Transxstate is required
 	valid=false;
 	viewstate=NULL;
-	if (mfd>20) mfd=1;//Set to safe value in this instance
+//	if (mfd>20) mfd=1;//Set to safe value in this instance
 	class shipptrs *shptr=shipptrs::getshipptrs();//Knows ship must be current focus
 	viewstate=shptr->getviewstate(mfd,this);
 	viewstate->setmfdactive(true);
@@ -104,20 +102,21 @@ int TransxMFD::getheight()
 	return H;
 }
 
-OAPI_MSGTYPE TransxMFD::MsgProc (UINT msg, UINT mfd, WPARAM wparam, LPARAM lparam)
+OAPI_MSGTYPE TransxMFD::MsgProc (MFD_msg msg, MfdId mfd,  MFDMODEOPENSPEC *param, VESSEL *vessel)
 // Standard message parser for messages passed from Orbiter
 {
 	switch (msg) {
-	case OAPI_MSG_MFD_OPENED:
-		return (OAPI_MSGTYPE)new TransxMFD (LOWORD(wparam), HIWORD(wparam), (VESSEL*)lparam, mfd);
+	case OAPI_MSG_MFD_OPENEDEX:
+		return (OAPI_MSGTYPE)new TransxMFD (param->w, param->h, vessel, mfd);
+	default: break;
 	}
 	return 0;
 }
 
-char *TransxMFD::ButtonLabel (int bt)
+const char *TransxMFD::ButtonLabel (int bt)
 // Routine to pass button label back to Orbiter. Called by Orbiter
 {
-	char *label[] = {"HLP","FWD","BCK", "VW","VAR","-VR", "ADJ", "-AJ","++", "--","EXE"};
+	const char *label[] = {"HLP","FWD","BCK", "VW","VAR","-VR", "ADJ", "-AJ","++", "--","EXE"};
 	return (bt < sizeof(label) / sizeof(char*) ? label[bt] : 0);
 }
 
@@ -165,7 +164,7 @@ bool TransxMFD::ConsumeKeyImmediate(char *kstate)
 bool TransxMFD::ConsumeButton(int bt, int event)
 // Deal with mouse pressing of keys
 {
-	static const DWORD btkey[11]={OAPI_KEY_H, OAPI_KEY_F, OAPI_KEY_R, OAPI_KEY_W, OAPI_KEY_PERIOD, 
+	static const int btkey[11]={OAPI_KEY_H, OAPI_KEY_F, OAPI_KEY_R, OAPI_KEY_W, OAPI_KEY_PERIOD, 
 		OAPI_KEY_COMMA, OAPI_KEY_LBRACKET, OAPI_KEY_RBRACKET, OAPI_KEY_EQUALS, OAPI_KEY_MINUS, OAPI_KEY_X};
 	if (!valid) return false;
 	MFDvariable *varpointer=viewstate->GetCurrVariable();
@@ -187,7 +186,7 @@ bool TransxMFD::ConsumeButton(int bt, int event)
 }
 
 
-bool TransxMFD::ConsumeKeyBuffered (DWORD key)
+bool TransxMFD::ConsumeKeyBuffered (int key)
 {
 	if (!valid) return false;
 

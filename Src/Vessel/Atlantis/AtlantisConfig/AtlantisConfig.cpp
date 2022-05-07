@@ -3,23 +3,25 @@
 
 #define STRICT 1
 #define ORBITER_MODULE
-#include "orbitersdk.h"
+#include "Orbitersdk.h"
 #include "AC_resource.h"
 #include <stdio.h>
-#include <io.h>
+//#include <io.h>
+#include <unistd.h>
+#define _access access
 
 class VesselConfig;
 class AtlantisConfig;
 
-static char *tex_hires_enabled = "Textures2\\Atlantis";
-static char *tex_hires_disabled = "Textures2\\~Atlantis";
+static const char *tex_hires_enabled = "Textures2/Atlantis";
+static const char *tex_hires_disabled = "Textures2/~Atlantis";
 
-static char *vcmsh_fname = "Meshes\\Atlantis\\AtlantisVC.msh";
-static char *msh_hires_bkup = "Meshes\\Atlantis\\~AtlantisVC_hi.msh";
-static char *msh_lores_bkup = "Meshes\\Atlantis\\~AtlantisVC_lo.msh";
+static const char *vcmsh_fname = "Meshes/Atlantis/AtlantisVC.msh";
+static const char *msh_hires_bkup = "Meshes/Atlantis/~AtlantisVC_hi.msh";
+static const char *msh_lores_bkup = "Meshes/Atlantis/~AtlantisVC_lo.msh";
 
 struct {
-	HINSTANCE hInst;
+	oapi::DynamicModule *hInst;
 	AtlantisConfig *item;
 } gParams;
 
@@ -136,14 +138,14 @@ INT_PTR CALLBACK AtlantisConfig::DlgProc (HWND hWnd, UINT uMsg, WPARAM wParam, L
 // The DLL entry point
 // ==============================================================
 
-DLLCLBK void InitModule (HINSTANCE hDLL)
+DLLCLBK void InitModule (oapi::DynamicModule *hDLL)
 {
 	gParams.hInst = hDLL;
 	gParams.item = new AtlantisConfig;
 	// create the new config item
-	LAUNCHPADITEM_HANDLE root = oapiFindLaunchpadItem ("Vessel configuration");
+	//LAUNCHPADITEM_HANDLE root = oapiFindLaunchpadItem ("Vessel configuration");
 	// find the config root entry provided by orbiter
-	oapiRegisterLaunchpadItem (gParams.item, root);
+	//oapiRegisterLaunchpadItem (gParams.item, root);
 	// register the DG config entry
 }
 
@@ -151,9 +153,9 @@ DLLCLBK void InitModule (HINSTANCE hDLL)
 // The DLL exit point
 // ==============================================================
 
-DLLCLBK void ExitModule (HINSTANCE hDLL)
+DLLCLBK void ExitModule (oapi::DynamicModule *hDLL)
 {
 	// Unregister the launchpad items
-	oapiUnregisterLaunchpadItem (gParams.item);
+	//oapiUnregisterLaunchpadItem (gParams.item);
 	delete gParams.item;
 }

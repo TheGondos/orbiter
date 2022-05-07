@@ -22,7 +22,7 @@
 
 #include "Orbiter.h"
 #include "Vessel.h"
-#include "Supervessel.h"
+#include "SuperVessel.h"
 #include "Config.h"
 #include "Camera.h"
 #include "Pane.h"
@@ -33,7 +33,6 @@
 #include "Mfd.h"
 #include "Keymap.h"
 #include "Log.h"
-#include "Dialogs.h"
 #include "State.h"
 #include "Util.h"
 #include "elevmgr.h"
@@ -42,9 +41,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#ifdef INLINEGRAPHICS
-#include "VVessel.h"
-#endif // INLINEGRAPHICS
+#include <cmath>
+#include <dlfcn.h>
 
 using namespace std;
 
@@ -52,8 +50,6 @@ extern Orbiter *g_pOrbiter;
 extern Vessel *g_focusobj;
 extern Camera *g_camera;
 extern Pane *g_pane;
-extern Select *g_select;
-extern InputBox *g_input;
 extern TimeData td;
 extern PlanetarySystem *g_psys;
 extern bool g_bStateUpdate;
@@ -80,6 +76,7 @@ static Vector DefAttExhaustDir[12] = {
 Vessel::Vessel (const PlanetarySystem *psys, const char *_name, const char *_classname, const VESSELSTATUS &status)
 : VesselBase()
 {
+	dock = nullptr;
 	name = new char[strlen(_name)+1]; TRACENEW
 	strcpy (name, _name);
 
@@ -115,6 +112,7 @@ Vessel::Vessel (const PlanetarySystem *psys, const char *_name, const char *_cla
 Vessel::Vessel (const PlanetarySystem *psys, const char *_name, const char *_classname, const void *status)
 : VesselBase()
 {
+	dock = nullptr;
 	name = new char[strlen(_name)+1]; TRACENEW
 	strcpy (name, _name);
 
@@ -153,6 +151,7 @@ Vessel::Vessel (const PlanetarySystem *psys, const char *_name, const char *_cla
 Vessel::Vessel (const PlanetarySystem *psys, const char *_name, const char *_classname, ifstream &ifs)
 : VesselBase()
 {
+	dock = nullptr;
 	char cbuf[256];
 
 	sprintf (cbuf, "%s (%s)", _classname ? _classname : _name, _name);
@@ -227,7 +226,7 @@ Vessel::~Vessel ()
 bool Vessel::OpenConfigFile (ifstream &cfgfile) const
 {
 	char cbuf[256];
-	strcpy (cbuf, "Vessels\\");
+	strcpy (cbuf, "Vessels/");
 	strcat (cbuf, classname ? classname : name);
 	// first search in $CONFIGDIR\Vessels
 	cfgfile.open (g_pOrbiter->ConfigPath (cbuf));
@@ -238,6 +237,7 @@ bool Vessel::OpenConfigFile (ifstream &cfgfile) const
 	if (cfgfile.good()) return true;
 	else {
 		cfgfile.clear();
+		fprintf(stderr, "No vessel class configuration file found for: %s cbuf=%s %s", classname ? classname : name, cbuf, g_pOrbiter->ConfigPath (cbuf));
 		LOGOUT_ERR_FILENOTFOUND_MSG(g_pOrbiter->ConfigPath(cbuf + 8), "No vessel class configuration file found for: %s", classname ? classname : name);
 		//LogOut (">>> ERROR: No vessel class configuration file found for:");
 		//LOGOUT_ERR(classname ? classname : name);
@@ -276,7 +276,7 @@ void Vessel::SetDefaultState ()
 	fmass = pfmass      = 0.0;
 	cbody               = 0;
 	landtgt             = 0;
-	nport               = (DWORD)-1;
+	nport               = (int)-1;
 	lstatus             = 0;
 	navmode             = 0;
 	surfprm_valid       = false;
@@ -304,7 +304,6 @@ void Vessel::SetDefaultState ()
 	rpressure           = g_pOrbiter->Cfg()->CfgPhysicsPrm.bRadiationPressure;
 	Lift = Drag         = 0.0;
 	attach_status.pname = 0;
-	hudskp              = NULL;
 	next_hullvtx        = 0;
 
 	lightfac            = 1.0;
@@ -329,7 +328,7 @@ void Vessel::DefaultGenericCaps ()
 
 	meshlist           = 0;
 	nmesh              = 0;
-	mesh_crc           = 0;
+	mesh_hash          = 0;
 	nanim              = 0;
 	size               = 10.0;
 	clipradius         = 0.0; // flag for clipradius=size
@@ -425,7 +424,7 @@ void Vessel::DefaultGenericCaps ()
 void Vessel::ReadGenericCaps (ifstream &ifs)
 {
 	char item[256], cbuf[256];
-	UINT i;
+	unsigned int i;
 	VECTOR3 tmp;
 	double d;
 	bool b;
@@ -730,7 +729,7 @@ void Vessel::Setup ()
 	UpdateMass ();
 	orthoaxis = 0;
 	kill_pending = false;
-	if (bFRplayback = bRequestPlayback) {
+	if ((bFRplayback = bRequestPlayback)) {
 		const char *playbackdir = g_pOrbiter->PState()->PlaybackDir();
 		//if (!playbackdir) playbackdir = ScenarioName;
 		FRecorder_Read (playbackdir);
@@ -741,7 +740,7 @@ void Vessel::Setup ()
 
 void Vessel::PostCreation ()
 {
-	DWORD i, j, k;
+	int i, j, k;
 
 	// define docking status
 	for (i = 0; i < ndock; i++) {
@@ -749,7 +748,7 @@ void Vessel::PostCreation ()
 			// decode vessel name
 			bool found = false;
 			void *tmp;
-			BYTE *bt = (BYTE*)&tmp;
+			uint8_t *bt = (uint8_t*)&tmp;
 			for (j = 0; j < g_psys->nVessel(); j++) {
 				Vessel *v = g_psys->GetVessel(j);
 				char *name = v->Name();
@@ -780,16 +779,14 @@ void Vessel::ModulePostCreation ()
 
 // ==============================================================
 
-void Vessel::ProcessMessage (DWORD msg, void *ptr)
+void Vessel::ProcessMessage (int msg, void *ptr)
 {
-	DWORD i;
-
 	switch (msg) {
 	case MSG_KILLVESSEL:
 		Destroying ((Vessel*)ptr);
 		break;
 	case MSG_KILLNAVSENDER:
-		for (i = 0; i < nnav; i++)
+		for (int i = 0; i < nnav; i++)
 			if (nav[i].sender == (const Nav*)ptr)
 				nav[i].sender = 0;
 		break;
@@ -803,7 +800,7 @@ void Vessel::Destroying (const Vessel *vessel)
 	if (vessel == this) { // it's us!
 		Undock (ALLDOCKS, 0, 0.0); // undock all docked vessels
 		DetachFromParent();
-		for (DWORD i = 0; i < ncattach; i++)
+		for (int i = 0; i < ncattach; i++)
 			DetachChild (cattach[i]);
 		if (fstatus == FLIGHTSTATUS_LANDED && proxybase)
 			proxybase->ReportTakeoff (this);
@@ -968,10 +965,8 @@ void Vessel::FocusChanged (bool getfocus, Vessel *newvessel, Vessel *oldvessel)
 
 void Vessel::InitSupervessel (bool isprimary)
 {
-	DWORD i;
-
 	// Initialise vessel-vessel docking
-	for (i = 0; i < ndock; i++)
+	for (int i = 0; i < ndock; i++)
 		if (dock[i]->mate && (!supervessel || !supervessel->isComponent (dock[i]->mate))) {
 			if (isprimary) g_psys->DockVessels (this, dock[i]->mate, i, dock[i]->matedock, false);
 			else           g_psys->DockVessels (dock[i]->mate, this, dock[i]->matedock, i, false);
@@ -991,17 +986,16 @@ void Vessel::InitSupervessel (bool isprimary)
 
 // ==============================================================
 
-void Vessel::InitNavRadios (DWORD n)
+void Vessel::InitNavRadios (int n)
 {
 	if (n == nnav) return; // nothing to do
 
 	NavRadioSpec *tmp;
-	DWORD i;
 
 	if (n) {
 		tmp = new NavRadioSpec[n]; TRACENEW
 		if (nnav) memcpy (tmp, nav, min (n, nnav) * sizeof(NavRadioSpec));
-		for (i = nnav; i < n; i++) {
+		for (int i = nnav; i < n; i++) {
 			tmp[i].freq   = NAV_RADIO_FREQ_MIN;
 			tmp[i].step   = 0;
 			tmp[i].dbidx  = -1; // undefined
@@ -1016,7 +1010,7 @@ void Vessel::InitNavRadios (DWORD n)
 
 // ==============================================================
 
-bool Vessel::SetNavChannel (DWORD n, DWORD ch)
+bool Vessel::SetNavChannel (int n, int ch)
 {
 	if (n < nnav && ch < NAV_RADIO_NSTEP) {
 		nav[n].step  = ch;
@@ -1029,7 +1023,7 @@ bool Vessel::SetNavChannel (DWORD n, DWORD ch)
 
 // ==============================================================
 
-bool Vessel::IncNavChannel (DWORD n, int dch)
+bool Vessel::IncNavChannel (int n, int dch)
 {
 	if (n < nnav) {
 		nav[n].step = IncRadioChannel (nav[n].step, dch);
@@ -1042,7 +1036,7 @@ bool Vessel::IncNavChannel (DWORD n, int dch)
 
 // ==============================================================
 
-bool Vessel::SetIDSChannel (PortSpec *ps, DWORD ch)
+bool Vessel::SetIDSChannel (PortSpec *ps, int ch)
 {
 	if (ps->ids && ch < NAV_RADIO_NSTEP) {
 		ps->ids->SetStep (ch);
@@ -1052,7 +1046,7 @@ bool Vessel::SetIDSChannel (PortSpec *ps, DWORD ch)
 
 // ==============================================================
 
-bool Vessel::SetXpdrChannel (DWORD ch)
+bool Vessel::SetXpdrChannel (int ch)
 {
 	if (xpdr && ch < NAV_RADIO_NSTEP) {
 		xpdr->SetStep (ch);
@@ -1072,26 +1066,26 @@ bool Vessel::IncXpdrChannel (int dch)
 
 // ==============================================================
 
-DWORD Vessel::IncRadioChannel (DWORD ch, int step) const
+int Vessel::IncRadioChannel (int ch, int step) const
 {
 	int nch = (int)ch + step;
 	while (nch < 0) nch += NAV_RADIO_NSTEP;
-	return (DWORD)(nch % NAV_RADIO_NSTEP);
+	return (int)(nch % NAV_RADIO_NSTEP);
 }
 
 // ==============================================================
 
-DWORD Vessel::GetNavChannel (DWORD n) const
+int Vessel::GetNavChannel (int n) const
 { return (n < nnav ? nav[n].step : 0); }
 
 // ==============================================================
 
-float Vessel::GetNavFreq (DWORD n) const
+float Vessel::GetNavFreq (int n) const
 { return (n < nnav ? nav[n].freq : 0.0f); }
 
 // ==============================================================
 
-DWORD Vessel::GetXpdrChannel () const
+int Vessel::GetXpdrChannel () const
 {
 	return (xpdr ? xpdr->GetStep() : 0);
 }
@@ -1115,12 +1109,12 @@ bool Vessel::isOrbitStabilised () const
 
 // ==============================================================
 
-bool Vessel::SetTouchdownPoints (const TOUCHDOWNVTX *tdvtx, DWORD ntp)
+bool Vessel::SetTouchdownPoints (const TOUCHDOWNVTX *tdvtx, int ntp)
 {
 	dASSERT(ntp >= 3, "Vessel::SetTouchdownPoints: at least 3 points must be provided");
 
 	static const double eps = 1e-12;
-	DWORD i;
+	int i;
 	double a, b, c, d, e, f;
 
 	if (ntp != ntouchdown_vtx) {
@@ -1238,7 +1232,7 @@ bool Vessel::GetLiftVector (Vector &L) const
 		L.Set (0, 0, 0);
 		return false;
 	} else {
-		double v0 = _hypot (sp.airvel_ship.y, sp.airvel_ship.z);
+		double v0 = std::hypot (sp.airvel_ship.y, sp.airvel_ship.z);
 		double scale = (v0 ? Lift/v0 : 0.0);
 		L.Set (0, sp.airvel_ship.z*scale, -sp.airvel_ship.y*scale);
 		return true;
@@ -1311,7 +1305,7 @@ ThrustSpec *Vessel::CreateThruster (const Vector &pos, const Vector &dir, double
 
 bool Vessel::DelThruster (ThrustSpec *ts)
 {
-	DWORD i, j, k, m;
+	int i, j, k, m;
 	ThrustSpec **tmp;
 	ThrustGroupSpec *tgs;
 
@@ -1384,8 +1378,7 @@ bool Vessel::DelThruster (ThrustSpec *ts)
 
 void Vessel::ShiftThrusters (const Vector &shift)
 {
-	DWORD i;
-	for (i = 0; i < nthruster; i++) {
+	for (int i = 0; i < nthruster; i++) {
 		thruster[i]->ref += MakeVECTOR3(shift);
 	}
 }
@@ -1424,7 +1417,7 @@ void Vessel::ClearThrusterDefinitions ()
 {
 	// delete all thrusters, thruster groups and exhaust render definitions
 	
-	DWORD grp;
+	int grp;
 	ThrustGroupSpec *tgs;
 
 	ClearExhaustDefinitions();
@@ -1450,7 +1443,7 @@ void Vessel::ClearThrusterDefinitions ()
 	}
 	// delete thrusters
 	if (nthruster) {
-		for (DWORD i = 0; i < nthruster; i++)
+		for (int i = 0; i < nthruster; i++)
 			delete thruster[i];
 		delete []thruster;
 		nthruster = 0;
@@ -1462,7 +1455,7 @@ void Vessel::ClearThrusterDefinitions ()
 
 void Vessel::ClearExhaustDefinitions ()
 {
-	DWORD i;
+	int i;
 
 	// delete exhaust definitions
 	if (nexhaust) {
@@ -1485,7 +1478,7 @@ void Vessel::ClearExhaustDefinitions ()
 void Vessel::ClearExhaustStreamDefinitions ()
 {
 	if (ncontrail) {
-		for (DWORD i = 0; i < ncontrail; i++) contrail[i]->Detach();
+		for (int i = 0; i < ncontrail; i++) contrail[i]->Detach();
 		delete []contrail;
 		ncontrail = 0;
 	}
@@ -1499,7 +1492,7 @@ void Vessel::SetThrusterMax0 (ThrustSpec *ts, double maxth0)
 		double dth = maxth0 - ts->maxth0;
 		ts->maxth0 = maxth0;
 		// re-calculate max group thrusts
-		DWORD i;
+		int i;
 		for (i = 0; i < 15; i++) {
 			ThrustGroupSpec *tgs = thruster_grp_default+i;
 			if (IsGroupThruster (tgs, ts))
@@ -1515,9 +1508,9 @@ void Vessel::SetThrusterMax0 (ThrustSpec *ts, double maxth0)
 
 // ==============================================================
 
-ThrustGroupSpec *Vessel::CreateThrusterGroup (ThrustSpec **ts, DWORD nts, THGROUP_TYPE thgt)
+ThrustGroupSpec *Vessel::CreateThrusterGroup (ThrustSpec **ts, int nts, THGROUP_TYPE thgt)
 {
-	DWORD i;
+	int i;
 	ThrustGroupSpec *tgs;
 
 	if (thgt < THGROUP_USER) { // define a standard group
@@ -1560,7 +1553,7 @@ bool Vessel::DeleteThrusterGroup (ThrustGroupSpec *tgs, THGROUP_TYPE thgt, bool 
 		if (tgs != thruster_grp_default + thgt) return false; // group specs don't match
 		return DeleteThrusterGroup (thgt, delth);
 	} else {                   // delete a user defined group
-		DWORD i, j, k;
+		int i, j, k;
 		ThrustGroupSpec **tmp;
 		for (i = 0; i < nthruster_grp_user; i++)
 			if (tgs == thruster_grp_user[i]) break;
@@ -1587,7 +1580,7 @@ bool Vessel::DeleteThrusterGroup (ThrustGroupSpec *tgs, THGROUP_TYPE thgt, bool 
 
 bool Vessel::DeleteThrusterGroup (ThrustGroupSpec *tgs, bool delth)
 {
-	DWORD i, j, k;
+	int i, j, k;
 
 	// sanity check
 	if (!tgs) return false;
@@ -1641,7 +1634,7 @@ void Vessel::IncThrusterGroupLevel (ThrustGroupSpec *tgs, double dlevel)
 {
 	if (bFRplayback) return;
 
-	for (DWORD i = 0; i < tgs->nts; i++)
+	for (int i = 0; i < tgs->nts; i++)
 		IncThrusterLevel (tgs->ts[i], dlevel);
 }
 
@@ -1656,7 +1649,7 @@ Vector Vessel::GetThrusterGroupForce (THGROUP_TYPE thgt) const
 Vector Vessel::GetThrusterGroupForce (const ThrustGroupSpec *tgs) const
 {
 	Vector F;
-	for (DWORD i = 0; i < tgs->nts; i++)
+	for (int i = 0; i < tgs->nts; i++)
 		F += GetThrusterForce (tgs->ts[i]);
 	return F;
 }
@@ -1711,7 +1704,7 @@ AirfoilSpec *Vessel::CreateAirfoil (AIRFOIL_ORIENTATION align, const Vector &ref
 
 bool Vessel::GetAirfoilParam (AirfoilSpec *af, VECTOR3 *ref, AirfoilCoeffFunc *cf, void **context, double *c, double *S, double *A)
 {
-	for (DWORD i = 0; i < nairfoil; i++) {
+	for (int i = 0; i < nairfoil; i++) {
 		if (af == airfoil[i]) {
 			if (ref)     *ref     = MakeVECTOR3(af->ref);
 			if (cf)      *cf      = af->cf;
@@ -1727,7 +1720,7 @@ bool Vessel::GetAirfoilParam (AirfoilSpec *af, VECTOR3 *ref, AirfoilCoeffFunc *c
 
 // ==============================================================
 
-void Vessel::EditAirfoil (AirfoilSpec *af, DWORD flag, const Vector &ref, AirfoilCoeffFunc cf, double c, double S, double A)
+void Vessel::EditAirfoil (AirfoilSpec *af, int flag, const Vector &ref, AirfoilCoeffFunc cf, double c, double S, double A)
 {
 	if (flag & 0x01) af->ref.Set (ref);
 	if (flag & 0x02) af->cf = cf;
@@ -1740,7 +1733,7 @@ void Vessel::EditAirfoil (AirfoilSpec *af, DWORD flag, const Vector &ref, Airfoi
 
 bool Vessel::DelAirfoil (AirfoilSpec *af)
 {
-	for (DWORD i = 0; i < nairfoil; i++)
+	for (int i = 0; i < nairfoil; i++)
 		if (af == airfoil[i])
 			return DelAirfoil (i);
 	return false;
@@ -1748,13 +1741,13 @@ bool Vessel::DelAirfoil (AirfoilSpec *af)
 
 // ==============================================================
 
-bool Vessel::DelAirfoil (DWORD i)
+bool Vessel::DelAirfoil (int i)
 {
 	if (i >= nairfoil) return false;
 	delete airfoil[i];
 	AirfoilSpec **tmp;
 	if (nairfoil > 1) {
-		DWORD j, k;
+		int j, k;
 		tmp = new AirfoilSpec*[nairfoil-1]; TRACENEW
 		for (j = k = 0; j < nairfoil; j++)
 			if (j != i) tmp[k++] = airfoil[j];
@@ -1770,7 +1763,7 @@ bool Vessel::DelAirfoil (DWORD i)
 void Vessel::ClearAirfoilDefinitions ()
 {
 	if (nairfoil) {
-		for (DWORD i = 0; i < nairfoil; i++) delete airfoil[i];
+		for (int i = 0; i < nairfoil; i++) delete airfoil[i];
 		delete []airfoil;
 		nairfoil = 0;
 	}
@@ -1778,7 +1771,7 @@ void Vessel::ClearAirfoilDefinitions ()
 
 // ==============================================================
 
-CtrlsurfSpec *Vessel::CreateControlSurface (AIRCTRL_TYPE ctrl, double area, double dCl, const Vector &ref, int axis, double delay, UINT anim)
+CtrlsurfSpec *Vessel::CreateControlSurface (AIRCTRL_TYPE ctrl, double area, double dCl, const Vector &ref, int axis, double delay, unsigned int anim)
 {
 	CtrlsurfSpec *css = new CtrlsurfSpec; TRACENEW
 	css->ctrl = ctrl;
@@ -1821,7 +1814,7 @@ CtrlsurfSpec *Vessel::CreateControlSurface (AIRCTRL_TYPE ctrl, double area, doub
 
 bool Vessel::DelControlSurface (CtrlsurfSpec *cs)
 {
-	for (DWORD i = 0; i < nctrlsurf; i++)
+	for (int i = 0; i < nctrlsurf; i++)
 		if (cs == ctrlsurf[i])
 			return DelControlSurface (i);
 	return false;
@@ -1829,13 +1822,13 @@ bool Vessel::DelControlSurface (CtrlsurfSpec *cs)
 
 // ==============================================================
 
-bool Vessel::DelControlSurface (DWORD i)
+bool Vessel::DelControlSurface (int i)
 {
 	if (i >= nctrlsurf) return false;
 	delete ctrlsurf[i];
 	CtrlsurfSpec **tmp;
 	if (nctrlsurf > 1) {
-		DWORD j, k;
+		int j, k;
 		tmp = new CtrlsurfSpec*[nctrlsurf-1]; TRACENEW
 		for (j = k = 0; j < nctrlsurf; j++)
 			if (j != i) tmp[k++] = ctrlsurf[j];
@@ -1851,7 +1844,7 @@ bool Vessel::DelControlSurface (DWORD i)
 void Vessel::ClearControlSurfaceDefinitions ()
 {
 	if (nctrlsurf) {
-		for (DWORD i = 0; i < nctrlsurf; i++) delete ctrlsurf[i];
+		for (int i = 0; i < nctrlsurf; i++) delete ctrlsurf[i];
 		delete []ctrlsurf;
 		nctrlsurf = 0;
 	}
@@ -1897,7 +1890,7 @@ void Vessel::ApplyControlSurfaceLevels ()
 	if (bChange) { // apply animations
 		for (i = 0; i < nctrlsurf; i++) {
 			AIRCTRL_TYPE ctrl = ctrlsurf[i]->ctrl;
-			if (ctrlsurf[i]->anim != (UINT)-1 && bChangeCtrl[ctrl])
+			if (ctrlsurf[i]->anim != (unsigned int)-1 && bChangeCtrl[ctrl])
 				SetAnimation (ctrlsurf[i]->anim, (ctrlsurf_level[ctrl].curr+1.0)*0.5);
 		}
 	}
@@ -1926,7 +1919,7 @@ void Vessel::CreateVariableDragElement (const double *drag, double factor, const
 void Vessel::ClearVariableDragElements ()
 {
 	if (ndragel) {
-		for (DWORD i = 0; i < ndragel; i++) delete dragel[i];
+		for (int i = 0; i < ndragel; i++) delete dragel[i];
 		delete []dragel;
 		ndragel = 0;
 	}
@@ -1934,7 +1927,7 @@ void Vessel::ClearVariableDragElements ()
 
 // ==============================================================
 
-void Vessel::ApplyUserAttitudeControls (DWORD *ctrl)
+void Vessel::ApplyUserAttitudeControls (int *ctrl)
 {
 	if (bFRplayback) return;
 	// ignore user controls during playback 
@@ -1962,6 +1955,10 @@ void Vessel::ApplyUserAttitudeControls (DWORD *ctrl)
 		if (ctrlsurfmode & 2) SetControlSurfaceLevel (AIRCTRL_RUDDER,   0.001*ctrl[THGROUP_ATT_YAWRIGHT]-0.001*ctrl[THGROUP_ATT_YAWLEFT],true);
 		if (ctrlsurfmode & 4) SetControlSurfaceLevel (AIRCTRL_AILERON,  0.001*ctrl[THGROUP_ATT_BANKRIGHT]-0.001*ctrl[THGROUP_ATT_BANKLEFT],true);
 	}
+
+	SetThrusterGroupLevel (THGROUP_MAIN, 0.001*ctrl[THGROUP_MAIN]);
+	SetThrusterGroupLevel (THGROUP_HOVER, 0.001*ctrl[THGROUP_HOVER]);
+	SetThrusterGroupLevel (THGROUP_RETRO, 0.001*ctrl[THGROUP_RETRO]);
 }
 
 // ==============================================================
@@ -2026,6 +2023,7 @@ bool Vessel::SetMaxThrust_old (ENGINETYPE eng, double maxth)
 			thruster_grp_default[THGROUP_HOVER].maxth_sum = maxth;
 			return true;
 		} else return false;
+	case ENGINE_ATTITUDE: break;
 	}
 	return false;
 }
@@ -2075,7 +2073,7 @@ void Vessel::CreateDefaultAttitudeSet (double maxth)
 
 // ==============================================================
 
-UINT Vessel::AddExhaust (EXHAUSTSPEC *spec)
+unsigned int Vessel::AddExhaust (EXHAUSTSPEC *spec)
 {
 	EXHAUSTSPEC **tmp = new EXHAUSTSPEC*[nexhaust+1];
 	EXHAUSTSPEC *es;
@@ -2122,9 +2120,9 @@ UINT Vessel::AddExhaust (EXHAUSTSPEC *spec)
 
 // ==============================================================
 
-bool Vessel::DelExhaust (UINT idx)
+bool Vessel::DelExhaust (unsigned int idx)
 {
-	DWORD i, j, k;
+	int i, j, k;
 	EXHAUSTSPEC **tmp;
 
 	for (i = 0; i < nexhaust; i++)
@@ -2157,13 +2155,18 @@ oapi::ParticleStream *Vessel::AddParticleStream (PARTICLESTREAMSPEC *pss, const 
 	oapi::GraphicsClient *gc = g_pOrbiter->GetGraphicsClient ();
 	if (!gc) return 0;
 
+	oapi::ParticleStream *ps = gc->clbkCreateExhaustStream (pss, (OBJHANDLE)this, lvl, MakeVECTOR3(pos), MakeVECTOR3(-dir));
+
+	if(ps == NULL)
+		return NULL;
+
 	oapi::ParticleStream **tmp = new oapi::ParticleStream*[ncontrail+1]; TRACENEW
 	if (ncontrail) {
 		memcpy (tmp, contrail, ncontrail*sizeof(oapi::ParticleStream*));
 		delete []contrail;
 	}
 	contrail = tmp;
-	contrail[ncontrail] = gc->clbkCreateExhaustStream (pss, (OBJHANDLE)this, lvl, MakeVECTOR3(pos), MakeVECTOR3(-dir));
+	contrail[ncontrail] = ps;
 	return contrail[ncontrail++];	
 }
 
@@ -2175,13 +2178,17 @@ oapi::ParticleStream *Vessel::AddExhaustStream (ThrustSpec *ts, PARTICLESTREAMSP
 	oapi::GraphicsClient *gc = g_pOrbiter->GetGraphicsClient ();
 	if (!gc) return 0;
 
+	oapi::ParticleStream *ps = gc->clbkCreateExhaustStream (pss, (OBJHANDLE)this, &ts->level, &ts->ref, &ts->dir);
+	if(ps == NULL)
+		return NULL;
+
 	oapi::ParticleStream **tmp = new oapi::ParticleStream*[ncontrail+1]; TRACENEW
 	if (ncontrail) {
 		memcpy (tmp, contrail, ncontrail*sizeof(oapi::ParticleStream*));
 		delete []contrail;
 	}
 	contrail = tmp;
-	contrail[ncontrail] = gc->clbkCreateExhaustStream (pss, (OBJHANDLE)this, &ts->level, &ts->ref, &ts->dir);
+	contrail[ncontrail] = ps;
 	if (pos) // local position reference
 		contrail[ncontrail]->SetFixedPos (MakeVECTOR3(*pos));
 	if (dir) // local direction reference
@@ -2202,7 +2209,7 @@ bool Vessel::DelExhaustStream (oapi::ParticleStream *ep)
 {
 	if (!ncontrail) return false;
 
-	DWORD i, j, k;
+	int i, j, k;
 	for (i = 0; i < ncontrail; i++)
 		if (contrail[i] == ep) break;
 	if (i == ncontrail) return false;
@@ -2260,7 +2267,7 @@ bool Vessel::DelReentryStream (oapi::ParticleStream *ep)
 {
 	if (!nreentrystream) return false;
 
-	DWORD i, j, k;
+	int i, j, k;
 
 	for (i = 0; i < nreentrystream; i++)
 		if (reentrystream[i] == ep) break;
@@ -2287,7 +2294,7 @@ bool Vessel::DelReentryStream (oapi::ParticleStream *ep)
 void Vessel::ClearReentryStreams ()
 {
 	if (nreentrystream) {
-		for (DWORD i = 0; i < nreentrystream; i++)
+		for (int i = 0; i < nreentrystream; i++)
 			reentrystream[i]->Detach();
 		delete []reentrystream;
 		nreentrystream = 0;
@@ -2329,7 +2336,7 @@ LightEmitter *Vessel::AddSpotLight (const VECTOR3 &pos, const VECTOR3 &dir, doub
 void Vessel::ClearLightEmitters ()
 {
 	if (!nemitter) return; // nothing to do
-	for (DWORD i = 0; i < nemitter; i++) {
+	for (int i = 0; i < nemitter; i++) {
 		if (emitter[i]) delete emitter[i];
 	}
 	delete []emitter;
@@ -2340,7 +2347,7 @@ void Vessel::ClearLightEmitters ()
 
 bool Vessel::DelLightEmitter (LightEmitter *le)
 {
-	DWORD i, j, k;
+	int i, j, k;
 	for (i = 0; i < nemitter; i++) {
 		if (emitter[i] == le) {
 			LightEmitter **tmp;
@@ -2363,7 +2370,7 @@ bool Vessel::DelLightEmitter (LightEmitter *le)
 
 void Vessel::LightEmitterState (LightEmitter *le, int param, void *value)
 {
-	DWORD idx;
+	int idx;
 	char cbuf[256];
 	for (idx = 0; idx < nemitter; idx++)
 		if (emitter[idx] == le) break;
@@ -2381,7 +2388,7 @@ void Vessel::LightEmitterState (LightEmitter *le, int param, void *value)
 
 void Vessel::ShiftLightEmitters (const VECTOR3 &ofs)
 {
-	DWORD i;
+	int i;
 	for (i = 0; i < nemitter; i++) {
 		emitter[i]->ShiftExplicitPosition (ofs);
 	}
@@ -2409,7 +2416,7 @@ TankSpec *Vessel::CreatePropellantResource (double maxmass, double mass, double 
 
 void Vessel::DelPropellantResource (TankSpec *ts)
 {
-	DWORD i, j, k;
+	int i, j, k;
 
 	// unlink thrusters which refer to ts
 	for (i = 0; i < nthruster; i++)
@@ -2438,7 +2445,7 @@ void Vessel::DelPropellantResource (TankSpec *ts)
 
 void Vessel::ClearPropellantResources ()
 {
-	DWORD i;
+	int i;
 
 	// unlink all thrusters from their fuel resources
 	for (i = 0; i < nthruster; i++)
@@ -2497,7 +2504,7 @@ void Vessel::SetDockParams (PortSpec *dock, const Vector &pos, const Vector &dir
 
 void Vessel::ShiftDocks (const Vector &ofs)
 {
-	for (DWORD i = 0; i < ndock; i++)
+	for (int i = 0; i < ndock; i++)
 		SetDockParams (dock[i], dock[i]->ref+ofs, dock[i]->dir, dock[i]->rot);
 }
 
@@ -2517,14 +2524,14 @@ void Vessel::SetDockIDS (PortSpec *dock, float freq, float range)
 
 bool Vessel::DelDock (PortSpec *dk)
 {
-	for (DWORD i = 0; i < ndock; i++)
+	for (int i = 0; i < ndock; i++)
 		if (dock[i] == dk) return DelDock (i);
 	return false;
 }
 
 // ==============================================================
 
-bool Vessel::DelDock (DWORD i)
+bool Vessel::DelDock (int i)
 {
 	if (i >= ndock) return false;
 	if (dock[i]->mate) Undock (i, 0, 0.0); // undock docked vessel before deleting the dock
@@ -2535,7 +2542,7 @@ bool Vessel::DelDock (DWORD i)
 	delete dock[i];
 	PortSpec **tmp;
 	if (ndock > 1) {
-		DWORD j, k;
+		int j, k;
 		tmp = new PortSpec*[ndock-1]; TRACENEW
 		for (j = k = 0; j < ndock; j++)
 			if (j != i) tmp[k++] = dock[j];
@@ -2551,7 +2558,7 @@ bool Vessel::DelDock (DWORD i)
 void Vessel::ClearDockDefinitions ()
 {
 	if (ndock) {
-		for (DWORD i = 0; i < ndock; i++) {
+		for (int i = 0; i < ndock; i++) {
 			if (dock[i]->mate) Undock (i, 0, 0.0);
 			if (dock[i]->ids) {
 				g_psys->BroadcastVessel (MSG_KILLNAVSENDER, dock[i]->ids);
@@ -2566,7 +2573,7 @@ void Vessel::ClearDockDefinitions ()
 
 // ==============================================================
 
-void Vessel::RegisterDocking (DWORD did, Vessel *mate, DWORD matedid)
+void Vessel::RegisterDocking (int did, Vessel *mate, int matedid)
 {
 	if (mate) {
 		dock[did]->mate = mate;
@@ -2580,7 +2587,7 @@ void Vessel::RegisterDocking (DWORD did, Vessel *mate, DWORD matedid)
 
 // ==============================================================
 
-void Vessel::UnregisterDocking (DWORD did)
+void Vessel::UnregisterDocking (int did)
 {
 	if (dock[did]->mate) {
 		dock[did]->mate = 0;
@@ -2592,7 +2599,7 @@ void Vessel::UnregisterDocking (DWORD did)
 
 // ==============================================================
 
-int Vessel::Dock (Vessel *target, DWORD mydid, DWORD tgtdid, DWORD mode)
+int Vessel::Dock (Vessel *target, int mydid, int tgtdid, int mode)
 {
 	if (dock[mydid]->mate) return 1;          // error: my dock already in use
 	if (target->dock[tgtdid]->mate) return 2; // error: target dock already in use
@@ -2631,10 +2638,10 @@ int Vessel::Dock (Vessel *target, DWORD mydid, DWORD tgtdid, DWORD mode)
 
 // ==============================================================
 
-bool Vessel::Undock (UINT did, const Vessel *exclude, double vsep)
+bool Vessel::Undock (unsigned int did, const Vessel *exclude, double vsep)
 {
 	bool undocked = false;
-	DWORD n, n0, n1;
+	int n, n0, n1;
 
 	if (did == ALLDOCKS) n0 = 0, n1 = ndock;
 	else                 n1 = (n0 = did) + 1;
@@ -2653,7 +2660,7 @@ bool Vessel::Undock (UINT did, const Vessel *exclude, double vsep)
 		for (n = n0; n < n1; n++) {
 			if (len >= 255) break;
 			if (n > n0) cbuf[len++] = ' ';
-			_itoa (n, cbuf+len, 10);
+			sprintf(cbuf+len,"%d",n);
 			len += (n < 10 ? 1 : n < 100 ? 2 : 3);
 		}
 		FRecorder_SaveEvent ("UNDOCK", cbuf);
@@ -2669,26 +2676,26 @@ struct UndockSpec {
 	double vsep;
 } undockspec;
 
-bool Vessel::ClbkSelect_Undock (Select *menu, int item, char *str, void *data)
+bool Vessel::ClbkSelect_Undock (Select *menu, int item, const char *str, void *data)
 {
 	UndockSpec *us = (UndockSpec*)data;
-	DWORD i;
+	int i;
 	char cbuf[16] = "Dock ";
 	for (i = 0; i < us->vessel->ndock; i++) {
-		_itoa (i+1, cbuf+5, 10);
+		sprintf(cbuf+5, "%d", i+1);
 		menu->Append (cbuf, us->vessel->dock[i]->mate ? 0 : ITEM_NOHILIGHT);
 	}
 	return true;
 }
 
-bool Vessel::ClbkEnter_Undock (Select *menu, int item, char *str, void *data)
+bool Vessel::ClbkEnter_Undock (Select *menu, int item, const char *str, void *data)
 {
 	return ClbkName_Undock (0, str+5, data);
 }
 
-bool Vessel::ClbkName_Undock (InputBox*, char *str, void *data)
+bool Vessel::ClbkName_Undock (InputBox*, const char *str, void *data)
 {
-	UINT did;
+	unsigned int did;
 	UndockSpec *us = (UndockSpec*)data;
 	if (sscanf (str, "%d", &did) && did >= 1 && did <= us->vessel->ndock)
 		return us->vessel->Undock (did-1, us->exclude, us->vsep);
@@ -2698,7 +2705,7 @@ bool Vessel::ClbkName_Undock (InputBox*, char *str, void *data)
 
 void Vessel::UndockInteractive (const Vessel *exclude, double vsep)
 {
-	UINT did = 0;
+	unsigned int did = 0;
 	undockspec.vessel = this;
 	undockspec.exclude = exclude;
 	undockspec.vsep = vsep;
@@ -2706,18 +2713,20 @@ void Vessel::UndockInteractive (const Vessel *exclude, double vsep)
 		Undock (0, exclude, vsep);
 	} else if (ndock) {
 		if (ndock <= 20) {
-			g_select->Open ("Select dock to disengage", ClbkSelect_Undock, ClbkEnter_Undock, (void*)&undockspec);
+			Select *select = (Select *)g_pOrbiter->m_pGUIManager->GetCtrl<Select>();
+			select->Open ("Select dock to disengage", ClbkSelect_Undock, ClbkEnter_Undock, (void*)&undockspec);
 		} else {
 			char cbuf[128] = "Select dock to disengage ";
 			sprintf (cbuf+25, "(1-%d)", ndock);
-			g_input->Open (cbuf, 0, 20, ClbkName_Undock, (void*)&undockspec);
+			InputBox *input = (InputBox *)g_pOrbiter->m_pGUIManager->GetCtrl<InputBox>();
+			input->Open (cbuf, 0, 20, ClbkName_Undock, (void*)&undockspec);
 		}
 	}
 }
 
 // ==============================================================
 
-void Vessel::RelDockingPos (const Vessel *target, UINT mydid, UINT tgtdid, Vector &P, Matrix &R)
+void Vessel::RelDockingPos (const Vessel *target, unsigned int mydid, unsigned int tgtdid, Vector &P, Matrix &R)
 {
 	// Calculate the relative position 'P' and orientation 'R' of 'target'
 	// in my reference frame, if we are docked between 'mydid' and 'tgtdid'
@@ -2845,13 +2854,13 @@ void Vessel::ClearAttachments ()
 {
 	if (attach) DetachFromParent();
 	if (npattach) {
-		for (DWORD i = 0; i < npattach; i++)
+		for (int i = 0; i < npattach; i++)
 			delete pattach[i];
 		delete []pattach;
 		npattach = 0;
 	}
 	if (ncattach) {
-		for (DWORD i = 0; i < ncattach; i++) {
+		for (int i = 0; i < ncattach; i++) {
 			if (cattach[i]->mate) DetachChild (cattach[i]);
 			delete cattach[i];
 		}
@@ -2894,8 +2903,8 @@ bool Vessel::AttachChild (Vessel *child, AttachmentSpec *as, AttachmentSpec *asc
 	as->mate = child;
 	as->mate_attach = asc;
 	if (bFRrecord) {
-		DWORD pidx = GetAttachmentIndex (as);
-		DWORD cidx = child->GetAttachmentIndex (asc);
+		int pidx = GetAttachmentIndex (as);
+		int cidx = child->GetAttachmentIndex (asc);
 		char cbuf[256];
 		sprintf (cbuf, "%s %d %d", child->Name(), pidx, cidx);
 		if (allow_loose) strcat (cbuf, " LOOSE");
@@ -2920,7 +2929,7 @@ bool Vessel::DetachChild (AttachmentSpec *asp, double v)
 	if (!asp->mate->DetachFromParent (v)) return false;
 	asp->mate = 0;
 	if (bFRrecord) {
-		DWORD pidx = GetAttachmentIndex (asp);
+		int pidx = GetAttachmentIndex (asp);
 		char cbuf[256];
 		sprintf (cbuf, "%d, %0.3f", pidx, v);
 		FRecorder_SaveEvent ("DETACH", cbuf);
@@ -3014,7 +3023,7 @@ void Vessel::InitAttachmentToParent (AttachmentSpec *asc, bool allow_loose)
 
 // ==============================================================
 
-AttachmentSpec *Vessel::GetAttachmentFromIndex (bool toparent, DWORD i)
+AttachmentSpec *Vessel::GetAttachmentFromIndex (bool toparent, int i)
 {
 	if (toparent) return (i < npattach ? pattach[i] : 0);
 	else          return (i < ncattach ? cattach[i] : 0);
@@ -3022,23 +3031,23 @@ AttachmentSpec *Vessel::GetAttachmentFromIndex (bool toparent, DWORD i)
 
 // ==============================================================
 
-DWORD Vessel::GetAttachmentIndex (AttachmentSpec *as) const
+int Vessel::GetAttachmentIndex (AttachmentSpec *as) const
 {
 	if (as->toparent) {
-		for (DWORD i = 0; i < npattach; i++)
+		for (int i = 0; i < npattach; i++)
 			if (as == pattach[i]) return i;
 	} else {
-		for (DWORD i = 0; i < ncattach; i++)
+		for (int i = 0; i < ncattach; i++)
 			if (as == cattach[i]) return i;
 	}
-	return (DWORD)-1;
+	return (int)-1;
 }
 
 // ==============================================================
 
 void Vessel::ShiftAttachments (const Vector &ofs)
 {
-	DWORD i;
+	int i;
 	for (i = 0; i < npattach; i++)
 		SetAttachmentParams (pattach[i], pattach[i]->ref+ofs, pattach[i]->dir, pattach[i]->rot);
 	for (i = 0; i < ncattach; i++)
@@ -3060,7 +3069,7 @@ void Vessel::AddBeacon (BEACONLIGHTSPEC *bs)
 
 bool Vessel::DelBeacon (BEACONLIGHTSPEC *bs)
 {
-	DWORD i, j, k;
+	int i, j, k;
 	for (i = 0; i < nbeacon; i++) {
 		if (beacon[i] == bs) {
 			BEACONLIGHTSPEC **tmp = 0;
@@ -3087,14 +3096,14 @@ void Vessel::ClearBeacons ()
 	}
 }
 
-const BEACONLIGHTSPEC *Vessel::GetBeacon (DWORD idx) const
+const BEACONLIGHTSPEC *Vessel::GetBeacon (int idx) const
 {
 	return (idx < nbeacon ? beacon[idx] : NULL);
 }
 
-UINT Vessel::MakeFreeMeshEntry (UINT idx)
+unsigned int Vessel::MakeFreeMeshEntry (unsigned int idx)
 {
-	if (idx == UINT(-1)) // search for an unused entry in the existing list
+	if (idx == (unsigned int)(-1)) // search for an unused entry in the existing list
 		for (idx = 0; idx < nmesh; idx++)
 			if (!meshlist[idx]) break;
 
@@ -3105,7 +3114,7 @@ UINT Vessel::MakeFreeMeshEntry (UINT idx)
 			delete []meshlist;
 		}
 		meshlist = tmp;
-		for (UINT i = nmesh; i <= idx; i++) meshlist[i] = 0;
+		for (unsigned int i = nmesh; i <= idx; i++) meshlist[i] = 0;
 		nmesh = idx+1;
 	}
 
@@ -3117,7 +3126,7 @@ void Vessel::ScanMeshCaps ()
 {
 	extpassmesh = false;
 
-	for (UINT i = 0; i < nmesh; i++) {
+	for (unsigned int i = 0; i < nmesh; i++) {
 		if (!meshlist[i]) continue;
 		if (meshlist[i]->vismode & MESHVIS_EXTPASS) {
 			extpassmesh = true;
@@ -3126,14 +3135,14 @@ void Vessel::ScanMeshCaps ()
 	}
 }
 
-UINT Vessel::AddMesh (const char *mname, const VECTOR3 *ofs)
+unsigned int Vessel::AddMesh (const char *mname, const VECTOR3 *ofs)
 {
-	return InsertMesh (mname, (UINT)-1, ofs);
+	return InsertMesh (mname, (unsigned int)-1, ofs);
 }
 
-UINT Vessel::InsertMesh (const char *mname, UINT idx, const VECTOR3 *ofs)
+unsigned int Vessel::InsertMesh (const char *mname, unsigned int idx, const VECTOR3 *ofs)
 {
-	UINT i;
+	unsigned int i;
 	idx = MakeFreeMeshEntry (idx);
 
 	strcpy (meshlist[idx]->meshname, mname);
@@ -3142,26 +3151,28 @@ UINT Vessel::InsertMesh (const char *mname, UINT idx, const VECTOR3 *ofs)
 
 	meshlist[idx]->hMesh = 0; // no preloaded mesh
 	meshlist[idx]->vismode = MESHVIS_EXTERNAL; // external view only by default
-	meshlist[idx]->crc = 0;
+	meshlist[idx]->hash = 0;
 	for (i = 0; i < strlen(mname); i++)
-		*((BYTE*)&meshlist[idx]->crc + (i%4)) += (BYTE)mname[i];
-	mesh_crc += meshlist[idx]->crc; // encode mesh name
+		*((uint8_t*)&meshlist[idx]->hash + (i%4)) += (uint8_t)mname[i];
+	mesh_hash += meshlist[idx]->hash; // encode mesh name
 	for (i = 0; i < sizeof(ofs); i++)
-		*((BYTE*)&mesh_crc + (i%4)) += *((BYTE*)&ofs+i); // encode offset
+		*((uint8_t*)&mesh_hash + (i%4)) += *((uint8_t*)&ofs+i); // encode offset
 	ScanMeshCaps();
-	BroadcastVisMsg (EVENT_VESSEL_INSMESH, idx); // notify visuals
+	visevent_data evt;
+	evt.meshidx = idx;
+	BroadcastVisMsg (EVENT_VESSEL_INSMESH, evt); // notify visuals
 
 	return idx;
 }
 
-UINT Vessel::AddMesh (MESHHANDLE hMesh, const VECTOR3 *ofs)
+unsigned int Vessel::AddMesh (MESHHANDLE hMesh, const VECTOR3 *ofs)
 {
-	return InsertMesh (hMesh, (UINT)-1, ofs);
+	return InsertMesh (hMesh, (unsigned int)-1, ofs);
 }
 
-UINT Vessel::InsertMesh (MESHHANDLE hMesh, UINT idx, const VECTOR3 *ofs)
+unsigned int Vessel::InsertMesh (MESHHANDLE hMesh, unsigned int idx, const VECTOR3 *ofs)
 {
-	UINT i;
+	unsigned int i;
 	idx = MakeFreeMeshEntry (idx);
 
 	meshlist[idx]->meshname[0] = '\0';
@@ -3170,22 +3181,26 @@ UINT Vessel::InsertMesh (MESHHANDLE hMesh, UINT idx, const VECTOR3 *ofs)
 
 	meshlist[idx]->hMesh = hMesh; // pointer to preloaded mesh
 	meshlist[idx]->vismode = MESHVIS_EXTERNAL; // external view only by default
-	meshlist[idx]->crc = (DWORD_PTR)hMesh;
-	mesh_crc += meshlist[idx]->crc; // encode mesh pointer
+	meshlist[idx]->hash = ((uint64_t)hMesh)^((uint64_t)hMesh>>32);
+	mesh_hash += meshlist[idx]->hash; // encode mesh pointer
 	for (i = 0; i < sizeof(ofs); i++)
-		*((BYTE*)&mesh_crc + (i%4)) += *((BYTE*)&ofs+i); // encode offset
+		*((uint8_t*)&mesh_hash + (i%4)) += *((uint8_t*)&ofs+i); // encode offset
 	ScanMeshCaps();
-	BroadcastVisMsg (EVENT_VESSEL_INSMESH, idx); // notify visuals
+	visevent_data evt;
+	evt.meshidx = idx;
+	BroadcastVisMsg (EVENT_VESSEL_INSMESH, evt); // notify visuals
 
 	return idx;
 }
 
-bool Vessel::DelMesh (UINT idx, bool retain_anim)
+bool Vessel::DelMesh (unsigned int idx, bool retain_anim)
 {
 	if (idx >= nmesh) return false; // mesh index out of range
 	if (!meshlist[idx]) return false; // mesh already deleted
 	
-	BroadcastVisMsg (EVENT_VESSEL_DELMESH, idx); // notify visuals
+	visevent_data evt;
+	evt.meshidx = idx;
+	BroadcastVisMsg (EVENT_VESSEL_DELMESH, evt); // notify visuals
 	//g_pOrbiter->VesselEvent (this, EVENT_VESSEL_DELMESH, (void*)idx);
 	delete meshlist[idx];
 	meshlist[idx] = 0;
@@ -3193,10 +3208,10 @@ bool Vessel::DelMesh (UINT idx, bool retain_anim)
 
 	// remove associated animation components
 	if (!retain_anim) {
-		UINT i, j;
+		unsigned int i, j;
 		for (i = 0; i < nanim; i++) {
 			ANIMATION &A = anim[i];
-			for (j = A.ncomp-1; j != (UINT)-1; j--) {
+			for (j = A.ncomp-1; j != (unsigned int)-1; j--) {
 				ANIMATIONCOMP *AC = A.comp[j];
 				if (AC->trans->mesh == idx)
 					DelAnimationComponent (i, AC);
@@ -3215,36 +3230,40 @@ void Vessel::ClearMeshes (bool retain_anim)
 
 	if (!retain_anim) ClearAnimations (true);
 
-	for (UINT i = 0; i < nmesh; i++)
+	for (unsigned int i = 0; i < nmesh; i++)
 		if (meshlist[i]) delete meshlist[i];
 	delete []meshlist;
 	nmesh = 0;
-	mesh_crc = 0;
+	mesh_hash = 0;
 	ScanMeshCaps();
-	BroadcastVisMsg (EVENT_VESSEL_DELMESH, (DWORD_PTR)((UINT)-1)); // notify visual
+	visevent_data evt;
+	evt.meshidx = (unsigned int)-1;
+	BroadcastVisMsg (EVENT_VESSEL_DELMESH, evt); // notify visual
 }
 
-bool Vessel::ShiftMesh (UINT idx, const VECTOR3 &ofs)
+bool Vessel::ShiftMesh (unsigned int idx, const VECTOR3 &ofs)
 {
 	if (idx >= nmesh || !meshlist[idx]) return false;
 	meshlist[idx]->meshofs += ofs;
-	BroadcastVisMsg (EVENT_VESSEL_MESHOFS, idx);
+	visevent_data evt;
+	evt.meshidx = idx;
+	BroadcastVisMsg (EVENT_VESSEL_MESHOFS, evt);
 	return true;
 }
 
-const MESHHANDLE Vessel::GetMeshTemplate (UINT idx) const
+const MESHHANDLE Vessel::GetMeshTemplate (unsigned int idx) const
 {
 	if (idx < nmesh && meshlist[idx]) return meshlist[idx]->hMesh;
 	else return NULL;
 }
 
-const char *Vessel::GetMeshName (UINT idx) const
+const char *Vessel::GetMeshName (unsigned int idx) const
 {
 	if (idx < nmesh && meshlist[idx]->meshname[0]) return meshlist[idx]->meshname;
 	else return NULL;
 }
 
-Mesh *Vessel::CopyMeshFromTemplate (UINT idx)
+Mesh *Vessel::CopyMeshFromTemplate (unsigned int idx)
 {
 	if (idx >= nmesh) return 0; // out of range check
 	Mesh *mesh = new Mesh; TRACENEW
@@ -3261,31 +3280,36 @@ Mesh *Vessel::CopyMeshFromTemplate (UINT idx)
 	return mesh;
 }
 
-void Vessel::SetMeshVisibilityMode (UINT meshidx, WORD mode)
+void Vessel::SetMeshVisibilityMode (unsigned int meshidx, uint16_t mode)
 {
 	if (meshidx < nmesh) {
 		meshlist[meshidx]->vismode = mode;
 		if (mode & MESHVIS_EXTPASS) extpassmesh = true;
-		BroadcastVisMsg (EVENT_VESSEL_MESHVISMODE, meshidx);
+
+		visevent_data evt;
+		evt.meshidx = meshidx;
+		BroadcastVisMsg (EVENT_VESSEL_MESHVISMODE, evt);
 	}
 }
 
-int Vessel::MeshModified (MESHHANDLE hMesh, UINT grp, DWORD modflag)
+int Vessel::MeshModified (MESHHANDLE hMesh, unsigned int grp, int modflag)
 {
 	struct {
 		MESHHANDLE hMesh;
-		UINT grp;
-		DWORD modflag;
+		unsigned int grp;
+		int modflag;
 	} moddata = { hMesh, grp, modflag };
 
-	BroadcastVisMsg (EVENT_VESSEL_MODMESHGROUP, (DWORD_PTR)&grp); // notify visual
+	visevent_data evt;
+	evt.grp = grp;
+
+	BroadcastVisMsg (EVENT_VESSEL_MODMESHGROUP, evt); // notify visual
 	return 0;
 }
 
 void Vessel::InitLanded (Planet *planet, double lng, double lat, double dir, const Matrix *hrot, double cgelev, bool asComponent)
 {
 	dASSERT(!g_bStateUpdate, "Vessel::InitLanded must not be called during state update"); // not valid during update phase
-
 	Vector nml;
 	int i;
 
@@ -3294,9 +3318,9 @@ void Vessel::InitLanded (Planet *planet, double lng, double lat, double dir, con
 		double prad = planet->Size();
 		double mg = Ggrav * planet->Mass() * mass / (prad*prad); // approximate vessel weight
 		Vector tp_comp[3];
-		for (i = 0; i < 3; i++)
+		for (i = 0; i < 3; i++) {
 			tp_comp[i] = touchdown_vtx[i].pos + touchdown_nm*(touchdown_vtx[i].compression*mg);
-
+		}
 		// equilibrium touchdown plane normal
 		nml = crossp (tp_comp[0]-(tp_comp[1]+tp_comp[2])*0.5, tp_comp[2]-tp_comp[1]).unit();
 
@@ -3435,7 +3459,7 @@ void Vessel::InitOrbiting (const Vector &relr, const Vector &relv, const Vector 
 		double lng, lat, alt0;
 		cbody->LocalToEquatorial (tmul(cbody->GRot(), cpos), lng, lat, rad);
 		alt0 = rad-cbody->Size();
-		int reslvl = (int)(32.0-log(max(alt0,100))*LOG2);
+		int reslvl = (int)(32.0-log(std::max(alt0,100.0))*LOG2);
 		elev = emgr->Elevation (lat, lng, reslvl, &etile);
 	} else {
 		rad = cpos.length();
@@ -3460,13 +3484,13 @@ void Vessel::SetProxyplanet (Planet *pp)
 {
 	VesselBase::SetProxyplanet (pp);
 	landtgt = 0;
-	for (DWORD i = 0; i < nnav; i++) nav[i].dbidx = -1;
+	for (int i = 0; i < nnav; i++) nav[i].dbidx = -1;
 }
 
 void Vessel::UpdateMass ()
 {
 	pfmass = fmass, fmass = 0.0;
-	for (DWORD i = 0; i < ntank; i++) fmass += tank[i]->mass;
+	for (int i = 0; i < ntank; i++) fmass += tank[i]->mass;
 	mass = emass + fmass;
 }
 
@@ -3475,7 +3499,7 @@ bool Vessel::SetNavMode (int mode, bool fromstream)
 	if (bFRplayback && !fromstream) return false;
 	// ignore manual SetNavMode during playback
 
-	DWORD bitflag = 1 << (mode-1);
+	int bitflag = 1 << (mode-1);
 	int i;
 	switch (mode) {
 	case 0: // clear all modes
@@ -3513,7 +3537,7 @@ bool Vessel::ClrNavMode (int mode, bool record, bool fromstream)
 	if (bFRplayback && !fromstream) return false;
 	// ignore manual ClrNavMode during playback
 
-	DWORD bitflag = 1 << (mode-1);
+	int bitflag = 1 << (mode-1);
 	if (navmode & bitflag) {
 		navmode ^= bitflag;
 		if (record) FRecorder_SaveEventInt ("NAVMODECLR", mode);
@@ -3531,13 +3555,13 @@ bool Vessel::TglNavMode (int mode)
 
 bool Vessel::NavModeActive (int mode)
 {
-	DWORD bitflag = 1 << (mode-1);
+	int bitflag = 1 << (mode-1);
 	return (navmode & bitflag) != 0;
 }
 
 void Vessel::SetHoverHoldAltitude (double alt, bool terrainalt)
 {
-	DWORD bitflag = 1 << (NAVMODE_HOLDALT-1);
+	int bitflag = 1 << (NAVMODE_HOLDALT-1);
 	if (!(navmode & bitflag)) {
 		navmode |= bitflag;
 		ModuleSignalNavmode (NAVMODE_HOLDALT, true);
@@ -3570,14 +3594,14 @@ int Vessel::ConsumeDirectKey (char *buffer)
 	}
 }
 
-int Vessel::ConsumeBufferedKey (DWORD key, bool down, char *kstate)
+int Vessel::ConsumeBufferedKey (int key, bool down, char *kstate)
 {
 	int res;
 	const Keymap &keymap = g_pOrbiter->keymap;
 
 	// first offer the key to the module
 	if (modIntf.v->Version() >= 1)
-		if (res = ((VESSEL2*)modIntf.v)->clbkConsumeBufferedKey (key, down, kstate)) return res;
+		if ((res = ((VESSEL2*)modIntf.v)->clbkConsumeBufferedKey (key, down, kstate))) return res;
 	// If module processes the key, we skip default handler
 
 	if (!down) return 0; // at the moment, only process keydown events
@@ -3607,7 +3631,7 @@ int Vessel::ConsumeBufferedKey (DWORD key, bool down, char *kstate)
 	if (KEYMOD_CONTROL (kstate)) {  // CTRL-Key combinations
 
 		switch (key) {
-		case DIK_C:        // landing/takeoff clearance request
+		case OAPI_KEY_C:        // landing/takeoff clearance request
 			IssueClearanceRequest ();
 			return 1;
 		}
@@ -3616,7 +3640,7 @@ int Vessel::ConsumeBufferedKey (DWORD key, bool down, char *kstate)
 	} else if (KEYMOD_ALT (kstate)) {   // ALT-Key combinations
 
 		switch (key) {
-		case DIK_DIVIDE:   // connect/disconnect user input to aerodynamic control surfaces
+		case OAPI_KEY_DIVIDE:   // connect/disconnect user input to aerodynamic control surfaces
 			ToggleADCtrlMode ();
 			return 1;
 		}
@@ -3699,7 +3723,7 @@ void Vessel::UpdateBodyForces ()
 
 void Vessel::UpdateThrustForces ()
 {
-	UINT j;
+	unsigned int j;
 	Vector F;
 
 	// Navigation computer sequences
@@ -3845,7 +3869,7 @@ void Vessel::UpdateThrustForces ()
 	bThrustEngaged = false;
 	Thrust.Set (0,0,0);
 	for (j = 0; j < nthruster; j++) {
-		if (thruster[j]->level = max (0.0, min (1.0, thruster[j]->level_permanent + thruster[j]->level_override))) {
+		if ((thruster[j]->level = max (0.0, min (1.0, thruster[j]->level_permanent + thruster[j]->level_override)))) {
 			if ((ts = thruster[j]->tank) && ts->mass) {        // fuel available?
 				th = thruster[j]->maxth0 * thruster[j]->level; // vacuum thrust
 				if (burnfuel) {                                // consume fuel
@@ -3935,7 +3959,7 @@ void Vessel::UpdateAerodynamicForces ()
 	if (!nairfoil) { UpdateAerodynamicForces_OLD (); return; }
 	// use old atmospheric flight model;
 
-	DWORD i;
+	int i;
 
 	if (!sp.airvel_ship.z) return;
 	// in the pathological case where there is no longitudinal airflow we stop
@@ -4074,7 +4098,7 @@ void Vessel::UpdateAerodynamicForces_OLD ()
 	if (LiftCoeff && (Cl = LiftCoeff (aoa))) {
 		Lift = Cl * sp.dynp * cs.y;    // lift magnitude
 		Vector L (0, sp.airvel_ship.z, -sp.airvel_ship.y); // lift direction
-		double lnorm = _hypot (sp.airvel_ship.z, sp.airvel_ship.y);
+		double lnorm = std::hypot (sp.airvel_ship.z, sp.airvel_ship.y);
 		if (lnorm) {
 			L *= Lift / lnorm;
 			Flin_add += L;
@@ -4110,7 +4134,7 @@ bool Vessel::AddSurfaceForces (Vector *F, Vector *M, const StateVectors *s, doub
 	static double *fn = new double[3];
 	static double *flng = new double[3];
 	static double *flat = new double[3];
-	static DWORD ntdy = 3;
+	static int ntdy = 3;
 
 	static StateVectors ls; // local state
 	StateVectors ps = proxybody->InterpolateState (tfrac); // intermediate planet state; should probably be passed in as function argument
@@ -4158,7 +4182,7 @@ bool Vessel::AddSurfaceForces (Vector *F, Vector *M, const StateVectors *s, doub
 
 	ElevationManager *emgr = ((Planet*)proxybody)->ElevMgr();
 	int reslvl;
-	if (emgr) reslvl = (int)(32.0-log(max(alt,100))*LOG2);
+	if (emgr) reslvl = (int)(32.0-log(std::max(alt,100.0))*LOG2);
 
 	Vector shift = tmul(ps.R, s->pos - ps.pos);
 	for (i = 0; i < ntouchdown_vtx; i++) {
@@ -4207,7 +4231,7 @@ bool Vessel::AddSurfaceForces (Vector *F, Vector *M, const StateVectors *s, doub
 //#define NEWCONTACTMODEL
 #ifdef NEWCONTACTMODEL // new version - experimental!
 		if (tdymin < 0.0) {
-			DWORD ntouch = 0;
+			int ntouch = 0;
 			double mueff_lng, mueff_lat, gv_hor;
 			double dt1 = max(dt, 1.0); // time to stop in case of Haftreibung
 			double massdt1 = mass/dt1;
@@ -4276,7 +4300,7 @@ bool Vessel::AddSurfaceForces (Vector *F, Vector *M, const StateVectors *s, doub
 
 #else
 
-		DWORD ntouch = 0;
+		int ntouch = 0;
 		for (i = 0; i < ntouchdown_vtx; i++) {
 			if (tdy[i] < 0.0) { // ground contact on point i!
 				tdy[i] = max(tdy[i], -1.0); // DEBUG
@@ -4787,7 +4811,7 @@ void Vessel::UpdatePassive ()
 
 void Vessel::UpdateAttachments ()
 {
-	for (DWORD j = 0; j < ncattach; j++)
+	for (int j = 0; j < ncattach; j++)
 		if (cattach[j]->mate) cattach[j]->mate->UpdatePassive ();
 }
 
@@ -4798,7 +4822,7 @@ void Vessel::PostUpdate ()
 
 	VesselBase::PostUpdate ();
 
-	DWORD j, k;
+	int j, k;
 
 	if (bFRplayback)
 		FRecorder_PlayEvent();
@@ -4882,7 +4906,7 @@ bool Vessel::CheckSurfaceContact () const
 	Matrix T (sp.L2H);
 	T.tpostmul (proxybody->s0->R);
 	T.postmul (s0->R);
-	for (DWORD i = 0; i < ntouchdown_vtx; i++) {
+	for (int i = 0; i < ntouchdown_vtx; i++) {
 		Vector p (mul (T, touchdown_vtx[i].pos));
 		if (p.y + alt < 0.0) return true;
 	}
@@ -4963,7 +4987,7 @@ void Vessel::ModuleSignalRCSmode (int mode)
 		((VESSEL2*)modIntf.v)->clbkRCSMode (mode);
 }
 
-void Vessel::ModuleSignalADCtrlmode (DWORD mode)
+void Vessel::ModuleSignalADCtrlmode (int mode)
 {
 	if (modIntf.v->Version() >= 1)
 		((VESSEL2*)modIntf.v)->clbkADCtrlMode (mode);
@@ -4978,17 +5002,8 @@ void Vessel::ModuleSignalNavmode (int mode, bool active)
 void Vessel::DrawHUD (HUD *hud, oapi::Sketchpad *skp)
 {
 	if (modIntf.v->Version() >= 1) {
-		bool drawn = false;
 		if (modIntf.v->Version() >= 2) {
-			drawn = ((VESSEL3*)modIntf.v)->clbkDrawHUD (hud->Mode(), hud->PaintSpec(), skp);
-		}
-		if (!drawn) {
-			HDC hDC = skp->GetDC();
-			if (hDC) {
-				hudskp = skp; // need to store the sketchpad instance for the callback
-				((VESSEL2*)modIntf.v)->clbkDrawHUD (hud->Mode(), hud->PaintSpec(), hDC);
-				hudskp = NULL;
-			}
+			((VESSEL3*)modIntf.v)->clbkDrawHUD (hud->Mode(), hud->PaintSpec(), skp);
 		}
 	} else
 		hud->DrawDefault (skp);
@@ -5033,15 +5048,15 @@ void Vessel::UpdateProxies ()
 	}
 }
 
-void Vessel::UpdateReceiverStatus (DWORD idx)
+void Vessel::UpdateReceiverStatus (int idx)
 {
 	if (!proxyplanet) return;
 
 	int i, j;
-	DWORD m, n, n0, n1, nn, r0, r1, rm, step;
+	int m, n, n0, n1, nn, r0, r1, rm, step;
 	double dist2, sig;
 
-	static DWORD nscan = 1;
+	static int nscan = 1;
 	static double *navsig = new double[nscan];
 	if (nnav > nscan) {
 		delete []navsig;
@@ -5056,7 +5071,7 @@ void Vessel::UpdateReceiverStatus (DWORD idx)
 	}
 
 	// scan for NAV radio signals
-	if (nn = proxyplanet->nNav()) { // surface-based transmitters
+	if ((nn = proxyplanet->nNav())) { // surface-based transmitters
 		Nav **nlist = proxyplanet->NavMgr().GetNavlist();
 		for (n = n0; n < n1; n++) {
 			step = nav[n].step;
@@ -5223,7 +5238,7 @@ void Vessel::IssueClearanceRequest () {
 
 void Vessel::Refuel ()
 {
-	for (DWORD i = 0; i < ntank; i++)
+	for (int i = 0; i < ntank; i++)
 		tank[i]->mass = tank[i]->maxmass;
 	UpdateMass();
 }
@@ -5258,13 +5273,12 @@ int Vessel::RegisterMFDMode (const MFDMODESPECEX *spec)
 	mfdmode[nmfdmode].spec = new MFDMODESPECEX;
 	mfdmode[nmfdmode].oldspec = new MFDMODESPEC;
 	memcpy (mfdmode[nmfdmode].spec, spec, sizeof(MFDMODESPECEX));
-	mfdmode[nmfdmode].spec->name = new char[strlen(spec->name)+1];
-	strcpy (mfdmode[nmfdmode].spec->name, spec->name);
+	mfdmode[nmfdmode].spec->name = strdup(spec->name);
 	mfdmode[nmfdmode].id = nmfdmode+1000;
 
 	// check for duplicate key codes and disable if required
 	if (spec->key) {
-		DWORD i, k;
+		int i, k;
 		for (i = 0; i < nmfdmode; i++)
 			if (mfdmode[i].spec->key == spec->key) break;
 		if (i < nmfdmode) { // key already assigned
@@ -5289,7 +5303,7 @@ int Vessel::RegisterMFDMode (const MFDMODESPECEX *spec)
 
 bool Vessel::UnregisterMFDMode (int id)
 {
-	DWORD i, j, k;
+	int i, j, k;
 	for (i = 0; i < nmfdmode; i++)
 		if (mfdmode[i].id == id) break;
 	if (i == nmfdmode) return false;
@@ -5359,7 +5373,7 @@ int Vessel::ToggleAttMode (void)
 	return attmode;
 }
 
-DWORD Vessel::ToggleADCtrlMode ()
+int Vessel::ToggleADCtrlMode ()
 {
 	if (!bFRplayback) {
 		ctrlsurfmode = (ctrlsurfmode ? 0 : 7);
@@ -5368,7 +5382,7 @@ DWORD Vessel::ToggleADCtrlMode ()
 	return ctrlsurfmode;
 }
 
-void Vessel::SetADCtrlMode (DWORD mode, bool fromstream)
+void Vessel::SetADCtrlMode (int mode, bool fromstream)
 {
 	if (bFRplayback && !fromstream) return;
 	// ignore manual SetAttMode during playback
@@ -5443,7 +5457,7 @@ bool Vessel::LoadPanel2D (int which, Panel2D *panel) const
 	if (modIntf.v->Version() >= 2) {
 		oapi::GraphicsClient *gc = g_pOrbiter->GetGraphicsClient();
 		if (gc) {
-			DWORD viewW, viewH;
+			int viewW, viewH;
 			gc->clbkGetViewportSize (&viewW, &viewH);
 			return ((VESSEL3*)modIntf.v)->clbkLoadPanel2D (which, (PANELHANDLE)panel, viewW, viewH);
 		}
@@ -5489,8 +5503,10 @@ bool Vessel::VCRedrawEvent (int id, int event, SURFHANDLE surf) const
 
 bool Vessel::VCMouseEvent (int id, int event, Vector &p) const
 {
-	if (modIntf.v->Version() >= 1)
-		return ((VESSEL2*)modIntf.v)->clbkVCMouseEvent (id, event, _V(p.x,p.y,p.z));
+	if (modIntf.v->Version() >= 1) {
+		VECTOR3 tmp = _V(p.x,p.y,p.z);
+		return ((VESSEL2*)modIntf.v)->clbkVCMouseEvent (id, event, tmp);
+	}
 	else
 		return false;
 }
@@ -5523,7 +5539,7 @@ void Vessel::LeanCamera (int dir, bool smooth)
 	}
 }
 
-UINT Vessel::AddAnimSeq (double defmeshstate)
+unsigned int Vessel::AddAnimSeq (double defmeshstate)
 {
 	ANIMSEQ *tmp = new ANIMSEQ[nanimseq+1]; TRACENEW
 	if (nanimseq) {
@@ -5537,11 +5553,11 @@ UINT Vessel::AddAnimSeq (double defmeshstate)
 	return nanimseq++;
 }
 
-bool Vessel::AddAnimSeqComp (UINT seq, ANIMCOMP *comp)
+bool Vessel::AddAnimSeqComp (unsigned int seq, ANIMCOMP *comp)
 {
 	if (seq >= nanimseq) return false;
 	ANIMSEQ *s = animseq+seq;
-	UINT ncomp = s->ncomp;
+	unsigned int ncomp = s->ncomp;
 	ANIMCOMP **tmp = new ANIMCOMP*[ncomp+1]; TRACENEW
 	if (ncomp) {
 		memcpy (tmp, s->comp, ncomp*sizeof(ANIMCOMP*));
@@ -5553,7 +5569,7 @@ bool Vessel::AddAnimSeqComp (UINT seq, ANIMCOMP *comp)
 	return true;
 }
 
-bool Vessel::SetAnimState (UINT seq, double state)
+bool Vessel::SetAnimState (unsigned int seq, double state)
 {
 	if (seq >= nanimseq) return false;
 	animseq[seq].state = state;
@@ -5562,7 +5578,7 @@ bool Vessel::SetAnimState (UINT seq, double state)
 
 void Vessel::ClearAnimSeqs (void)
 {
-	UINT i;
+	unsigned int i;
 	for (i = 0; i < nanimseq; i++)
 		if (animseq[i].ncomp) delete []animseq[i].comp;
 	if (nanimseq)
@@ -5570,7 +5586,7 @@ void Vessel::ClearAnimSeqs (void)
 	nanimseq = 0;
 }
 
-UINT Vessel::CreateAnimation (double initial_state)
+unsigned int Vessel::CreateAnimation (double initial_state)
 {
 	ANIMATION *tmp = new ANIMATION[nanim+1]; TRACENEW
 	if (nanim) {
@@ -5581,20 +5597,23 @@ UINT Vessel::CreateAnimation (double initial_state)
 	anim[nanim].defstate = initial_state;
 	anim[nanim].state    = initial_state;
 	anim[nanim].ncomp    = 0;
-	BroadcastVisMsg (EVENT_VESSEL_NEWANIM, nanim);
+
+	visevent_data evt;
+	evt.animidx = nanim;
+	BroadcastVisMsg (EVENT_VESSEL_NEWANIM, evt);
 	return nanim++;
 }
 
-ANIMATIONCOMP *Vessel::AddAnimationComponent (UINT an, double state0, double state1,
+ANIMATIONCOMP *Vessel::AddAnimationComponent (unsigned int an, double state0, double state1,
 	MGROUP_TRANSFORM *trans, ANIMATIONCOMP *parent)
 {
 	if (an >= nanim) return 0;
 	ANIMATION *A = anim+an;
-	UINT ncomp = A->ncomp;
+	unsigned int ncomp = A->ncomp;
 	ANIMATIONCOMP **tmp = new ANIMATIONCOMP*[ncomp+1]; TRACENEW
 	if (ncomp) {
 		memcpy (tmp, A->comp, ncomp*sizeof(ANIMATIONCOMP*));
-		delete A->comp;
+		delete[] A->comp;
 	}
 	A->comp = tmp;
 	ANIMATIONCOMP *ac = new ANIMATIONCOMP; TRACENEW
@@ -5619,11 +5638,11 @@ ANIMATIONCOMP *Vessel::AddAnimationComponent (UINT an, double state0, double sta
 	return ac;
 }
 
-bool Vessel::DelAnimationComponent (UINT an, ANIMATIONCOMP *comp)
+bool Vessel::DelAnimationComponent (unsigned int an, ANIMATIONCOMP *comp)
 {
 	if (an >= nanim) return false;
 	ANIMATION *A = anim+an;
-	UINT i, j, k, ncomp = A->ncomp;
+	unsigned int i, j, k, ncomp = A->ncomp;
 
 	for (i = 0; i < ncomp; i++)
 		if (A->comp[i] == comp) break;
@@ -5681,19 +5700,19 @@ bool Vessel::DelAnimationComponent (UINT an, ANIMATIONCOMP *comp)
 	return true;
 }
 
-bool Vessel::SetAnimation (UINT an, double state)
+bool Vessel::SetAnimation (unsigned int an, double state)
 {
 	if (an >= nanim) return false;
 	anim[an].state = state;
 	return true;
 }
 
-double Vessel::GetAnimation (UINT an)
+double Vessel::GetAnimation (unsigned int an)
 {
 	return (an < nanim ? anim[an].state : -1.0);
 }
 
-bool Vessel::DelAnimation (UINT an)
+bool Vessel::DelAnimation (unsigned int an)
 {
 	// This clears the animation, but doesn't actually deallocate it
 	// to avoid corrupting other animation ids.
@@ -5704,9 +5723,9 @@ bool Vessel::DelAnimation (UINT an)
 #ifdef UNDEF
 	if (A.ncomp) {
 		BroadcastVisMsg (EVENT_VESSEL_DELANIM, an); // reset animation on visuals
-		for (UINT j = 0; j < A.ncomp; j++) {
+		for (unsigned int j = 0; j < A.ncomp; j++) {
 			if (A.comp[j]->nchildren) {
-				for (UINT k = 0; k < A.comp[j]->nchildren; k++)
+				for (unsigned int k = 0; k < A.comp[j]->nchildren; k++)
 					delete A.comp[j]->children[k];
 				delete []A.comp[j]->children;
 			}
@@ -5723,13 +5742,15 @@ bool Vessel::DelAnimation (UINT an)
 
 void Vessel::ClearAnimations (bool reset)
 {
-	BroadcastVisMsg (EVENT_VESSEL_CLEARANIM, (UINT)reset); // clear animations on visuals
+	visevent_data evt;
+	evt.reset = reset;
+	BroadcastVisMsg (EVENT_VESSEL_CLEARANIM, evt); // clear animations on visuals
 
-	for (UINT i = 0; i < nanim; i++) {
+	for (unsigned int i = 0; i < nanim; i++) {
 		if (anim[i].ncomp) {
-			for (UINT j = 0; j < anim[i].ncomp; j++) {
+			for (unsigned int j = 0; j < anim[i].ncomp; j++) {
 				if (anim[i].comp[j]->nchildren) {
-					//for (UINT k = 0; k < anim[i].comp[j]->nchildren; k++)
+					//for (unsigned int k = 0; k < anim[i].comp[j]->nchildren; k++)
 					//	delete anim[i].comp[j]->children[k];
 					delete []anim[i].comp[j]->children;
 				}
@@ -5747,56 +5768,67 @@ bool Vessel::LoadModule (ifstream &classf)
 {
 	char cbuf[256];
 	bool found;
-	hMod = 0;
 	ClearModule();
 	modIntf.v = 0;
 	flightmodel = g_pOrbiter->Cfg()->CfgLogicPrm.FlightModelLevel;
-	if (found = GetItemString (classf, "Module", cbuf)) {
+	if (GetItemString (classf, "Module", cbuf)) {
 		found = RegisterModule (cbuf);
 		if (!found) {
-			DWORD code = GetLastError();
-			char errbuf[256];
-			sprintf(errbuf, "Could not load vessel module: %s (code %d)", cbuf, code);
+			char *code = dlerror();
+			char errbuf[512];
+			sprintf(errbuf, "Could not load vessel module: %s (code %s)", cbuf, code);
 			LOGOUT_ERR (errbuf);
 		}
 		if (modIntf.ovcInit)
 			modIntf.v = modIntf.ovcInit ((OBJHANDLE)this, flightmodel);
 	}
 	if (!modIntf.v) { // Problem: module didn't create a VESSEL instance!
+		printf("Problem: module didn't create a VESSEL instance!\n");
+		//exit(-1);
 		modIntf.v = new VESSEL ((OBJHANDLE)this, flightmodel); TRACENEW
 	}
 	return found;
 }
 
+#include <libgen.h>
 bool Vessel::RegisterModule (const char *dllname)
 {
+	printf("Vessel::RegisterModule %s\n", dllname);
 	char cbuf[256];
-	sprintf (cbuf, "Modules\\%s.dll", dllname);
-	hMod = LoadLibrary (cbuf);
-	if (!hMod)
+	char cbuf2[256];
+	strcpy(cbuf, dllname);
+	for(int i=0;i<strlen(cbuf);i++) if(cbuf[i]=='\\') cbuf[i]='/';
+	char *bn = basename(cbuf);
+	char *dn = dirname(cbuf);
+	printf("basename=%s\n",bn);
+	printf("dirname=%s\n",dn);
+
+
+	sprintf (cbuf2, "Modules/%s/lib%s.so", dn, bn);
+	if(!hMod.Load(cbuf2)) {
+		fprintf(stderr, "Vessel::RegisterModule failed\n");
+		exit(-1);
 		return false;
+	}
 
 	// retrieve module version
-	int (*fversion)() = (int(*)())GetProcAddress (hMod, "GetModuleVersion");
+	int (*fversion)() = (int(*)())hMod["GetModuleVersion"];
 	modIntf.version = (fversion ? fversion() : 0);
 
-	modIntf.ovcInit = (VESSEL_Init)GetProcAddress (hMod, "ovcInit");
-	modIntf.ovcExit = (VESSEL_Exit)GetProcAddress (hMod, "ovcExit");
+	modIntf.ovcInit = (VESSEL_Init)hMod["ovcInit"];
+	modIntf.ovcExit = (VESSEL_Exit)hMod["ovcExit"];
 	return true;
 }
 
 void Vessel::ClearModule ()
 {
-	if (hMod) {
-		FreeLibrary (hMod);
-		hMod = 0;
-	}
+	hMod.Unload();
 	memset (&modIntf, 0, sizeof (modIntf));
 }
 
 bool Vessel::SetStateEx (const void *status)
 {
-	switch (*(DWORD*)status) { // check interface version
+	switch (*(int*)status) { // check interface version
 	case 2:  // VESSELSTATUS2 (interface version 2)
 		SetState2 (status);
 		return true;
@@ -5807,7 +5839,7 @@ bool Vessel::SetStateEx (const void *status)
 
 bool Vessel::GetStateEx (void *status)
 {
-	switch (*(DWORD*)status) { // check interface version
+	switch (*(int*)status) { // check interface version
 	case 2:  // VESSELSTATUS2 (interface version 2)
 		GetState2 (status);
 		return true;
@@ -5830,7 +5862,6 @@ bool Vessel::Read (ifstream &scn)
 	bool res;
 	attmode = 1;
 	attach_status.pname = 0;
-
 	VESSELSTATUS2 vs;
 	memset (&vs, 0, sizeof(VESSELSTATUS2));
 	vs.version = 2;
@@ -5869,7 +5900,7 @@ bool Vessel::EditorModule (char *cbuf) const
 
 bool Vessel::ParseScenarioLineEx (char *line, void *status)
 {
-	switch (*(DWORD*)status) { // check interface version
+	switch (*(int*)status) { // check interface version
 	case 2:  // VESSELSTATUS2 (interface version 2)
 		ParseScenarioLine2 (line, status);
 		return true;
@@ -5894,7 +5925,6 @@ bool Vessel::ParseScenario (ifstream &scn, VESSELSTATUS &vs)
 bool Vessel::ParseScenarioEx (ifstream &scn, void *status)
 {
 	char cbuf[256], *pc;
-	
 	for (;;) {
 		if (!scn.getline (cbuf, 256)) break;
 		pc = trim_string (cbuf);
@@ -5920,7 +5950,7 @@ void Vessel::Write (ostream &scn) const
 
 void Vessel::WriteDefault (ostream &ofs) const
 {
-	DWORD i;
+	int i;
 	int pad;
 	bool needlabel;
 
@@ -5949,6 +5979,11 @@ void Vessel::WriteDefault (ostream &ofs) const
 				ofs << "  VROT " << setprecision(4) << DEG*s0->omega.x << ' ' << DEG*s0->omega.y << ' ' << DEG*s0->omega.z << endl;
 		}
 		break;
+	case FLIGHTSTATUS_TAXIING:
+	case FLIGHTSTATUS_DOCKED:
+	case FLIGHTSTATUS_CRASHED:
+	case FLIGHTSTATUS_UNDEFINED:
+		break;
 	}
 	if (attach)   // vessel is passive child of another vessel
 		ofs << "  ATTACHED " << GetAttachmentIndex (attach) << ':'
@@ -5963,7 +5998,7 @@ void Vessel::WriteDefault (ostream &ofs) const
 
 	for (i =  0, needlabel = true; i < ntank; i++) {
 		double lvl;
-		if (lvl = GetPropellantLevel (tank[i])) {
+		if ((lvl = GetPropellantLevel (tank[i])) != 0.0) {
 			if (needlabel) { ofs << "  PRPLEVEL"; needlabel = false; }
 			ofs << ' ' << i << ':' << setprecision(6) << lvl;
 		}
@@ -6153,12 +6188,12 @@ bool VESSEL::SetAttitudeMode (int mode) const
 	return vessel->SetAttMode (mode);
 }
 
-DWORD VESSEL::GetADCtrlMode () const
+int VESSEL::GetADCtrlMode () const
 {
 	return vessel->ctrlsurfmode;
 }
 
-void VESSEL::SetADCtrlMode (DWORD mode) const
+void VESSEL::SetADCtrlMode (int mode) const
 {
 	vessel->SetADCtrlMode (mode);
 }
@@ -6182,7 +6217,7 @@ int VESSEL::ToggleAttitudeMode () const
 	return vessel->ToggleAttMode();
 }
 
-double VESSEL::GetManualControlLevel (THGROUP_TYPE thgt, DWORD mode, DWORD device) const
+double VESSEL::GetManualControlLevel (THGROUP_TYPE thgt, int mode, int device) const
 {
 	static int revmode[3] = {0,2,1};
 
@@ -6296,9 +6331,9 @@ void VESSEL::GetStatusEx (void *status) const
 	vessel->GetStateEx (status);
 }
 
-DWORD VESSEL::GetFlightStatus () const
+int VESSEL::GetFlightStatus () const
 {
-	DWORD status = (vessel->fstatus == FLIGHTSTATUS_LANDED ? 0x1:0x0);
+	int status = (vessel->fstatus == FLIGHTSTATUS_LANDED ? 0x1:0x0);
 	if (vessel->supervessel) status |= 0x2;
 	return status;
 }
@@ -6845,6 +6880,7 @@ void VESSEL::SetEngineLevel (ENGINETYPE eng, double level) const
 	case ENGINE_HOVER:
 		vessel->SetThrusterGroupLevel (THGROUP_HOVER, level);
 		break;
+	case ENGINE_ATTITUDE: break;
 	}
 }
 
@@ -7128,12 +7164,12 @@ void VESSEL::GetDockParams (DOCKHANDLE dock, VECTOR3 &pos, VECTOR3 &dir, VECTOR3
 	rot.x = ps->rot.x, rot.y = ps->rot.y, rot.z = ps->rot.z;
 }
 
-UINT VESSEL::DockCount () const
+unsigned int VESSEL::DockCount () const
 {
 	return vessel->ndock;
 }
 
-DOCKHANDLE VESSEL::GetDockHandle (UINT n) const
+DOCKHANDLE VESSEL::GetDockHandle (unsigned int n) const
 {
 	return (DOCKHANDLE)(n < vessel->ndock ? vessel->GetDockParams(n) : 0);
 }
@@ -7143,18 +7179,18 @@ OBJHANDLE VESSEL::GetDockStatus (DOCKHANDLE dock) const
 	return (OBJHANDLE)((PortSpec*)dock)->mate;
 }
 
-UINT VESSEL::DockingStatus (UINT port) const
+unsigned int VESSEL::DockingStatus (unsigned int port) const
 {
 	if (port >= vessel->ndock) return 0;
 	return (vessel->GetDockParams(port)->mate ? 1 : 0);
 }
 
-int VESSEL::Dock (OBJHANDLE target, UINT n, UINT tgtn, UINT mode) const
+int VESSEL::Dock (OBJHANDLE target, unsigned int n, unsigned int tgtn, unsigned int mode) const
 {
 	return vessel->Dock ((Vessel*)target, n, tgtn, mode);
 }
 
-bool VESSEL::Undock (UINT n, const OBJHANDLE exclude) const
+bool VESSEL::Undock (unsigned int n, const OBJHANDLE exclude) const
 {
 	return vessel->Undock (n, (Vessel*)exclude);
 }
@@ -7212,17 +7248,17 @@ bool VESSEL::DetachChild (ATTACHMENTHANDLE attachment, double vel) const
 	return vessel->DetachChild ((AttachmentSpec*)attachment, vel);
 }
 
-DWORD VESSEL::AttachmentCount (bool toparent) const
+int VESSEL::AttachmentCount (bool toparent) const
 {
 	return (toparent ? vessel->npattach : vessel->ncattach);
 }
 
-DWORD VESSEL::GetAttachmentIndex (ATTACHMENTHANDLE attachment) const
+int VESSEL::GetAttachmentIndex (ATTACHMENTHANDLE attachment) const
 {
 	return vessel->GetAttachmentIndex ((AttachmentSpec*)attachment);
 }
 
-ATTACHMENTHANDLE VESSEL::GetAttachmentHandle (bool toparent, DWORD i) const
+ATTACHMENTHANDLE VESSEL::GetAttachmentHandle (bool toparent, int i) const
 {
 	if (toparent) {
 		return (i < vessel->npattach ? (ATTACHMENTHANDLE)vessel->pattach[i] : 0);
@@ -7246,7 +7282,7 @@ void VESSEL::ClearBeacons ()
 	vessel->ClearBeacons ();
 }
 
-const BEACONLIGHTSPEC *VESSEL::GetBeacon (DWORD idx) const
+const BEACONLIGHTSPEC *VESSEL::GetBeacon (int idx) const
 {
 	return vessel->GetBeacon (idx);
 }
@@ -7261,12 +7297,12 @@ LightEmitter *VESSEL::AddSpotLight (const VECTOR3 &pos, const VECTOR3 &dir, doub
 	return vessel->AddSpotLight (pos, dir, range, att0, att1, att2, umbra, penumbra, diffuse, specular, ambient);
 }
 
-DWORD VESSEL::LightEmitterCount () const
+int VESSEL::LightEmitterCount () const
 {
 	return vessel->LightEmitterCount();
 }
 
-const LightEmitter *VESSEL::GetLightEmitter (DWORD i) const
+const LightEmitter *VESSEL::GetLightEmitter (int i) const
 {
 	return (i < vessel->LightEmitterCount() ? vessel->GetLightEmitter(i) : NULL);
 }
@@ -7297,7 +7333,7 @@ void VESSEL::SetTouchdownPoints (const VECTOR3 &pt1, const VECTOR3 &pt2, const V
 	tdvtx[0].pos = pt1;
 	tdvtx[1].pos = pt2;
 	tdvtx[2].pos = pt3;
-	for (DWORD i = 0; i < 3; i++) {
+	for (int i = 0; i < 3; i++) {
 		tdvtx[i].stiffness = (vessel->emass == 1e3 ? 1e6 : vessel->emass*20.0);
 		tdvtx[i].damping   = tdvtx[i].stiffness*0.1;
 		tdvtx[i].mu        = vessel->mu;
@@ -7306,7 +7342,7 @@ void VESSEL::SetTouchdownPoints (const VECTOR3 &pt1, const VECTOR3 &pt2, const V
 	vessel->SetTouchdownPoints (tdvtx, 3);
 }
 
-void VESSEL::SetTouchdownPoints (const TOUCHDOWNVTX *tdvtx, DWORD ntdvtx) const
+void VESSEL::SetTouchdownPoints (const TOUCHDOWNVTX *tdvtx, int ntdvtx) const
 {
 	dASSERT (ntdvtx >= 3, "VESSEL::SetTouchdownPoints: at least 3 points must be provided");
 	vessel->SetTouchdownPoints (tdvtx, ntdvtx);
@@ -7319,7 +7355,7 @@ void VESSEL::GetTouchdownPoints (VECTOR3 &pt1, VECTOR3 &pt2, VECTOR3 &pt3) const
 	CopyVector (vessel->touchdown_vtx[2].pos, pt3);
 }
 
-bool VESSEL::GetTouchdownPoint (TOUCHDOWNVTX &tdvtx, DWORD idx) const
+bool VESSEL::GetTouchdownPoint (TOUCHDOWNVTX &tdvtx, int idx) const
 {
 	if (idx < vessel->ntouchdown_vtx) {
 		memcpy(&tdvtx, vessel->touchdown_vtx+idx, sizeof(TOUCHDOWNVTX));
@@ -7327,7 +7363,7 @@ bool VESSEL::GetTouchdownPoint (TOUCHDOWNVTX &tdvtx, DWORD idx) const
 	} else return false;
 }
 
-DWORD VESSEL::GetTouchdownPointCount () const
+int VESSEL::GetTouchdownPointCount () const
 {
 	return vessel->ntouchdown_vtx;
 }
@@ -7362,7 +7398,7 @@ void VESSEL::ClearMeshes (bool retain_anim) const
 	vessel->ClearMeshes (retain_anim);
 }
 
-UINT VESSEL::AddMesh (const char *meshname, const VECTOR3 *ofs) const
+unsigned int VESSEL::AddMesh (const char *meshname, const VECTOR3 *ofs) const
 {
 	if (ofs) {
 		return vessel->AddMesh (meshname, ofs);
@@ -7370,7 +7406,7 @@ UINT VESSEL::AddMesh (const char *meshname, const VECTOR3 *ofs) const
 		return vessel->AddMesh (meshname);
 }
 
-UINT VESSEL::AddMesh (MESHHANDLE hMesh, const VECTOR3 *ofs) const
+unsigned int VESSEL::AddMesh (MESHHANDLE hMesh, const VECTOR3 *ofs) const
 {
 	if (ofs) {
 		return vessel->AddMesh (hMesh, ofs);
@@ -7378,7 +7414,7 @@ UINT VESSEL::AddMesh (MESHHANDLE hMesh, const VECTOR3 *ofs) const
 		return vessel->AddMesh (hMesh);
 }
 
-UINT VESSEL::InsertMesh (const char *meshname, UINT idx, const VECTOR3 *ofs) const
+unsigned int VESSEL::InsertMesh (const char *meshname, unsigned int idx, const VECTOR3 *ofs) const
 {
 	if (ofs) {
 		return vessel->InsertMesh (meshname, idx, ofs);
@@ -7386,7 +7422,7 @@ UINT VESSEL::InsertMesh (const char *meshname, UINT idx, const VECTOR3 *ofs) con
 		return vessel->InsertMesh (meshname, idx);
 }
 
-UINT VESSEL::InsertMesh (MESHHANDLE hMesh, UINT idx, const VECTOR3 *ofs) const
+unsigned int VESSEL::InsertMesh (MESHHANDLE hMesh, unsigned int idx, const VECTOR3 *ofs) const
 {
 	if (ofs) {
 		return vessel->InsertMesh (hMesh, idx, ofs);
@@ -7394,88 +7430,84 @@ UINT VESSEL::InsertMesh (MESHHANDLE hMesh, UINT idx, const VECTOR3 *ofs) const
 		return vessel->InsertMesh (hMesh, idx);
 }
 
-bool VESSEL::DelMesh (UINT idx, bool retain_anim) const
+bool VESSEL::DelMesh (unsigned int idx, bool retain_anim) const
 {
 	return vessel->DelMesh (idx, retain_anim);
 }
 
-bool VESSEL::ShiftMesh (UINT idx, const VECTOR3 &ofs) const
+bool VESSEL::ShiftMesh (unsigned int idx, const VECTOR3 &ofs) const
 {
 	return vessel->ShiftMesh (idx, ofs);
 }
 
 void VESSEL::ShiftMeshes (const VECTOR3 &ofs) const
 {
-	for (UINT i = 0; i < vessel->nmesh; i++)
+	for (unsigned int i = 0; i < vessel->nmesh; i++)
 		vessel->ShiftMesh (i, ofs);
 }
 
-bool VESSEL::GetMeshOffset (UINT idx, VECTOR3 &ofs) const
+bool VESSEL::GetMeshOffset (unsigned int idx, VECTOR3 &ofs) const
 {
 	if (idx >= vessel->nmesh) return false;
 	memcpy (&ofs, &vessel->meshlist[idx]->meshofs, sizeof(VECTOR3));
 	return true;
 }
 
-UINT VESSEL::GetMeshCount () const
+unsigned int VESSEL::GetMeshCount () const
 {
 	return vessel->nmesh;
 }
 
-MESHHANDLE VESSEL::GetMesh (VISHANDLE vis, UINT idx) const
+MESHHANDLE VESSEL::GetMesh (VISHANDLE vis, unsigned int idx) const
 {
-#ifdef INLINEGRAPHICS
-	return g_pOrbiter->GetGraphicsClient()->clbkGetMesh (vis, idx);
-#else
 	return NULL;
-#endif
 }
 
-DEVMESHHANDLE VESSEL::GetDevMesh (VISHANDLE vis, UINT idx) const
+DEVMESHHANDLE VESSEL::GetDevMesh (VISHANDLE vis, unsigned int idx) const
 {
 	oapi::GraphicsClient *gc = g_pOrbiter->GetGraphicsClient();
 	return (gc ? (DEVMESHHANDLE)gc->clbkGetMesh (vis, idx) : NULL);
 }
 
-const MESHHANDLE VESSEL::GetMeshTemplate (UINT idx) const
+const MESHHANDLE VESSEL::GetMeshTemplate (unsigned int idx) const
 {
 	return vessel->GetMeshTemplate (idx);
 }
 
-const char *VESSEL::GetMeshName (UINT idx) const
+const char *VESSEL::GetMeshName (unsigned int idx) const
 {
 	return vessel->GetMeshName (idx);
 }
 
-MESHHANDLE VESSEL::CopyMeshFromTemplate (UINT idx) const
+MESHHANDLE VESSEL::CopyMeshFromTemplate (unsigned int idx) const
 {
 	return (MESHHANDLE)vessel->CopyMeshFromTemplate (idx);
 }
 
-WORD VESSEL::GetMeshVisibilityMode (UINT idx) const
+uint16_t VESSEL::GetMeshVisibilityMode (unsigned int idx) const
 {
 	return (idx < vessel->nmesh ? vessel->meshlist[idx]->vismode : 0);
 }
 
-void VESSEL::SetMeshVisibilityMode (UINT idx, WORD mode) const
+void VESSEL::SetMeshVisibilityMode (unsigned int idx, uint16_t mode) const
 {
 	vessel->SetMeshVisibilityMode (idx, mode);
 }
 
-void VESSEL::SetMeshVisibleInternal (UINT idx, bool visible) const
+void VESSEL::SetMeshVisibleInternal (unsigned int idx, bool visible) const
 {
 	vessel->SetMeshVisibilityMode (idx, visible ? MESHVIS_ALWAYS : MESHVIS_EXTERNAL);
 }
 
-int VESSEL::MeshModified (MESHHANDLE hMesh, UINT grp, DWORD modflag)
+int VESSEL::MeshModified (MESHHANDLE hMesh, unsigned int grp, int modflag)
 {
 	return vessel->MeshModified (hMesh, grp, modflag);
 }
 
-UINT VESSEL::AddExhaustRef (EXHAUSTTYPE exh, VECTOR3 &pos, double lscale, double wscale, VECTOR3 *dir) const
+unsigned int VESSEL::AddExhaustRef (EXHAUSTTYPE exh, VECTOR3 &pos, double lscale, double wscale, VECTOR3 *dir) const
 {
 	ThrustSpec *th;
-	UINT iexh = (UINT)exh;
+	unsigned int iexh = (unsigned int)exh;
 
 	switch (exh) {
 	case EXHAUST_MAIN:
@@ -7500,11 +7532,11 @@ UINT VESSEL::AddExhaustRef (EXHAUSTTYPE exh, VECTOR3 &pos, double lscale, double
 	//return vessel->AddExhaust (th, lscale, wscale, 0, &p, &d);
 }
 
-void VESSEL::DelExhaustRef (EXHAUSTTYPE exh, WORD id) const
+void VESSEL::DelExhaustRef (EXHAUSTTYPE exh, int id) const
 {
 #ifdef UNDEF
-	UINT i, j, iexh = (UINT)exh;
-	UINT &neng = vessel->neng[iexh];
+	unsigned int i, j, iexh = (unsigned int)exh;
+	unsigned int &neng = vessel->neng[iexh];
 	ExhaustSpec *spec = vessel->eng_spec[iexh];
 	for (i = 0; i < neng; i++) {
 		if (spec[i].id == id) {
@@ -7523,7 +7555,7 @@ void VESSEL::ClearExhaustRefs (void) const
 	vessel->ClearExhaustDefinitions();
 }
 
-void VESSEL::SetExhaustScales (EXHAUSTTYPE exh, WORD id, double lscale, double wscale) const
+void VESSEL::SetExhaustScales (EXHAUSTTYPE exh, int id, double lscale, double wscale) const
 {
 #ifdef UNDEF
 	int i, iexh = (int)exh;
@@ -7548,9 +7580,9 @@ void VESSEL::SetReentryTexture (SURFHANDLE tex, double plimit, double lscale, do
 	vessel->reentry.do_render = (tex != NULL);
 }
 
-UINT VESSEL::AddAttExhaustRef (const VECTOR3 &pos, const VECTOR3 &dir, double wscale, double lscale) const
+unsigned int VESSEL::AddAttExhaustRef (const VECTOR3 &pos, const VECTOR3 &dir, double wscale, double lscale) const
 {
-	DWORD n = vessel->noexhaust;
+	int n = vessel->noexhaust;
 	OldExhaustSpec **tmp = new OldExhaustSpec*[n+1]; TRACENEW
 	if (n) {
 		memcpy (tmp, vessel->oexhaust, n*sizeof(OldExhaustSpec*));
@@ -7565,7 +7597,7 @@ UINT VESSEL::AddAttExhaustRef (const VECTOR3 &pos, const VECTOR3 &dir, double ws
 	return vessel->noexhaust++;
 }
 
-void VESSEL::AddAttExhaustMode (UINT idx, ATTITUDEMODE mode, int axis, int dir) const
+void VESSEL::AddAttExhaustMode (unsigned int idx, ATTITUDEMODE mode, int axis, int dir) const
 {
 	ThrustGroupSpec *tgs;
 	switch (mode) {
@@ -7595,6 +7627,7 @@ void VESSEL::AddAttExhaustMode (UINT idx, ATTITUDEMODE mode, int axis, int dir) 
 			break;
 		}
 		break;
+	case ATTMODE_DISABLED: break;
 	}
 	if (idx >= vessel->noexhaust) return;
 	OldExhaustSpec *oes = vessel->oexhaust[idx];
@@ -7713,52 +7746,52 @@ void VESSEL::UnregisterAnimation (void) const
 		vessel->animcount--;
 }
 
-UINT VESSEL::RegisterAnimSequence (double defmeshstate) const
+unsigned int VESSEL::RegisterAnimSequence (double defmeshstate) const
 {
 	return vessel->AddAnimSeq (defmeshstate);
 }
 
-bool VESSEL::AddAnimComp (UINT seq, ANIMCOMP *comp)
+bool VESSEL::AddAnimComp (unsigned int seq, ANIMCOMP *comp)
 {
 	return vessel->AddAnimSeqComp (seq, comp);
 }
 
-bool VESSEL::SetAnimState (UINT seq, double state)
+bool VESSEL::SetAnimState (unsigned int seq, double state)
 {
 	return vessel->SetAnimState (seq, state);
 }
 
-UINT VESSEL::CreateAnimation (double initial_state) const
+unsigned int VESSEL::CreateAnimation (double initial_state) const
 {
 	return vessel->CreateAnimation (initial_state);
 }
 
-bool VESSEL::DelAnimation (UINT anim) const
+bool VESSEL::DelAnimation (unsigned int anim) const
 {
 	return vessel->DelAnimation (anim);
 }
 
-ANIMATIONCOMPONENT_HANDLE VESSEL::AddAnimationComponent (UINT anim, double state0, double state1, MGROUP_TRANSFORM *trans, ANIMATIONCOMPONENT_HANDLE parent) const
+ANIMATIONCOMPONENT_HANDLE VESSEL::AddAnimationComponent (unsigned int anim, double state0, double state1, MGROUP_TRANSFORM *trans, ANIMATIONCOMPONENT_HANDLE parent) const
 {
 	return (ANIMATIONCOMPONENT_HANDLE)vessel->AddAnimationComponent (anim, state0, state1, trans, (ANIMATIONCOMP*)parent);
 }
 
-bool VESSEL::DelAnimationComponent (UINT anim, ANIMATIONCOMPONENT_HANDLE hAC)
+bool VESSEL::DelAnimationComponent (unsigned int anim, ANIMATIONCOMPONENT_HANDLE hAC)
 {
 	return vessel->DelAnimationComponent (anim, (ANIMATIONCOMP*)hAC);
 }
 
-bool VESSEL::SetAnimation (UINT anim, double state) const
+bool VESSEL::SetAnimation (unsigned int anim, double state) const
 {
 	return vessel->SetAnimation (anim, state);
 }
 
-double VESSEL::GetAnimation (UINT anim) const
+double VESSEL::GetAnimation (unsigned int anim) const
 {
 	return vessel->GetAnimation (anim);
 }
 
-UINT VESSEL::GetAnimPtr (ANIMATION **anim) const
+unsigned int VESSEL::GetAnimPtr (ANIMATION **anim) const
 {
 	*anim = vessel->anim;
 	return vessel->nanim;
@@ -7821,13 +7854,13 @@ void VESSEL::ClearPropellantResources () const
 	vessel->ClearPropellantResources();
 }
 
-PROPELLANT_HANDLE VESSEL::GetPropellantHandleByIndex (DWORD idx) const
+PROPELLANT_HANDLE VESSEL::GetPropellantHandleByIndex (int idx) const
 {
 	if (idx >= vessel->ntank) return 0;
 	return (PROPELLANT_HANDLE) vessel->tank[idx];
 }
 
-DWORD VESSEL::GetPropellantCount () const
+int VESSEL::GetPropellantCount () const
 {
 	return vessel->ntank;
 }
@@ -7907,13 +7940,13 @@ void VESSEL::ClearThrusterDefinitions () const
 	vessel->ClearThrusterDefinitions ();
 }
 
-THRUSTER_HANDLE VESSEL::GetThrusterHandleByIndex (DWORD idx) const
+THRUSTER_HANDLE VESSEL::GetThrusterHandleByIndex (int idx) const
 {
 	if (idx >= vessel->nthruster) return 0;
 	return (THRUSTER_HANDLE)vessel->thruster[idx];
 }
 
-DWORD VESSEL::GetThrusterCount (void) const
+int VESSEL::GetThrusterCount (void) const
 {
 	return vessel->nthruster;
 }
@@ -8086,35 +8119,35 @@ THGROUP_HANDLE VESSEL::GetThrusterGroupHandle (THGROUP_TYPE thgt) const
 	return (THGROUP_HANDLE)(vessel->thruster_grp_default+thgt);
 }
 
-THGROUP_HANDLE VESSEL::GetUserThrusterGroupHandleByIndex (DWORD idx) const
+THGROUP_HANDLE VESSEL::GetUserThrusterGroupHandleByIndex (int idx) const
 {
 	if (idx >= vessel->nthruster_grp_user) return 0;
 	return (THGROUP_HANDLE)vessel->thruster_grp_user[idx];
 }
 
-DWORD VESSEL::GetGroupThrusterCount (THGROUP_HANDLE thg) const
+int VESSEL::GetGroupThrusterCount (THGROUP_HANDLE thg) const
 {
 	return ((ThrustGroupSpec*)thg)->nts;
 }
 
-DWORD VESSEL::GetGroupThrusterCount (THGROUP_TYPE thgt) const
+int VESSEL::GetGroupThrusterCount (THGROUP_TYPE thgt) const
 {
 	return vessel->thruster_grp_default[thgt].nts;
 }
 
-THRUSTER_HANDLE VESSEL::GetGroupThruster (THGROUP_HANDLE thg, DWORD idx) const
+THRUSTER_HANDLE VESSEL::GetGroupThruster (THGROUP_HANDLE thg, int idx) const
 {
 	ThrustGroupSpec *tgs = (ThrustGroupSpec*)thg;
 	return (idx < tgs->nts ? (THRUSTER_HANDLE)(tgs->ts[idx]) : NULL);
 }
 
-THRUSTER_HANDLE VESSEL::GetGroupThruster (THGROUP_TYPE thgt, DWORD idx) const
+THRUSTER_HANDLE VESSEL::GetGroupThruster (THGROUP_TYPE thgt, int idx) const
 {
 	ThrustGroupSpec *tgs = vessel->thruster_grp_default+thgt;
 	return (idx < tgs->nts ? (THRUSTER_HANDLE)(tgs->ts[idx]) : NULL);
 }
 
-DWORD VESSEL::GetUserThrusterGroupCount () const
+int VESSEL::GetUserThrusterGroupCount () const
 {
 	return vessel->nthruster_grp_user;
 }
@@ -8169,19 +8202,19 @@ double VESSEL::GetThrusterGroupLevel (THGROUP_TYPE thgt) const
 	return vessel->GetThrusterGroupLevel (thgt);
 }
 
-UINT VESSEL::AddExhaust (THRUSTER_HANDLE th, double lscale, double wscale, SURFHANDLE tex) const
+unsigned int VESSEL::AddExhaust (THRUSTER_HANDLE th, double lscale, double wscale, SURFHANDLE tex) const
 {
 	EXHAUSTSPEC es = {th, NULL, NULL, NULL, lscale, wscale, 0, 0, tex, 0};
 	return vessel->AddExhaust (&es);
 }
 
-UINT VESSEL::AddExhaust (THRUSTER_HANDLE th, double lscale, double wscale, double lofs, SURFHANDLE tex) const
+unsigned int VESSEL::AddExhaust (THRUSTER_HANDLE th, double lscale, double wscale, double lofs, SURFHANDLE tex) const
 {
 	EXHAUSTSPEC es = {th, NULL, NULL, NULL, lscale, wscale, lofs, 0, tex, 0};
 	return vessel->AddExhaust (&es);
 }
 
-UINT VESSEL::AddExhaust (THRUSTER_HANDLE th, double lscale, double wscale, const VECTOR3 &pos, const VECTOR3 &dir, SURFHANDLE tex) const
+unsigned int VESSEL::AddExhaust (THRUSTER_HANDLE th, double lscale, double wscale, const VECTOR3 &pos, const VECTOR3 &dir, SURFHANDLE tex) const
 {
 	VECTOR3 p = {pos.x, pos.y, pos.z};
 	VECTOR3 d = {-dir.x, -dir.y, -dir.z};
@@ -8189,22 +8222,22 @@ UINT VESSEL::AddExhaust (THRUSTER_HANDLE th, double lscale, double wscale, const
 	return vessel->AddExhaust (&es);
 }
 
-UINT VESSEL::AddExhaust (EXHAUSTSPEC *spec)
+unsigned int VESSEL::AddExhaust (EXHAUSTSPEC *spec)
 {
 	return vessel->AddExhaust (spec);
 }
 
-bool VESSEL::DelExhaust (UINT idx) const
+bool VESSEL::DelExhaust (unsigned int idx) const
 {
 	return vessel->DelExhaust (idx);
 }
 
-DWORD VESSEL::GetExhaustCount () const
+int VESSEL::GetExhaustCount () const
 {
 	return vessel->nexhaust;
 }
 
-bool VESSEL::GetExhaustSpec (UINT idx, double *lscale, double *wscale, VECTOR3 *pos, VECTOR3 *dir, SURFHANDLE *tex) const
+bool VESSEL::GetExhaustSpec (unsigned int idx, double *lscale, double *wscale, VECTOR3 *pos, VECTOR3 *dir, SURFHANDLE *tex) const
 {
 	if (idx < 0 || idx >= vessel->nexhaust) return false;
 	EXHAUSTSPEC *es = vessel->exhaust[idx];
@@ -8221,14 +8254,14 @@ bool VESSEL::GetExhaustSpec (UINT idx, double *lscale, double *wscale, VECTOR3 *
 	return true;
 }
 
-bool VESSEL::GetExhaustSpec (UINT idx, EXHAUSTSPEC *spec)
+bool VESSEL::GetExhaustSpec (unsigned int idx, EXHAUSTSPEC *spec)
 {
 	if (idx < 0 || idx >= vessel->nexhaust) return false;
 	memcpy (spec, vessel->exhaust[idx], sizeof(EXHAUSTSPEC));
 	return true;
 }
 
-double VESSEL::GetExhaustLevel (UINT idx) const
+double VESSEL::GetExhaustLevel (unsigned int idx) const
 {
 	if (idx < 0 || idx >= vessel->nexhaust) return 0.0;
 	return *vessel->exhaust[idx]->level;
@@ -8287,7 +8320,7 @@ bool VESSEL::GetAirfoilParam (AIRFOILHANDLE hAirfoil, VECTOR3 *ref, AirfoilCoeff
 	return vessel->GetAirfoilParam ((AirfoilSpec*)hAirfoil, ref, cf, context, c, S, A);
 }
 
-void VESSEL::EditAirfoil (AIRFOILHANDLE hAirfoil, DWORD flag, const VECTOR3 &ref, AirfoilCoeffFunc cf, double c, double S, double A) const
+void VESSEL::EditAirfoil (AIRFOILHANDLE hAirfoil, int flag, const VECTOR3 &ref, AirfoilCoeffFunc cf, double c, double S, double A) const
 {
 	vessel->EditAirfoil ((AirfoilSpec*)hAirfoil, flag, MakeVector(ref), cf, c, S, A);
 }
@@ -8302,17 +8335,17 @@ void VESSEL::ClearAirfoilDefinitions () const
 	vessel->ClearAirfoilDefinitions();
 }
 
-void VESSEL::CreateControlSurface (AIRCTRL_TYPE type, double area, double dCl, const VECTOR3 &ref, int axis, UINT anim) const
+void VESSEL::CreateControlSurface (AIRCTRL_TYPE type, double area, double dCl, const VECTOR3 &ref, int axis, unsigned int anim) const
 {
 	vessel->CreateControlSurface (type, area, dCl, MakeVector(ref), axis, 1.0, anim);
 }
 
-CTRLSURFHANDLE VESSEL::CreateControlSurface2 (AIRCTRL_TYPE type, double area, double dCl, const VECTOR3 &ref, int axis, UINT anim) const
+CTRLSURFHANDLE VESSEL::CreateControlSurface2 (AIRCTRL_TYPE type, double area, double dCl, const VECTOR3 &ref, int axis, unsigned int anim) const
 {
 	return vessel->CreateControlSurface (type, area, dCl, MakeVector(ref), axis, 1.0, anim);
 }
 
-CTRLSURFHANDLE VESSEL::CreateControlSurface3 (AIRCTRL_TYPE type, double area, double dCl, const VECTOR3 &ref, int axis, double delay, UINT anim) const
+CTRLSURFHANDLE VESSEL::CreateControlSurface3 (AIRCTRL_TYPE type, double area, double dCl, const VECTOR3 &ref, int axis, double delay, unsigned int anim) const
 {
 	return vessel->CreateControlSurface (type, area, dCl, MakeVector(ref), axis, delay, anim);
 }
@@ -8395,37 +8428,37 @@ double VESSEL::GetWheelbrakeLevel (int which) const
 	}
 }
 
-void VESSEL::InitNavRadios (DWORD nnav) const
+void VESSEL::InitNavRadios (int nnav) const
 {
 	vessel->InitNavRadios (nnav);
 }
 
-DWORD VESSEL::GetNavCount () const
+int VESSEL::GetNavCount () const
 {
 	return vessel->nnav;
 }
 
-bool VESSEL::SetNavChannel (DWORD n, DWORD step) const
+bool VESSEL::SetNavChannel (int n, int step) const
 {
 	return vessel->SetNavChannel (n, step);
 }
 
-DWORD VESSEL::GetNavChannel (DWORD n) const
+int VESSEL::GetNavChannel (int n) const
 {
 	return vessel->GetNavChannel (n);
 }
 
-float VESSEL::GetNavRecvFreq (DWORD n) const
+float VESSEL::GetNavRecvFreq (int n) const
 {
 	return vessel->GetNavFreq (n);
 }
 
-bool VESSEL::SetTransponderChannel (DWORD ch) const
+bool VESSEL::SetTransponderChannel (int ch) const
 {
 	return vessel->SetXpdrChannel (ch);
 }
 
-bool VESSEL::SetIDSChannel (DOCKHANDLE hDock, DWORD ch) const
+bool VESSEL::SetIDSChannel (DOCKHANDLE hDock, int ch) const
 {
 	return vessel->SetIDSChannel ((PortSpec*)hDock, ch);
 }
@@ -8461,7 +8494,7 @@ NAVHANDLE VESSEL::GetIDS (DOCKHANDLE hDock) const
 	return (NAVHANDLE)dock->ids;
 }
 
-NAVHANDLE VESSEL::GetNavSource (DWORD n) const
+NAVHANDLE VESSEL::GetNavSource (int n) const
 {
 	return (n < vessel->nnav ? (NAVHANDLE)vessel->nav[n].sender : NULL);
 }
@@ -8481,7 +8514,7 @@ bool VESSEL::NonsphericalGravityEnabled () const
 	return vessel->bGPerturb;
 }
 
-int VESSEL::SendBufferedKey (DWORD key, bool down, char *kstate)
+int VESSEL::SendBufferedKey (int key, bool down, char *kstate)
 {
 	static char def_kstate[256] = {0};
 	if (!kstate) kstate = def_kstate;
@@ -8495,23 +8528,19 @@ bool VESSEL::GetEditorModule (char *fname) const
 
 bool VESSEL::MeshgroupTransform (VISHANDLE vis, const MESHGROUP_TRANSFORM &mt) const
 {
-#ifdef INLINEGRAPHICS
-	return ((VVessel*)vis)->MeshgroupTransform (mt);
-#else
 	return false; // not supported yet
-#endif
 }
 
 // ==============================================================
 // Obsolete VESSEL methods
 
-bool VESSEL::SetNavRecv (DWORD n, DWORD step) const
+bool VESSEL::SetNavRecv (int n, int step) const
 {
 	LOGOUT_OBSOLETE;
 	return vessel->SetNavChannel (n, step);
 }
 
-DWORD VESSEL::GetNavRecv (DWORD n) const
+int VESSEL::GetNavRecv (int n) const
 {
 	LOGOUT_OBSOLETE;
 	return vessel->GetNavChannel (n);
@@ -8574,17 +8603,17 @@ void VESSEL2::clbkVisualDestroyed (VISHANDLE vis, int refcount)
 {
 }
 
-void VESSEL2::clbkDrawHUD (int mode, const HUDPAINTSPEC *hps, HDC hDC)
+bool VESSEL2::clbkDrawHUD (int mode, const HUDPAINTSPEC *hps, oapi::Sketchpad *skp)
 {
-	if (vessel->hudskp && vessel->hudskp->GetDC() == hDC)
-		g_pane->DrawDefaultHUD (vessel->hudskp);
+	g_pane->DrawDefaultHUD (skp);
+	return true;
 }
 
 void VESSEL2::clbkRCSMode (int mode)
 {
 }
 
-void VESSEL2::clbkADCtrlMode (DWORD mode)
+void VESSEL2::clbkADCtrlMode (int mode)
 {
 }
 
@@ -8613,7 +8642,7 @@ int VESSEL2::clbkConsumeDirectKey (char *keystate)
 	return 0;
 }
 
-int VESSEL2::clbkConsumeBufferedKey (DWORD key, bool down, char *keystate)
+int VESSEL2::clbkConsumeBufferedKey (int key, bool down, char *keystate)
 {
 	return 0;
 }
@@ -8664,7 +8693,7 @@ VESSEL3::VESSEL3 (OBJHANDLE hVessel, int fmodel): VESSEL2 (hVessel, fmodel)
 	version = 2;
 }
 
-int VESSEL3::SetPanelBackground (PANELHANDLE hPanel, SURFHANDLE *hSurf, DWORD nsurf, MESHHANDLE hMesh, DWORD width, DWORD height, DWORD baseline, DWORD scrollflag)
+int VESSEL3::SetPanelBackground (PANELHANDLE hPanel, SURFHANDLE *hSurf, int nsurf, MESHHANDLE hMesh, int width, int height, int baseline, int scrollflag)
 {
 	return ((Panel2D*)hPanel)->SetBackground (hSurf, nsurf, hMesh, width, height, baseline, scrollflag);
 }
@@ -8681,7 +8710,7 @@ int VESSEL3::RegisterPanelMFDGeometry (PANELHANDLE hPanel, int MFD_id, int nmesh
 
 int VESSEL3::RegisterPanelArea (PANELHANDLE hPanel, int id, const RECT &pos, const RECT &texpos, int draw_event, int mouse_event, int bkmode)
 {
-	return ((Panel2D*)hPanel)->DefineArea (id, pos, 0, texpos, draw_event | PANEL_REDRAW_GDI | PANEL_REDRAW_SKETCHPAD, mouse_event, bkmode);
+	return ((Panel2D*)hPanel)->DefineArea (id, pos, 0, texpos, draw_event | PANEL_REDRAW_SKETCHPAD, mouse_event, bkmode);
 }
 
 int VESSEL3::RegisterPanelArea (PANELHANDLE hPanel, int id, const RECT &pos, int draw_event, int mouse_event, SURFHANDLE surf, void *context)
@@ -8704,15 +8733,9 @@ int VESSEL3::clbkGeneric (int msgid, int prm, void *context)
 	return 0;
 }
 
-bool VESSEL3::clbkLoadPanel2D (int id, PANELHANDLE hPanel, DWORD viewW, DWORD viewH)
+bool VESSEL3::clbkLoadPanel2D (int id, PANELHANDLE hPanel, int viewW, int viewH)
 {
 	return false;
-}
-
-bool VESSEL3::clbkDrawHUD (int mode, const HUDPAINTSPEC *hps, oapi::Sketchpad *skp)
-{
-	g_pane->DrawDefaultHUD (skp);
-	return true;
 }
 
 void VESSEL3::clbkRenderHUD (int mode, const HUDPAINTSPEC *hps, SURFHANDLE hDefaultTex)

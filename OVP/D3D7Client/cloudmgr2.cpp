@@ -46,7 +46,7 @@ void CloudTile::Load ()
 	// Load cloud texture
 	owntex = true;
 	if (mgr->Cprm().tileLoadFlags & 0x0001) { // try loading from individual tile file
-		sprintf (path, "%s\\Cloud\\%02d\\%06d\\%06d.dds", mgr->CbodyName(), lvl+4, ilat, ilng);
+		sprintf (path, "%s/Cloud/%02d/%06d/%06d.dds", mgr->CbodyName(), lvl+4, ilat, ilng);
 		ok = (mgr->GClient()->GetTexMgr()->LoadTexture (path, &tex, flag) == S_OK);
 	}
 	if (!ok && cmgr->ZTreeManager(0)) { // try loading from compressed archive
@@ -132,7 +132,7 @@ void TileManager2<CloudTile>::Render (MATRIX4 &dwmat, bool use_zbuf, const vPlan
 			zmax = sqrt(D*D-R*R) + sqrt(Rc*Rc-R*R);
 			zmin = Rc-D;
 		}
-		zmin = max (2.0, min (zmax*1e-4, zmin));
+		zmin = std::max (2.0, std::min (zmax*1e-4, zmin));
 
 		np = camera->GetNearlimit();
 		fp = camera->GetFarlimit();
@@ -202,7 +202,7 @@ void TileManager2<CloudTile>::RenderFlatCloudShadows (MATRIX4 &dwmat, const vPla
 	double R = obj_size;
 	double D = prm.cdist*R;
 	double zmax = sqrt(D*D-R*R);
-	double zmin = max (2.0, min (zmax*1e-4, (D-R)*0.8));
+	double zmin = std::max (2.0, std::min (zmax*1e-4, (D-R)*0.8));
 	np = camera->GetNearlimit();
 	fp = camera->GetFarlimit();
 	camera->SetFrustumLimits (zmin, zmax);

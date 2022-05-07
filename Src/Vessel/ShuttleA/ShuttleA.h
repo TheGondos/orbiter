@@ -12,7 +12,7 @@
 #ifndef __SHUTTLEA_H
 #define __SHUTTLEA_H
 
-#include "orbitersdk.h"
+#include "Orbitersdk.h"
 
 // ==========================================================
 // Some vessel class caps
@@ -75,27 +75,27 @@ const double MAX_GRAPPLING_DIST = 0.5f;
 const double MAX_GRAPPLING_ANG  = 0.9f; //(cos(angle)>0.9f)
 //distance for payload grappling.. being a bit generous here
 
-const DWORD PANEL2D_TEXW  = 2048;
-const DWORD PANEL2D_TEXH  = 1024;
-const DWORD PANELEL_TEXW  =  512;
-const DWORD PANELEL_TEXH  =  512;
-const DWORD PANEL2D_MAINW = 1280;
-const DWORD PANEL2D_MAINH  = 382;
-const DWORD PANEL2D_OVRHW = 1280;
-const DWORD PANEL2D_OVRHH =  299;
+const int PANEL2D_TEXW  = 2048;
+const int PANEL2D_TEXH  = 1024;
+const int PANELEL_TEXW  =  512;
+const int PANELEL_TEXH  =  512;
+const int PANEL2D_MAINW = 1280;
+const int PANEL2D_MAINH  = 382;
+const int PANEL2D_OVRHW = 1280;
+const int PANEL2D_OVRHH =  299;
 
-const DWORD LMFD_X     =  56;  // left MFD reference x-pos
-const DWORD RMFD_X     = 966;  // right MFD reference x-pos
-const DWORD NAVBTN_X   = 105;  // navigation button reference x-pos
-const DWORD HUDBTN_X   = 912;  // HUD button reference x-pos
-const DWORD THROTTLE_X = 521;  // Throttle block reference x-pos
-const DWORD THROTTLE_Y = 244;  // Throttle block reference y-pos
-const DWORD ADIBALL_X  = 733;  // ADI ball reference x-pos
-const DWORD ADIBALL_Y  =  29;  // ADI ball reference y-pos
-const DWORD ADICTRL_X  = 733;  // ADI control panel reference x-pos
-const DWORD ADICTRL_Y  = 200;  // ADI control panel reference y-pos
-const DWORD PODCTRL_X  = 379;  // Aux thruster pod panel reference x-pos
-const DWORD PODCTRL_Y  = 255;  // Aux thruster pod panel reference y-pos
+const int LMFD_X     =  56;  // left MFD reference x-pos
+const int RMFD_X     = 966;  // right MFD reference x-pos
+const int NAVBTN_X   = 105;  // navigation button reference x-pos
+const int HUDBTN_X   = 912;  // HUD button reference x-pos
+const int THROTTLE_X = 521;  // Throttle block reference x-pos
+const int THROTTLE_Y = 244;  // Throttle block reference y-pos
+const int ADIBALL_X  = 733;  // ADI ball reference x-pos
+const int ADIBALL_Y  =  29;  // ADI ball reference y-pos
+const int ADICTRL_X  = 733;  // ADI control panel reference x-pos
+const int ADICTRL_Y  = 200;  // ADI control panel reference y-pos
+const int PODCTRL_X  = 379;  // Aux thruster pod panel reference x-pos
+const int PODCTRL_Y  = 255;  // Aux thruster pod panel reference y-pos
 
 class PanelElement;
 class ADIBall;
@@ -115,10 +115,10 @@ public:
 	~ShuttleA ();
 	void ReleaseSurfaces ();
 	void InitPanel (int panel);
-	bool RotatePods (UINT which, UINT mode);
-	void SetPodAngle (UINT which, double angle);
-	void CommandPodAngle (UINT which, double angle);
-	inline double GetPodAngle (UINT which) { return pod_angle[which]; }
+	bool RotatePods (unsigned int which, unsigned int mode);
+	void SetPodAngle (unsigned int which, double angle);
+	void CommandPodAngle (unsigned int which, double angle);
+	inline double GetPodAngle (unsigned int which) { return pod_angle[which]; }
 
 	void RedrawPanel_MFDButton (SURFHANDLE surf, int mfd, int side);
 	void RedrawPanel_Navmode (SURFHANDLE surf);
@@ -135,7 +135,7 @@ public:
 	PROPELLANT_HANDLE ph_main, ph_rcs;
 	THRUSTER_HANDLE th_main[2], th_hover[2], th_pod[2];
 	MESHHANDLE vcmesh_tpl,exmesh_tpl;
-	UINT podswitch[2];
+	unsigned int podswitch[2];
 	double dock_proc, lock_proc[2], gear_proc;
 	enum DoorStatus { DOOR_CLOSED, DOOR_OPEN, DOOR_CLOSING, DOOR_OPENING }
 		dock_status, lock_status[2], gear_status;
@@ -170,33 +170,33 @@ public:
 	bool SetAtttgtFrameMode (int mode);
 
 	// Overloaded callback functions
-	void clbkSetClassCaps (FILEHANDLE cfg);
-	void clbkLoadStateEx (FILEHANDLE scn, void *vs);
-	void clbkSaveState (FILEHANDLE scn);
-	void clbkPostCreation ();
-	bool clbkPlaybackEvent (double simt, double event_t, const char *event_type, const char *event);
-	void clbkPostStep (double simt, double simdt, double mjd);
-	void clbkMFDMode (int mfd, int mode);
-	void clbkNavMode (int mode, bool active);
-	void clbkHUDMode (int mode);
-	void clbkRCSMode (int mode);
-	int  clbkConsumeBufferedKey (DWORD key, bool down, char *kstate);
-	int  clbkConsumeDirectKey (char *kstate);
-	int  clbkGeneric (int msgid, int prm, void *context);
-	bool clbkLoadPanel2D (int id, PANELHANDLE hPanel, DWORD viewW, DWORD viewH);
-	bool clbkPanelMouseEvent (int id, int event, int mx, int my, void *context);
-	bool clbkPanelRedrawEvent (int id, int event, SURFHANDLE surf, void *context);
-	bool clbkDrawHUD (int mode, const HUDPAINTSPEC *hps, oapi::Sketchpad *skp);
-	void clbkRenderHUD (int mode, const HUDPAINTSPEC *hps, SURFHANDLE hTex);
-	bool clbkLoadVC (int id);
-	bool clbkVCRedrawEvent (int id, int event, SURFHANDLE surf);
-	bool clbkVCMouseEvent (int id, int event, VECTOR3 &p);
-	void clbkVisualCreated (VISHANDLE vis, int refcount);
+	void clbkSetClassCaps (FILEHANDLE cfg) override;
+	void clbkLoadStateEx (FILEHANDLE scn, void *vs) override;
+	void clbkSaveState (FILEHANDLE scn) override;
+	void clbkPostCreation () override;
+	bool clbkPlaybackEvent (double simt, double event_t, const char *event_type, const char *event) override;
+	void clbkPostStep (double simt, double simdt, double mjd) override;
+	void clbkMFDMode (int mfd, int mode) override;
+	void clbkNavMode (int mode, bool active) override;
+	void clbkHUDMode (int mode) override;
+	void clbkRCSMode (int mode) override;
+	int  clbkConsumeBufferedKey (int key, bool down, char *kstate) override;
+	int  clbkConsumeDirectKey (char *kstate) override;
+	int  clbkGeneric (int msgid, int prm, void *context) override;
+	bool clbkLoadPanel2D (int id, PANELHANDLE hPanel, int viewW, int viewH) override;
+	bool clbkPanelMouseEvent (int id, int event, int mx, int my, void *context) override;
+	bool clbkPanelRedrawEvent (int id, int event, SURFHANDLE surf, void *context) override;
+	bool clbkDrawHUD (int mode, const HUDPAINTSPEC *hps, oapi::Sketchpad *skp) override;
+	void clbkRenderHUD (int mode, const HUDPAINTSPEC *hps, SURFHANDLE hTex) override;
+	bool clbkLoadVC (int id) override;
+	bool clbkVCRedrawEvent (int id, int event, SURFHANDLE surf) override;
+	bool clbkVCMouseEvent (int id, int event, VECTOR3 &p) override;
+	void clbkVisualCreated (VISHANDLE vis, int refcount) override;
 
 private:
 	void DefineMainPanel (PANELHANDLE hPanel);
 	void DefineOverheadPanel (PANELHANDLE hPanel);
-	void ScalePanel (PANELHANDLE hPanel, DWORD viewW, DWORD viewH);
+	void ScalePanel (PANELHANDLE hPanel, int viewW, int viewH);
 	void DefineAnimations ();
 	double payload_mass;
 	void ComputePayloadMass();
@@ -217,31 +217,31 @@ private:
 	int npel;
 	int adi_layout; // (0=standard (yaw-major), 1=pitch-major
 
-	UINT anim_pod[2], anim_dock;
-	UINT anim_lock[2]; // 0=outer, 1=inner
-	UINT sliderpos_main[2], sliderpos_hovr[2];
-	UINT sliderpos_retro[2], sliderpos_auxhovr[2], sliderpos_pod[2];
-    UINT anim_gear;
+	unsigned int anim_pod[2], anim_dock;
+	unsigned int anim_lock[2]; // 0=outer, 1=inner
+	unsigned int sliderpos_main[2], sliderpos_hovr[2];
+	unsigned int sliderpos_retro[2], sliderpos_auxhovr[2], sliderpos_pod[2];
+    unsigned int anim_gear;
 
-	UINT sliderpos_main_v[2], sliderpos_hovr_v[2];
-	UINT sliderpos_retro_v[2], sliderpos_auxhovr_v[2], sliderpos_pod_v[2];
+	unsigned int sliderpos_main_v[2], sliderpos_hovr_v[2];
+	unsigned int sliderpos_retro_v[2], sliderpos_auxhovr_v[2], sliderpos_pod_v[2];
 
-	UINT anim_pod_thrust_left;      // VC pod thruster animation
-	UINT anim_pod_thrust_right;      // VC pod thruster animation
+	unsigned int anim_pod_thrust_left;      // VC pod thruster animation
+	unsigned int anim_pod_thrust_right;      // VC pod thruster animation
 
-	UINT anim_main_thrust_left;
-	UINT anim_main_thrust_right;
+	unsigned int anim_main_thrust_left;
+	unsigned int anim_main_thrust_right;
 
-	UINT anim_hover_thrust_left;
-	UINT anim_hover_thrust_right;
+	unsigned int anim_hover_thrust_left;
+	unsigned int anim_hover_thrust_right;
 
-    UINT anim_pod_angle;
-	UINT anim_rcs_mode;
+    unsigned int anim_pod_angle;
+	unsigned int anim_rcs_mode;
 
-	UINT anim_dock_switch;
-	UINT anim_airlock_switch;
-	UINT anim_gear_switch;
-	UINT anim_cargo_switch;
+	unsigned int anim_dock_switch;
+	unsigned int anim_airlock_switch;
+	unsigned int anim_gear_switch;
+	unsigned int anim_cargo_switch;
 
 	MESHHANDLE hPanelMesh0; // mesh for 2D main panel
 	MESHHANDLE hPanelMesh1; // mesh for 2D overhead panel
@@ -252,10 +252,10 @@ private:
 };
 
 typedef struct {
-	HINSTANCE hDLL;
-	HFONT hFont[1];
-	HPEN hPen[3];
-	HBRUSH hBrush[2];
+	oapi::DynamicModule *hDLL;
+	oapi::Font *hFont[1];
+	oapi::Pen *hPen[3];
+	oapi::Brush *hBrush[2];
 } GDIParams;
 
 #define AID_MFD1_LBUTTONS      0

@@ -13,14 +13,14 @@
 #define __NEEDLEPAIR_H
 
 #include "ShuttleA.h"
-#include "..\Common\Instrument.h"
+#include "../Common/Instrument.h"
 
 // ==============================================================
 
 class NeedlePair: public PanelElement {
 public:
 	NeedlePair (VESSEL3 *v, float basex, float basey, float range, int readout_ty);
-	void AddMeshData2D (MESHHANDLE hMesh, DWORD grpidx);
+	void AddMeshData2D (MESHHANDLE hMesh, int grpidx);
 	bool Redraw2D (SURFHANDLE surf, double level[2]);
 
 protected:

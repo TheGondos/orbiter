@@ -41,6 +41,8 @@ typedef struct {
 
 // =======================================================================
 
+class TileManager2Base;
+class TileLoader;
 class Tile {
 	friend class TileManager2Base;
 	friend class TileLoader;
@@ -149,6 +151,7 @@ private:
 
 // =======================================================================
 
+class Tile;
 class TileManager2Base {
 	friend class Tile;
 

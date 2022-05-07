@@ -4,11 +4,11 @@
 #define STRICT 1
 #define OAPI_IMPLEMENTATION
 
+#include "D3dmath.h"
 #include <stdio.h>
 #include <iomanip>
 
-#include "resource.h"
-#include "D3dmath.h"
+//#include "resource.h"
 #include "Camera.h"
 #include "Config.h"
 #include "Body.h"
@@ -16,19 +16,19 @@
 #include "Vessel.h"
 #include "Psys.h"
 #include "Pane.h"
-#include "Dialogs.h"
-#include "DlgMgr.h"
 #include "Orbiter.h"
 #include "Orbitersdk.h"
 #include "Util.h"
 #include "Log.h"
 #include "OrbiterAPI.h"
-#include <zmouse.h>
 
-#ifdef INLINEGRAPHICS
-#include "OGraphics.h"
-#include "Scene.h"
-#endif // INLINEGRAPHICS
+#include <algorithm>
+#include <cmath>
+
+#define _stricmp strcasecmp
+#define _strnicmp strncasecmp
+#define stricmp strcasecmp
+#define strnicmp strncasecmp
 
 using namespace std;
 
@@ -58,22 +58,38 @@ Camera::Camera (double _nearplane, double _farplane)
 	ephi = etheta = 0.0;
 	dphi = dtht = 0.0;
 	eyeofs0. Set (0,0.1,0.08);
+	external_view = true;//false;
 	SetDefaultCockpitDir (Vector (0,0,1));
 	SetCockpitDir (0,0);
 	SetCatchAngle (RAD*5.0);
-	memset (&cockpitprm, 0, sizeof(cockpitprm));
+
+	cockpitprm.target = nullptr;
+	cockpitprm.rpos = {0,0,0};       // camera position offset
+	cockpitprm.cphi = 0.0;
+	cockpitprm.ctheta = 0.0;// camera azimuth and polar angles
+
+
+
 	go.panspeed = g_pOrbiter->Cfg()->CfgCameraPrm.Panspeed;
 	go.tgtlock = true;
 	go.terrain_limit = g_pOrbiter->Cfg()->CfgCameraPrm.TerrainLimit;
 	gos.planet[0] = gos.site[0] = gos.addr[0] = '\0';
 	planet_proxy = 0;
 	npreset = 0;
-	external_view = true;//false;
 	pv_mat_valid = false;
 	has_tref = false;
 	movehead = false;
 	ExtCtrlMode = 0;
-	GetCursorPos (&pm);
+
+
+//	GetCursorPos (&pm);
+	GLFWwindow *window = g_pOrbiter->GetRenderWnd();
+	double xpos, ypos;
+	glfwGetCursorPos(window, &xpos, &ypos);	
+	pm.x = floor(xpos);
+	pm.y = floor(ypos);
+
+
 	mmoveT = -1000.0;
 	ap_int = ap_ext = RAD*25.0;
 	ap = &ap_ext;
@@ -83,7 +99,7 @@ Camera::Camera (double _nearplane, double _farplane)
 	aspect = 1.0; // arbitrary default - reset with ResizeViewport
 	w05 = h05 = 100;
 	mbdown[0] = mbdown[1] = false;
-	VMAT_identity (view_mat);
+	view_mat = glm::fmat4(1.0);
 	SetFrustumLimits (nearplane, farplane);
 	ECC = 0;
 	etile.resize(2);
@@ -94,43 +110,48 @@ Camera::~Camera ()
 	ClearPresets();
 }
 
-bool Camera::ProcessMouse (UINT event, DWORD state, DWORD x, DWORD y, const char *kstate)
+bool Camera::ProcessMouse (oapi::MouseEvent event, int state, int x, int y, const char *kstate)
 {
-	if (event != WM_MOUSEWHEEL)
+	if (event != oapi::MOUSE_WHEEL)
 		mx = (int)x, my = (int)y;
 
 	switch (event) {
-	case WM_LBUTTONDOWN:
+	case oapi::MOUSE_LBUTTONDOWN:
 		mbdown[0] = true;
 		return true;
-	case WM_RBUTTONDOWN:
+	case oapi::MOUSE_RBUTTONDOWN:
 		mbdown[1] = true;
 		g_pOrbiter->InitRotationMode();
 		return true;
-	case WM_LBUTTONUP:
+	case oapi::MOUSE_LBUTTONUP:
 		if (mbdown[0]) {
 			mbdown[0] = false;
 			return true;
 		}
 		break;
-	case WM_RBUTTONUP:
+	case oapi::MOUSE_RBUTTONUP:
 		if (mbdown[1]) {
 			mbdown[1] = false;
 			g_pOrbiter->ExitRotationMode();
 			return true;
 		}
 		break;
-	case WM_MOUSEWHEEL:
+	case oapi::MOUSE_WHEEL:
 		if (KEYMOD_CONTROL(kstate)) {
 		}
 		else {
-			short zDelta = (short)HIWORD(state);
-			if (external_view)
+			short zDelta = (short)y;
+			if (external_view) {
 				ShiftDist(-zDelta*0.001);
-			else
+			} else {
 				g_pOrbiter->IncFOV(zDelta*(-2.0 / 120.0*RAD));
+			}
 		} return true;
 		break;
+	case oapi::MOUSE_MBUTTONDOWN:
+	case oapi::MOUSE_MBUTTONUP:
+	case oapi::MOUSE_MOVE:
+		return false;
 	}
 	return false;
 }
@@ -138,7 +159,13 @@ bool Camera::ProcessMouse (UINT event, DWORD state, DWORD x, DWORD y, const char
 void Camera::UpdateMouse ()
 {
 	POINT pt;
-	GetCursorPos (&pt);
+
+	GLFWwindow *window = g_pOrbiter->GetRenderWnd();
+	double xpos, ypos;
+	glfwGetCursorPos(window, &xpos, &ypos);	
+	pt.x = floor(xpos);
+	pt.y = floor(ypos);
+
 	if (pt.x != pm.x || pt.y != pm.y) {
 		pm.x = pt.x, pm.y = pt.y;
 		mmoveT = td.SysT0;
@@ -147,11 +174,12 @@ void Camera::UpdateMouse ()
 	if (mbdown[1]) {
 		int dx, dy, x0, y0;
 		x0 = pt.x, y0 = pt.y;
-		if (!g_pOrbiter->IsFullscreen())
-			ScreenToClient (g_pOrbiter->GetRenderWnd(), &pt);
+//		if (!g_pOrbiter->IsFullscreen())
+//			ScreenToClient (g_pOrbiter->GetRenderWnd(), &pt);
 		dx = pt.x - mx;
 		dy = pt.y - my;
-		SetCursorPos (x0-dx, y0-dy);
+//		SetCursorPos (x0-dx, y0-dy);
+		glfwSetCursorPos (window, x0-dx, y0-dy);
 		if (!(dx || dy)) return;
 
 		if (external_view) {
@@ -260,18 +288,20 @@ void Camera::SetCMode (const CameraMode *cm)
 				}
 			}
 			break;
+		case CameraMode_Cockpit::CM_CURRENT: break;
 		}
 		} break;
 	case CameraMode::CM_TRACK: {
 		const CameraMode_Track *cmt = (const CameraMode_Track*)cm;
 		if (cmt->GetTrackMode() != CameraMode_Track::TM_CURRENT) {
-			ExtCamMode mode;
+			ExtCamMode mode = CAMERA_TARGETRELATIVE;
 			switch (cmt->GetTrackMode()) {
 			case CameraMode_Track::TM_RELATIVE:      mode = CAMERA_TARGETRELATIVE;   break;
 			case CameraMode_Track::TM_ABSDIR:        mode = CAMERA_ABSDIRECTION;     break;
 			case CameraMode_Track::TM_GLOBAL:        mode = CAMERA_GLOBALFRAME;      break;
 			case CameraMode_Track::TM_TARGETTOREF:   mode = CAMERA_TARGETTOOBJECT;   break;
 			case CameraMode_Track::TM_TARGETFROMREF: mode = CAMERA_TARGETFROMOBJECT; break;
+			case CameraMode_Track::TM_CURRENT: break;
 			}
 			SetTrackMode (mode, (const Body*)cmt->GetRef());
 		}
@@ -297,12 +327,11 @@ void Camera::SetCMode (const CameraMode *cm)
 
 	double newap = cm->GetFOV()*0.5*RAD;
 	if (newap && fabs(newap - *ap) > 1e-6) g_pOrbiter->SetFOV (newap);
-	SendDlgMessage (3, 0);
 }
 
 CameraMode *Camera::GetCMode () const
 {
-	CameraMode *cm;
+	CameraMode *cm = nullptr;
 
 	if (external_view) {
 		switch (extmode) {
@@ -407,15 +436,14 @@ void Camera::Attach (Body *_target, int mode)
 	tref.Set(0,0,0);
 	vphi = vtht = dphi = dtht = 0.0;
 	has_tref = false;
-	SendDlgMessage (3, 0);
 }
 
 bool Camera::Direction2Viewport(const Vector &dir, int &x, int &y)
 {
-	D3DVECTOR homog;
-	D3DMath_VectorMatrixMultiply (homog, D3DMath_Vector(-dir.x, -dir.y, -dir.z), *D3D_ProjViewMatrix());
+	glm::fvec3 homog;
+	D3DMath_VectorMatrixMultiply (homog, D3DMath_Vector(-dir.x, -dir.y, -dir.z), *ProjViewMatrix());
 	if (homog.x >= -1.0f && homog.y <= 1.0f && homog.z >= 0.0) {
-		if (_hypot(homog.x, homog.y) < 1e-6) {
+		if (std::hypot(homog.x, homog.y) < 1e-6) {
 			x = (int)w05, y = (int)h05;
 		} else {
 			x = (int)(w05*(1.0f+homog.x));
@@ -507,7 +535,7 @@ void Camera::MoveToDirect (const Vector &p)
 void Camera::ShiftPhi (double shift)
 {
 	if (external_view && extmode != CAMERA_GROUNDOBSERVER && target->Type() == OBJTP_PLANET) {
-		shift *= max (1e-6, (rdist-1.0)/rdist);
+		shift *= std::max (1e-6, (rdist-1.0)/rdist);
 	}
 	AddPhi (shift);
 }
@@ -515,7 +543,7 @@ void Camera::ShiftPhi (double shift)
 void Camera::ShiftTheta (double shift)
 {
 	if (external_view && extmode != CAMERA_GROUNDOBSERVER && target->Type() == OBJTP_PLANET) {
-		shift *= max (1e-6, (rdist-1.0)/rdist);
+		shift *= std::max (1e-6, (rdist-1.0)/rdist);
 	}
 	AddTheta (shift);
 }
@@ -524,12 +552,12 @@ void Camera::ShiftDist (double shift)
 {
 	double fact;
 	if (external_view && extmode != CAMERA_GROUNDOBSERVER) {
-		double scale = max (1e-6, (rdist-1.0)/rdist); // slow down when approaching target radius
-		scale = max(scale, 1.0/target->Size());       // move at least 1m/s
+		double scale = std::max (1e-6, (rdist-1.0)/rdist); // slow down when approaching target radius
+		scale = std::max(scale, 1.0/target->Size());       // move at least 1m/s
 		shift *= scale;
 	}
 	if (shift > 0) fact = 1.0 + shift;
-	else fact = max(1.0/rdist, 1.0/(1.0 - shift));
+	else fact = std::max(1.0/rdist, 1.0/(1.0 - shift));
 	ChangeDist (fact);
 }
 
@@ -725,9 +753,9 @@ void Camera::SetTrackMode (ExtCamMode mode, const Body *ref)
 		if (!ref) return; // bail out
 		dirref = ref;
 		break;
+	case CAMERA_GROUNDOBSERVER: break;
 	}
 	extmode = mode;
-	SendDlgMessage (3, 0);
 }
 
 double Camera::GroundElevation (const Planet *ref, double lng, double lat, double alt) const
@@ -735,7 +763,7 @@ double Camera::GroundElevation (const Planet *ref, double lng, double lat, doubl
 	double elev = 0.0;
 	ElevationManager *emgr = ref->ElevMgr();
 	if (emgr) {
-		int reslvl = (int)(32.0-log(max(go.alt,100))*LOG2);
+		int reslvl = (int)(32.0-log(std::max(go.alt,100.0))*LOG2);
 		elev = emgr->Elevation (lat, lng, reslvl, &etile);
 	}
 	return elev;
@@ -747,7 +775,7 @@ void Camera::SetGroundMode (ExtCamMode mode, const Body *ref, double lng, double
 	SetViewExternal();
 	if (ref != dirref) {
 		dirref = ref;
-		for (int i = 0; i < etile.size(); i++)
+		for (size_t i = 0; i < etile.size(); i++)
 			etile[i].Clear();
 	}
 	go.lng = lng;
@@ -773,7 +801,6 @@ void Camera::SetGroundMode (ExtCamMode mode, const Body *ref, double lng, double
 		strcpy (gos.site, _gos->site);
 		strcpy (gos.addr, _gos->addr);
 	}
-	SendDlgMessage (3, 0);
 }
 
 //bool Camera::GetGroundMode (const Body **ref, double *lng, double *lat, double *alt)
@@ -789,7 +816,7 @@ void Camera::SetGroundMode (ExtCamMode mode, const Body *ref, double lng, double
 
 void Camera::SetGroundObserver_PanSpeed (double speed)
 {
-	go.panspeed = max (0.1, min (1e5, speed));
+	go.panspeed = std::max (0.1, min (1e5, speed));
 	g_pOrbiter->Cfg()->CfgCameraPrm.Panspeed = go.panspeed;
 }
 
@@ -803,10 +830,7 @@ void Camera::SetGroundObserver_TargetLock (bool lock)
 			Vector hdir = tmul (go.R, tmul (dirref->GRot(), gdir));
 			go.tht = asin (hdir.y);
 			go.phi = atan2 (-hdir.x, hdir.z);
-			OutputGroundObserverParams();
 		}
-		
-		SendDlgMessage (2, this);
 	}
 }
 
@@ -830,7 +854,7 @@ void Camera::GroundObserverShift (double dx, double dz, double dh)
 	Vector dsz (grot.m13, grot.m23, grot.m33); // dz: go forward/backward w.r.t. camera view direction
 	Vector dsx (grot.m11, grot.m21, grot.m31); // dx: go sideways w.r.t. camera view direction
 	dirref->GlobalToEquatorial (gpos + dsz*dz + dsx*dx, go.lng, go.lat, r);
-	double new_alt = max (1, go.alt+dh);
+	double new_alt = std::max (1.0, go.alt+dh);
 	go.alt0 += new_alt-go.alt;
 	go.alt = new_alt;
 	double clng = cos(go.lng), slng = sin(go.lng);
@@ -838,38 +862,12 @@ void Camera::GroundObserverShift (double dx, double dz, double dh)
 	go.R.Set ( clng*slat, clng*clat, -slng,   // rotate from local
 	          -clat,      slat,       0,      // observer to local
 		       slng*slat, slng*clat,  clng);  // planet coords
-	OutputGroundObserverParams();
 }
 
 void Camera::GroundObserverTilt (double dphi, double dtht)
 {
 	go.phi += dphi;
 	go.tht += dtht;
-	OutputGroundObserverParams();
-}
-
-void Camera::SendDlgMessage (int msgid, void *msg) const
-{
-	DialogManager *dlgmgr = g_pOrbiter->DlgMgr();
-	if (dlgmgr) {
-		HWND dlg = dlgmgr->IsEntry (g_pOrbiter->GetInstance(), IDD_CAMERA);
-		if (dlg)
-			PostMessage (dlg, WM_APP, msgid, (LPARAM)msg);
-	}
-}
-
-void Camera::OutputGroundObserverParams () const
-{
-	DialogManager *dlgmgr = g_pOrbiter->DlgMgr();
-	if (dlgmgr) {
-		HWND dlg = dlgmgr->IsEntry (g_pOrbiter->GetInstance(), IDD_CAMERA);
-		if (dlg) {
-			char cbuf[256];
-			sprintf (cbuf, "Lng = %+0.6f°\r\nLat = %+0.6f°\r\nAlt = %0.2fm\r\nPhi = %0.2f°\r\nTheta = %0.2f°",
-				DEG*go.lng, DEG*go.lat, go.alt, DEG*go.phi, DEG*go.tht);
-			SendDlgMessage (1, cbuf);
-		}
-	}
 }
 
 void Camera::ResizeViewport (int w, int h)
@@ -880,10 +878,10 @@ void Camera::ResizeViewport (int w, int h)
 	UpdateProjectionMatrix ();
 }
 
-DWORD Camera::UpdateExternalControl (ExternalCameraControl *ecc)
+int Camera::UpdateExternalControl (ExternalCameraControl *ecc)
 {
-	DWORD dmode = 0;
-	DWORD cmode = ECC->GetCameraMode();
+	int dmode = 0;
+	int cmode = ECC->GetCameraMode();
 
 	// camera control via external module
 	if (external_view) {
@@ -922,7 +920,7 @@ DWORD Camera::UpdateExternalControl (ExternalCameraControl *ecc)
 			}
 		}
 	} else { // cockpit camera
-		DWORD extctrl = 0;
+		int extctrl = 0;
 		const ExternalCameraControl::VCMode *vcmode = 0;
 		bool dorot = true, dopos = false;
 		double rotscale = 1.0;
@@ -975,9 +973,9 @@ DWORD Camera::UpdateExternalControl (ExternalCameraControl *ecc)
 					dmode |= CAMDATA_DIR;
 				}
 				if (dopos) {
-					double x = min (posrange, max (-posrange, data.x));
-					double y = min (posrange, max (-posrange, data.y));
-					double z = min (posrange, max (-posrange, data.z));
+					double x = std::min (posrange, std::max (-posrange, data.x));
+					double y = std::min (posrange, std::max (-posrange, data.y));
+					double z = std::min (posrange, std::max (-posrange, data.z));
 					Vector p(x,y,z);
 					Vector pr(mul (isStdDir ? rrot : rrot0*rrot, p));
 					if (dragpos) {
@@ -1008,37 +1006,13 @@ void Camera::Update ()
 	if (ECC) ExtCtrlMode = UpdateExternalControl (ECC);
 
 	// get a list of current visuals
-	double dist, calt, dist_proxy = 1e100;
-	VObject **vobj, *vo;
-	const Body *bd;
-	int i, nobj;
-#ifdef INLINEGRAPHICS
-	nobj = g_pOrbiter->GetInlineGraphicsClient()->GetScene()->GetObjects (&vobj);
-#else
-	nobj = 0; vobj = 0;
-#endif // INLINEGRAPHICS
-	for (i = 0; i < nobj; i++) {
-		bd = (vo = vobj[i])->GetBody();
-		if (!external_view && bd == (Body*)g_focusobj &&
-			!g_focusobj->HasExtpassMeshes()) continue;
-		dist = vo->CDist() - bd->ClipRadius();
-		if (bd->Type() == OBJTP_PLANET) {
-			if (dist < 50e3) {
-				dist = 0; // suppress dynamic nearplane if in proximity of the surface
-			} else if (((Planet*)bd)->CloudParam (calt)) {
-				double lowc;
-				if (dist > calt) dist -= calt;
-				else if (dist < (lowc = 0.99985*(calt+bd->Size())-bd->Size()))
-					dist = lowc-dist;
-				else dist = 4.0;
-			}
-		}
-		if (dist < dist_proxy) dist_proxy = dist;
-	}
-#ifdef INLINEGRAPHICS
-	if (dist_proxy > 0.0)
-		dist_proxy = min(dist_proxy, g_pOrbiter->GetInlineGraphicsClient()->GetScene()->MinParticleCameraDist());
-#endif
+//	double dist, calt, dist_proxy = 1e100;
+	double dist, dist_proxy = 1e100;
+	//VObject **vobj, *vo;
+	//const Body *bd;
+	int i;
+
+	//vobj = 0;
 
 	// find the largest apparent planet
 	double ralt_proxy = 1e100;
@@ -1111,7 +1085,6 @@ void Camera::Update ()
 					go.tht = (hdir.y > 0 ? Pi05 : -Pi05);
 					go.phi = 0.0;
 				}
-				//OutputGroundObserverParams();
 			}
 			double sinph = sin(go.phi), cosph = cos(go.phi);
 			double sinth = sin(go.tht), costh = cos(go.tht);
@@ -1167,12 +1140,12 @@ void Camera::Update ()
 			  	action = CAMERA_NORMAL;
 			} else {
 				if (fa > fb) {
-					if (a >= 0.0) dphi = min (min (min (vmax, vphi+amax*dt), a*dfac) * dt, a);
-					else          dphi = max (max (max (-vmax, vphi-amax*dt), a*dfac) * dt, a);
+					if (a >= 0.0) dphi = std::min (std::min (std::min (vmax, vphi+amax*dt), a*dfac) * dt, a);
+					else          dphi = std::max (std::max (std::max (-vmax, vphi-amax*dt), a*dfac) * dt, a);
 					dtht = dphi*b/a;
 				} else {
-					if (b >= 0.0) dtht = min (min (min (vmax, vtht+amax*dt), b*dfac) * dt, b);
-					else          dtht = max (max (max (-vmax, vtht-amax*dt), b*dfac) * dt, b);
+					if (b >= 0.0) dtht = std::min (std::min (std::min (vmax, vtht+amax*dt), b*dfac) * dt, b);
+					else          dtht = std::max (std::max (std::max (-vmax, vtht-amax*dt), b*dfac) * dt, b);
 					dphi = dtht*a/b;
 				}
 				vphi = dphi*td.iSysDT;
@@ -1187,18 +1160,18 @@ void Camera::Update ()
 		if (dphi || dtht) {
 			double dp_left, dp_right, dt_up, dt_down;
 			g_focusobj->CamRange (dp_left, dp_right, dt_up, dt_down);
-			const double phirange = 0.8*Pi;   // make panel-dependent!
-			const double thtrange = 0.8*Pi05; // make panel-dependent!
+			//const double phirange = 0.8*Pi;   // make panel-dependent!
+			//const double thtrange = 0.8*Pi05; // make panel-dependent!
 
 			vp = dphi*td.iSysDT;
 			vt = dtht*td.iSysDT;
 
 			double p = normangle (cphi);
-			if (vp > 0) vp = min (vp,  (dp_left-p)*dfac);
-			else        vp = max (vp, (-dp_right-p)*dfac);
+			if (vp > 0) vp = std::min (vp,  (dp_left-p)*dfac);
+			else        vp = std::max (vp, (-dp_right-p)*dfac);
 			double t = normangle (ctheta);
-			if (vt > 0) vt = min (vt,  (dt_up-t)*dfac);
-			else        vt = max (vt, (-dt_down-t)*dfac);
+			if (vt > 0) vt = std::min (vt,  (dt_up-t)*dfac);
+			else        vt = std::max (vt, (-dt_down-t)*dfac);
 			dphi = dtht = 0.0;
 			idleT = t1;
 		} else {
@@ -1252,7 +1225,7 @@ void Camera::Update ()
 		Vector cp(planet_proxy->GPos()-gpos);
 		double alt = cp.length()-planet_proxy->Size();
 		double az = acos (dotp (gd, cp.unit()));
-		double a = atan (tan_ap*_hypot(w05,h05)/h05);
+		double a = atan (tan_ap*std::hypot(w05,h05)/h05);
 		double tht = az-a;
 		if (tht < Pi05)
 			np = min (np, alt*cos(a)/cos(tht));
@@ -1262,8 +1235,8 @@ void Camera::Update ()
 	} else if (np > np_max) {
 		if (nearplane < np_max) SetFrustumLimits (np_max, farplane);
 	} else {
-		if (nearplane > np) SetFrustumLimits (max (np_min, 0.5*np), farplane);
-		else if (nearplane < 0.25*np) SetFrustumLimits (min (np_max, 0.5*np), farplane);
+		if (nearplane > np) SetFrustumLimits (std::max (np_min, 0.5*np), farplane);
+		else if (nearplane < 0.25*np) SetFrustumLimits (std::min (np_max, 0.5*np), farplane);
 	}
 #ifdef OLD_NEARPLANE
 	const double minp_min = 5.0; // 2*smallest near plane
@@ -1307,7 +1280,7 @@ MATRIX4 Camera::ViewMatrix() const
 	return mat;
 }
 
-D3DMATRIX *Camera::D3D_ProjViewMatrix ()
+glm::fmat4 *Camera::ProjViewMatrix ()
 {
 	if (!pv_mat_valid) {
 		D3DMath_MatrixMultiply (pv_mat, proj_mat, view_mat);
@@ -1318,21 +1291,16 @@ D3DMATRIX *Camera::D3D_ProjViewMatrix ()
 
 void Camera::UpdateProjectionMatrix ()
 {
-	ZeroMemory (&proj_mat, sizeof (D3DMATRIX));
-	proj_mat._11 = (FLOAT)(aspect / tan_ap);
-	proj_mat._22 = (FLOAT)(1.0    / tan_ap);
+	memset (&proj_mat, 0, sizeof (glm::fmat4));
+	proj_mat[0][0] = (float)(aspect / tan_ap);
+	proj_mat[1][1] = (float)(1.0    / tan_ap);
 	if (farplane >= 1e20) {
-		proj_mat._33 = 1.0f;
-		proj_mat._43 = -nearplane;
+		proj_mat[2][2] = 1.0f;
+		proj_mat[3][2] = -nearplane;
 	} else {
-		proj_mat._43 = (proj_mat._33 = farplane / (farplane-nearplane)) * (-nearplane);
+		proj_mat[3][2] = (proj_mat[2][2] = farplane / (farplane-nearplane)) * (-nearplane);
 	}
-	proj_mat._34 = 1.0f;
-
-#ifdef INLINEGRAPHICS
-	OrbiterGraphics *og = g_pOrbiter->GetInlineGraphicsClient();
-	if (og) og->clbkSetCamera (aspect, tan_ap, nearplane, farplane);
-#endif
+	proj_mat[2][3] = 1.0f;
 
 	// register new projection matrix with device
     //pDev->SetTransform (D3DTRANSFORMSTATE_PROJECTION, &proj_mat);
@@ -1362,14 +1330,14 @@ void Camera::InitState (const char *scn, Body *default_target)
 void Camera::ClearPresets ()
 {
 	if (npreset) {
-		for (DWORD i = 0; i < npreset; i++)
+		for (int i = 0; i < npreset; i++)
 			delete preset[i];
 		delete []preset;
 		npreset = 0;
 	}
 }
 
-DWORD Camera::AddPreset (CameraMode *mode)
+int Camera::AddPreset (CameraMode *mode)
 {
 	if (!mode) mode = GetCMode();
 	CameraMode **tmp = new CameraMode*[npreset+1]; TRACENEW
@@ -1382,9 +1350,9 @@ DWORD Camera::AddPreset (CameraMode *mode)
 	return npreset++;
 }
 
-bool Camera::DelPreset (DWORD idx)
+bool Camera::DelPreset (int idx)
 {
-	DWORD i, j;
+	int i, j;
 	if (idx >= npreset) return false;
 	CameraMode **tmp = 0;
 	if (npreset > 1) {
@@ -1398,13 +1366,13 @@ bool Camera::DelPreset (DWORD idx)
 	return true;
 }
 
-void Camera::RecallPreset (DWORD idx)
+void Camera::RecallPreset (int idx)
 {
 	if (idx >= npreset) return; // out of range
 	SetCMode (preset[idx]);
 }
 
-CameraMode *Camera::GetPreset (DWORD idx)
+CameraMode *Camera::GetPreset (int idx)
 {
 	if (idx >= npreset) return 0;
 	return preset[idx];
@@ -1516,7 +1484,7 @@ void Camera::Write (ostream &ofs) const
 	if (npreset) {
 		char cbuf[256] = "    ";
 		ofs << "  BEGIN_PRESET" << endl;
-		for (DWORD i = 0; i < npreset; i++) {
+		for (int i = 0; i < npreset; i++) {
 			preset[i]->Store (cbuf+4);
 			ofs << cbuf << endl;
 		}
@@ -1587,11 +1555,13 @@ CameraMode *CameraMode::Create (char *str)
 		cm = new CameraMode_Track; TRACENEW
 	} else if (!_stricmp (tc, "Ground")) {
 		cm = new CameraMode_Ground; TRACENEW
+	} else {
+		return nullptr;
 	}
 	
 	if (!(pc = strtok (NULL, ":")) || !(cm->target = (OBJHANDLE)g_psys->GetObj (trim_string (pc), true))) {
 		delete cm;
-		return 0;
+		return nullptr;
 	}
 
 	pc = strtok (NULL, ":");
@@ -1692,8 +1662,8 @@ void CameraMode_Track::Init (char *str)
 
 void CameraMode_Track::Store (char *str)
 {
-	static char *tmstr[6] = {"CURRENT","RELATIVE", "ABSDIR", "GLOBAL", "TARGETTOREF", "TARGETFROMREF"};
-	sprintf (str, "Track:%s%:%0.2f:%s %0.3f %0.3f %0.3f", 
+	static const char *tmstr[6] = {"CURRENT","RELATIVE", "ABSDIR", "GLOBAL", "TARGETTOREF", "TARGETFROMREF"};
+	sprintf (str, "Track:%s:%0.2f:%s %0.3f %0.3f %0.3f", 
 		target ? ((Body*)target)->Name() : "-", fov,
 		tmstr[tmode], reldist, phi, theta);
 	if (tmode == TM_TARGETTOREF || tmode == TM_TARGETFROMREF) {
@@ -1711,6 +1681,9 @@ void CameraMode_Track::GetDescr (char *str, int len)
 	case TM_RELATIVE: strcat (cbuf, "relative "); break;
 	case TM_ABSDIR:   strcat (cbuf, "fixed "); break;
 	case TM_GLOBAL:   strcat (cbuf, "global "); break;
+	case TM_CURRENT: break;
+	case TM_TARGETTOREF: break;
+	case TM_TARGETFROMREF: break;
 	}
 	strncpy (str, cbuf, len-1);
 }

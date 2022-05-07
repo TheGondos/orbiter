@@ -12,8 +12,6 @@
 #ifndef __PANEL2D_H
 #define __PANEL2D_H
 
-#define STRICT 1
-#include <windows.h>
 #include "Mfd.h"
 
 // =======================================================================
@@ -71,7 +69,7 @@ public:
 	 * \param scrollflag attachment and scrolling flags
 	 * \return Always 0.
 	 */
-	int SetBackground (SURFHANDLE *hSurface, DWORD nsurf, MESHHANDLE hMesh, DWORD width, DWORD height, DWORD baseline, DWORD scrollflag);
+	int SetBackground (SURFHANDLE *hSurface, int nsurf, MESHHANDLE hMesh, int width, int height, int baseline, int scrollflag);
 
 	/**
 	 * \brief Set panel scaling factors
@@ -128,7 +126,7 @@ public:
 	* \param y mouse screen y position
 	* \return \e true if the panel processes the event.
 	*/
-	bool ProcessMouse_System(UINT event, DWORD state, int x, int y, const char *kstate);
+	bool ProcessMouse_System(oapi::MouseEvent event, int state, int x, int y, const char *kstate);
 
 	/**
 	 * \brief Process a mouse event for the panel while the simulation is active.
@@ -138,7 +136,7 @@ public:
 	 * \param y mouse screen y position
 	 * \return \e true if the panel processes the event.
 	 */
-	bool ProcessMouse_OnRunning (UINT event, DWORD state, int x, int y, const char *kstate);
+	bool ProcessMouse_OnRunning (oapi::MouseEvent event, int state, int x, int y, const char *kstate);
 
 	void GetMouseState (int &idx, int &state, int &mx, int &my) const;
 
@@ -193,19 +191,19 @@ protected:
 private:
 	oapi::GraphicsClient *gc; // graphics client object
 	Pane *pane;               // logical cockpit object
-	HWND cwnd;                // window handle for mouse position offset calculations
+	GLFWwindow *cwnd;                // window handle for mouse position offset calculations
 	int id;                   // panel identifier (0=main)
 	int connect[4];           // neighbour panel identifiers
 	bool visible;             // panel visible in viewport?
 	bool allowMFDNudge;       // allow nudging the MFD size to fit texture size
-	DWORD shiftflag;          // bitflags for shifting modes
+	int shiftflag;          // bitflags for shifting modes
 	//SURFHANDLE hBkgSurf;      // surface handle for panel background
 	MESHHANDLE hBkgMesh;      // mesh handle for panel background
 	SURFHANDLE *hSurf;        // surface handles for panel textures
-	DWORD nSurf;              // number of surfaces
-	DWORD panelW, panelH;     // panel width, height [pixel]
-	DWORD ybase;              // reference base line
-	DWORD viewW, viewH;       // viewport width, height [pixel]
+	int nSurf;              // number of surfaces
+	int panelW, panelH;     // panel width, height [pixel]
+	int ybase;              // reference base line
+	int viewW, viewH;       // viewport width, height [pixel]
 	double x0, y0;            // screen coordinates of top left panel corner
 	double userscale;         // user-defined scaling request
 	double panelscale;        // panel scaling factor
@@ -237,7 +235,7 @@ private:
 		int nmsh;    // mesh index
 		int ngrp;    // group index
 		float left, right, top, bottom; // the initial borders of the display (in mesh units)
-		DWORD flag;
+		int flag;
 	} mfdspec[MAXMFD];
 };
 

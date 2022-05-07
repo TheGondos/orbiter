@@ -12,14 +12,13 @@
 
 class Instrument_Transfer: public Instrument {
 public:
-	Instrument_Transfer (Pane *_pane, INT_PTR _id, const Spec &spec, Vessel *_vessel);
+	Instrument_Transfer (Pane *_pane, MfdId _id, const Spec &spec, Vessel *_vessel);
 	virtual ~Instrument_Transfer ();
 	int Type() const { return MFD_TRANSFER; }
 	char ModeSelKey () const { return 'X'; }
-	HELPCONTEXT *HelpTopic () const;
 	void UpdateDraw (oapi::Sketchpad *skp);
 	void SetSize (const Spec &spec);
-	bool KeyBuffered (DWORD key);
+	bool KeyBuffered (int key);
 	bool KeyImmediate (char *kstate);
 	bool ProcessButton (int bt, int event);
 	const char *BtnLabel (int bt) const;
@@ -37,14 +36,14 @@ private:
 	//bool CalcNumTrajectory (const Elements *el, double T);
 	bool CalcStep ();
 	bool InitNumTrajectory (const Elements *el);
-	bool SelectTarget (char *str);
-	bool SelectRef (char *str);
-	bool SelectSrc (char *str);
+	bool SelectTarget (const char *str);
+	bool SelectRef (const char *str);
+	bool SelectSrc (const char *str);
 	bool SetNstep (int np);
-	static bool ClbkEnter_Tgt (Select*, int, char*, void*);
-	static bool ClbkEnter_Ref (Select *menu, int item, char *str, void *data);
-	static bool ClbkEnter_Src (Select *menu, int item, char *str, void *data);
-	static bool ClbkNstep (InputBox *inp, char *str, void *data);
+	static bool ClbkEnter_Tgt (Select*, int, const char*, void*);
+	static bool ClbkEnter_Ref (Select *menu, int item, const char *str, void *data);
+	static bool ClbkEnter_Src (Select *menu, int item, const char *str, void *data);
+	static bool ClbkNstep (InputBox *inp, const char *str, void *data);
 
 	const CelestialBody *elref; // element reference body
 	const RigidBody *src;   // target orbit body

@@ -82,7 +82,7 @@ void D3D7PlanetRenderCfg::InitDialog (HWND hDlg)
 		sprintf (cbuf, "%dx", i);
 		SendDlgItemMessage (hDlg, IDC_COMBO1, CB_ADDSTRING, 0, (LPARAM)cbuf);
 	}
-	mode = min (cfg->PlanetAnisoMode, 16);
+	mode = std::min (cfg->PlanetAnisoMode, 16);
 	for (i = 0, j = 1; j < mode; i++, j*=2);
 	SendDlgItemMessage (hDlg, IDC_COMBO1, CB_SETCURSEL, i, 0);
 

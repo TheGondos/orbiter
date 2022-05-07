@@ -16,6 +16,9 @@
 #include "meshres_vc.h"
 #include "meshres_p0.h"
 #include "dg_vc_anim.h"
+#include <strings.h>
+
+#define _stricmp strcasecmp
 
 // ==============================================================
 // Landing gear subsystem
@@ -64,40 +67,40 @@ GearControl::GearControl (GearSubsystem *_subsys)
 	ELID_INDICATOR = AddElement (indicator = new GearIndicator (this));
 
 	// Landing gear animation
-	static UINT NWheelStrutGrp[2] = {GRP_NWheelStrut1,GRP_NWheelStrut2};
+	static unsigned int NWheelStrutGrp[2] = {GRP_NWheelStrut1,GRP_NWheelStrut2};
 	static MGROUP_ROTATE NWheelStrut (0, NWheelStrutGrp, 2,
 		_V(0,-1.048,8.561), _V(1,0,0), (float)(-95*RAD));
-	static UINT NWheelFCoverGrp[2] = {GRP_NWheelFCover1,GRP_NWheelFCover2};
+	static unsigned int NWheelFCoverGrp[2] = {GRP_NWheelFCover1,GRP_NWheelFCover2};
 	static MGROUP_ROTATE NWheelFCover (0, NWheelFCoverGrp, 2,
 		_V(0,-1.145,8.65), _V(1,0,0), (float)(-90*RAD));
-	static UINT NWheelLCoverGrp[2] = {GRP_NWheelLCover1,GRP_NWheelLCover2};
+	static unsigned int NWheelLCoverGrp[2] = {GRP_NWheelLCover1,GRP_NWheelLCover2};
 	static MGROUP_ROTATE NWheelLCover1 (0, NWheelLCoverGrp, 2,
 		_V(-0.3,-1.222,7.029), _V(0,0.052,0.999), (float)(-90*RAD));
 	static MGROUP_ROTATE NWheelLCover2 (0, NWheelLCoverGrp, 2,
 		_V(-0.3,-1.222,7.029), _V(0,0.052,0.999), (float)( 90*RAD));
-	static UINT NWheelRCoverGrp[2] = {GRP_NWheelRCover1,GRP_NWheelRCover2};
+	static unsigned int NWheelRCoverGrp[2] = {GRP_NWheelRCover1,GRP_NWheelRCover2};
 	static MGROUP_ROTATE NWheelRCover1 (0, NWheelRCoverGrp, 2,
 		_V( 0.3,-1.222,7.029), _V(0,0.052,0.999), (float)( 90*RAD));
 	static MGROUP_ROTATE NWheelRCover2 (0, NWheelRCoverGrp, 2,
 		_V( 0.3,-1.222,7.029), _V(0,0.052,0.999), (float)(-90*RAD));
-	static UINT LWheelStrutGrp[2] = {GRP_LWheelStrut1,GRP_LWheelStrut2};
+	static unsigned int LWheelStrutGrp[2] = {GRP_LWheelStrut1,GRP_LWheelStrut2};
 	static MGROUP_ROTATE LWheelStrut (0, LWheelStrutGrp, 2,
 		_V(-3.607,-1.137,-3.08), _V(0,0,1), (float)(-90*RAD));
-	static UINT RWheelStrutGrp[2] = {GRP_RWheelStrut1,GRP_RWheelStrut2};
+	static unsigned int RWheelStrutGrp[2] = {GRP_RWheelStrut1,GRP_RWheelStrut2};
 	static MGROUP_ROTATE RWheelStrut (0, RWheelStrutGrp, 2,
 		_V( 3.607,-1.137,-3.08), _V(0,0,1), (float)(90*RAD));
-	static UINT LWheelOCoverGrp[4] = {GRP_LWheelOCover1,GRP_LWheelOCover2,GRP_LWheelOCover3,GRP_LWheelOCover4};
+	static unsigned int LWheelOCoverGrp[4] = {GRP_LWheelOCover1,GRP_LWheelOCover2,GRP_LWheelOCover3,GRP_LWheelOCover4};
 	static MGROUP_ROTATE LWheelOCover (0, LWheelOCoverGrp, 4,
 		_V(-3.658,-1.239,-3.038), _V(0,0,1), (float)(-110*RAD));
-	static UINT LWheelICoverGrp[2] = {GRP_LWheelICover1,GRP_LWheelICover2};
+	static unsigned int LWheelICoverGrp[2] = {GRP_LWheelICover1,GRP_LWheelICover2};
 	static MGROUP_ROTATE LWheelICover1 (0, LWheelICoverGrp, 2,
 		_V(-2.175,-1.178,-3.438), _V(0,0,1), (float)(90*RAD));
 	static MGROUP_ROTATE LWheelICover2 (0, LWheelICoverGrp, 2,
 		_V(-2.175,-1.178,-3.438), _V(0,0,1), (float)(-90*RAD));
-	static UINT RWheelOCoverGrp[4] = {GRP_RWheelOCover1,GRP_RWheelOCover2,GRP_RWheelOCover3,GRP_RWheelOCover4};
+	static unsigned int RWheelOCoverGrp[4] = {GRP_RWheelOCover1,GRP_RWheelOCover2,GRP_RWheelOCover3,GRP_RWheelOCover4};
 	static MGROUP_ROTATE RWheelOCover (0, RWheelOCoverGrp, 4,
 		_V( 3.658,-1.239,-3.038), _V(0,0,1), (float)( 110*RAD));
-	static UINT RWheelICoverGrp[2] = {GRP_RWheelICover1,GRP_RWheelICover2};
+	static unsigned int RWheelICoverGrp[2] = {GRP_RWheelICover1,GRP_RWheelICover2};
 	static MGROUP_ROTATE RWheelICover1 (0, RWheelICoverGrp, 2,
 		_V( 2.175,-1.178,-3.438), _V(0,0,1), (float)(-90*RAD));
 	static MGROUP_ROTATE RWheelICover2 (0, RWheelICoverGrp, 2,
@@ -119,7 +122,7 @@ GearControl::GearControl (GearSubsystem *_subsys)
 	DG()->AddAnimationComponent (anim_gear, 0.7, 1, &RWheelICover2);
 
 	// VC gear lever animation
-	static UINT GearLeverGrp = GRP_GEAR_LEVER_VC;
+	static unsigned int GearLeverGrp = GRP_GEAR_LEVER_VC;
 	static MGROUP_ROTATE GearLeverTransform (1, &GearLeverGrp, 1,
 		VC_GEARLEVER_ref, VC_GEARLEVER_axis, (float)(-70*RAD));
 	anim_gearlever = DG()->CreateAnimation (0.5);
@@ -130,8 +133,6 @@ GearControl::GearControl (GearSubsystem *_subsys)
 
 void GearControl::LowerGear ()
 {
-	extern void UpdateCtrlDialog (DeltaGlider *dg, HWND hWnd=0);
-
 	if (DG()->GroundContact()) {
 		VECTOR3 nml = {0,1,0}, vnml;
 		DG()->HorizonInvRot(nml, vnml);
@@ -144,7 +145,6 @@ void GearControl::LowerGear ()
 	DG()->UpdateStatusIndicators();
 	DG()->TriggerPanelRedrawArea (0, ELID_LEVER);
 	DG()->TriggerRedrawArea (2, 0, ELID_INDICATOR);
-	UpdateCtrlDialog (DG());
 	DG()->RecordEvent ("GEAR", "DOWN");
 }
 
@@ -152,14 +152,11 @@ void GearControl::LowerGear ()
 
 void GearControl::RaiseGear ()
 {
-	extern void UpdateCtrlDialog (DeltaGlider *dg, HWND hWnd=0);
-
 	gear_state.Close();
 	glever_state.Close();
 	DG()->UpdateStatusIndicators();
 	DG()->TriggerPanelRedrawArea (0, ELID_LEVER);
 	DG()->TriggerRedrawArea (2, 0, ELID_INDICATOR);
-	UpdateCtrlDialog (DG());
 	DG()->RecordEvent ("GEAR", "UP");
 }
 
@@ -193,7 +190,7 @@ void GearControl::clbkPostStep (double simt, double simdt, double mjd)
 
 // --------------------------------------------------------------
 
-bool GearControl::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH)
+bool GearControl::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH)
 {
 	if (panelid != 0) return false;
 
@@ -285,7 +282,7 @@ bool GearControl::clbkPlaybackEvent (double simt, double event_t, const char *ev
 
 // --------------------------------------------------------------
 
-int GearControl::clbkConsumeBufferedKey (DWORD key, bool down, char *kstate)
+int GearControl::clbkConsumeBufferedKey (int key, bool down, char *kstate)
 {
 	if (KEYMOD_ALT(kstate) || KEYMOD_CONTROL(kstate) || KEYMOD_SHIFT(kstate))
 		return 0;
@@ -399,12 +396,12 @@ bool GearIndicator::RedrawVC (DEVMESHHANDLE hMesh, SURFHANDLE surf)
 					   (modf (oapiGetSimTime()+tofs, &d) < 0.5));
 	if (showlights != light) {
 		GROUPEDITSPEC ges;
-		static WORD vtxofs = VC_GEAR_INDICATOR_vofs;
-		static const DWORD nvtx = 2;
-		static WORD vidx[nvtx] = {vtxofs,vtxofs+1};
+		static uint16_t vtxofs = VC_GEAR_INDICATOR_vofs;
+		static const int nvtx = 2;
+		static uint16_t vidx[nvtx] = {vtxofs,(uint16_t)(vtxofs+1)};
 		static float v[2] = {0.2427f,0.3042f};
 		NTVERTEX vtx[nvtx];
-		for (DWORD i = 0; i < nvtx; i++)
+		for (int i = 0; i < nvtx; i++)
 			vtx[i].tv = v[(showlights ? 1:0)];
 		ges.flags = GRPEDIT_VTXTEXV;
 		ges.Vtx = vtx;
@@ -429,7 +426,7 @@ Wheelbrake::Wheelbrake (GearSubsystem *_subsys)
 
 // --------------------------------------------------------------
 
-bool Wheelbrake::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH)
+bool Wheelbrake::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH)
 {
 	if (panelid != 0) return false;
 

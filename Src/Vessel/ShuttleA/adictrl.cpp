@@ -13,6 +13,7 @@
 #include "adictrl.h"
 #include "attref.h"
 #include "paneltext.h"
+#include <cstring>
 
 #define STRICT 1
 
@@ -52,7 +53,7 @@ ADICtrl::ADICtrl (ShuttleA *shuttlea): PanelElement (shuttlea)
 
 // ==============================================================
 
-void ADICtrl::AddMeshData2D (MESHHANDLE hMesh, DWORD grpidx, DWORD grpidx_disp)
+void ADICtrl::AddMeshData2D (MESHHANDLE hMesh, int grpidx, int grpidx_disp)
 {
 	// Controls
 	const float bb_x0 = bb_dl_x0+10.0f;
@@ -60,8 +61,8 @@ void ADICtrl::AddMeshData2D (MESHHANDLE hMesh, DWORD grpidx, DWORD grpidx_disp)
 	const float bb_y0 = bb_dl_y0+39.0f;
 	const float bb_tgt_x0 = bb_x0-46.0f;
 	const float bb_mde_x0 = bb_x0+80.0f;
-	const DWORD nvtx = 4*7;
-	const DWORD nidx = 6*7;
+	const int nvtx = 4*7;
+	const int nidx = 6*7;
 	const NTVERTEX vtx[nvtx] = {
 		// frame dial
 		{bb_dl_x0-bb_dl_dx2,bb_dl_y0-bb_dl_dy2,0,  0,0,0,  tx_x0/texw,        tx_y0/texh        },
@@ -99,7 +100,7 @@ void ADICtrl::AddMeshData2D (MESHHANDLE hMesh, DWORD grpidx, DWORD grpidx_disp)
 		{bb_mde_x0,         bb_y0+tx_dy_bt,0,  0,0,0,  tx_x0_bt/texw,           (tx_y0_bt+tx_dy_bt)/texh},
 		{bb_mde_x0+tx_dx_bt,bb_y0+tx_dy_bt,0,  0,0,0,  (tx_x0_bt+tx_dx_bt)/texw,(tx_y0_bt+tx_dy_bt)/texh}
 	};
-	const WORD idx[nidx] = {
+	const uint16_t idx[nidx] = {
 		0,1,2, 3,2,1,
 		4,5,6, 7,6,5,
 		8,9,10, 11,10,9,
@@ -127,7 +128,7 @@ void ADICtrl::AddMeshData2D (MESHHANDLE hMesh, DWORD grpidx, DWORD grpidx_disp)
 		{bb_dsp_x0,          bb_dsp_y0+tx_dsp_dy,0,  0,0,0,  tx_dsp_x0/dsp_texw,            (tx_dsp_y0+tx_dsp_dy)/dsp_texh},
 		{bb_dsp_x0+tx_dsp_dx,bb_dsp_y0+tx_dsp_dy,0,  0,0,0,  (tx_dsp_x0+tx_dsp_dx)/dsp_texw,(tx_dsp_y0+tx_dsp_dy)/dsp_texh}
 	};
-	const WORD didx[6] = {
+	const uint16_t didx[6] = {
 		0,1,2, 3,2,1
 	};
 	AddGeometry (hMesh, grpidx_disp, dvtx, 4, didx, 6);
@@ -225,7 +226,7 @@ void ADICtrl::UpdateDisplay (SURFHANDLE surf, bool force)
 	tgtmode = sh->GetAttref()->GetTgtmode();
 
 	if (mode == 4) {
-		DWORD navid = sh->GetAttref()->GetNavid();
+		int navid = sh->GetAttref()->GetNavid();
 		hNav = sh->GetNavSource (navid);
 		if (navid) mode = 5;
 	} else if (mode >= 1 && mode <= 3) {

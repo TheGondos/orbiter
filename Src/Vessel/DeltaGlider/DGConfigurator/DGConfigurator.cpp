@@ -3,19 +3,21 @@
 
 #define STRICT 1
 #define ORBITER_MODULE
-#include "orbitersdk.h"
+#include "Orbitersdk.h"
 #include "DGC_resource.h"
 #include <stdio.h>
-#include <io.h>
+//#include <io.h>
+#include <unistd.h>
+#define _access access
 
 class VesselConfig;
 class DGConfig;
 
-static char *hires_enabled = "Textures2\\DG";
-static char *hires_disabled = "Textures2\\~DG";
+static char *hires_enabled = "Textures2/DG";
+static char *hires_disabled = "Textures2/~DG";
 
 struct {
-	HINSTANCE hInst;
+	oapi::DynamicModule *hInst;
 	DGConfig *item;
 } gParams;
 
@@ -101,14 +103,14 @@ INT_PTR CALLBACK DGConfig::DlgProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
 // The DLL entry point
 // ==============================================================
 
-DLLCLBK void InitModule (HINSTANCE hDLL)
+DLLCLBK void InitModule (DynamicModule *hDLL)
 {
 	gParams.hInst = hDLL;
 	gParams.item = new DGConfig;
 	// create the new config item
-	LAUNCHPADITEM_HANDLE root = oapiFindLaunchpadItem ("Vessel configuration");
+	//LAUNCHPADITEM_HANDLE root = oapiFindLaunchpadItem ("Vessel configuration");
 	// find the config root entry provided by orbiter
-	oapiRegisterLaunchpadItem (gParams.item, root);
+	//oapiRegisterLaunchpadItem (gParams.item, root);
 	// register the DG config entry
 }
 
@@ -119,6 +121,6 @@ DLLCLBK void InitModule (HINSTANCE hDLL)
 DLLCLBK void ExitModule (HINSTANCE hDLL)
 {
 	// Unregister the launchpad items
-	oapiUnregisterLaunchpadItem (gParams.item);
+	//oapiUnregisterLaunchpadItem (gParams.item);
 	delete gParams.item;
 }

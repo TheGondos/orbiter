@@ -8,7 +8,6 @@
 #ifndef __KEYMAP_H
 #define __KEYMAP_H
 
-#include "windows.h"
 #include "Orbitersdk.h"
 
 // key modifier list
@@ -29,27 +28,27 @@ public:
 	void SetDefault ();
 	// set orbiter-default key mapping
 
-	bool Read (char *fname);
+	bool Read (const char *fname);
 	// parse keymap table from file
 
-	void Write (char *fname);
+	void Write (const char *fname);
 	// write keymap table to file
 
 	bool IsLogicalKey (char *kstate, int lfunc) const;
 	// return true if logical function lfunc is selected by key state kstate
 
-	bool IsLogicalKey (DWORD &key, char *kstate, int lfunc, bool clearkey = true) const;
+	bool IsLogicalKey (int key, char *kstate, int lfunc) const;
 	// return true if logical function lfunc is selected by key and kstate
 	// (kstate only used for modifier keys)
 	// if clearkey == true then key is set to 0 on return, if a match is found
 
 private:
-	bool IsMatchingModifier (char *kstate, WORD key) const;
+	bool IsMatchingModifier (char *kstate, int key) const;
 
-	bool ScanStr (char *cbuf, WORD &key) const;
-	char *PrintStr (char *cbuf, WORD &key) const;
+	bool ScanStr (char *cbuf, uint16_t &key) const;
+	char *PrintStr (char *cbuf, uint16_t key) const;
 
-	WORD func[LKEY_COUNT];
+	uint16_t func[LKEY_COUNT];
 	// list of logical function keys
 	// LOBYTE: key id; HIBYTE: modifier (see modifier list)
 };

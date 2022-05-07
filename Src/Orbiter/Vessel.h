@@ -26,6 +26,7 @@
 #include <fstream>
 #include "Orbitersdk.h"
 #include "GraphicsAPI.h"
+#include <algorithm>
 
 class Elements;
 class CelestialBody;
@@ -39,7 +40,7 @@ class Nav;
 class Nav_IDS;
 class Nav_XPDR;
 class ExhaustStream;
-class oapi::Sketchpad;
+//class oapi::Sketchpad;
 class LightEmitter;
 class Select;
 class InputBox;
@@ -50,21 +51,21 @@ typedef char Str64[64];
 #define SD_NAME 0x0001 // include vessel name and class name in scenario data
 
 struct ScenarioData { // packed vessel state
-	DWORD size;             // size of the complete data block
-	DWORD flag;
-	BYTE fstate;            // flight status
+	uint32_t size;             // size of the complete data block
+	uint32_t flag;
+	uint8_t  fstate;            // flight status
 	union {
 		struct {
 			Vector rpos;    // reference body-relative position
 			Vector rvel;    // reference body-relative velocity
 			Vector arot;    // orientation (Euler angles)
 			Vector vrot;    // angular velocity
-		};
+		} freeflight;
 		struct {
 			double lng;     // longitude of landing site [rad]
 			double lat;     // latitude of landing site [rad]
 			double hdg;     // orientation on the ground
-		};
+		} landed;
 	};
 	char buf[1];            // pointer to variable-length parameters
 };
@@ -94,7 +95,7 @@ typedef struct {      // logical thruster definition
 
 typedef struct {      // thruster group definition
 	ThrustSpec **ts;        // list of thrusters
-	DWORD nts;              // number of thrusters
+	int nts;              // number of thrusters
 	double maxth_sum;       // sum of maxth of all components
 } ThrustGroupSpec;
 
@@ -121,7 +122,7 @@ typedef struct {      // airfoil control surface definition
 	int axis;               // axis orientation: 1=+Y, 2=-Y, 3=+X, 4=-X (should allow freely defined axes)
 	double area;            // surface area
 	double dCl;             // lift coefficient differential
-	UINT anim;              // animation reference ((UINT)-1 for none)
+	unsigned int anim;              // animation reference ((unsigned int)-1 for none)
 } CtrlsurfSpec;
 
 typedef struct {      // variable drag element definition
@@ -137,7 +138,7 @@ typedef struct {      // docking port definition
 	Vessel *mate;           // vessel attached to port (NULL for none)
 	Vessel *pending;        // vessel being currently docked/undocked
 	int status;             // 0=normal (docked/free), 1=docking in progress, 2=undocking in progress
-	DWORD matedock;         // mate dock index
+	int matedock;         // mate dock index
 	Nav_IDS *ids;           // instrument docking system specs (NULL if not available)
 } PortSpec;
 
@@ -154,7 +155,7 @@ typedef struct tagAttachmentSpec { // parent/child attachment definition
 
 typedef struct {      // nav radio definition
 	float freq;             // current frequency [MHz]
-	DWORD step;             // discrete frequency setting (freq = MinFreq + step * 0.05MHz)
+	int step;             // discrete frequency setting (freq = MinFreq + step * 0.05MHz)
 	int dbidx;              // index into NAV data base for current proxybody and frequency
 	const Nav *sender;      // incoming transmitter signal
 } NavRadioSpec;
@@ -169,7 +170,7 @@ typedef struct {      // reentry texture definition
 typedef struct {      // list of animation sequences - OBSOLETE
 	double defstate;        // default mesh state
 	double state;           // current state
-	UINT ncomp;             // # components
+	unsigned int ncomp;             // # components
 	ANIMCOMP **comp;        // pointer to list of components
 } ANIMSEQ;
 
@@ -262,7 +263,7 @@ public:
 	void PostCreation ();
 	// This is called by the psys manager after all vessels have been created
 
-	void ProcessMessage (DWORD msg, void *data);
+	void ProcessMessage (int msg, void *data);
 	// Process a message sent by the system
 
 	void Destroying (const Vessel *vessel);
@@ -340,7 +341,7 @@ public:
 	//   1 = file could not be opened
 	//   2 = parse error
 
-	bool SetTouchdownPoints (const TOUCHDOWNVTX *tdvtx, DWORD ntp = 3);
+	bool SetTouchdownPoints (const TOUCHDOWNVTX *tdvtx, int ntp = 3);
 	// sets the touchdown points in the vessel frame
 	// tp should contain 3 points (not collinear!)
 
@@ -421,7 +422,7 @@ public:
 			double dlevel = level - ts->level_permanent;
 			ts->level_permanent = level;
 			if (ts->tank && ts->tank->mass)
-				ts->level = max(0.0, min(1.0, ts->level+dlevel));
+				ts->level = std::max(0.0, std::min(1.0, ts->level+dlevel));
 		}
 	}
 	// set the permanent level for a thruster (0-1)
@@ -431,7 +432,7 @@ public:
 		if (!bFRplayback) {
 			ts->level_permanent += dlevel;
 			if (ts->tank && ts->tank->mass)
-				ts->level = max(0.0, min(1.0, ts->level+dlevel));
+				ts->level = std::max(0.0, std::min(1.0, ts->level+dlevel));
 		}
 	}
 
@@ -440,7 +441,7 @@ public:
 		double dlevel = level - ts->level_permanent;
 		ts->level_permanent = level;
 		if (ts->tank && ts->tank->mass)
-			ts->level = max(0.0, min(1.0, ts->level+dlevel));
+			ts->level = std::max(0.0, std::min(1.0, ts->level+dlevel));
 
 	}
 	// set permanent thruster level during playback
@@ -463,7 +464,7 @@ public:
 	// ========================================================================
 	// thruster group management
 
-	ThrustGroupSpec *CreateThrusterGroup (ThrustSpec **ts, DWORD nts, THGROUP_TYPE thgt);
+	ThrustGroupSpec *CreateThrusterGroup (ThrustSpec **ts, int nts, THGROUP_TYPE thgt);
 	// assemble a set of thrusters into a logical group
 
 	bool DeleteThrusterGroup (ThrustGroupSpec *tgs, THGROUP_TYPE thgt, bool delth = false);
@@ -479,12 +480,12 @@ public:
 	// Remove a default thruster group definition.
 	// If delth==true, the associated thrusters are also destroyed
 
-	inline DWORD NumThrusters (THGROUP_TYPE thg) const
+	inline int NumThrusters (THGROUP_TYPE thg) const
 	{ return thruster_grp_default[thg].nts; }
 	// number of thrusters in thruster group thg
 
 	inline bool IsGroupThruster (ThrustGroupSpec *tgs, ThrustSpec *ts)
-	{ for (DWORD i = 0; i < tgs->nts; i++)
+	{ for (int i = 0; i < tgs->nts; i++)
 	      if (tgs->ts[i] == ts) return true;
 	  return false;
 	}
@@ -492,14 +493,14 @@ public:
 
 	inline void SetThrusterGroupLevel (ThrustGroupSpec *tgs, double level)
 	{
-		for (DWORD i = 0; i < tgs->nts; i++)
+		for (int i = 0; i < tgs->nts; i++)
 			SetThrusterLevel (tgs->ts[i], level);
 	}
 	// set permanent thruster level for all thrusters in group 'tgs'
 
 	inline void SetThrusterGroupOverride (ThrustGroupSpec *tgs, double level)
 	{
-		for (DWORD i = 0; i < tgs->nts; i++)
+		for (int i = 0; i < tgs->nts; i++)
 			SetThrusterOverride (tgs->ts[i], level);
 	}
 	// set single-step level for all thrusters in group 'tgs'
@@ -526,7 +527,7 @@ public:
 
 	inline void IncThrusterGroupOverride (ThrustGroupSpec *tgs, double dlevel)
 	{
-		for (DWORD i = 0; i < tgs->nts; i++)
+		for (int i = 0; i < tgs->nts; i++)
 			IncThrusterOverride (tgs->ts[i], dlevel);
 	}
 	// add 'dlevel' to the temporary settings of all thrusters in group 'tgs'
@@ -540,7 +541,7 @@ public:
 	inline double GetThrusterGroupLevel (const ThrustGroupSpec *tgs) const
 	{
 		double level = 0.0;
-		for (DWORD i = 0; i < tgs->nts; i++)
+		for (int i = 0; i < tgs->nts; i++)
 			level += tgs->ts[i]->level;
 		return (tgs->nts ? level/tgs->nts : 0.0);
 	}
@@ -580,16 +581,16 @@ public:
 	// linear groups consist of 2 thrusters each, so the total thrust for linear modes is 2*maxth
 
 #ifdef UNDEF
-	UINT AddExhaust (ThrustSpec *ts, double lscale, double wscale, double lofs = 0,
+	unsigned int AddExhaust (ThrustSpec *ts, double lscale, double wscale, double lofs = 0,
 		const Vector *pos = 0, const Vector *dir = 0, SURFHANDLE tex = 0, double modulate = 0.0);
 	// Add an exhaust render specification for thruster ts, using its 'level' parameter for
 	// scaling. Unless pos and/or dir are explicitly specified, they are linked to the thruster
 	// 'pos' and 'dir' parameters. lscale and wscale are exhaust length and width scales.
 #endif
 
-	UINT AddExhaust (EXHAUSTSPEC *spec);
+	unsigned int AddExhaust (EXHAUSTSPEC *spec);
 
-	bool DelExhaust (UINT idx);
+	bool DelExhaust (unsigned int idx);
 	// removes the idx-th exhaust render specification from the list
 
 	oapi::ParticleStream *AddParticleStream (PARTICLESTREAMSPEC *pss, const Vector &pos, const Vector &dir, double *lvl);
@@ -634,10 +635,10 @@ public:
 	void ClearLightEmitters ();
 	// Delete all light emitters defined for the vessel
 
-	DWORD LightEmitterCount () const { return nemitter; }
+	int LightEmitterCount () const { return nemitter; }
 	// Returns the number of emitters defined for the vessel
 
-	const LightEmitter *GetLightEmitter (DWORD i) const { return emitter[i]; }
+	const LightEmitter *GetLightEmitter (int i) const { return emitter[i]; }
 	// Returns an emitter identified by index
 
 	void LightEmitterState (LightEmitter *le, int param, void *value);
@@ -660,18 +661,18 @@ public:
 	void ClearPropellantResources ();
 	// Remove all propellant resources, and unlink all thrusters from their resources
 
-	inline TankSpec *PropellantHandle (DWORD idx) const
+	inline TankSpec *PropellantHandle (int idx) const
 	{ return (idx < ntank ? tank[idx] : 0); }
 
 	inline TankSpec *DefaultPropellantHandle () const
 	{ return (def_tank ? def_tank : ntank ? tank[0] : 0); }
 
 	inline void SetPropellantMaxMass (TankSpec *ts, double m)
-	{ ts->mass = ts->pmass = min (ts->maxmass = m, ts->mass); UpdateMass(); }
+	{ ts->mass = ts->pmass = std::min (ts->maxmass = m, ts->mass); UpdateMass(); }
 	// Reset the maximum capacity [kg] of a propellant resource
 
 	inline void SetPropellantMass (TankSpec *ts, double m)
-	{ ts->mass = ts->pmass = min (m, ts->maxmass); ResetMass(); }
+	{ ts->mass = ts->pmass = std::min (m, ts->maxmass); ResetMass(); }
 	// Set fuel mass [kg] of a propellant resource
 
 	inline double GetPropellantLevel (const TankSpec *ts) const
@@ -692,25 +693,25 @@ public:
 	bool GetAirfoilParam (AirfoilSpec *af, VECTOR3 *ref, AirfoilCoeffFunc *cf, void **context, double *c, double *S, double *A);
 	// Return airfoil parameters
 
-	void EditAirfoil (AirfoilSpec *af, DWORD flag, const Vector &ref, AirfoilCoeffFunc cf, double c, double S, double A);
+	void EditAirfoil (AirfoilSpec *af, int flag, const Vector &ref, AirfoilCoeffFunc cf, double c, double S, double A);
 	// Edit an existing airfoil definition
 
 	bool DelAirfoil (AirfoilSpec *af);
 	// Delete an airfoil. Returns false on failure.
 
-	bool DelAirfoil (DWORD i);
+	bool DelAirfoil (int i);
 	// Delete an airfoil given by its index. Returns false on failure.
 
 	void ClearAirfoilDefinitions ();
 	// Remove all airfoil lift,drag definitions
 
-	CtrlsurfSpec *CreateControlSurface (AIRCTRL_TYPE ctrl, double area, double dCl, const Vector &ref, int axis, double delay = 1.0, UINT anim = (UINT)-1);
+	CtrlsurfSpec *CreateControlSurface (AIRCTRL_TYPE ctrl, double area, double dCl, const Vector &ref, int axis, double delay = 1.0, unsigned int anim = (unsigned int)-1);
 	// Create a new control surface definition of the specified type
 
 	bool DelControlSurface (CtrlsurfSpec *cs);
 	// Delete a control surfce. Returns false on failure.
 
-	bool DelControlSurface (DWORD i);
+	bool DelControlSurface (int i);
 	// Delete a control surface given by its index. Returns false on failure.
 
 	void ClearControlSurfaceDefinitions ();
@@ -731,7 +732,7 @@ public:
 	void ClearVariableDragElements ();
 	// Remove all drag element definitions
 
-	void ApplyUserAttitudeControls (DWORD *ctrl);
+	void ApplyUserAttitudeControls (int *ctrl);
 	// translate user keyboard/joystick input into RCS or airfoil response (single frame)
 
 	void IncTrim (AIRCTRL_TYPE ctrl);
@@ -751,7 +752,7 @@ public:
 	void UnregisterMFDModes ();
 	// Un-register all locally defined MFD modes
 
-	DWORD GetMFDModes (const MFDMODE **modelist) const
+	int GetMFDModes (const MFDMODE **modelist) const
 	{ *modelist = mfdmode; return nmfdmode; }
 
 	// ========================================================================
@@ -834,8 +835,8 @@ public:
 	bool SetAttMode (int mode, bool fromstream = false);
 	// return/toggle/set attitude thruster mode (0=disable, 1=rot, 2=lin)
 
-	DWORD ToggleADCtrlMode ();
-	void SetADCtrlMode (DWORD mode, bool fromstream = false);
+	int ToggleADCtrlMode ();
+	void SetADCtrlMode (int mode, bool fromstream = false);
 	// connect/disconnect user input to aerodynamic control surfaces
 
 	void SetWBrakeLevel (double level, int which = 0, bool permanent = true);
@@ -859,7 +860,7 @@ public:
 	void ShiftDocks (const Vector &ofs);
 	// shift all dock positions by ofs
 
-	inline const PortSpec *GetDockParams (DWORD did) const { return dock[did]; }
+	inline const PortSpec *GetDockParams (int did) const { return dock[did]; }
 
 	Vector GetDockGPos (const PortSpec *dock) const
 	{ return (mul (s0->R, dock->ref) + s0->pos); }
@@ -869,24 +870,24 @@ public:
 	// Set instrument docking approach specs for a docking port
 
 	bool DelDock (PortSpec *dock);
-	bool DelDock (DWORD i);
+	bool DelDock (int i);
 	// Delete a dock (by spec or index), after undocking any docked vessel.
 	// Returns false on failure.
 
 	void ClearDockDefinitions ();
 	// Remove all dock definitions
 
-	void RegisterDocking (DWORD did, Vessel *mate, DWORD matedid);
+	void RegisterDocking (int did, Vessel *mate, int matedid);
 	// Register a docking event at dock 'did' with vessel 'mate' and mate's dock 'matedid'
 
-	void UnregisterDocking (DWORD did);
+	void UnregisterDocking (int did);
 	// Register an undocking event at dock 'did'
 
-	int Dock (Vessel *target, DWORD mydid, DWORD tgtdid, DWORD mode = 0);
+	int Dock (Vessel *target, int mydid, int tgtdid, int mode = 0);
 	// Dock with 'target', using dock 'mydid' and attach to target dock 'tgtdid'
 	// Return values: 0=ok, 1=my dock in use, 2=target dock in use, 3=already docked to target
 
-	bool Undock (UINT did, const Vessel *exclude = 0, double vsep = 0.2);
+	bool Undock (unsigned int did, const Vessel *exclude = 0, double vsep = 0.2);
 	// Perform undocking from object docked at 'did' with separation velocity
 	// 'vsep', but excluding object 'exclude'
 
@@ -894,10 +895,10 @@ public:
 	// This version asks for a dock to disengage, if the vessel defines more
 	// than one dock.
 
-	inline DWORD nDock () const { return ndock; }
-	inline Vessel *DockMate (DWORD n) const { return dock[n]->mate; }
+	inline int nDock () const { return ndock; }
+	inline Vessel *DockMate (int n) const { return dock[n]->mate; }
 
-	void RelDockingPos (const Vessel *target, UINT mydid, UINT tgtdid, Vector &P, Matrix &R);
+	void RelDockingPos (const Vessel *target, unsigned int mydid, unsigned int tgtdid, Vector &P, Matrix &R);
 	// Calculate the relative position 'P' and orientation 'R' of 'target'
 	// in my reference frame, if we are docked between 'mydid' and 'tgtdid'
 
@@ -940,10 +941,10 @@ public:
 	void InitAttachmentToParent (AttachmentSpec *asc, bool allow_loose = true);
 	// set relative rotation matrix and position of child after attached to a parent
 
-	DWORD GetAttachmentIndex (AttachmentSpec *as) const;
-	// returns the list index of as (either in child or parent list) or (DWORD)-1 if not present
+	int GetAttachmentIndex (AttachmentSpec *as) const;
+	// returns the list index of as (either in child or parent list) or (int)-1 if not present
 
-	AttachmentSpec *GetAttachmentFromIndex (bool toparent, DWORD i);
+	AttachmentSpec *GetAttachmentFromIndex (bool toparent, int i);
 	// returns the attachment for a given index from either the to-parent or the to-child list
 
 	void ShiftAttachments (const Vector &ofs);
@@ -952,17 +953,17 @@ public:
 	// ========================================================================
 	// navigation radio interface
 
-	bool SetNavChannel (DWORD n, DWORD ch);
-	bool IncNavChannel (DWORD n, int dch);
-	DWORD GetNavChannel (DWORD n) const;
-	float GetNavFreq (DWORD n) const;
+	bool SetNavChannel (int n, int ch);
+	bool IncNavChannel (int n, int dch);
+	int GetNavChannel (int n) const;
+	float GetNavFreq (int n) const;
 
 	inline Nav_XPDR *GetXPDR () const { return xpdr; }
-	DWORD GetXpdrChannel () const;
+	int GetXpdrChannel () const;
 	bool GetXpdrFreq (float &freq) const;
-	bool SetXpdrChannel (DWORD ch);
+	bool SetXpdrChannel (int ch);
 	bool IncXpdrChannel (int dch);
-	bool SetIDSChannel (PortSpec *ps, DWORD ch);
+	bool SetIDSChannel (PortSpec *ps, int ch);
 
 	bool SetNavMode (int mode, bool fromstream = false);
 	bool ClrNavMode (int mode, bool record = true, bool fromstream = false);
@@ -971,7 +972,7 @@ public:
 	// set/unset/toggle a particular navigation mode
 	// and check status of a navigation mode
 
-	void Vessel::SetHoverHoldAltitude (double alt, bool terrainalt);
+	void SetHoverHoldAltitude (double alt, bool terrainalt);
 
 	// ========================================================================
 	// beacon light management
@@ -985,7 +986,7 @@ public:
 	void ClearBeacons ();
 	// remove all beacons
 
-	const BEACONLIGHTSPEC *GetBeacon (DWORD idx) const;
+	const BEACONLIGHTSPEC *GetBeacon (int idx) const;
 
 	inline VESSEL *GetModuleInterface () { return modIntf.v; }
 	// Return module interface for vessel. Guaranteed to exist even if the
@@ -994,7 +995,7 @@ public:
 	int ConsumeDirectKey (char *buffer);
 	// Keyboard handler for immediate keys
 
-	int ConsumeBufferedKey (DWORD key, bool down, char *kstate);
+	int ConsumeBufferedKey (int key, bool down, char *kstate);
 	// Keyboard handler for buffered keys
 
 	void Update (bool force = false);
@@ -1030,7 +1031,7 @@ public:
 	void ModuleSignalRCSmode (int mode);
 	// Notifies module of RCS mode change by calling VESSEL2::clbkRCSMode function
 
-	void ModuleSignalADCtrlmode (DWORD mode);
+	void ModuleSignalADCtrlmode (int mode);
 	// Notifies module of aerodynamic control mode change by calling VESSEL2::clbkADCtrlmode
 
 	void ModuleSignalNavmode (int mode, bool active);
@@ -1052,7 +1053,7 @@ public:
 
 	inline void SetLandingTarget (Base *target) { landtgt = target; }
 	inline Base *LandingTarget () const { return landtgt; }
-	inline DWORD PortNo () const { return nport; }
+	inline int   PortNo () const { return nport; }
 	inline int   LCommsStatus() const { return lstatus; }
 	//inline int   DCommsStatus() const { return dstatus; }
 	// set and retrieve the vessel's target (base) for landing/docking
@@ -1202,7 +1203,7 @@ protected:
 	inline double ThrusterAtmScale (const ThrustSpec *ts, double p) const
 	{
 		if (!ts->pfac) return 1.0;
-		return max (0.0, 1.0 - p*ts->pfac);    // old linear model
+		return std::max (0.0, 1.0 - p*ts->pfac);    // old linear model
 		//return exp (p*ts->pfac);               // new exponential model
 	}
 	// Returns a thrust scaling factor for thruster th in ambient pressure p
@@ -1222,7 +1223,7 @@ protected:
 	// Parse a single line directly into vessel structure, bypassing any VESSELSTATUSx structure
 	// This is used for any status options that are not currently represented in VESSELSTATUSx
 
-	DWORD PackDefaultState (char **data, DWORD flag);
+	int PackDefaultState (char **data, int flag);
 	// pack the default vessel state parameters into a data buffer
 	// (e.g. for passing between remote sessions)
 	// *data is dynamically allocated and must be deallocated by the caller after use
@@ -1245,21 +1246,21 @@ protected:
 	void ReadGenericCaps (std::ifstream &ifs);
 	// read generic vessel caps from a class cfg file
 
-	UINT AddMesh (const char *mname, const VECTOR3 *ofs = 0);
+	unsigned int AddMesh (const char *mname, const VECTOR3 *ofs = 0);
 	// add a mesh with offset to the list (load from file). Return value is mesh index
 
-	UINT AddMesh (MESHHANDLE hMesh, const VECTOR3 *ofs = 0);
+	unsigned int AddMesh (MESHHANDLE hMesh, const VECTOR3 *ofs = 0);
 	// add a mesh with offset to the list (copy from handle). Return value is mesh index
 
-	UINT InsertMesh (const char *mname, UINT idx, const VECTOR3 *ofs = 0);
+	unsigned int InsertMesh (const char *mname, unsigned int idx, const VECTOR3 *ofs = 0);
 	// Insert a mesh at a particular position (load from file). If a mesh is already registered
 	// with index 'idx', the existing mesh is replaced
 
-	UINT InsertMesh (MESHHANDLE hMesh, UINT idx, const VECTOR3 *ofs = 0);
+	unsigned int InsertMesh (MESHHANDLE hMesh, unsigned int idx, const VECTOR3 *ofs = 0);
 	// Insert a mesh at a particular position (copy from handle). If a mesh is already registered
 	// with index 'idx', the existing mesh is replaced
 
-	bool DelMesh (UINT idx, bool retain_anim = false);
+	bool DelMesh (unsigned int idx, bool retain_anim = false);
 	// Remove mesh with index 'idx'. Returns false if idx is out of range
 	// If retain_anim=true, animation components associated with the mesh
 	// are not removed.
@@ -1268,26 +1269,26 @@ protected:
 	// remove all entries from mesh list
 	// If retain_anim=true, animations are not removed.
 
-	bool ShiftMesh (UINT idx, const VECTOR3 &ofs);
+	bool ShiftMesh (unsigned int idx, const VECTOR3 &ofs);
 	// shift mesh 'idx' by 'ofs' from current position
 
-	const MESHHANDLE GetMeshTemplate (UINT idx) const;
+	const MESHHANDLE GetMeshTemplate (unsigned int idx) const;
 	// returns template handle for pre-loaded mesh, or NULL if not available
 
-	const char *GetMeshName (UINT idx) const;
+	const char *GetMeshName (unsigned int idx) const;
 	// returns mesh name for on-demand mesh, or NULL for pre-loaded mesh
 
-	Mesh *CopyMeshFromTemplate (UINT idx);
+	Mesh *CopyMeshFromTemplate (unsigned int idx);
 	// Creates a new copy of the vessel's idx-th mesh, either by
 	// copying from the preloaded template, or by reading from file.
 	// If idx is out of range, or the mesh could not be read, the
 	// return value is 0.
 	// If vismode!=0, it will be set to the mesh visibility mode.
 
-	void SetMeshVisibilityMode (UINT meshidx, WORD mode);
+	void SetMeshVisibilityMode (unsigned int meshidx, uint16_t mode);
 	// set visibility flag for mesh in cockpit view/external view
 
-	int MeshModified (MESHHANDLE hMesh, UINT grp, DWORD modflag);
+	int MeshModified (MESHHANDLE hMesh, unsigned int grp, int modflag);
 	// Notify the visualisation subsystem of a modification of a mesh group
 
 	bool LoadModule (std::ifstream &classf);
@@ -1299,7 +1300,7 @@ protected:
 	void ClearModule ();
 	// clear interface pointers and unload module
 
-	HINSTANCE hMod;        // module handle
+	oapi::DynamicModule hMod;        // module handle
 	struct {               // module interface
 		VESSEL *v;
 		int version;
@@ -1320,7 +1321,7 @@ private:
 	inline void FlushThrusterLevel (ThrustSpec *ts)
 	{
 		if (ts->tank && ts->tank->mass)
-			ts->level = max (0.0, min (1.0, ts->level_permanent + ts->level_override));
+			ts->level = std::max (0.0, std::min (1.0, ts->level_permanent + ts->level_override));
 	}
 	// set thruster level as sum of permanent and override setting
 
@@ -1346,16 +1347,16 @@ private:
 	// orientation rot (all w.r.t. ecliptic axis orientation). _vrot is rotation vector (rad/s) around the
 	// three axes, if provided
 
-	void InitNavRadios (DWORD n);
+	void InitNavRadios (int n);
 	// define the number of navigation radios supported by the vessel
 
-	DWORD IncRadioChannel (DWORD ch, int step) const;
+	int IncRadioChannel (int ch, int step) const;
 	// Generic functions to step through radio frequencies
 
 	void UpdateProxies ();
 	// check for grav reference body, and closest planet, base and station
 
-	void UpdateReceiverStatus (DWORD idx = 0xffff);
+	void UpdateReceiverStatus (int idx = 0xffff);
 	// update reception status for NAV receiver idx (or for all by default)
 
 	double IlluminationFactor () const;
@@ -1363,7 +1364,7 @@ private:
 	// only considers shadowing effect from closest planet
 	// currently ignores atmospheric effects
 
-	UINT MakeFreeMeshEntry (UINT idx = (UINT)-1);
+	unsigned int MakeFreeMeshEntry (unsigned int idx = (unsigned int)-1);
 	// If 'idx'==-1, return a pointer to an unused entry into the mesh list (add new entry if required)
 	// If 'idx' is set, force this entry to be created (may replace an existing entry)
 
@@ -1372,40 +1373,40 @@ private:
 
 	// thruster specs
 	ThrustSpec **thruster;                       // list of thruster definitions
-	DWORD nthruster;                             // length of thruster list
+	int nthruster;                             // length of thruster list
 	double isp_default;                          // default fuel specific impulse [m/s] for new thrusters
 	bool bThrustEngaged;                         // true if any thrusters are engaged at current time step
 
 	// thruster group specs
 	ThrustGroupSpec thruster_grp_default[15];    // list of default thruster groups (see THGROUP_TYPE in Orbitersdk.h)
 	ThrustGroupSpec **thruster_grp_user;         // list of user-defined groups
-	DWORD nthruster_grp_user;                    // length of thruster_grp_user
+	int nthruster_grp_user;                    // length of thruster_grp_user
 
 	// exhaust specs
 	EXHAUSTSPEC **exhaust;                       // list of exhaust definitions
-	DWORD nexhaust;                              // length of exhaust list
+	int nexhaust;                              // length of exhaust list
 	OldExhaustSpec **oexhaust;                   // list of old (obsolete) exhaust definitions
-	DWORD noexhaust;                             // length of oexhaust list
+	int noexhaust;                             // length of oexhaust list
 
 	// particle system
 	oapi::ParticleStream **contrail;
-	DWORD ncontrail;
+	int ncontrail;
 	oapi::ParticleStream **reentrystream;
-	DWORD nreentrystream;
+	int nreentrystream;
 
 	// propellant resource specs
 	TankSpec **tank;                             // list of propellant resource definitions
-	DWORD ntank;                                 // length of propellant list
+	int ntank;                                 // length of propellant list
 	TankSpec *def_tank;                          // default propellant handle (for generic HUD display)
 	double max_angular_moment[6];                // max angular momentum for the 6 standard rotational attitude thruster groups
 
 	// airfoil specs
 	AirfoilSpec **airfoil;
-	DWORD nairfoil;
+	int nairfoil;
 
 	// airfoil control surface specs
 	CtrlsurfSpec **ctrlsurf;                     // list of airfoil control surface definitions
-	DWORD nctrlsurf;                             // length of control surface list
+	int nctrlsurf;                             // length of control surface list
 	struct {                                     // status for elevator,rudder,aileron etc. (-1..+1)
 		double ttgt;                                 // target setting (transient)
 		double ptgt;                                 // target setting (permanent)
@@ -1417,46 +1418,46 @@ private:
 
 	// drag element specs
 	DragElementSpec **dragel;                    // list of variable drag element definitions
-	DWORD ndragel;                               // length of drag element list
+	int ndragel;                               // length of drag element list
 
 	// docking port specs
 	PortSpec **dock;                             // list of docking port definitions
-	DWORD ndock;                                 // length of docking port list
+	int ndock;                                 // length of docking port list
 	int dockmode;                                // 0=2006 legacy mode, 1=2010 mode
 	double undock_t;                             // time of last undock event
 
 	// parent/child attachment specs
 	AttachmentSpec **pattach;                    // "attachment to parent" list
 	AttachmentSpec **cattach;                    // "attachment to children" list
-	DWORD npattach, ncattach;                    // list lengths
+	int npattach, ncattach;                    // list lengths
 	AttachmentSpec *attach;                      // the current attachment to a parent, if applicable
 	Matrix attach_rrot;                          // rotation matrix from vessel to current parent
 	Vector attach_rpos;                          // position of vessel in current parent's frame
 
 	struct {                                     // this structure is used when parsing attachment
-		DWORD ci, pi;                            // info from a scenario to prepare deferred attachment
+		int ci, pi;                            // info from a scenario to prepare deferred attachment
 		char *pname;                             // should be merged into VESSELSTATUS
 	} attach_status;
 
 	// navigation radios
 	NavRadioSpec *nav;                           // list of nav radio settings
-	DWORD nnav;                                  // number of nav radios
+	int nnav;                                  // number of nav radios
 
 	// transponder
 	Nav_XPDR *xpdr;
 
 	// beacon lights
 	BEACONLIGHTSPEC **beacon;
-	DWORD nbeacon;
+	int nbeacon;
 
 	LightEmitter **emitter;
-	DWORD nemitter;
+	int nemitter;
 
 	// reentry texture definition
 	ReentryRenderSpec reentry;
 
 	// locally defined MFD modes
-	DWORD nmfdmode;                              // number of locally defined modes
+	int nmfdmode;                              // number of locally defined modes
 	MFDMODE *mfdmode;                            // list of locally defined modes
 
 	double emass, fmass, pfmass; // empty mass, current total fuel mass, previous total fuel mass
@@ -1477,7 +1478,7 @@ private:
 	bool burnfuel;               // no unlimited fuel
 	bool extpassmesh;
 	int attmode;                 // 0=disabled, 1=rotational, 2=transversal attitude thruster mode
-	DWORD ctrlsurfmode;          // disable/enable airfoil control surfaces. bit0=elevator, bit1=rudder, bit2=aileron
+	int ctrlsurfmode;          // disable/enable airfoil control surfaces. bit0=elevator, bit1=rudder, bit2=aileron
 
 	bool nosesteering;           // nosewheel steering active?
 	double nosewheeldir;         // nosewheel orientation (-1..1)
@@ -1500,15 +1501,15 @@ private:
 	struct {
 		double dist;
 		Vessel *vessel;
-		DWORD dock;
+		int dock;
 	} closedock;
 
 	Vessel *proxyvessel;      // closest vessel
 	SuperVessel *supervessel; // vessel superstructure (docking complex)
 	Base    *landtgt;         // landing target (base)
 	int   lstatus;            // landing/docking comms status (0=no contact, 1=contact,
-	DWORD nport;              // allocated landing pad/docking port no (>=0, (DWORD)-1=none)
-	UINT  scanvessel;         // next vessel to check for docking event
+	int nport;              // allocated landing pad/docking port no (>=0, (int)-1=none)
+	unsigned int  scanvessel;         // next vessel to check for docking event
 
 	mutable bool surfprm_valid;
 	bool pyp_valid;
@@ -1519,8 +1520,8 @@ private:
 	Vector touchdown_nm;   // upward normal of touchdown plane (vessel frame)
 	Vector touchdown_cg;   // projection of CG onto touchdown plane
 	TOUCHDOWN_VTX *touchdown_vtx;
-	DWORD ntouchdown_vtx;    // number of touchdown vertices
-	DWORD next_hullvtx;      // used by hull vertex iterator
+	int ntouchdown_vtx;    // number of touchdown vertices
+	int next_hullvtx;      // used by hull vertex iterator
 
 	Vector campos;             // internal camera position (cockpit mode);
 	Vector camdir0;            // internal default camera direction (cockpit mode)
@@ -1547,7 +1548,7 @@ private:
 	mutable bool weight_valid; // flag for 'Weight' up to date
 	double Lift, Drag;         // current lift and drag magnitudes
 
-	DWORD navmode;             // bitflags for currently active navmodes
+	int navmode;             // bitflags for currently active navmodes
 	struct HoverHoldAlt {      // Hover hold altitude data
 		double alt;            //   hover hold target altitude
 		double palt;           //   hover hold previous altitude
@@ -1570,13 +1571,13 @@ private:
 		Str64 meshname;    // mesh file names for the visual
 		MESHHANDLE hMesh;  // pointer to preloaded mesh, if present
 		VECTOR3 meshofs;   // mesh offset in vessel coords
-		DWORD_PTR crc;         // mesh id
-		WORD vismode;      // visibility mode: 1=external only, 2=internal only, 3=both
+		uint32_t hash;          // mesh id
+		uint16_t vismode;      // visibility mode: 1=external only, 2=internal only, 3=both
 	} **meshlist;
-	UINT nmesh;        // number of meshes
-	DWORD_PTR mesh_crc;    // visual state checksum
+	unsigned int nmesh;        // number of meshes
+	uint32_t mesh_hash;    // visual state checksum
 
-	UINT exhaust_id;   // next exhaust id to attach
+	unsigned int exhaust_id;   // next exhaust id to attach
 
 	int killrot_delay;   // delay counter for killrot terminate
 	bool kill_pending;
@@ -1584,15 +1585,13 @@ private:
 	int orthoaxis;       // auxiliary flag
 	int animcount;       // animation request ref count
 
-	oapi::Sketchpad *hudskp;    // hack: hud drawing instance (for callback)
-
 	LiftCoeffFunc LiftCoeff;    // function pointer for aoa-dependent lift coeff calculation - OBSOLETE
 
 	int flightmodel;            // flight model complexity; 0=simple, 1=realistic
 
-	static bool ClbkSelect_Undock (Select *menu, int item, char *str, void *data);
-	static bool ClbkEnter_Undock (Select *menu, int item, char *str, void *data);
-	static bool ClbkName_Undock (InputBox*, char *str, void *data);
+	static bool ClbkSelect_Undock (Select *menu, int item, const char *str, void *data);
+	static bool ClbkEnter_Undock (Select *menu, int item, const char *str, void *data);
+	static bool ClbkName_Undock (InputBox*, const char *str, void *data);
 
 	// =======================================================
 	// Flight recorder routines (should be a class!)
@@ -1628,7 +1627,7 @@ private:
 	// system time for last sample output (pos, att)
 
 	double *frec_eng;
-	DWORD nfrec_eng;
+	int    nfrec_eng;
 	double frec_eng_simt;
 	// Current engine status list
 
@@ -1669,44 +1668,44 @@ private:
 
 // BEGIN OBSOLETE
 
-	UINT AddAnimSeq (double defmeshstate);
+	unsigned int AddAnimSeq (double defmeshstate);
 	// add an animation sequence to the list
 	// defmeshstate (0..1) is the animation state of this sequence stored in the original mesh
 
-	bool AddAnimSeqComp (UINT seq, ANIMCOMP *comp);
+	bool AddAnimSeqComp (unsigned int seq, ANIMCOMP *comp);
 	// add a component to an existing animation sequence
 
-	bool SetAnimState (UINT seq, double state);
+	bool SetAnimState (unsigned int seq, double state);
 	// sets the state (0..1) of an animation sequence
 
 	void ClearAnimSeqs (void);
 	// removes all animation sequences
 
-	UINT nanimseq;        // number of animation sequences
+	unsigned int nanimseq;        // number of animation sequences
 	ANIMSEQ *animseq;     // list of animation sequences
 
 // END OBSOLETE
 
-	UINT CreateAnimation (double initial_state);
+	unsigned int CreateAnimation (double initial_state);
 	// Create a new animation
 	// initial_state (0..1) is the state of the animation of the unmodified mesh
 
-	ANIMATIONCOMP *AddAnimationComponent (UINT an, double state0, double state1,
+	ANIMATIONCOMP *AddAnimationComponent (unsigned int an, double state0, double state1,
 		MGROUP_TRANSFORM *trans, ANIMATIONCOMP *parent = NULL);
 	// Add a new component to animation 'an' with end states 'state0' and 'state1'
 	// 'trans' defines the transform. If 'parent' is defined, the animation is
 	// inserted as a child of 'parent'
 
-	bool DelAnimationComponent (UINT an, ANIMATIONCOMP *comp);
+	bool DelAnimationComponent (unsigned int an, ANIMATIONCOMP *comp);
 	// Remove a component from an animation
 
-	bool SetAnimation (UINT an, double state);
+	bool SetAnimation (unsigned int an, double state);
 	// Set the state (0..1) of animation 'an'
 
-	double GetAnimation (UINT an);
+	double GetAnimation (unsigned int an);
 	// Returns the current state of animation 'an'
 
-	bool DelAnimation (UINT an);
+	bool DelAnimation (unsigned int an);
 	// Deletes animation 'an' by removing all its components.
 	// The animation state of the mesh is reset to its default position
 	// before the animation is removed.
@@ -1715,7 +1714,7 @@ private:
 	// Remove all animations. If reset==true, all animated groups on visuals
 	// are reset to their initial states before the animations are destroyed
 
-	UINT nanim;			// number of animations
+	unsigned int nanim;			// number of animations
 	ANIMATION *anim;	// list of animations
 
 	bool EditorModule (char *cbuf) const;
@@ -1724,7 +1723,7 @@ private:
 
 	// API interface functions
 	friend OAPIFUNC double oapiGetMaxFuelMass (OBJHANDLE hVessel);
-	friend OAPIFUNC PROPELLANT_HANDLE oapiGetPropellantHandle (OBJHANDLE hVessel, DWORD idx);
+	friend OAPIFUNC PROPELLANT_HANDLE oapiGetPropellantHandle (OBJHANDLE hVessel, int idx);
 };
 
 #endif // !__VESSEL_H

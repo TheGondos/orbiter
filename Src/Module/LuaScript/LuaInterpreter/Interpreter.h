@@ -5,13 +5,15 @@
 #define __INTERPRETER_H
 
 extern "C" {
-#include "lua\lua.h"
-#include "lua\lualib.h"
-#include "lua\lauxlib.h"
+#include "lua.h"
+#include "lualib.h"
+#include "lauxlib.h"
 }
 
 #include "OrbiterAPI.h"
 #include "VesselAPI.h" // for TOUCHDOWNVTX
+#include <mutex>
+#include <semaphore.h>
 
 #define PRMTP_NIL           0x01
 #define PRMTP_NUMBER        0x02
@@ -118,12 +120,16 @@ public:
 	
 	void PostStep (double simt, double simdt, double mjd);
 
+	void StepInterpreter();
+	void WaitForStep();
+	void StepDone();
+
 	/**
 	 * \brief Wait for thread execution.
 	 * \note This is called by either the orbiter thread or the interpreter
 	 *   thread when they are waiting to regain execution control.
 	 */
-	virtual void WaitExec (DWORD timeout = INFINITE);
+//	virtual void WaitExec (int timeout = (unsigned int)-1);
 
 	/**
 	 * \brief Release thread execution.
@@ -133,7 +139,7 @@ public:
 	 *   thread after finishing a cycle to hand control over to the other
 	 *   thread.
 	 */
-	virtual void EndExec ();
+//	virtual void EndExec ();
 
 	/**
 	 * \brief Define functions for interfacing with Orbiter API
@@ -153,7 +159,7 @@ public:
 	 */
 	virtual void LoadStartupScript ();
 
-	virtual int ProcessChunk (const char *chunk, int n);
+	//virtual int ProcessChunk (const char *chunk, int n);
 
 	/**
 	 * \brief Executes a command or script.
@@ -346,7 +352,6 @@ protected:
 	static int oapiDbgOut (lua_State *L);
 	static int oapiWriteLog(lua_State* L);
 	static int oapiExit(lua_State *L);
-	static int oapiOpenHelp (lua_State *L);
 	static int oapiOpenInputBox (lua_State *L);
 	static int oapiReceiveInput (lua_State *L);
 	static int oapi_global_to_equ (lua_State *L);
@@ -812,8 +817,10 @@ protected:
 	friend int OpenHelp (void *context);
 
 private:
-	HANDLE hExecMutex; // flow control synchronisation
-	HANDLE hWaitMutex;
+//	std::mutex hExecMutex; // flow control synchronisation
+//	std::mutex hWaitMutex;
+	sem_t m_ExecSemaphore;
+	sem_t m_WaitSemaphore;
 
 	bool bExecLocal;   // flag for locally created mutexes
 	bool bWaitLocal;

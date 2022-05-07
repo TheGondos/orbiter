@@ -12,7 +12,7 @@
 // resolutions.
 // =======================================================================
 
-#include "D3d7util.h"
+#include "D3D7Util.h"
 #include "CSphereMgr.h"
 #include "Scene.h"
 #include "Camera.h"
@@ -72,7 +72,7 @@ CSphereManager::CSphereManager (const D3D7Client *gclient, const Scene *scene)
 	intensity = (float)tmp;
 
 	maxlvl = 8; // g_pOrbiter->Cfg()->CSphereMaxLevel;
-	maxbaselvl = min (8, maxlvl);
+	maxbaselvl = std::min ((DWORD)8, maxlvl);
 	int maxidx = patchidx[maxbaselvl];
 	bPreloadTile = (cfg->PlanetPreloadMode != 0);
 	nhitex = nhispec = 0;
@@ -233,7 +233,7 @@ void CSphereManager::Render (LPDIRECT3DDEVICE7 dev, int level, int bglvl)
 
 	if (!intens) return; // sanity check
 
-	level = min (level, (int)maxlvl);
+	level = std::min (level, (int)maxlvl);
 
 	RenderParam.dev = dev;
 	RenderParam.tgtlvl = level;
@@ -241,7 +241,7 @@ void CSphereManager::Render (LPDIRECT3DDEVICE7 dev, int level, int bglvl)
 
 	RenderParam.viewap = atan(diagscale * scn->GetCamera()->GetTanAp());
 
-	int startlvl = min (level, 8);
+	int startlvl = std::min (level, 8);
 	int hemisp, ilat, ilng, idx;
 	int  nlat = NLAT[startlvl];
 	int *nlng = NLNG[startlvl];
@@ -332,7 +332,7 @@ void CSphereManager::SetWorldMatrix (int ilng, int nlng, int ilat, int nlat)
 	// set up world transformation matrix
 	D3DMATRIX rtile, wtrans;
 
-	double lng = PI2 * (double)ilng/(double)nlng + PI; // add pi so texture wraps at +-180°
+	double lng = PI2 * (double)ilng/(double)nlng + PI; // add pi so texture wraps at +-180ï¿½
 	D3DMAT_RotY (&rtile, lng);
 
 	D3DMAT_MatrixMultiply (&wtrans, &RenderParam.wmat, &rtile);

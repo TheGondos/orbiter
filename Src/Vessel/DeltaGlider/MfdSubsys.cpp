@@ -13,6 +13,7 @@
 
 #include "MfdSubsys.h"
 #include "meshres_vc.h"
+#include <cstring>
 
 // ==============================================================
 // Constants for button labels
@@ -98,7 +99,7 @@ void MfdSubsystem::ModeChanged ()
 
 // --------------------------------------------------------------
 
-bool MfdSubsystem::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH)
+bool MfdSubsystem::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH)
 {
 	if (panelid != 0) return false;
 
@@ -137,11 +138,11 @@ bool MfdSubsystem::clbkLoadVC (int vcid)
 // MfdButtonGrp: row/column group of MFD buttons
 // ==============================================================
 
-MfdButtonGrp::MfdButtonGrp (MfdSubsystem *_subsys, DWORD _nbtn)
+MfdButtonGrp::MfdButtonGrp (MfdSubsystem *_subsys, int _nbtn)
 : PanelElement(_subsys->DG()), subsys(_subsys), nbtn(_nbtn)
 {
 	ispushed = new bool[nbtn];
-	for (DWORD i = 0; i < nbtn; i++)
+	for (int i = 0; i < nbtn; i++)
 		ispushed[i] = false;
 	pending_action = 0;
 }
@@ -166,7 +167,7 @@ void MfdButtonGrp::PushButtonVC (DEVMESHHANDLE hMesh, int meshgrp, int btn, bool
 	static const float dz_down = (float)( depth*cos(tilt));
 	static const float dy_down = (float)(-depth*sin(tilt));
 	NTVERTEX dvtx[nvtx_per_button];
-	WORD vofs[nvtx_per_button];
+	uint16_t vofs[nvtx_per_button];
 	float dz = (down ? dz_down : -dz_down);
 	float dy = (down ? dy_down : -dy_down);
 	for (int i = 0; i < nvtx_per_button; i++) {
@@ -185,6 +186,7 @@ void MfdButtonGrp::PushButtonVC (DEVMESHHANDLE hMesh, int meshgrp, int btn, bool
 MfdButtonRow::MfdButtonRow (MfdSubsystem *_subsys)
 : MfdButtonGrp(_subsys, 2)
 {
+	curbtn = -1;
 }
 
 // --------------------------------------------------------------
@@ -273,7 +275,7 @@ bool MfdButtonCol::Redraw2D (SURFHANDLE surf)
 		oapiBlt (surf, surf, xcnt-14, lbly[btn], 773, 22, 28, CHH); // blank label
 
 	for (btn = 0; btn < 6; btn++) {
-		if (label = oapiMFDButtonLabel (subsys->MfdId(), btn+sd*6)) {
+		if ((label = oapiMFDButtonLabel (subsys->MfdId(), btn+sd*6))) {
 			len = strlen(label);
 			for (w = i = 0; i < len; i++) w += CHW[label[i]];
 			for (i = 0, x = xcnt-w/2; i < len; i++) {
@@ -351,7 +353,7 @@ bool MfdButtonCol::RedrawVC (DEVMESHHANDLE hMesh, SURFHANDLE surf)
 			oapiBlt (surf, surf, xcnt0-wlbl/2+btn*dx, y, 0, 128, wlbl, hlbl); // blank label
 
 		for (btn = 0; btn < 6; btn++) {
-			if (label = oapiMFDButtonLabel (subsys->MfdId(), btn+sd*6)) {
+			if ((label = oapiMFDButtonLabel (subsys->MfdId(), btn+sd*6))) {
 				len = strlen(label);
 				for (w = i = 0; i < len; i++) w += CHW[label[i]];
 				xcnt = xcnt0 + btn*dx;
@@ -362,7 +364,9 @@ bool MfdButtonCol::RedrawVC (DEVMESHHANDLE hMesh, SURFHANDLE surf)
 						x += w;
 					}
 				}
-			} else break;
+			} else {
+				break;
+			}
 		}
 		return true;
 	}
@@ -375,8 +379,9 @@ bool MfdButtonCol::ProcessMouse2D (int event, int mx, int my)
 	int process_btn = -1;
 
 	if (event & PANEL_MOUSE_LBDOWN) {
-		if (my%41 < 18)
+		if (my%41 < 18) {
 			curbtn = process_btn = my/41 + sd*6;
+		}
 	} else if (curbtn >= 0) {
 		process_btn = curbtn;
 		if (event & PANEL_MOUSE_LBUP)

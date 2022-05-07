@@ -14,6 +14,7 @@
 #include "Element.h"
 #include "Log.h"
 #include <stdio.h>
+#include "Vecmat.h"
 
 using namespace std;
 using namespace oapi;
@@ -184,7 +185,7 @@ void Body::UnregisterVisual ()
 	hVis = NULL;
 }
 
-void Body::BroadcastVisMsg (DWORD msg, DWORD_PTR content)
+void Body::BroadcastVisMsg (visevent msg, visevent_data content)
 {
 	oapi::GraphicsClient *gc;
 	if (hVis && (gc = g_pOrbiter->GetGraphicsClient())) {

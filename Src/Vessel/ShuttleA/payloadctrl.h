@@ -19,7 +19,7 @@
 class PayloadRelease: public PanelElement {
 public:
 	PayloadRelease (ShuttleA *v, MESHHANDLE hMesh);
-	void AddMeshData2D (MESHHANDLE hMesh, DWORD grpidx);
+	void AddMeshData2D (MESHHANDLE hMesh, int grpidx);
 	bool Redraw2D (SURFHANDLE surf);
 	bool ProcessMouse2D (int event, int mx, int my);
 

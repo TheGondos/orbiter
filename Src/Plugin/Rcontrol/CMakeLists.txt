@@ -3,7 +3,6 @@
 
 add_library(Rcontrol SHARED
 	Rcontrol.cpp
-	Rcontrol.rc
 )
 
 target_include_directories(Rcontrol
@@ -13,13 +12,11 @@ target_include_directories(Rcontrol
 target_link_libraries(Rcontrol
 	${ORBITER_LIB}
 	${ORBITER_SDK_LIB}
-	${ORBITER_DLGCTRL_LIB}
 )
 
 add_dependencies(Rcontrol
 	${OrbiterTgt}
 	Orbitersdk
-	DlgCtrl
 )
 
 set_target_properties(Rcontrol

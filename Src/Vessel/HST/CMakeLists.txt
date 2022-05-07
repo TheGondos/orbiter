@@ -23,7 +23,8 @@ target_include_directories(HST
 )
 
 target_link_libraries(HST
-	${ORBITER_LIB}
+	lua::lib
+#	${ORBITER_LIB}
 	${ORBITER_SDK_LIB}
 )
 
@@ -35,7 +36,7 @@ add_dependencies(HST
 if(ADD_SCRIPT_SUPPORT)
 	add_definitions(-DSCRIPTSUPPORT)
 	target_link_libraries(HST
-	${LUA_LIB}
+	lua::lib
 	)
 endif()
 
@@ -56,7 +57,7 @@ add_custom_command(
 
 #Installation
 install(TARGETS HST
-	RUNTIME
+#	RUNTIME
 	DESTINATION ${ORBITER_INSTALL_MODULE_DIR}
 )
 install(DIRECTORY ${CONFIG_SOURCE_DIR}/

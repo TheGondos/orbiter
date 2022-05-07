@@ -153,8 +153,10 @@ void VideoTab::Initialise (D3D7Enum_DeviceInfo *dev)
 	SendDlgItemMessage (hTab, IDC_VID_VSYNC, BM_SETCHECK, data->novsync ? BST_CHECKED : BST_UNCHECKED, 0);
 	SendDlgItemMessage (hTab, IDC_VID_PAGEFLIP, BM_SETCHECK, data->pageflip ? BST_UNCHECKED : BST_CHECKED, 0);
 
-	SetWindowText (GetDlgItem (hTab, IDC_VID_WIDTH), _itoa (data->winw, cbuf, 10));
-	SetWindowText (GetDlgItem (hTab, IDC_VID_HEIGHT), _itoa (data->winh, cbuf, 10));
+	sprintf(cbuf,"%d", data->winw);
+	SetWindowText (GetDlgItem (hTab, IDC_VID_WIDTH), cbuf);
+	sprintf(cbuf,"%d", data->winh);
+	SetWindowText (GetDlgItem (hTab, IDC_VID_HEIGHT), cbuf);
 
 	if (data->winw == (4*data->winh)/3 || data->winh == (3*data->winw)/4)
 		aspect_idx = 1;
@@ -268,8 +270,9 @@ void VideoTab::SelectMode (D3D7Enum_DeviceInfo *dev, DWORD idx)
 	// if a bpp change was required, notify the bpp control
 	if (bpp != usebpp) {
 		char cbuf[20];
+		sprintf(cbuf,"%d",usebpp);
 		SendDlgItemMessage (hTab, IDC_VID_BPP, CB_SELECTSTRING, -1,
-			(LPARAM)_itoa (usebpp, cbuf, 10));
+			(LPARAM)cbuf);
 	}
 }
 
@@ -300,8 +303,9 @@ void VideoTab::SelectBPP (D3D7Enum_DeviceInfo *dev, DWORD idx)
 	// at this bit depth (shouldn't happen)
 	bpp = dev->pddsdModes[dev->dwCurrentMode].ddpfPixelFormat.dwRGBBitCount;
 	char cbuf[20];
+	sprintf(cbuf,"%d",bpp);
 	SendDlgItemMessage (hTab, IDC_VID_BPP, CB_SELECTSTRING, -1,
-		(LPARAM)_itoa (bpp, cbuf, 10));
+		(LPARAM)bpp);
 
 	// If we get here, then we've screwed up big time
 	// and leave quietly
@@ -330,7 +334,8 @@ void VideoTab::SelectWidth ()
 		GetWindowText (GetDlgItem (hTab, IDC_VID_HEIGHT), cbuf, 127); h = atoi(cbuf);
 		if (w != (wfac*h)/hfac) {
 			h = (hfac*w)/wfac;
-			SetWindowText (GetDlgItem (hTab, IDC_VID_HEIGHT), itoa (h, cbuf, 10));
+			sprintf(cbuf,"%d",h);
+			SetWindowText (GetDlgItem (hTab, IDC_VID_HEIGHT), cbuf);
 		}
 	}
 }
@@ -347,7 +352,8 @@ void VideoTab::SelectHeight ()
 		GetWindowText (GetDlgItem (hTab, IDC_VID_HEIGHT), cbuf, 127); h = atoi(cbuf);
 		if (h != (hfac*w)/wfac) {
 			w = (wfac*h)/hfac;
-			SetWindowText (GetDlgItem (hTab, IDC_VID_WIDTH), itoa (w, cbuf, 10));
+			sprintf(cbuf,"%d",w);
+			SetWindowText (GetDlgItem (hTab, IDC_VID_WIDTH), cbuf);
 		}
 	}
 }

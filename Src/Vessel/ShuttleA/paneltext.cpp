@@ -12,6 +12,7 @@
 #define STRICT 1
 #define __PANELTEXT_CPP
 #include "paneltext.h"
+#include <cstring>
 
 int small_font_xpos[256] = {
 	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -54,7 +55,7 @@ int small_font_width[256] = {   // character widths in texture
 int small_font_ypos[2] = {35,43};
 int small_font_height = 8;
 
-void BltStr (SURFHANDLE tgt, SURFHANDLE src, int x, int y, const char *newstr, char *oldstr, DWORD style)
+void BltStr (SURFHANDLE tgt, SURFHANDLE src, int x, int y, const char *newstr, char *oldstr, int style)
 {
 	if (newstr && oldstr && !strcmp (newstr, oldstr)) return; // nothing to do
 	int w;

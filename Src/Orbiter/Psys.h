@@ -12,6 +12,7 @@
 #include "Base.h"
 #include "GraphicsAPI.h"
 #include <iostream>
+#include <dirent.h>
 
 #define FILETYPE_MARKER 1
 
@@ -41,13 +42,13 @@ public:
 	void Write (std::ostream &os);
 	// Write list of current vessel states to scenario stream
 
-	DWORD nObj() const { return nbody; }
+	int nObj() const { return nbody; }
 	Body *GetObj (const char *name, bool ignorecase = false);
 	Body *GetObj (int i) const { return body[i]; }
 	// Return pointer to object "name" (gravbody, station,
 	// etc.) or 0 if not present
 
-	DWORD nGrav() const { return ngrav; }
+	int nGrav() const { return ngrav; }
 	CelestialBody *GetGravObj (const char *name, bool ignorecase = false) const;
 	inline CelestialBody *GetGravObj (int i) const { return grav[i]; }
 	// Return pointer to 'massive' object by name or index, or 0 if not present
@@ -57,12 +58,12 @@ public:
 	Planet *GetPlanet (int i) const { return planet[i]; }
 	// Return pointer to planet-type object (planet or moon)
 
-	DWORD nStar() const { return nstar; }
+	int nStar() const { return nstar; }
 	Star *GetStar (int i) const { return star[i]; }
 
-	inline DWORD nVessel() const { return nvessel; }
+	inline int nVessel() const { return nvessel; }
 	Vessel *GetVessel (const char *name, bool ignorecase = false) const;
-	inline Vessel *GetVessel (DWORD i) const { return vessel[i]; }
+	inline Vessel *GetVessel (int i) const { return vessel[i]; }
 	// Return pointer to vessel by name or index, or 0 if not present
 
 	bool isObject (const Body *obj) const;
@@ -71,8 +72,8 @@ public:
 	bool isVessel (const Vessel *v) const;
 	// returns true if v is a registered vessel
 
-	DWORD nBase(const Planet *planet) const { return planet->nBase(); }
-	Base *GetBase (const Planet *planet, DWORD i) { return planet->GetBase(i); }
+	int nBase(const Planet *planet) const { return planet->nBase(); }
+	Base *GetBase (const Planet *planet, int i) { return planet->GetBase(i); }
 	Base *GetBase (const Planet *planet, const char *name, bool ignorecase = false);
 	// Return pointer to planet's base by name or index
 
@@ -180,33 +181,31 @@ public:
 	// These functions should eventually become obsolete because none of the
 	// logical objects should contain any device objects
 
-	void BroadcastVessel (DWORD msg, void *data);
+	void BroadcastVessel (int msg, void *data);
 	// Broadcast a message to all vessels
-
-	friend Vector SingleGacc (const Vector &rpos, const CelestialBody *body);
-	friend Vector SingleGacc_perturbation (const Vector &rpos, const CelestialBody *body);
 
 	oapi::GraphicsClient::LABELLIST *LabelList (int *nlist = 0) { if (nlist) *nlist = nlabellist; return labellist; }
 	void ScanLabelLists (std::ifstream &cfg);
 
 	void ActivatePlanetLabels(bool activate);
 
-	intptr_t FindFirst (int type, _finddata_t *fdata, char *path, char *fname);
-	intptr_t FindNext (intptr_t fh, _finddata_t *fdata, char *fname);
+	bool FindFirst (int type, DIR **dir, char *path, char *fname);
+	bool FindNext (DIR *dir, char *fname);
+	void FindClose (DIR *dir);
 
 private:
 	char *name; // system's name
 
-	DWORD nbody;     // number of bodies in the general object list
+	int nbody;     // number of bodies in the general object list
 	Body **body;   // list of bodies
 
-	DWORD nstar;     // number of stars in the system
+	int nstar;     // number of stars in the system
 	Star **star;   // list of stars
 
 	int nplanet; // number of planets in the system
 	Planet **planet; // list of planets
 
-	DWORD ngrav;
+	int ngrav;
 	CelestialBody **grav;
 	// List of "massive" objects (those producing a
 	// gravitational field: stars, planets, moons)
@@ -215,11 +214,11 @@ private:
 	int nlabellist;
 	char *labelpath;
 
-	DWORD nvessel;
+	int nvessel;
 	Vessel **vessel;
 	// List of spacecraft
 
-	DWORD nsupervessel;
+	int nsupervessel;
 	SuperVessel **supervessel;
 	// List of spacecraft groups (composite vessels)
 
@@ -241,5 +240,8 @@ private:
 	// remove a vessel superstructure from the list
 
 };
+	Vector SingleGacc (const Vector &rpos, const CelestialBody *body);
+	Vector SingleGacc_perturbation (const Vector &rpos, const CelestialBody *body);
+
 
 #endif // !__PSYS_H

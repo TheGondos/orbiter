@@ -15,9 +15,9 @@ target_include_directories(LuaInterpreter
 )
 
 target_link_libraries(LuaInterpreter
-	${ORBITER_LIB}
+#	${ORBITER_LIB}
 	${ORBITER_SDK_LIB}
-	${LUA_LIB}
+	lua::lib
 )
 
 add_dependencies(LuaInterpreter
@@ -70,8 +70,8 @@ endif()
 
 # Installation
 install(TARGETS LuaInterpreter
-	RUNTIME
-	DESTINATION ${ORBITER_INSTALL_ROOT_DIR}
+#	RUNTIME
+	DESTINATION ${ORBITER_INSTALL_MODULE_DIR}
 )
 install(FILES $<TARGET_LINKER_FILE:LuaInterpreter>
 	DESTINATION ${ORBITER_INSTALL_SDK_DIR}/lib/Lua

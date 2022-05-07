@@ -13,7 +13,7 @@ target_include_directories(AtlantisConfig
 )
 
 target_link_libraries(AtlantisConfig
-	${ORBITER_LIB}
+#	${ORBITER_LIB}
 	${ORBITER_SDK_LIB}
 )
 

@@ -16,7 +16,7 @@
 #define __SURFMGR2_H
 
 #include "tilemgr2_imp.hpp"
-
+class TileLabel;
 class SurfTile: public Tile {
 	friend class TileManager2Base;
 	template<class SurfTile> friend class TileManager2;

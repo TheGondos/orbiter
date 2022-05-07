@@ -12,7 +12,7 @@
 #ifndef __INSTRHSI_H
 #define __INSTRHSI_H
 
-#include "..\Common\Instrument.h"
+#include "../Common/Instrument.h"
 
 // ==============================================================
 
@@ -44,7 +44,7 @@ private:
 	double gslope;
 	NAVHANDLE nav;
 	OBJHANDLE navRef;
-	DWORD navType;
+	int navType;
 	double navlng, navlat;
 	GROUPREQUESTSPEC vc_grp; ///< Buffered VC vertex data
 };

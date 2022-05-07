@@ -11,6 +11,7 @@
 
 #define STRICT 1
 #include "mfdbutton.h"
+#include <cstring>
 
 // MFD button font geometry
 
@@ -65,7 +66,7 @@ const int lbly[6] = {PANEL2D_MAINH-272, PANEL2D_MAINH-234, PANEL2D_MAINH-196, PA
 
 // ==============================================================
 
-MFDButtonCol::MFDButtonCol (VESSEL3 *v, DWORD _mfdid, DWORD _lr): PanelElement (v)
+MFDButtonCol::MFDButtonCol (VESSEL3 *v, int _mfdid, int _lr): PanelElement (v)
 {
 	mfdid = _mfdid;
 	lr = _lr;
@@ -74,17 +75,17 @@ MFDButtonCol::MFDButtonCol (VESSEL3 *v, DWORD _mfdid, DWORD _lr): PanelElement (
 
 // ==============================================================
 
-void MFDButtonCol::AddMeshData2D (MESHHANDLE hMesh, DWORD grpidx)
+void MFDButtonCol::AddMeshData2D (MESHHANDLE hMesh, int grpidx)
 {
-	static const DWORD nbtn = 6;
-	static const DWORD nvtx = 4*nbtn;
-	static const DWORD nidx = 6*nbtn;
-	static const WORD base_idx[6] = { 0,1,2, 3,2,1 };
+	static const int nbtn = 6;
+	static const int nvtx = 4*nbtn;
+	static const int nidx = 6*nbtn;
+	static const uint16_t base_idx[6] = { 0,1,2, 3,2,1 };
 
-	DWORD btn, i;
+	int btn, i;
 	int x0 = lblx[mfdid][lr]-15;
 	NTVERTEX vtx[nvtx];
-	WORD idx[nidx];
+	uint16_t idx[nidx];
 	memset (vtx, 0, nvtx*sizeof(NTVERTEX));
 	for (btn = 0; btn < nbtn; btn++) {
 		for (i = 0; i < 4; i++) {
@@ -94,7 +95,7 @@ void MFDButtonCol::AddMeshData2D (MESHHANDLE hMesh, DWORD grpidx)
 			vtx[btn*4+i].tv = (float)(PANELEL_TEXH - MFD_font_height*(24-mfdid*12-lr*6-btn-(i/2?1:0)))/(float)PANELEL_TEXH;
 		}
 		for (i = 0; i < 6; i++)
-			idx[btn*6+i] = (WORD)btn*4 + base_idx[i];
+			idx[btn*6+i] = (uint16_t)btn*4 + base_idx[i];
 	}
 	AddGeometry (hMesh, grpidx, vtx, nvtx, idx, nidx);
 }
@@ -113,7 +114,7 @@ bool MFDButtonCol::Redraw2D (SURFHANDLE surf)
 
 	// write labels
 	for (btn = 0; btn < 6; btn++) {
-		if (label = oapiMFDButtonLabel (mfdid, btn+lr*6)) {
+		if ((label = oapiMFDButtonLabel (mfdid, btn+lr*6))) {
 			len = strlen(label);
 			for (w = i = 0; i < len; i++) w += MFD_font_width[label[i]];
 			for (i = 0, x = xcnt-w/2; i < len; i++) {
@@ -146,7 +147,7 @@ bool MFDButtonCol::ProcessMouse2D (int event, int mx, int my)
 // ==============================================================
 // ==============================================================
 
-MFDButtonRow::MFDButtonRow (VESSEL3 *v, DWORD _mfdid): PanelElement (v)
+MFDButtonRow::MFDButtonRow (VESSEL3 *v, int _mfdid): PanelElement (v)
 {
 	mfdid = _mfdid;
 }

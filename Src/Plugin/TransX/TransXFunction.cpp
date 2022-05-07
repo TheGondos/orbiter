@@ -18,15 +18,14 @@
 ** OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 ** THE SOFTWARE.*/
 
-#define STRICT
-#include <windows.h>
 #include <stdio.h>
 #include <math.h>
-#include "orbitersdk.h"
+#include "Orbitersdk.h"
 #include "mfd.h"
 #include "transxstate.h"
 #include "TransXFunction.h"
 #include "transx.h"
+#include <cstring>
 
 TransXFunction::TransXFunction(class transxstate *tstate, OBJHANDLE thmajor, OBJHANDLE thminor, OBJHANDLE thtarget, OBJHANDLE thcraft, OBJHANDLE thbase)
 {	
@@ -305,18 +304,18 @@ void TransXFunction::gethandles(OBJHANDLE *thmajor, OBJHANDLE *thminor, OBJHANDL
 
 void TransXFunction::initpens(void)								//(rbd+)
 {
-	if (!pens[Green])	pens[Green]		= oapiCreatePen(1, 1 , RGB(0x00, 0xFF, 0x00));	// Green - stands for craft
-	if (!pens[Blue])	pens[Blue]		= oapiCreatePen(1, 1 , RGB(0x00, 0x00, 0xCD));	// Blue - stands for planet
-	if (!pens[Yellow])	pens[Yellow]	= oapiCreatePen(2,	  1	, RGB(0xCD, 0xCD, 0x00));	// Bright yellow - hypos
-	if (!pens[Red])		pens[Red]		= oapiCreatePen(1, 1 , RGB(0xFF, 0x00, 0x00));	// Bright red - unused, but danger
-	if (!pens[Grey])	pens[Grey]		= oapiCreatePen(1, 1 , RGB(0xC0, 0xC0, 0xC0));	// Light Grey
-	if (!pens[White])	pens[White]		= oapiCreatePen(1, 1 , RGB(0xFF, 0xFF, 0xFF));	// Bright white - unused
-	if (!brush[Green])	brush[Green]    = oapiCreateBrush (RGB(0x00, 0xFF, 0x00));
-	if (!brush[Blue])	brush[Blue]		= oapiCreateBrush (RGB(0x00, 0x00, 0xCD));
-	if (!brush[Yellow])	brush[Yellow]	= oapiCreateBrush (RGB(0xCD, 0xCD, 0x00));
-	if (!brush[Red])	brush[Red]		= oapiCreateBrush (RGB(0xFF, 0x00, 0x00));
-	if (!brush[Grey])	brush[Grey]		= oapiCreateBrush (RGB(0xC0, 0xC0, 0xC0));
-	if (!brush[White])	brush[White]	= oapiCreateBrush (RGB(0xFF, 0xFF, 0xFF));
+	if (!pens[Green])	pens[Green]		= oapiCreatePen(1, 1 , 0x0000FF00);	// Green - stands for craft
+	if (!pens[Blue])	pens[Blue]		= oapiCreatePen(1, 1 , 0x000000CD);	// Blue - stands for planet
+	if (!pens[Yellow])	pens[Yellow]	= oapiCreatePen(2, 1 , 0x00CDCD00);	// Bright yellow - hypos
+	if (!pens[Red])		pens[Red]		= oapiCreatePen(1, 1 , 0x00FF0000);	// Bright red - unused, but danger
+	if (!pens[Grey])	pens[Grey]		= oapiCreatePen(1, 1 , 0x00C0C0C0);	// Light Grey
+	if (!pens[White])	pens[White]		= oapiCreatePen(1, 1 , 0x00FFFFFF);	// Bright white - unused
+	if (!brush[Green])	brush[Green]    = oapiCreateBrush (0x0000FF00);
+	if (!brush[Blue])	brush[Blue]		= oapiCreateBrush (0x000000CD);
+	if (!brush[Yellow])	brush[Yellow]	= oapiCreateBrush (0x00CDCD00);
+	if (!brush[Red])	brush[Red]		= oapiCreateBrush (0x00FF0000);
+	if (!brush[Grey])	brush[Grey]		= oapiCreateBrush (0x00C0C0C0);
+	if (!brush[White])	brush[White]	= oapiCreateBrush (0x00FFFFFF);
 }
 
 
@@ -351,7 +350,7 @@ Brush* TransXFunction::SelectBrush(Sketchpad *sketchpad, int value)
 		return sketchpad->SetBrush(NULL);
 }
 
-void TransXFunction::sethelp(char *help1,char *help2,char *help3,char *help4,char *help5)
+void TransXFunction::sethelp(const char *help1,const char *help2,const char *help3,const char *help4,const char *help5)
 {
 	strcpy(helpstring1,help1);
 	strcpy(helpstring2,help2);

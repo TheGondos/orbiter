@@ -10,8 +10,8 @@
 using namespace std;
 
 struct {
-	BYTE id;
-	char *name;
+	uint8_t id;
+	const char *name;
 } keyname[NKEY] = {
 	{OAPI_KEY_ESCAPE,     "ESC"},         // 0x01: Escape
 	{OAPI_KEY_1,          "1"},           // 0x02: 1
@@ -111,7 +111,7 @@ struct {
 };
 
 struct {
-	WORD defkey;
+	int defkey;
 	const char *itemstr;
 } lkeyspec[LKEY_COUNT] = {
 	{OAPI_KEY_LEFT     | KMOD_ALT,                 "CockpitCamRotateLeft"},
@@ -226,11 +226,11 @@ Keymap::Keymap ()
 
 void Keymap::SetDefault ()
 {
-	for (WORD i = 0; i < LKEY_COUNT; i++)
+	for (int i = 0; i < LKEY_COUNT; i++)
 		func[i] = lkeyspec[i].defkey;
 }
 
-void Keymap::Write (char *fname)
+void Keymap::Write (const char *fname)
 {
 	char cbuf[256];
 	ofstream ofs (fname);
@@ -238,7 +238,7 @@ void Keymap::Write (char *fname)
 		ofs << lkeyspec[i].itemstr << " = " << PrintStr (cbuf, func[i]) << endl;
 }
 
-bool Keymap::Read (char *fname)
+bool Keymap::Read (const char *fname)
 {
 	char cbuf[256];
 	ifstream ifs (fname, ios::in);
@@ -260,23 +260,22 @@ bool Keymap::IsLogicalKey (char *kstate, int lfunc) const
 	return IsMatchingModifier (kstate, func[lfunc]);
 }
 
-bool Keymap::IsLogicalKey (DWORD &key, char *kstate, int lfunc, bool clearkey) const
+bool Keymap::IsLogicalKey (int key, char *kstate, int lfunc) const
 {
 	// check key
-	if ((func[lfunc] & 0x00FFu) != key) return false;
+	if ((func[lfunc] & 0x00FFu) != (uint16_t)key) return false;
 	// check modifiers, if any
 	if (IsMatchingModifier (kstate, func[lfunc])) {
-		if (clearkey) key = 0;
 		return true;
 	} else {
 		return false;
 	}
 }
 
-bool Keymap::IsMatchingModifier (char *kstate, WORD key) const
+bool Keymap::IsMatchingModifier (char *kstate, int key) const
 {
-	WORD kmod;
-	if (kmod = (key & KMOD_CTRL)) {
+	int kmod;
+	if ((kmod = (key & KMOD_CTRL))) {
 		if (kmod == KMOD_CTRL) {
 			if (!KEYMOD_CONTROL(kstate))  return false;
 		} else if (kmod == KMOD_LCTRL) {
@@ -288,7 +287,7 @@ bool Keymap::IsMatchingModifier (char *kstate, WORD key) const
 		if (KEYMOD_CONTROL(kstate))       return false;
 	}
 
-	if (kmod = (key & KMOD_SHIFT)) {
+	if ((kmod = (key & KMOD_SHIFT))) {
 		if (kmod == KMOD_SHIFT) {
 			if (!KEYMOD_SHIFT(kstate))    return false;
 		} else if (kmod == KMOD_LSHIFT) {
@@ -300,7 +299,7 @@ bool Keymap::IsMatchingModifier (char *kstate, WORD key) const
 		if (KEYMOD_SHIFT(kstate))         return false;
 	}
 
-	if (kmod = (key & KMOD_ALT)) {
+	if ((kmod = (key & KMOD_ALT))) {
 		if (kmod == KMOD_ALT) {
 			if (!KEYMOD_ALT(kstate))      return false;
 		} else if (kmod == KMOD_LALT) {
@@ -315,7 +314,7 @@ bool Keymap::IsMatchingModifier (char *kstate, WORD key) const
 	return true;
 }
 
-bool Keymap::ScanStr (char *cbuf, WORD &key) const
+bool Keymap::ScanStr (char *cbuf, uint16_t &key) const
 {
 	int i;
 	char *tok = strtok (cbuf, " ");
@@ -340,9 +339,9 @@ bool Keymap::ScanStr (char *cbuf, WORD &key) const
 	return true;
 }
 
-char *Keymap::PrintStr (char *cbuf, WORD &key) const
+char *Keymap::PrintStr (char *cbuf, uint16_t key) const
 {
-	WORD i, kmod, kbase = key & 0x00ff;
+	int i, kmod, kbase = key & 0x00ff;
 
 	for (i = 0; i < NKEY; i++)
 		if (keyname[i].id == kbase) break;
@@ -350,21 +349,21 @@ char *Keymap::PrintStr (char *cbuf, WORD &key) const
 		cbuf[0] = '\0'; 
 	} else {
 		strcpy (cbuf, keyname[i].name);
-		if (kmod = (key & KMOD_SHIFT)) {
+		if ((kmod = (key & KMOD_SHIFT))) {
 			switch (kmod) {
 			case KMOD_SHIFT:  strcat (cbuf, " SHIFT");  break;
 			case KMOD_LSHIFT: strcat (cbuf, " LSHIFT"); break;
 			case KMOD_RSHIFT: strcat (cbuf, " RSHIFT"); break;
 			}
 		}
-		if (kmod = (key & KMOD_CTRL)) {
+		if ((kmod = (key & KMOD_CTRL))) {
 			switch (kmod) {
 			case KMOD_CTRL:  strcat (cbuf, " CTRL");  break;
 			case KMOD_LCTRL: strcat (cbuf, " LCTRL"); break;
 			case KMOD_RCTRL: strcat (cbuf, " RCTRL"); break;
 			}
 		}
-		if (kmod = (key & KMOD_ALT)) {
+		if ((kmod = (key & KMOD_ALT))) {
 			switch (kmod) {
 			case KMOD_ALT:  strcat (cbuf, " ALT");  break;
 			case KMOD_LALT: strcat (cbuf, " LALT"); break;

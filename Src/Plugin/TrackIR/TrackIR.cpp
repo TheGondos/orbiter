@@ -273,7 +273,7 @@ DLLCLBK void opcCloseRenderViewport (void)
 // The DLL entry point
 // ==============================================================
 
-DLLCLBK void InitModule (HINSTANCE hDLL)
+DLLCLBK void InitModule (DynamicModule *hDLL)
 {
 	gParams.hInst = hDLL;
 	trackir = new TrackIR;
@@ -288,7 +288,7 @@ DLLCLBK void InitModule (HINSTANCE hDLL)
 // The DLL exit point
 // ==============================================================
 
-DLLCLBK void ExitModule (HINSTANCE hDLL)
+DLLCLBK void ExitModule (DynamicModule *hDLL)
 {
 	oapiUnregisterLaunchpadItem (gParams.item);
 	// Unregister the launchpad item

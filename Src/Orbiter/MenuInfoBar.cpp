@@ -4,11 +4,15 @@
 #include "MenuInfoBar.h"
 #include "Pane.h"
 #include "Camera.h"
-#include "Resource.h"
-#include "Dialogs.h"
-#include "DlgMgr.h"
-#include "DlgMenuCfg.h"
 #include "Log.h"
+#include "DlgCamera.h"
+#include "DlgFocus.h"
+#include "DlgFunction.h"
+#include "DlgInfo.h"
+#include "DlgMap.h"
+#include "DlgRecorder.h"
+#include "DlgTacc.h"
+#include "DlgVishelper.h"
 
 // =======================================================================
 // Externs
@@ -16,8 +20,8 @@
 extern char DBG_MSG[256];
 extern Orbiter *g_pOrbiter;
 extern Camera *g_camera;
-extern DWORD g_vtxcount;
-extern DWORD g_tilecount;
+extern int g_vtxcount;
+extern int g_tilecount;
 extern TimeData td;
 
 class MenuInfoBar;
@@ -185,7 +189,7 @@ void GraphInfoBar::RescaleGraph (double smax)
 		y0 = 145-(int)(sample[i0]/smax*46);
 		y1 = 145-(int)(sample[i1]/smax*46);
 		if (y1 < y0) { int tmp = y0; y0 = y1; y1 = tmp; }
-		h = min (max (y1-y0,1), 46);
+		h = std::min (std::max (y1-y0,1), 46);
 		gc->clbkBlt (infoSrc, bufofs+i1,96,infoTgt,1023,2,1,48);
 		gc->clbkBlt (infoSrc, bufofs+i1,y0,infoTgt,1022,2,1,h);
 	}
@@ -209,7 +213,7 @@ void GraphInfoBar::SetCurrentSample (double s)
 		int y0 = 145-(int)(s0/smax*46);
 		int y1 = 145-(int)(s/smax*46);
 		if (y1 < y0) { int tmp = y0; y0 = y1; y1 = tmp; }
-		int h = min (max (y1-y0,1), 46);
+		int h = std::min (std::max (y1-y0,1), 46);
 		gc->clbkBeginBltGroup (infoSrc);
 		gc->clbkBlt (infoSrc, bufofs+isample,96,infoTgt,1023,2,1,48);
 		gc->clbkBlt (infoSrc, bufofs+isample,y0,infoTgt,1022,2,1,h);
@@ -248,7 +252,7 @@ void ViewportInfoBar::Init ()
 	char cbuf[128];
 	sprintf (cbuf, "Viewport: %dx%d, %dbpp", pane->Width(), pane->Height(), pane->BitsPerPixel());
 	TexBltString (cbuf, texofs+5, infoLine1, texofs+190);
-	DWORD is_tl;
+	int is_tl;
 	strcpy (cbuf, "T&L support: ");
 	if (gc->clbkGetRenderParam (RP_ISTLDEVICE, &is_tl))
 		strcat (cbuf, is_tl ? "yes" : "no");
@@ -272,7 +276,7 @@ protected:
 
 private:
 	int framecount;
-	DWORD vtxsum;
+	int vtxsum;
 };
 
 RenderstatInfoBar::RenderstatInfoBar (MenuInfoBar *_mibar, int side)
@@ -295,7 +299,7 @@ void RenderstatInfoBar::Update (double t, bool sys_tick)
 	vtxsum += g_vtxcount;
 	if (sys_tick && framecount) {
 		char cbuf[32];
-		DWORD nvtx = vtxsum/framecount;
+		int nvtx = vtxsum/framecount;
 		SetCurrentSample (nvtx);
 		sprintf (cbuf, "%d", g_vtxcount);
 		TexBltString (cbuf, texofs+35, infoLine1, texofs+98);
@@ -469,7 +473,7 @@ MenuInfoBar::MenuInfoBar (const Pane *_pane)
 		{(float)viewW,        (float)miniH,0, 0,0,0, 800.5f/1024.0f,(tgtTexH-menuH-0.5f)/(float)tgtTexH}
 	};
 
-	WORD idx[36] = {
+	uint16_t idx[36] = {
 		0,2,1, 1,2,3, 4,6,5, 5,6,7,            // menu bar
 		8,10,9, 9,10,11, 12,14,13, 13,14,15,   // left info bar
 		16,18,17, 17,18,19, 20,22,21, 21,22,23 // right info bar
@@ -551,8 +555,8 @@ void MenuInfoBar::Update (double t)
 	int it = (int)t, sit = (int)td.SysT1;
 	bool tick_one, sys_one;
 	char cbuf[256];
-	if (tick_one = (it != time_upd))  time_upd = it;
-	if (sys_one = (sit != sys_upd)) sys_upd = sit;
+	if ((tick_one = (it != time_upd)))  time_upd = it;
+	if ((sys_one = (sit != sys_upd))) sys_upd = sit;
 
 	if (tick_one) {
 		strcpy  (cbuf, DateStr (td.MJD1));
@@ -620,11 +624,11 @@ void MenuInfoBar::Update (double t)
 	}
 }
 
-bool MenuInfoBar::ProcessMouse (UINT event, DWORD state, DWORD x, DWORD y)
+bool MenuInfoBar::ProcessMouse (oapi::MouseEvent event, int state, int x, int y)
 {
-	x = (DWORD)(x / transf.m11); // account for menu squeezing
+	x = (int)(x / transf.m11); // account for menu squeezing
 
-	if (event == WM_MOUSEMOVE) {
+	if (event == oapi::MOUSE_MOVE) {
 		if (menumode == 2) {
 			if (y <= scrollzone && menustate != 1) {
 				menustate = 2;
@@ -654,51 +658,48 @@ bool MenuInfoBar::ProcessMouse (UINT event, DWORD state, DWORD x, DWORD y)
 			itemHighlight = item;
 		}
 	}
-	if (event == WM_LBUTTONDOWN && itemHighlight >= 0) {
+	if (event == oapi::MOUSE_LBUTTONDOWN && itemHighlight >= 0) {
 		switch (itemHighlight) {
 		case 0:
-			g_pOrbiter->DlgMgr()->EnsureEntry<DlgFocus> ();
+			g_pOrbiter->m_pGUIManager->ShowCtrl<DlgFocus>();
 			return true;
 		case 1:
-			g_pOrbiter->DlgMgr()->EnsureEntry<DlgCamera> ();
+			g_pOrbiter->m_pGUIManager->ShowCtrl<DlgCamera>();
 			return true;
 		case 2:
-			g_pOrbiter->DlgMgr()->EnsureEntry<DlgTacc> ();
+			g_pOrbiter->m_pGUIManager->ShowCtrl<DlgTacc>();
 			return true;
 		case 3:
 			g_pOrbiter->TogglePause();
 			return true;
 		case 4:
-			g_pOrbiter->DlgMgr()->EnsureEntry<DlgInfo> ();
+			g_pOrbiter->m_pGUIManager->ShowCtrl<DlgInfo>();
 			return true;
 		case 5:
-			g_pOrbiter->DlgMgr()->EnsureEntry<DlgFunction> ();
+			g_pOrbiter->m_pGUIManager->ShowCtrl<DlgFunction>();
 			return true;
 		case 6:
-			g_pOrbiter->DlgMgr()->EnsureEntry<DlgVishelper> ();
+			g_pOrbiter->m_pGUIManager->ShowCtrl<DlgVishelper>();
 			return true;
 		case 7:
-			g_pOrbiter->DlgMgr()->EnsureEntry<DlgMap> ();
+			g_pOrbiter->m_pGUIManager->ShowCtrl<DlgMap>();
 			return true;
 		case 8:
-			g_pOrbiter->DlgMgr()->EnsureEntry<DlgRecorder> ();
+			g_pOrbiter->m_pGUIManager->ShowCtrl<DlgRecorder>();
 			return true;
 		case 9:
-			extern HELPCONTEXT DefHelpContext;
-			DefHelpContext.topic = "/mainmenu.htm";
-			g_pOrbiter->OpenHelp (&DefHelpContext);
 			return true;
 		case 10:
 			g_pOrbiter->Quicksave ();
 			return true;
 		case 11:
 			g_pOrbiter->PreCloseSession();
-			DestroyWindow (g_pOrbiter->GetRenderWnd());
+			glfwSetWindowShouldClose(g_pOrbiter->GetRenderWnd(), GL_TRUE);
 			return true;
 		}
 	}
-	if (event == WM_RBUTTONDOWN && y <= scrollpos && x >= menuX && x < menuX+menuW) {
-		g_pOrbiter->DlgMgr()->EnsureEntry<DlgMenuCfg> ();
+	if (event == oapi::MOUSE_RBUTTONDOWN && y <= scrollpos && x >= menuX && x < menuX+menuW) {
+		//g_pOrbiter->DlgMgr()->EnsureEntry<DlgMenuCfg> ();
 		return true;
 	}
 	return false;
@@ -822,7 +823,7 @@ void MenuInfoBar::ToggleAutohide ()
 	SetMenuMode (menumode == 0 ? 2:0);
 }
 
-void MenuInfoBar::SetMenuMode (DWORD mode)
+void MenuInfoBar::SetMenuMode (int mode)
 {
 	if (menumode != mode) {
 		menumode = mode;
@@ -835,7 +836,7 @@ void MenuInfoBar::SetMenuMode (DWORD mode)
 	}
 }
 
-void MenuInfoBar::SetInfoMode (DWORD mode)
+void MenuInfoBar::SetInfoMode (int mode)
 {
 	if (infomode != mode) {
 		infomode = mode;
@@ -848,7 +849,7 @@ void MenuInfoBar::SetInfoMode (DWORD mode)
 	}
 }
 
-void MenuInfoBar::SetPauseIndicatorMode (DWORD mode)
+void MenuInfoBar::SetPauseIndicatorMode (int mode)
 {
 	if (pausemode != mode) {
 		pausemode = mode;
@@ -915,9 +916,9 @@ void MenuInfoBar::SetLabelOnly (bool labelonly)
 	}
 }
 
-void MenuInfoBar::SetAuxInfobar (int side, DWORD idx)
+void MenuInfoBar::SetAuxInfobar (int side, int idx)
 {
-	DWORD curidx = (eibar[side] ? eibar[side]->Mode() : 0);
+	int curidx = (eibar[side] ? eibar[side]->Mode() : 0);
 	if (idx != curidx) {
 		if (eibar[side]) delete eibar[side];
 		eibar[side] = ExtraInfoBar::Create (this, side, idx);

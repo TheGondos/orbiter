@@ -30,7 +30,7 @@ HazeManager::HazeManager (const D3D7Client *gclient, const vPlanet *vplanet)
 	if (atmc) {
 		basecol = *(VECTOR3*)oapiGetObjectParam (obj, OBJPRM_PLANET_HAZECOLOUR);
 		hralt = (float)(atmc->horizonalt / rad);
-		dens0 = (float)(min (1.0, atmc->horizonalt/64e3 *
+		dens0 = (float)(std::min (1.0, atmc->horizonalt/64e3 *
 			*(double*)oapiGetObjectParam (obj, OBJPRM_PLANET_HAZEDENSITY)));
 	} else {
 		basecol = _V(1,1,1);
@@ -75,13 +75,13 @@ void HazeManager::Render (LPDIRECT3DDEVICE7 dev, D3DMATRIX &wmat, bool dual)
 	VECTOR3 rpos = {imat._41, imat._42, imat._43};   // camera in local coords (planet radius = 1)
 	double cdist = length (rpos);
 
-	alpha = dens0 * min (1.0, (cdist-1.0)*200.0);
+	alpha = dens0 * std::min (1.0, (cdist-1.0)*200.0);
 	if (!dual) alpha = 1.0-alpha;
 	if (alpha <= 0.0) return;  // nothing to do
-	alpha = min(alpha,1.0);
+	alpha = std::min(alpha,1.0);
 
 	VECTOR3 cpos = {0,cdist,0};
-	double id = 1.0 / max (cdist, 1.002);  // inverse camera distance; 1.001: hack to avoid horizon to creep too close
+	double id = 1.0 / std::max (cdist, 1.002);  // inverse camera distance; 1.001: hack to avoid horizon to creep too close
 	double visrad = acos (id);             // aperture of visibility sector
 	double sinv = sin(visrad);
 	h1 = (float)id, h2 = h1 + (float)(hralt*id);
@@ -101,7 +101,7 @@ void HazeManager::Render (LPDIRECT3DDEVICE7 dev, D3DMATRIX &wmat, bool dual)
 		}
 	}
 
-	float dens = (float)max (1.0, 1.4 - 0.3/hralt*(cdist-1.0)); // saturate haze colour at low altitudes
+	float dens = (float)std::max (1.0, 1.4 - 0.3/hralt*(cdist-1.0)); // saturate haze colour at low altitudes
 	if (dual) dens *= (float)(0.5 + 0.5/cdist);                 // scale down intensity at large distances
 
 	normalise (rpos);
@@ -155,7 +155,7 @@ void HazeManager::Render (LPDIRECT3DDEVICE7 dev, D3DMATRIX &wmat, bool dual)
 		if      (csun > maxblue) intb = 1.0f;
 		else if (csun < minblue) intb = 0.0f;
 		else                     intb = (float)((csun-minblue)*2.5);
-		D3DCOLOR col = D3DRGBA (intr*min(1.0,dens*basecol.x), intg*min(1.0,dens*basecol.y), intb*min(1.0,dens*basecol.z), alpha);
+		D3DCOLOR col = D3DRGBA (intr*std::min(1.0,dens*basecol.x), intg*std::min(1.0,dens*basecol.y), intb*std::min(1.0,dens*basecol.z), alpha);
 
 		Vtx[j].dcol = col;
 		j++;

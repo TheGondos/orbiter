@@ -47,9 +47,9 @@ public:
 	void CloseHatch ();
 	const AnimState2 &HatchState() const;
 	void RepairDamage ();
-	void clbkPostStep (double simt, double simdt, double mjd);
-	bool clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH);
-	bool clbkLoadVC (int vcid);     // create the VC elements for this module
+	void clbkPostStep (double simt, double simdt, double mjd) override;
+	bool clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH) override;
+	bool clbkLoadVC (int vcid) override;     // create the VC elements for this module
 
 private:
 	bool docked;
@@ -74,6 +74,9 @@ private:
 // Airlock controls
 // ==============================================================
 
+class PressureSubsystem;
+class OuterLockSwitch;
+class InnerLockSwitch;
 class AirlockCtrl: public DGSubsystem {
 	friend class PressureSubsystem;
 	friend class OuterLockSwitch;
@@ -89,14 +92,14 @@ public:
 	void RevertInnerLock ();
 	inline const AnimState2 &OLockState() const { return ostate; }
 	inline const AnimState2 &ILockState() const { return istate; }
-	void clbkSaveState (FILEHANDLE scn);
-	bool clbkParseScenarioLine (const char *line);
-	void clbkPostCreation ();
-	void clbkPostStep (double simt, double simdt, double mjd);
-	bool clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH);
-	bool clbkLoadVC (int vcid);
-	bool clbkPlaybackEvent (double simt, double event_t, const char *event_type, const char *event);
-	int clbkConsumeBufferedKey (DWORD key, bool down, char *kstate);
+	void clbkSaveState (FILEHANDLE scn) override;
+	bool clbkParseScenarioLine (const char *line) override;
+	void clbkPostCreation () override;
+	void clbkPostStep (double simt, double simdt, double mjd) override;
+	bool clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH) override;
+	bool clbkLoadVC (int vcid) override;
+	bool clbkPlaybackEvent (double simt, double event_t, const char *event_type, const char *event) override;
+	int clbkConsumeBufferedKey (int key, bool down, char *kstate) override;
 
 private:
 	AnimState2 ostate, istate;
@@ -107,8 +110,8 @@ private:
 	int ELID_OSWITCH;
 	int ELID_ISWITCH;
 
-	UINT anim_olock;            // handle for outer airlock animation
-	UINT anim_ilock;            // handle for inner airlock animation
+	unsigned int anim_olock;            // handle for outer airlock animation
+	unsigned int anim_ilock;            // handle for inner airlock animation
 };
 
 // ==============================================================
@@ -143,6 +146,8 @@ private:
 // Top hatch controls
 // ==============================================================
 
+class PressureSubsystem;
+class HatchCtrlSwitch;
 class TophatchCtrl: public DGSubsystem {
 	friend class PressureSubsystem;
 	friend class HatchCtrlSwitch;
@@ -155,14 +160,14 @@ public:
 	void Revert ();
 	inline const AnimState2 &State() const { return hatch_state; }
 	void RepairDamage();
-	void clbkSaveState (FILEHANDLE scn);
-	bool clbkParseScenarioLine (const char *line);
-	void clbkPostCreation ();
-	void clbkPostStep (double simt, double simdt, double mjd);
-	bool clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH);
-	bool clbkLoadVC (int vcid);     // create the VC elements for this module
-	bool clbkPlaybackEvent (double simt, double event_t, const char *event_type, const char *event);
-	int clbkConsumeBufferedKey(DWORD key, bool down, char *kstate);
+	void clbkSaveState (FILEHANDLE scn) override;
+	bool clbkParseScenarioLine (const char *line) override;
+	void clbkPostCreation () override;
+	void clbkPostStep (double simt, double simdt, double mjd) override;
+	bool clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH) override;
+	bool clbkLoadVC (int vcid) override;     // create the VC elements for this module
+	bool clbkPlaybackEvent (double simt, double event_t, const char *event_type, const char *event) override;
+	int clbkConsumeBufferedKey(int key, bool down, char *kstate) override;
 
 private:
 	AnimState2 hatch_state;
@@ -170,7 +175,7 @@ private:
 	int ELID_SWITCH;
 	PSTREAM_HANDLE hatch_vent;
 	double hatch_vent_t;
-	UINT anim_hatch;            // handle for top hatch animation
+	unsigned int anim_hatch;            // handle for top hatch animation
 	int hatchfail;
 };
 

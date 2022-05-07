@@ -18,15 +18,13 @@
 ** OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 ** THE SOFTWARE.*/
 
-#define STRICT
-
-#include <windows.h>
 #include <stdio.h>
 #include <math.h>
-#include "orbitersdk.h"
+#include "Orbitersdk.h"
 #include "parser.h"
 #include "mapfunction.h"
 #include "shiplist.h"
+#include <cstring>
 
 class shipptrs* shipptrs::first=NULL;
 class shipptrs* shipptrs::current=NULL;
@@ -35,7 +33,7 @@ bool shipptrs::saved=false;
 shipptrs::shipptrs()
 {
 	OBJHANDLE hcraft=oapiGetFocusObject();//Sets up new shipptrs for focus object
-	ZeroMemory(shipname, SHIPNAME_LENGTH);
+	memset(shipname, 0, SHIPNAME_LENGTH);
 	oapiGetObjectName(hcraft,shipname,SHIPNAME_LENGTH - 1); // Why is this -1?
 	subcreate();
 	state=new transxstate(hcraft,this);//A new plan base for this vessel
@@ -43,7 +41,7 @@ shipptrs::shipptrs()
 
 shipptrs::shipptrs(OBJHANDLE hcraft)
 {
-	ZeroMemory(shipname, SHIPNAME_LENGTH);	
+	memset(shipname, 0, SHIPNAME_LENGTH);	
 	oapiGetObjectName(hcraft,shipname,SHIPNAME_LENGTH - 1);
 	state=new transxstate(hcraft,this);//A new plan base for this vessel
 	subcreate();
@@ -52,8 +50,7 @@ shipptrs::shipptrs(OBJHANDLE hcraft)
 void shipptrs::subcreate()
 {
 	previous=NULL;
-	for (int a=0;a<MFDLIST_LENGTH;a++)
-		mfdlist[a]=NULL;//No views yet
+	mfdmap.clear();
 	next=first;
 	first=this;
 	if (next!=NULL)next->previous=this;
@@ -61,8 +58,10 @@ void shipptrs::subcreate()
 
 shipptrs::~shipptrs()
 {
-	for (int a=0;a<MFDLIST_LENGTH;a++)
-		delete mfdlist[a];
+	for(auto &m: mfdmap)
+		delete m.second;
+//	for (int a=0;a<MFDLIST_LENGTH;a++)
+//		delete mfdlist[a];
 	delete state;
 	if (first==this) first=next;
 	if (next!=NULL) next->previous=previous;
@@ -176,23 +175,32 @@ void shipptrs::destroyshipptrs()
 
 void shipptrs::downshift()
 {
-	for (int a=0; a<MFDLIST_LENGTH; a++)
-		if (mfdlist[a]!=NULL) mfdlist[a]->selfdownshift();
+	for(auto e: mfdmap)
+		e.second->selfdownshift();
+//	for (int a=0; a<MFDLIST_LENGTH; a++)
+//		if (mfdlist[a]!=NULL) mfdlist[a]->selfdownshift();
 }
 
 void shipptrs::resetshift()
 {
-	for (int a=0;a<MFDLIST_LENGTH;a++)
-		if (mfdlist[a]!=NULL) mfdlist[a]->resetshift();
+	for(auto e: mfdmap)
+		e.second->resetshift();
+//	for (int a=0;a<MFDLIST_LENGTH;a++)
+//		if (mfdlist[a]!=NULL) mfdlist[a]->resetshift();
 }
 
 
-class viewstate *shipptrs::getviewstate(int mfdpos,class TransxMFD *mfdptr)
+class viewstate *shipptrs::getviewstate(MfdId mfdpos,class TransxMFD *mfdptr)
 {
-	if (mfdpos<0 || mfdpos>MFDLIST_LENGTH - 1) mfdpos=0;
-	if (mfdlist[mfdpos]==NULL)
-		mfdlist[mfdpos]=new viewstate(mfdpos,this);
-	return mfdlist[mfdpos];
+	auto vs = mfdmap.find(mfdpos);
+	if(vs==mfdmap.end()) {
+		mfdmap[mfdpos] = new viewstate(mfdpos,this);
+	}
+
+//	if (mfdpos<0 || mfdpos>MFDLIST_LENGTH - 1) mfdpos=0;
+//	if (mfdlist[mfdpos]==NULL)
+//		mfdlist[mfdpos]=new viewstate(mfdpos,this);
+	return mfdmap[mfdpos];
 }
 
 class shipptrs* shipptr_itr::getnext()

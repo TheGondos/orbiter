@@ -5,6 +5,7 @@
 #define __MFDINTERPRETER_H
 
 #include "Interpreter.h"
+#include <thread>
 
 #define NCHAR 80 // characters per line in console buffer
 #define NLINE 50 // number of buffered lines
@@ -18,16 +19,16 @@ class MFDInterpreter: public Interpreter {
 public:
 	struct LineSpec {
 		char buf[NCHAR];
-		COLORREF col;
+		uint32_t col;
 		LineSpec *prev, *next;
 	};
 
 	MFDInterpreter ();
 	void SetSelf (OBJHANDLE hV);
 	void LoadAPI();
-	void AddLine (const char *line, COLORREF col);
+	void AddLine (const char *line, uint32_t col);
 	inline LineSpec *FirstLine() const { return lineFirst; }
-	inline DWORD LineCount() const { return nline; }
+	inline int LineCount() const { return nline; }
 	void term_strout (const char *str, bool iserr=false);
 	void term_out (lua_State *L, bool iserr=false);
 	void term_clear ();
@@ -40,7 +41,7 @@ protected:
 
 private:
 	LineSpec *lineFirst, *lineLast;
-	DWORD nline;
+	int nline;
 };
 
 // ==============================================================
@@ -53,17 +54,17 @@ public:
 		~Environment();
 		MFDInterpreter *CreateInterpreter (OBJHANDLE hV);
 		MFDInterpreter *interp;
-		HANDLE hThread;
+		std::thread hThread;
 		char cmd[1024];
-		static unsigned int WINAPI InterpreterThreadProc (LPVOID context);
+		static unsigned int InterpreterThreadProc (void *context);
 	};
 	struct VesselInterp {
 		OBJHANDLE hVessel;
 		Environment **env;
-		DWORD nenv;
+		int nenv;
 	} *list;
-	DWORD nlist;
-	DWORD nbuf;
+	int nlist;
+	int nbuf;
 
 	InterpreterList();
 	~InterpreterList();
@@ -71,12 +72,12 @@ public:
 	void Update (double simt, double simdt, double mjd);
 
 	Environment *AddInterpreter (OBJHANDLE hV);
-	bool DeleteInterpreter (OBJHANDLE hV, DWORD idx);
+	bool DeleteInterpreter (OBJHANDLE hV, int idx);
 	bool DeleteInterpreters (OBJHANDLE hV);
 	void DeleteList ();
 	VesselInterp *FindVesselInterp (OBJHANDLE hV);
-	Environment *FindInterpreter (OBJHANDLE hV, DWORD idx);
-	DWORD InterpreterCount (OBJHANDLE hV);
+	Environment *FindInterpreter (OBJHANDLE hV, int idx);
+	int InterpreterCount (OBJHANDLE hV);
 };
 
 #endif // !__MFDINTERPRETER_H

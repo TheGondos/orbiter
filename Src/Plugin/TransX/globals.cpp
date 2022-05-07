@@ -20,12 +20,12 @@
 
 #define STRICT
 
-#include <windows.h>
 #include <stdio.h>
 #include <math.h>
-#include "orbitersdk.h"
+#include "Orbitersdk.h"
 #include "shiplist.h"
 #include <list>
+#include <cstring>
 
 static int mode;
 
@@ -34,7 +34,7 @@ using namespace std;
 // ==============================================================
 // API interface
 
-DLLCLBK void InitModule (HINSTANCE hDLL)
+DLLCLBK void InitModule (DynamicModule *hDLL)
 {
 	static char name[] = "TransX";
 	MFDMODESPECEX spec;
@@ -42,8 +42,7 @@ DLLCLBK void InitModule (HINSTANCE hDLL)
 	spec.msgproc = TransxMFD::MsgProc;
 	spec.context = NULL;
 	//Code contributed by Dave Robotham
-	ifstream kstream;
-	kstream.open("config\\transx.cfg",NULL);	// this could be any file really.
+	ifstream kstream("Config/transx.cfg");
 	if( kstream )
 	{
 		try 
@@ -97,7 +96,7 @@ DLLCLBK void InitModule (HINSTANCE hDLL)
 
 }//end code from Dave Robotham
 
-DLLCLBK void ExitModule (HINSTANCE hDLL)
+DLLCLBK void ExitModule (void *hDLL)
 {
 	oapiUnregisterMFDMode (mode);
 }
@@ -119,13 +118,13 @@ DLLCLBK void opcCloseRenderViewport()
 }
 
 static int choose = 0;
-
+/*
 DLLCLBK void opcOpenRenderViewport(HWND renderWnd,DWORD width,DWORD height,BOOL fullscreen)
 {
 	mapfunction *temp=mapfunction::getthemap();//kicks off the process of map creation
 	choose = 0;
 }
-
+*/
 DLLCLBK void opcFocusChanged(OBJHANDLE newfocus, OBJHANDLE oldfocus)
 {
 
@@ -146,7 +145,7 @@ DLLCLBK void opcPostStep(double SimT, double SimDT, double mjd)
 }
 
 
-bool SelectVariableBody(void *id, char *str, void *usrdata)
+bool SelectVariableBody(void *id, const char *str, void *usrdata)
 {
 	return ((MFDvarmoon*)usrdata)->SetVariableBody(str);
 }

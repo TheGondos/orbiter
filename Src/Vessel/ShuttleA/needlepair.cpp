@@ -30,10 +30,10 @@ NeedlePair::NeedlePair (VESSEL3 *v, float basex, float basey, float range, int r
 
 // ==============================================================
 
-void NeedlePair::AddMeshData2D (MESHHANDLE hMesh, DWORD grpidx)
+void NeedlePair::AddMeshData2D (MESHHANDLE hMesh, int grpidx)
 {
-	static const DWORD nvtx = 6+4;
-	static const DWORD nidx = 6+6;
+	static const int nvtx = 6+4;
+	static const int nidx = 6+6;
 	const NTVERTEX vtx[nvtx] = {
 		// needles
 		{bx-20.0f, by-5.0f,0,  0,0,0,  61.5f/texw,  (texh-44.0f)/texh},
@@ -48,7 +48,7 @@ void NeedlePair::AddMeshData2D (MESHHANDLE hMesh, DWORD grpidx)
 		{bx-14.0f, by-81.5f,0, 0,0,0,  (texw-207.0f)/texw, (texh-rty)/texh},
 		{bx+11.0f, by-81.5f,0, 0,0,0,  (texw-182.0f)/texw, (texh-rty)/texh}
 	};
-	static const WORD idx[nidx] = {
+	static const uint16_t idx[nidx] = {
 		0,1,2,  3,5,4,
 		6,7,8,  9,8,7
 	};

@@ -13,7 +13,7 @@
 #define __SLIDERPAIR_H
 
 #include "ShuttleA.h"
-#include "..\Common\Instrument.h"
+#include "../Common/Instrument.h"
 
 // ==============================================================
 
@@ -21,7 +21,7 @@
 class SliderPair: public PanelElement {
 public:
 	SliderPair (VESSEL3 *v, float basex, float basey, float rangey, int colidx);
-	void AddMeshData2D (MESHHANDLE hMesh, DWORD grpidx);
+	void AddMeshData2D (MESHHANDLE hMesh, int grpidx);
 	bool Redraw2D (SURFHANDLE surf, double level[2]);
 	int ProcessMouse2D (int event, int mx, int my, double *level);
 

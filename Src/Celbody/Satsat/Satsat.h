@@ -6,7 +6,7 @@
 
 #define SKIP_MFD_API
 #include "OrbiterAPI.h"
-#include "CelbodyAPI.h"
+#include "CelBodyAPI.h"
 
 #define SAT_MIMAS     0
 #define SAT_ENCELADUS 1
@@ -27,8 +27,8 @@ class DLLEXPORT SATOBJ: public CELBODY2 {
 public:
 	SATOBJ (OBJHANDLE hObj, int is, double dt);
 	bool bEphemeris() const;
-	int  clbkEphemeris (double mjd, int req, double *ret);
-	int  clbkFastEphemeris (double simt, int req, double *ret);
+	int  clbkEphemeris (double mjd, int req, double *ret) override;
+	int  clbkFastEphemeris (double simt, int req, double *ret) override;
 
 protected:
 	int ksat;     // object id
@@ -47,6 +47,6 @@ DLLEXPORT void SaturnFastEphemeris (double simt, double *ret);
 
 int posired (double dj, int is, double *xyz, double *vxyz);
 int nterm (int is);
-void ReadData (char *fname, int res);
+void ReadData (const char *fname, int res);
 
 #endif // !__SATSAT_H

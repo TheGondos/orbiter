@@ -3,9 +3,7 @@
 
 add_library(FlightData SHARED
 	FlightData.cpp
-	FlightData.rc
 	FDGraph.cpp
-	../Common/Dialog/Graph.cpp
 )
 
 target_include_directories(FlightData

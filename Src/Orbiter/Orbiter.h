@@ -5,13 +5,13 @@
 #define ORBITER_H
 
 #include "Config.h"
-#include "Input.h"
 #include "Select.h"
 #include "Keymap.h"
 #include <stdio.h>
-#include <commctrl.h>
 #include "Mesh.h"
 #include "Astro.h"
+#include "GUIManager.h"
+#include <chrono>
 
 
 class DInput;
@@ -25,14 +25,23 @@ class OrbiterGraphics;
 class OrbiterConnect;
 class OrbiterServer;
 class OrbiterClient;
-class PlaybackEditor;
+//class PlaybackEditor;
 class MemStat;
 class DDEServer;
 class ImageIO;
-namespace orbiter {
-	class ConsoleNG;
-	class LaunchpadDialog;
-}
+
+class DlgCamera;
+class DlgInfo;
+class DlgTacc;
+class DlgMap;
+class DlgFocus;
+class DlgFunction;
+class DlgVishelper;
+class DlgLaunchpad;
+class DlgRecorder;
+class Select;
+class InputBox;
+class DlgPlaybackEditor;
 
 //-----------------------------------------------------------------------------
 // Structure for module callback functions
@@ -51,11 +60,11 @@ public:
 	// Reset all sim and sys times to 0. Set time warp to 1
 	// Disable fixed step mode
 
-	void TimeData::SetFixedStep(double step);
+	void SetFixedStep(double step);
 	// set a fixed time interval for each time step [s]
 	// step=0 disables the fixed step modus
 
-	double TimeData::FixedStep() const { return (bFixedStep ? fixed_step : 0.0); }
+	double FixedStep() const { return (bFixedStep ? fixed_step : 0.0); }
 
 	void BeginStep (double deltat, bool running);
 	// advance time by deltat (seconds)
@@ -109,6 +118,9 @@ private:
 // Name: class Orbiter
 // Desc: Main application class
 //-----------------------------------------------------------------------------
+class ScriptInterface;
+//class oapi::GraphicsClient;
+class OrbiterGraphics;
 class Orbiter {
 	friend class ScriptInterface;
 	friend class oapi::GraphicsClient;
@@ -118,28 +130,29 @@ public:
 	Orbiter ();
 	~Orbiter ();
 
-    HRESULT Create (HINSTANCE);
-	VOID Launch (const char *scenario);
+    void Create ();
+	void Launch (const char *scenario);
 	void CloseApp (bool fast_shutdown = false);
 	int GetVersion () const;
-	HWND CreateRenderWindow (Config *pCfg, const char *scenario);
+	void StartSession (Config *pCfg, const char *scenario);
+	GLFWwindow *CreateRenderWindow ();
 	void PreCloseSession();
 	void CloseSession ();
 	void GetRenderParameters ();
 	bool InitializeWorld (char *name);
 	void ScreenToClient (POINT *pt) const;
-    LRESULT MsgProc (HWND, UINT, WPARAM, LPARAM);
-	HRESULT Render3DEnvironment();
-	VOID Output2DData ();
+    //LRESULT MsgProc (HWND, UINT, WPARAM, LPARAM);
+	void Render3DEnvironment();
+	void RenderGUI();
+	void DisplayFrame();
+	void Output2DData ();
 	void OutputLoadStatus (const char *msg, int line);
 	void OutputLoadTick (int line, bool ok = true);
 	void TerminateOnError();
-	void UpdateServerWnd (HWND hWnd);
 	void InitRotationMode ();
 	void ExitRotationMode ();
 	bool StickyFocus() const { return bKeepFocus; }
-	void OpenVideoTab() { bStartVideoTab = true; }
-	INT Run ();
+	int Run ();
 	void SingleFrame ();
     void Pause (bool bPause);
 	void Freeze (bool bFreeze);
@@ -149,31 +162,23 @@ public:
 	void Resume (void); // A Suspend/Resume pair must be closed within a time step
 	bool SaveScenario (const char *fname, const char *desc);
 	void SaveConfig ();
-	VOID Quicksave ();
+	void Quicksave ();
 	void StartCaptureFrames () { video_skip_count = 0; bCapture = true; }
 	void StopCaptureFrames () { bCapture = false; }
 	bool IsCapturingFrames() const { return bCapture; }
 	void CaptureVideoFrame ();
 	const char *KeyState() const;
 
-	// dialog box processing
-	HWND OpenDialog (int id, DLGPROC pDlg, void *context = 0); // This version expects the dialog resource in the Orbiter instance
-	HWND OpenDialog (HINSTANCE hInst, int id, DLGPROC pDlg, void *context = 0); // use this version for for calls from external dlls
-	HWND OpenDialogEx (int id, DLGPROC pDlg, DWORD flag = 0, void *context = 0); // extended version
-	HWND OpenDialogEx (HINSTANCE hInst, int id, DLGPROC pDlg, DWORD flag = 0, void *context = 0); // extended version
-	HWND OpenHelp (HELPCONTEXT *hcontext);
-	void OpenLaunchpadHelp (HELPCONTEXT *hcontext);
-	//void OpenDialogAsync (int id, DLGPROC pDlg, void *context = 0);
-	void CloseDialog (HWND hDlg);
-	HWND IsDialog (HINSTANCE hInst, DWORD resId);
-	bool RegisterWindow (HINSTANCE hInstance, HWND hWnd, DWORD flag);
+	void CloseDialog (GUIElement *e);
+	void RegisterGUIElement(GUIElement *);
+	void UnregisterGUIElement(GUIElement *);
 
 	void UpdateDeallocationProgress();
 
 	// plugin module loading/unloading
-	HINSTANCE LoadModule (const char *path, const char *name);   // load a plugin
+	oapi::DynamicModule *LoadModule (const char *path, const char *name);   // load a plugin
 	void UnloadModule (const char *name); // unload a plugin
-	void UnloadModule (HINSTANCE hi);
+	void UnloadModule (oapi::DynamicModule *hi);
 
 	Vessel *SetFocusObject (Vessel *vessel, bool setview = true);
 	// Select a new user-controlled vessel
@@ -189,7 +194,7 @@ public:
 	bool KillVessels();
 	// Kill the vessels that have been marked for deletion in the last time step
 
-	inline double ManCtrlLevel (THGROUP_TYPE thgt, DWORD device) const {
+	inline double ManCtrlLevel (THGROUP_TYPE thgt, int device) const {
 		switch (device) {
 		case MANCTRL_KEYBOARD: return 0.001*ctrlKeyboard[thgt];
 		case MANCTRL_JOYSTICK: return 0.001*ctrlJoystick[thgt];
@@ -203,35 +208,29 @@ public:
 	void SetWarpFactor (double warp, bool force = false, double delay = 0.0);
 	// Set time acceleration factor
 
-	VOID SetFOV (double fov, bool limit_range = true);
+	void SetFOV (double fov, bool limit_range = true);
 	// Set camera field of view to fov (vertical half-screen) [rad]
 
-	VOID IncFOV (double dfov);
+	void IncFOV (double dfov);
 	// Increase camera field of view by dfov
 
 	// Accessor functions
-	inline HINSTANCE GetInstance() const { return hInst; }
-	inline HWND    GetRenderWnd() const { return hRenderWnd; }
+	inline GLFWwindow *GetRenderWnd() const { return hRenderWnd; }
 	inline bool    IsFullscreen() const { return bFullscreen; }
-	inline DWORD   ViewW() const { return viewW; }
-	inline DWORD   ViewH() const { return viewH; }
-	inline DWORD   ViewBPP() const { return viewBPP; }
+	inline int   ViewW() const { return viewW; }
+	inline int   ViewH() const { return viewH; }
+	inline int   ViewBPP() const { return viewBPP; }
 	inline Config* Cfg() const { return pConfig; }
 	inline ScriptInterface *Script() const { return script; }
-	inline DialogManager *DlgMgr() const { return pDlgMgr; }
-	inline orbiter::LaunchpadDialog *Launchpad() const { return m_pLaunchpad; }
+	//inline DialogManager *DlgMgr() const { return pDlgMgr; }
 	inline State*  PState() const { return pState; }
 	inline bool    IsActive() const { return bActive; } // temporary
 	inline bool    IsRunning() const { return bRunning; }
 	inline bool    UseStencil() const { return bUseStencil; }
 	inline void    SetFastExit (bool fexit) { bFastExit = fexit; }
-	inline bool    UseHtmlInline () { return (pConfig->CfgDebugPrm.bHtmlScnDesc == 1 || pConfig->CfgDebugPrm.bHtmlScnDesc == 2 && !bWINEenv); }
+	inline bool    UseHtmlInline () { return (pConfig->CfgDebugPrm.bHtmlScnDesc == 1 || pConfig->CfgDebugPrm.bHtmlScnDesc == 2); }
 
 	// DirectInput components
-	inline CDIFramework7 *GetDInput() const { return pDI->GetDIFrame(); }
-	inline LPDIRECTINPUTDEVICE8 GetKbdDevice() const { return pDI->GetKbdDevice(); }
-	inline LPDIRECTINPUTDEVICE8 GetJoyDevice() const { return pDI->GetJoyDevice(); }
-
 	// memory monitor
 	MemStat *memstat;
 	long simheapsize; // memory allocated during CreateRenderWindow
@@ -253,20 +252,17 @@ public:
 	FILE *OpenTextureFile (const char *name, const char *ext);
 	// return texture file handle. Searches in hightex and standard directories
 
-	SURFHANDLE RegisterExhaustTexture (char *name);
+	SURFHANDLE RegisterExhaustTexture (const char *name);
 
 	Keymap keymap;
 	// keyboard mapper
-
-	bool ActivateRoughType();   // suppress font smoothing
-	bool DeactivateRoughType(); // re-enable font smoothing
 
 	// Flight recorder
 	char *FRsysname;             // system event playback name
 	std::ifstream *FRsys_stream; // system event playback file
 	double frec_sys_simt;        // system event timer
-	PlaybackEditor *FReditor;    // playback editor instance
-	void ToggleRecorder (bool force = false, bool append = false);
+//	PlaybackEditor *FReditor;    // playback editor instance
+	bool ToggleRecorder (bool force = false, bool append = false);
 	void EndPlayback ();
 	inline int RecorderStatus() const { return (bRecord ? 1 : bPlayback ? 2 : 0); }
 	inline bool IsPlayback() const { return bPlayback; }
@@ -294,8 +290,8 @@ public:
 	// toggle the playback editor
 
 	typedef struct {
-		char *label;
-		char *desc;
+		const char *label;
+		const char *desc;
 		int id;
 		CustomFunc func;
 		void *context;
@@ -306,7 +302,7 @@ public:
 		int mode;
 	} tjump;
 
-	DWORD RegisterCustomCmd (char *label, char *desc, CustomFunc func, void *context);
+	int RegisterCustomCmd (const char *label, const char *desc, CustomFunc func, void *context);
 	bool UnregisterCustomCmd (int cmdId);
 
 	MeshManager     meshmanager;    // global mesh manager
@@ -316,60 +312,52 @@ public:
 	const Mesh *LoadMeshGlobal (const char *fname, LoadMeshClbkFunc fClbk);
 
 	// graphics client shortcuts
-	inline SURFHANDLE LoadTexture (const char *fname, DWORD flags = 0)
+	inline SURFHANDLE LoadTexture (const char *fname, int flags = 0)
 	{ return (gclient ? gclient->clbkLoadTexture (fname, flags) : NULL); }
 
-	//inline SURFHANDLE CreateSurface (DWORD w, DWORD h, DWORD attrib)
+	//inline SURFHANDLE CreateSurface (int w, int h, int attrib)
 	//{ return (gclient ? gclient->clbkCreateSurfaceEx (w, h, attrib) : NULL); }
 
-	//inline SURFHANDLE CreateTexture (DWORD w, DWORD h)
+	//inline SURFHANDLE CreateTexture (int w, int h)
 	//{ return (gclient ? gclient->clbkCreateTexture (w, h) : NULL); }
 
 	inline bool ReleaseSurface (SURFHANDLE surf)
 	{ return (gclient ? gclient->clbkReleaseSurface (surf) : false); }
 
-	inline bool SetSurfaceColourKey (SURFHANDLE surf, DWORD ckey)
+	inline bool SetSurfaceColourKey (SURFHANDLE surf, uint32_t ckey)
 	{ return (gclient ? gclient->clbkSetSurfaceColourKey (surf, ckey) : false); }
 
-	inline DWORD GetDeviceColour (BYTE r, BYTE g, BYTE b)
+	inline uint32_t GetDeviceColour (uint8_t r, uint8_t g, uint8_t b)
 	{ return (gclient ? gclient->clbkGetDeviceColour (r, g, b) : 0); }
 
-	inline bool Blt (SURFHANDLE tgt, DWORD tgtx, DWORD tgty, SURFHANDLE src, DWORD flag = 0)
+	inline bool Blt (SURFHANDLE tgt, int tgtx, int tgty, SURFHANDLE src, int flag = 0)
 	{ return (gclient ? gclient->clbkBlt (tgt, tgtx, tgty, src, flag) : false); }
 
-	inline bool Blt (SURFHANDLE tgt, DWORD tgtx, DWORD tgty, SURFHANDLE src, DWORD srcx, DWORD srcy, DWORD w, DWORD h, DWORD flag = 0)
+	inline bool Blt (SURFHANDLE tgt, int tgtx, int tgty, SURFHANDLE src, int srcx, int srcy, int w, int h, int flag = 0)
 	{ return (gclient ? gclient->clbkBlt (tgt, tgtx, tgty, src, srcx, srcy, w, h, flag) : false); }
 
-	inline bool FillSurface (SURFHANDLE surf, DWORD col)
+	inline bool FillSurface (SURFHANDLE surf, uint32_t col)
 	{ return (gclient ? gclient->clbkFillSurface (surf, col) : false); }
 
-	inline bool FillSurface (SURFHANDLE surf, DWORD tgtx, DWORD tgty, DWORD w, DWORD h, DWORD col)
+	inline bool FillSurface (SURFHANDLE surf, int tgtx, int tgty, int w, int h, uint32_t col)
 	{ return (gclient ? gclient->clbkFillSurface (surf, tgtx, tgty, w, h, col) : false); }
 
-	inline HDC GetSurfaceDC (SURFHANDLE surf)
-	{ return (gclient ? gclient->clbkGetSurfaceDC (surf) : NULL); }
-
-	inline void ReleaseSurfaceDC (SURFHANDLE surf, HDC hDC)
-	{ if (gclient) gclient->clbkReleaseSurfaceDC (surf, hDC); }
-
-	bool SendKbdBuffered(DWORD key, DWORD *mod = 0, DWORD nmod = 0, bool onRunningOnly = false);
+	bool SendKbdBuffered(int key, int *mod = 0, int nmod = 0, bool onRunningOnly = false);
 	// Simulate a buffered keypress with an optional list of modifier keys
 
 	bool SendKbdImmediate(char kstate[256], bool onRunningOnly = false);
 	// Simulate an immediate key state
 
+	bool MouseEvent (oapi::MouseEvent event, int state, int x, int y);
 protected:
-	HRESULT UserInput ();
+	void UserInput ();
 	void KbdInputImmediate_System    (char *kstate);
 	void KbdInputImmediate_OnRunning (char *buffer);
-	void KbdInputBuffered_System     (char *kstate, DIDEVICEOBJECTDATA *dod, DWORD n);
-	void KbdInputBuffered_OnRunning  (char *kstate, DIDEVICEOBJECTDATA *dod, DWORD n);
-	void UserJoyInput_System (DIJOYSTATE2 *js);
-	void UserJoyInput_OnRunning (DIJOYSTATE2 *js);
-	bool MouseEvent (UINT event, DWORD state, DWORD x, DWORD y);
-	bool BroadcastMouseEvent (UINT event, DWORD state, DWORD x, DWORD y);
+	void KbdInputBuffered_System     (char *kstate, int key);
+	void KbdInputBuffered_OnRunning  (char *kstate, int key);
+	bool BroadcastMouseEvent (oapi::MouseEvent event, int state, int x, int y);
 	bool BroadcastImmediateKeyboardEvent (char *kstate);
-	void BroadcastBufferedKeyboardEvent (char *kstate, DIDEVICEOBJECTDATA *dod, DWORD n);
+	void BroadcastBufferedKeyboardEvent (char *kstate, int key);
 
 	void BroadcastGlobalInit();
 
@@ -386,7 +374,7 @@ protected:
 
 	void ModulePreStep ();
 	void ModulePostStep ();
-	VOID UpdateWorld ();
+	void UpdateWorld ();
 
 	void IncWarpFactor ();
 	void DecWarpFactor ();
@@ -395,104 +383,96 @@ protected:
 	void ApplyWarpFactor ();
 	// broadcast new warp factor to components and modules
 
-    HRESULT InitDeviceObjects ();
-	HRESULT RestoreDeviceObjects ();
-    HRESULT DeleteDeviceObjects ();
-	void InitializeGDIResources (HWND hWnd);
-	void ReleaseGDIResources ();
-
+public:
+	std::unique_ptr<GUIManager> m_pGUIManager;
+	std::unique_ptr<DlgCamera> m_DlgCamera;
+	std::unique_ptr<DlgInfo> m_DlgInfo;
+	std::unique_ptr<DlgTacc> m_DlgTacc;
+	std::unique_ptr<DlgMap> m_DlgMap;
+	std::unique_ptr<DlgFocus> m_DlgFocus;
+	std::unique_ptr<DlgFunction> m_DlgFunction;
+	std::unique_ptr<DlgVishelper> m_DlgVishelper;
+	std::unique_ptr<DlgLaunchpad> m_DlgLaunchpad;
+	std::unique_ptr<DlgRecorder> m_DlgRecorder;
+	std::unique_ptr<Select> m_DlgSelect;
+	std::unique_ptr<InputBox> m_DlgInputBox;
+	std::unique_ptr<DlgPlaybackEditor> m_DlgPlaybackEditor;
 private:
 	Config         *pConfig;
 	State          *pState;
-	orbiter::LaunchpadDialog *m_pLaunchpad;
-	DialogManager  *pDlgMgr;
-	orbiter::ConsoleNG* m_pConsole;    // The console window opened when Orbiter server is launched without a graphics client
+	//DialogManager  *pDlgMgr;
 	DInput         *pDI;
-	HINSTANCE       hInst;         // orbiter instance handle
-	HWND            hRenderWnd;    // render window handle (NULL if no render support)
-	HWND            hBk;           // background window handle (demo mode only)
-	BOOL            bRenderOnce;   // flag for single frame render request
-	BOOL            bEnableLighting;
+	GLFWwindow     *hRenderWnd;    // render window handle (NULL if no render support)
+	bool            bRenderOnce;   // flag for single frame render request
+	bool            bEnableLighting;
 	bool			bUseStencil;   // render device provides stencil buffer (and user requests it)
 	bool            bKeepFocus;    // disable focus switch on mouse move (during rotations)
-	bool            bStartVideoTab; // Open Launchpad dialog on video tab
-	bool            bWINEenv;      // we are running under Linux/WINE
 	bool            ignorefirst;   // flag for first joystick action
 	long            plZ4;          // previous joystick throttle setting
 	int             video_skip_count; // count skipped frames for frame sequence capturing
 	oapi::ScreenAnnotation **snote;// onscreen annotations
-	DWORD           nsnote;        // number of annotations
+	int             nsnote;        // number of annotations
 	oapi::ScreenAnnotation *snote_playback;// onscreen annotation during playback
 	ScriptInterface *script;
 	INTERPRETERHANDLE hScnInterp;
 
 	// render parameters (only used if graphics client is present)
 	bool			bFullscreen;   // renderer in fullscreen mode
-	DWORD           viewW, viewH;  // render viewport dimensions
-	DWORD			viewBPP;       // render colour depth (bits per pixel)
+	int             viewW, viewH;  // render viewport dimensions
+	int		    	viewBPP;       // render colour depth (bits per pixel)
 
 	char            cfgpath[256];
 	int             cfglen;
 	char            simkstate[256];// accumulated simulated key state
 
-	DWORD           ms_prev;       // used for time step calculation
-	DWORD           ms_suspend;    // used for time-skipping within a step
+	std::chrono::time_point<std::chrono::steady_clock> time_prev;       // used for time step calculation
+	std::chrono::time_point<std::chrono::steady_clock> time_suspend;    // used for time-skipping within a step
 	bool            bActive;       // render window has focus
 	bool            bAllowInput;   // allow input processing for the next frame even if render window doesn't have focus
 	bool            bVisible;      // render window exists and is visible
 	bool            bRunning;      // simulation is running
 	bool            bRequestRunning; // pause/resume request
 	bool            bSession;      // simulation session in progress
-	BOOL			bRealtime;     // TRUE if TWarp == 1
-	BOOL            bEnableAtt;    // TRUE if manual attitude control (keyboard or joystick) is enabled
+	bool			bRealtime;     // TRUE if TWarp == 1
+	bool            bEnableAtt;    // TRUE if manual attitude control (keyboard or joystick) is enabled
 	bool            bRecord;       // true if flight is being recorded
 	bool            bPlayback;     // true if flight is being played back
 	bool            bCapture;      // capturing frame sequence is active
 	bool            bFastExit;     // terminate on simulation end?
-	bool            bSysClearType; // is cleartype enabled on the user's system?
-	bool            bRoughType;    // font-smoothing disabled?
 
 	// Manual joystick/keyboard attitude inputs
-	DWORD ctrlJoystick[15];
-	DWORD ctrlKeyboard[15];
-	DWORD ctrlTotal[15];
+	int ctrlJoystick[15];
+	int ctrlKeyboard[15];
+	int ctrlTotal[15];
 
-	VOID SavePlaybackScn (const char *fname);
+	void SavePlaybackScn (const char *fname);
 
 	// === The plugin module interface ===
 	struct DLLModule {               // list of plugin modules
 		oapi::Module *module;
-		HINSTANCE hMod;
+		oapi::DynamicModule *hMod;
 		//OPC_Interface *intf;
 		char *name;
 	} *module;
-	DWORD nmodule;                  // number of plugins
+	int nmodule;                  // number of plugins
 
 	oapi::Module *register_module;  // used during module registration
 	friend OAPIFUNC void oapiRegisterModule (oapi::Module* module);
 
 	void LoadFixedModules ();                   // load all startup plugins
-	OPC_Proc FindModuleProc (DWORD nmod, const char *procname);
+	OPC_Proc FindModuleProc (int nmod, const char *procname);
 	// returns address of a procedure in a plugin module, or NULL if procedure not found
-
 	// list of custom commands
 	CUSTOMCMD *customcmd;
-	DWORD ncustomcmd;
+	int ncustomcmd;
 	friend class DlgFunction;
 
-	// DDE interface
-	DDEServer *ddeserver;
-	void DDEInit (HWND hClient, ATOM topic);
-	void DDERequest (HWND hClient, int format, ATOM item);
-
 public:
-#ifndef INLINEGRAPHICS
 	// external graphics client
 	bool AttachGraphicsClient (oapi::GraphicsClient *gc);
 	bool RemoveGraphicsClient (oapi::GraphicsClient *gc);
-#endif // !INLINEGRAPHICS
 	inline oapi::GraphicsClient *GetGraphicsClient () { return gclient; }
-
+	void MakeContextCurrent(bool);
 private:
 	oapi::GraphicsClient *gclient;       // external graphics client (renderer)
 	OrbiterGraphics *oclient;            // inline graphics client
@@ -501,6 +481,7 @@ public:
 	inline OrbiterGraphics *GetInlineGraphicsClient() { return oclient; }
 	// (to access special inline graphics features. Eventually this should no longer
 	// be necessary)
+	void KeyCallback(int key, char state);
 
 };
 

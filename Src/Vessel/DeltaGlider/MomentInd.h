@@ -12,7 +12,7 @@
 #ifndef __MOMENTIND_H
 #define __MOMENTIND_H
 
-#include "..\Common\Instrument.h"
+#include "../Common/Instrument.h"
 
 // ==============================================================
 
@@ -23,7 +23,7 @@ public:
 	void Reset2D (int panelid, MESHHANDLE hMesh);
 	void ResetVC (DEVMESHHANDLE hMesh);
 	void LoadVC (int vcid);
-	void LoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH);
+	void LoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH);
 	bool Redraw2D (SURFHANDLE surf);
 	bool RedrawVC (DEVMESHHANDLE hMesh, SURFHANDLE surf);
 

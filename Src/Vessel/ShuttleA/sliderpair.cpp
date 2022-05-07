@@ -28,10 +28,10 @@ SliderPair::SliderPair (VESSEL3 *v, float basex, float basey, float rangey, int 
 
 // ==============================================================
 
-void SliderPair::AddMeshData2D (MESHHANDLE hMesh, DWORD grpidx)
+void SliderPair::AddMeshData2D (MESHHANDLE hMesh, int grpidx)
 {
-	static const DWORD nvtx =  8*2;
-	static const DWORD nidx = 30*2;
+	static const int nvtx =  8*2;
+	static const int nidx = 30*2;
 	float tu0 = (float)( 6+cidx*31)/texw;
 	float tu1 = (float)(26+cidx*31)/texw;
 	float tu2 = (float)( 1+cidx*31)/texw;
@@ -60,7 +60,7 @@ void SliderPair::AddMeshData2D (MESHHANDLE hMesh, DWORD grpidx)
 		{0,0,0,  0,0,0,  tu2,tv3},
 		{0,0,0,  0,0,0,  tu3,tv3}
 	};
-	static const WORD idx[nidx] = {
+	static const uint16_t idx[nidx] = {
 		0,1,2, 3,2,1,
 		4,5,0, 1,0,5,
 		5,7,1, 3,1,7,
@@ -110,7 +110,7 @@ void SliderPair::SetVertices (int which, double pos)
 	double alpha = alpha0 + (alpha1-alpha0)*pos;
 	double sina = sin(alpha), cosa = cos(alpha);
 
-	DWORD vofs = vtxofs + which*8;
+	int vofs = vtxofs + which*8;
 
 	for (i = 0; i < 8; i++) {
 		double x = x0[i] + (which-0.5)*25+bx;

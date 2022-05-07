@@ -18,7 +18,7 @@
 #define STRICT
 #define ORBITER_MODULE
 
-#include "orbitersdk.h"
+#include "Orbitersdk.h"
 
 // ==============================================================
 // Some vessel parameters
@@ -47,7 +47,7 @@ const VECTOR3 PB_DOCK_DIR   = {0,1,0};         // docking port approach directio
 const VECTOR3 PB_DOCK_ROT   = {0,0,-1};        // docking port alignment direction
 
 // Define impact convex hull
-static const DWORD ntdvtx = 12;
+static const int ntdvtx = 12;
 static TOUCHDOWNVTX tdvtx[ntdvtx] = {
 	{_V( 0,  -1.5, 2  ), 2e4, 1e3, 1.6, 1},
 	{_V(-1,  -1.5,-1.5), 2e4, 1e3, 3.0, 1},
@@ -110,8 +110,8 @@ ShuttlePB::~ShuttlePB ()
 }
 
 // animation transformation definitions
-static UINT GRP_LWING = 2;
-static UINT GRP_RWING = 3;
+static unsigned int GRP_LWING = 2;
+static unsigned int GRP_RWING = 3;
 static VECTOR3 LWING_REF  = {-1.3,-0.725,-1.5};
 static VECTOR3 LWING_AXIS = {-0.9619,-0.2735,0};
 static VECTOR3 RWING_REF  = {1.3,-0.725,-1.5};
@@ -151,9 +151,9 @@ void ShuttlePB::clbkSetClassCaps (FILEHANDLE cfg)
 	CreateAirfoil3 (LIFT_HORIZONTAL, PB_COP, hlift, NULL, PB_HLIFT_C, PB_HLIFT_S, PB_HLIFT_A);
 
 	// control surface animations
-	UINT anim_Laileron = CreateAnimation (0.5);
-	UINT anim_Raileron = CreateAnimation (0.5);
-	UINT anim_elevator = CreateAnimation (0.5);
+	unsigned int anim_Laileron = CreateAnimation (0.5);
+	unsigned int anim_Raileron = CreateAnimation (0.5);
+	unsigned int anim_elevator = CreateAnimation (0.5);
 	AddAnimationComponent (anim_Laileron, 0, 1, &trans_Laileron);
 	AddAnimationComponent (anim_Raileron, 0, 1, &trans_Raileron);
 	AddAnimationComponent (anim_elevator, 0, 1, &trans_Lelevator);

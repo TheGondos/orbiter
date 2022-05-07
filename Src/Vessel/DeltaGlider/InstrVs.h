@@ -12,7 +12,7 @@
 #ifndef __INSTRVS_H
 #define __INSTRVS_H
 
-#include "..\Common\Instrument.h"
+#include "../Common/Instrument.h"
 
 class InstrVS: public PanelElement {
 public:
@@ -20,7 +20,7 @@ public:
 	~InstrVS ();
 	void Reset2D (int panelid, MESHHANDLE hMesh);
 	void ResetVC (DEVMESHHANDLE hMesh);
-	void AddMeshData2D (MESHHANDLE hMesh, DWORD grpidx);
+	void AddMeshData2D (MESHHANDLE hMesh, int grpidx);
 	bool Redraw2D (SURFHANDLE surf);
 	bool RedrawVC (DEVMESHHANDLE hMesh, SURFHANDLE surf);
 
@@ -30,8 +30,8 @@ private:
 	SURFHANDLE sf;
 	GROUPREQUESTSPEC vc_grp;         ///< Buffered VC vertex data (tape)
 	GROUPREQUESTSPEC vc_grp_readout; ///< Buffered VC vertex data (readout)
-	WORD vperm[4];
-	WORD vperm_readout[20];
+	uint16_t vperm[4];
+	uint16_t vperm_readout[20];
 };
 
 #endif // !__INSTRVS_H

@@ -1,13 +1,14 @@
 // Copyright (c) Martin Schweiger
 // Licensed under the MIT License
 
+#include "cmdline.h"
 #include <iostream>
 #include <set>
-#include "cmdline.h"
 #include "Orbiter.h"
-#include "Launchpad.h"
 
-CommandLine::CommandLine(const PSTR cmdLine)
+#define stricmp strcasecmp
+
+CommandLine::CommandLine(const char *cmdLine)
 {
 	m_cmdLine = (std::string(cmdLine ? cmdLine : ""));
 	ParseCmdLine(cmdLine);
@@ -18,7 +19,7 @@ const char* CommandLine::CmdLine() const
 	return m_cmdLine.c_str();
 }
 
-bool CommandLine::GetOption(UINT id, const std::string** value) const
+bool CommandLine::GetOption(unsigned int id, const std::string** value) const
 {
 	for (auto it = optionList.cbegin(); it < optionList.cend(); it++)
 		if (it->key->id == id) {
@@ -28,9 +29,9 @@ bool CommandLine::GetOption(UINT id, const std::string** value) const
 	return false;
 }
 
-void CommandLine::ParseCmdLine(const PSTR cmdLine)
+void CommandLine::ParseCmdLine(const char *cmdLine)
 {
-	PSTR pc = cmdLine;
+	const char *pc = cmdLine;
 	bool groupKey = false;
 
 	while (*pc) {
@@ -42,7 +43,7 @@ void CommandLine::ParseCmdLine(const PSTR cmdLine)
 	}
 }
 
-bool CommandLine::ParseNextOption(PSTR& cmdLine, bool& groupKey, Option& option)
+bool CommandLine::ParseNextOption(const char *& cmdLine, bool& groupKey, Option& option)
 {
 	bool isLongKey;
 	bool isQuotedVal;
@@ -62,19 +63,19 @@ bool CommandLine::ParseNextOption(PSTR& cmdLine, bool& groupKey, Option& option)
 			return false; // parse error: key indicator not found
 		else
 			cmdLine++;
-		if (isLongKey = (*cmdLine == '-'))
+		if ((isLongKey = (*cmdLine == '-')))
 			cmdLine++;
 	}
 	else {
 		isLongKey = false;
 	}
-	char* termKeyChar = (isLongKey ? " \t=" : " \t"); // '=' as key-value separator only allowed for long keys
+	const char* termKeyChar = (isLongKey ? " \t=" : " \t"); // '=' as key-value separator only allowed for long keys
 	std::set<char> termK(termKeyChar, termKeyChar + strlen(termKeyChar) + 1); // include '\0' in set
-	PSTR endKey = cmdLine;
+	const char *endKey = cmdLine;
 	while (termK.find(*endKey) == termK.end())
 		endKey++;
 	size_t keyLen = endKey - cmdLine;
-	if (groupKey = (!isLongKey && keyLen > 1)) // concatenated short keys
+	if ((groupKey = (!isLongKey && keyLen > 1))) // concatenated short keys
 		keyLen = 1;
 	option.strKey = std::string(cmdLine, keyLen);
 	if (groupKey) {
@@ -100,11 +101,11 @@ bool CommandLine::ParseNextOption(PSTR& cmdLine, bool& groupKey, Option& option)
 	}
 	else if (isLongKey)
 		return false;     // for long keys, '=' is mandatory before values
-	if (isQuotedVal = (*cmdLine == '\"'))
+	if ((isQuotedVal = (*cmdLine == '\"')))
 		cmdLine++; // skip starting quotes
-	char* termValChar = (isQuotedParam || isQuotedVal ? "\"" : " \t"); // for quoted values, only accept quotes as terminator
+	const char* termValChar = (isQuotedParam || isQuotedVal ? "\"" : " \t"); // for quoted values, only accept quotes as terminator
 	std::set<char> termV(termValChar, termValChar + strlen(termValChar) + 1); // include '\0' in set
-	PSTR endVal = cmdLine;
+	const char *endVal = cmdLine;
 	while (termV.find(*endVal) == termV.end())
 		endVal++;
 	size_t valLen = endVal - cmdLine;
@@ -151,7 +152,7 @@ void CommandLine::ApplyOptions()
 
 
 
-orbiter::CommandLine::CommandLine(Orbiter* pOrbiter, const PSTR cmdLine)
+orbiter::CommandLine::CommandLine(Orbiter* pOrbiter, const char *cmdLine)
 	: ::CommandLine(cmdLine)
 	, m_pOrbiter(pOrbiter)
 {
@@ -235,11 +236,6 @@ void orbiter::CommandLine::ApplyOption(const Key* key, const std::string& value)
 
 void orbiter::CommandLine::PrintHelpAndExit() const
 {
-	// Get console output
-	if (AttachConsole(ATTACH_PARENT_PROCESS) || AllocConsole()) {
-		freopen("CONOUT$", "w", stdout);
-	}
-
 	std::cout << "\nOrbiter Space Flight Simulator" << std::endl;
 	std::cout << "orbiter.exe [options]\n\n";
 	std::cout << "Options:\n";
@@ -259,7 +255,7 @@ void orbiter::CommandLine::PrintHelpAndExit() const
 	exit(0);
 }
 
-orbiter::CommandLine& orbiter::CommandLine::InstanceImpl(Orbiter* pOrbiter, const PSTR cmdLine)
+orbiter::CommandLine& orbiter::CommandLine::InstanceImpl(Orbiter* pOrbiter, const char *cmdLine)
 {
 	static orbiter::CommandLine instance{ pOrbiter, cmdLine };
 	return instance;

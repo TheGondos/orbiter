@@ -12,6 +12,7 @@
 #define STRICT 1
 #include "adiball.h"
 #include "attref.h"
+#include <cstring>
 
 // Generic ADI texture parameters
 static const float texw = 512.0f;  // ADI texture width
@@ -82,18 +83,18 @@ ADIBall::~ADIBall ()
 
 // ==============================================================
 
-void ADIBall::AddMeshData2D (MESHHANDLE hMesh, DWORD grpidx_ball, DWORD grpidx_ind)
+void ADIBall::AddMeshData2D (MESHHANDLE hMesh, int grpidx_ball, int grpidx_ind)
 {
 	// We need two separate mesh groups for the ball and indicators, because the ball is typically
 	// rendered below the panel mesh, and the indicators above it
 
-	static const DWORD nvtx_rect = 4;
-	static const DWORD nidx_rect = 6;
-	static const WORD idx_rect[nidx_rect] = { 0,1,2,  3,2,1 };
+	static const int nvtx_rect = 4;
+	static const int nidx_rect = 6;
+	static const uint16_t idx_rect[nidx_rect] = { 0,1,2,  3,2,1 };
 
-	DWORD i, nidx;
+	int i, nidx;
 	NTVERTEX *vtx;
-	WORD *idx;
+	uint16_t *idx;
 
 	// ball mesh
 	MakeBall (6, rad, vtx, nballvtx, idx, nidx);
@@ -200,7 +201,7 @@ void ADIBall::SetLayout (int _layout)
 
 	if (ballvtx0) {
 		float dtu = (layout ? tx_dx : -tx_dx)/texw;
-		for (DWORD i = 0; i < nballvtx; i++)
+		for (int i = 0; i < nballvtx; i++)
 			ballgrp->Vtx[ballofs+i].tu += dtu;
 	}
 
@@ -229,7 +230,7 @@ bool ADIBall::Redraw2D (SURFHANDLE surf)
 	double dphi = phi-phi_curr;
 	if (dphi > PI)       dphi -= PI2;
 	else if (dphi < -PI) dphi += PI2;
-	double dangle = max (fabs(drho), max (fabs(dtht), fabs(dphi)));
+	double dangle = std::max (fabs(drho), std::max (fabs(dtht), fabs(dphi)));
 	if (dangle > dangle_max) {
 		double scale = dangle_max/dangle;
 		rho = rho_curr + drho*scale;
@@ -240,7 +241,7 @@ bool ADIBall::Redraw2D (SURFHANDLE surf)
 	tht_curr = tht;
 	phi_curr = phi;
 
-	DWORD i;
+	int i;
 
 	double sinp = sin(phi), cosp = cos(phi);
 	double sint = sin(tht), cost = cos(tht);
@@ -302,7 +303,7 @@ bool ADIBall::Redraw2D (SURFHANDLE surf)
 	double tgtx, tgty;
 	static const float yexofs[4] = {bb_cntx-needle_w2,bb_cntx+needle_w2,bb_cntx-needle_w2,bb_cntx+needle_w2};
 	static const float peyofs[4] = {bb_cnty+needle_w2,bb_cnty-needle_w2,bb_cnty+needle_w2,bb_cnty-needle_w2};
-	const float erange = 42.0f;
+	const double erange = 42.0;
 	int tgtflag;
 	VECTOR3 euler_tgt;
 	if (!aref->GetTgtEulerAngles (euler_tgt)) {
@@ -317,8 +318,8 @@ bool ADIBall::Redraw2D (SURFHANDLE surf)
 		} else {
 			tgt = _V(-rad*sint*cosp, rad*sinp, rad*cost*cosp);
 		}
-		tgtx = min(max( (a1*tgt.x + b1*tgt.y + c1*tgt.z), -erange), erange);
-		tgty = min(max(-(a2*tgt.x + b2*tgt.y + c2*tgt.z), -erange), erange);
+		tgtx = std::min(std::max( (a1*tgt.x + b1*tgt.y + c1*tgt.z), -erange), erange);
+		tgty = std::min(std::max(-(a2*tgt.x + b2*tgt.y + c2*tgt.z), -erange), erange);
 		double tgtz =    a3*tgt.x + b3*tgt.y + c3*tgt.z;
 		tgtflag = (tgtz >= 0.0 ? 1 : 2);
 	}
@@ -359,17 +360,17 @@ bool ADIBall::Redraw2D (SURFHANDLE surf)
 
 	// Pitch rate indicator transformation
 	static const float pry[4] = {bb_cnty+rate_w2,bb_cnty-rate_w2,bb_cnty+rate_w2,bb_cnty-rate_w2};
-	float dp = (float)max (-rate_max, min (rate_max, vrot.x*rate_scale));
+	float dp = (float)std::max (-rate_max, std::min (rate_max, vrot.x*rate_scale));
 	for (i = 0; i < 4; i++) indgrp->Vtx[prateofs+i].y = pry[i]-dp;
 
 	// Roll rate indicator transformation
 	static const float brx[4] = {bb_cntx+rate_w2,bb_cntx-rate_w2,bb_cntx+rate_w2,bb_cntx-rate_w2};
-	float db = (float)max (-rate_max, min (rate_max, vrot.z*rate_scale));
+	float db = (float)std::max (-rate_max, std::min (rate_max, vrot.z*rate_scale));
 	for (i = 0; i < 4; i++) indgrp->Vtx[brateofs+i].x = brx[i]+db;
 
 	// Yaw rate indicator transformation
 	static const float yrx[4] = {bb_cntx-rate_w2,bb_cntx+rate_w2,bb_cntx-rate_w2,bb_cntx+rate_w2};
-	float dy = (float)max (-rate_max, min (rate_max, vrot.y*rate_scale));
+	float dy = (float)std::max (-rate_max, std::min (rate_max, vrot.y*rate_scale));
 	for (i = 0; i < 4; i++) indgrp->Vtx[yrateofs+i].x = yrx[i]-dy;
 
 	return false;
@@ -377,7 +378,7 @@ bool ADIBall::Redraw2D (SURFHANDLE surf)
 
 // ==============================================================
 
-void ADIBall::MakeBall (int res, double rad, NTVERTEX *&vtx, DWORD &nvtx, WORD *&idx, DWORD &nidx)
+void ADIBall::MakeBall (int res, double rad, NTVERTEX *&vtx, int &nvtx, uint16_t *&idx, int &nidx)
 {
 	int i, j, k;
 	nvtx = (res*2+1) * (res*4+1);
@@ -405,7 +406,7 @@ void ADIBall::MakeBall (int res, double rad, NTVERTEX *&vtx, DWORD &nvtx, WORD *
 
 	int nrow = res*4+1;
 	nidx = res*2 * res*4 * 6;
-	idx = new WORD[nidx];
+	idx = new uint16_t[nidx];
 	for (j = k = 0; j < res*2; j++) {
 		for (i = 0; i < res*4; i++) {
 			idx[k++] = j*nrow+i;

@@ -15,7 +15,7 @@
 #define __HST_H
 
 #define STRICT
-#include "orbitersdk.h"
+#include "Orbitersdk.h"
 
 // ==============================================================
 // Some parameters and capabilities
@@ -44,15 +44,15 @@ public:
 	void RevertArray (void);
 
 	// Overloaded callback functions
-	void clbkSetClassCaps (FILEHANDLE cfg);
-	void clbkLoadStateEx (FILEHANDLE scn, void *vs);
-	void clbkSaveState (FILEHANDLE scn);
-	void clbkPostStep (double simt, double simdt, double mjd);
-	int  clbkConsumeBufferedKey (DWORD key, bool down, char *kstate);
-	int  clbkGeneric (int msgid, int prm, void *context);
+	void clbkSetClassCaps (FILEHANDLE cfg) override;
+	void clbkLoadStateEx (FILEHANDLE scn, void *vs) override;
+	void clbkSaveState (FILEHANDLE scn) override;
+	void clbkPostStep (double simt, double simdt, double mjd) override;
+	int  clbkConsumeBufferedKey (int key, bool down, char *kstate) override;
+	int  clbkGeneric (int msgid, int prm, void *context) override;
 
 private:
-	UINT anim_ant, anim_hatch, anim_array;
+	unsigned int anim_ant, anim_hatch, anim_array;
 	double ant_proc, hatch_proc, array_proc;
 
 	// script interface-related methods, implemented in HST_Lua.cpp

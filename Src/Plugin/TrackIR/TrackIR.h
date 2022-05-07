@@ -29,7 +29,7 @@ private:
 // ==============================================================
 
 struct GPARAMS {
-	HINSTANCE hInst;
+	DynamicModule *hInst;
 	TrackIRconfig *item;
 };
 

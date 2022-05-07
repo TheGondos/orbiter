@@ -38,6 +38,20 @@ struct ELEVFILEHEADER { // file header for patch elevation data file
 
 #pragma pack(pop)
 
+// -----------------------------------------------------------------------
+
+template<>
+void TileManager2<SurfTile>::SetSubtreeLabels(QuadTreeNode<SurfTile> *node, bool activate)
+{
+	if (node->Entry()) {
+		if (activate) node->Entry()->CreateLabels();
+		else          node->Entry()->DeleteLabels();
+	}
+	for (int i = 0; i < 4; i++)
+		if (node->Child(i))
+			SetSubtreeLabels(node->Child(i), activate);
+}
+
 // =======================================================================
 // Utility functions
 
@@ -91,7 +105,7 @@ void SurfTile::Load ()
 	ok = false;
 	owntex = true;
 	if (mgr->Cprm().tileLoadFlags & 0x0001) { // try loading from individual tile file
-		sprintf (path, "%s\\Surf\\%02d\\%06d\\%06d.dds", mgr->CbodyName(), lvl+4, ilat, ilng);
+		sprintf (path, "%s/Surf/%02d/%06d/%06d.dds", mgr->CbodyName(), lvl+4, ilat, ilng);
 		ok = (mgr->GClient()->GetTexMgr()->LoadTexture (path, &tex, flag) == S_OK);
 	}
 	if (!ok && smgr->ZTreeManager(0)) { // try loading from compressed archive
@@ -116,7 +130,7 @@ void SurfTile::Load ()
 		if (owntex) {
 			ok = false;
 			if (mgr->Cprm().tileLoadFlags & 0x0001) { // try loading from individual tile file
-				sprintf (path, "%s\\Mask\\%02d\\%06d\\%06d.dds", mgr->CbodyName(), lvl+4, ilat, ilng);
+				sprintf (path, "%s/Mask/%02d/%06d/%06d.dds", mgr->CbodyName(), lvl+4, ilat, ilng);
 				ok = (mgr->GClient()->GetTexMgr()->LoadTexture (path, &ltex, flag) == S_OK);
 			}
 			if (!ok && smgr->ZTreeManager(1)) { // try loading from compressed archive
@@ -169,7 +183,7 @@ INT16 *SurfTile::ReadElevationFile (const char *name, int lvl, int ilat, int iln
 
 	// Elevation data
 	if (mgr->Cprm().tileLoadFlags & 0x0001) { // try loading from individual tile file
-		sprintf (path, "%s\\Elev\\%02d\\%06d\\%06d.elv", name, lvl, ilat, ilng);
+		sprintf (path, "%s/Elev/%02d/%06d/%06d.elv", name, lvl, ilat, ilng);
 		mgr->GClient()->PlanetTexturePath(path, texpath);
 		if (f = fopen(texpath, "rb")) {
 			e = new INT16[ndat];
@@ -247,7 +261,7 @@ INT16 *SurfTile::ReadElevationFile (const char *name, int lvl, int ilat, int iln
 		INT16 offset;
 		bool do_rescale, do_shift;
 		if (mgr->Cprm().tileLoadFlags & 0x0001) { // try loading from individual tile file
-			sprintf (path, "%s\\Elev_mod\\%02d\\%06d\\%06d.elv", name, lvl, ilat, ilng);
+			sprintf (path, "%s/Elev_mod/%02d/%06d/%06d.elv", name, lvl, ilat, ilng);
 			mgr->GClient()->PlanetTexturePath(path, texpath);
 			if (f = fopen(texpath, "rb")) {
 				fread (&hdr, sizeof(ELEVFILEHEADER), 1, f);
@@ -461,8 +475,10 @@ void SurfTile::Render ()
 	}
 
 	LPDIRECT3DVERTEXBUFFER7 vb = mesh->vb;        // processed vertex buffer
+//	TileManager2Base::Dev()->SetRenderState( D3DRENDERSTATE_FILLMODE , D3DFILL_WIREFRAME );
 	TileManager2Base::Dev()->DrawIndexedPrimitiveVB (D3DPT_TRIANGLELIST, vb, 0,
 		mesh->nv, mesh->idx, mesh->ni, 0);
+//	TileManager2Base::Dev()->SetRenderState( D3DRENDERSTATE_FILLMODE , D3DFILL_SOLID );
 
 	static const double rad0 = sqrt(2.0)*PI05;
 	double sdist, rad;
@@ -533,7 +549,7 @@ void SurfTile::Render ()
 		double maxlng = PI2 * (double)(ilng-nlng/2+1)/(double)nlng;
 
 		const Tile *tbuf[2];
-		int maxlvl = min(lvl,9);
+		int maxlvl = std::min(lvl,9);
 		int ncloud = cmgr->Coverage(minlat, maxlat, minlng, maxlng, maxlvl, tbuf, 2);
 		if (ncloud > 0) {
 			float alpha = (float)mgr->prm.rprm->shadowalpha;
@@ -740,7 +756,7 @@ void SurfTile::FixLongitudeBoundary (const SurfTile *nbr, bool keep_corner)
 
 	vtx_ofs = (ilng & 1 ? res : 0); // check if neighbour is at left or right edge
 	if (nbr && nbr->mesh && nbr->mesh->vtx) {
-		nbrlvl = min(nbr->lvl, lvl); // we don't need to worry about neigbour levels higher than ours
+		nbrlvl = std::min(nbr->lvl, lvl); // we don't need to worry about neigbour levels higher than ours
 		vtx_store = mesh->vtx + mesh->nv;
 		if (nbrlvl == lvl) { // put my own edge back
 			i0 = 0;
@@ -799,7 +815,7 @@ void SurfTile::FixLatitudeBoundary (const SurfTile *nbr, bool keep_corner)
 	int line = (ilat & 1 ? 0 : res);
 	int vtx_ofs = (ilat & 1 ? 0 : line*(res+1));
 	if (nbr && nbr->mesh && nbr->mesh->vtx) {
-		nbrlvl = min(nbr->lvl, lvl); // we don't need to worry about neigbour levels higher than ours
+		nbrlvl = std::min(nbr->lvl, lvl); // we don't need to worry about neigbour levels higher than ours
 		vtx_store = mesh->vtx + mesh->nv + res + 1;
 		if (nbrlvl == lvl) { // put my own edge back
 			i0 = 0;
@@ -879,7 +895,7 @@ void TileManager2<SurfTile>::Render (MATRIX4 &dwmat, bool use_zbuf, const vPlane
 		double R = obj_size;
 		double D = prm.cdist*R;
 		double zmax = (D - R*R/D) * 1.5;
-		double zmin = max (2.0, min (zmax*1e-4, (D-R) * 0.8));
+		double zmin = std::max (2.0, std::min (zmax*1e-4, (D-R) * 0.8));
 		double zscale = 1.0;
 
 		np = camera->GetNearlimit();
@@ -953,20 +969,6 @@ void TileManager2<SurfTile>::DeleteLabels()
 		SetSubtreeLabels(tiletree+i, false);
 
 	loader->ReleaseMutex();
-}
-
-// -----------------------------------------------------------------------
-
-template<>
-void TileManager2<SurfTile>::SetSubtreeLabels(QuadTreeNode<SurfTile> *node, bool activate)
-{
-	if (node->Entry()) {
-		if (activate) node->Entry()->CreateLabels();
-		else          node->Entry()->DeleteLabels();
-	}
-	for (int i = 0; i < 4; i++)
-		if (node->Child(i))
-			SetSubtreeLabels(node->Child(i), activate);
 }
 
 // -----------------------------------------------------------------------

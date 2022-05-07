@@ -17,12 +17,14 @@
 #include "Atlantis.h"
 #include "PlBayOp.h"
 #include "AscentAP.h"
-#include "DlgCtrl.h"
 #include "meshres.h"
 #include "meshres_vc.h"
-#include "resource.h"
 #include <stdio.h>
 #include <fstream>
+#include <cstring>
+
+#define _stricmp strcasecmp
+#define _strnicmp strncasecmp
 
 #ifdef _DEBUG
     // D. Beachy: for BoundsChecker debugging
@@ -36,21 +38,14 @@
 
 GDIParams g_Param;
 
-char *ActionString[5] = {"STOPPED", "ISCLOSED", "ISOPEN", "CLOSE", "OPEN"};
-
-HELPCONTEXT g_hc = {
-	"html/vessels/Atlantis.chm",
-	0,
-	"html/vessels/Atlantis.chm::/Atlantis.hhc",
-	"html/vessels/Atlantis.chm::/Atlantis.hhk"
-};
-
+const char *ActionString[5] = {"STOPPED", "ISCLOSED", "ISOPEN", "CLOSE", "OPEN"};
 
 // ==============================================================
 // Local prototypes
-
+/*
 INT_PTR CALLBACK Atlantis_DlgProc (HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK RMS_DlgProc (HWND, UINT, WPARAM, LPARAM);
+*/
 extern void GetSRB_State (double met, double &thrust_level, double &prop_level);
 
 // ==============================================================
@@ -142,7 +137,7 @@ Atlantis::Atlantis (OBJHANDLE hObj, int fmodel)
 	};
 	AddReentryStream (&rps);
 
-	ascentApDlg = 0;
+	//ascentApDlg = 0;
 }
 
 // --------------------------------------------------------------
@@ -151,7 +146,7 @@ Atlantis::Atlantis (OBJHANDLE hObj, int fmodel)
 Atlantis::~Atlantis ()
 {
 	UnregisterMFDMode (ascapMfdId);
-	if (ascentApDlg) delete ascentApDlg;
+	//if (ascentApDlg) delete ascentApDlg;
 	delete ascap;
 	delete plop;
 	int i;
@@ -179,8 +174,8 @@ void Atlantis::LoadMeshes()
 	SetMeshVisibilityMode (mesh_vc, MESHVIS_VC);
 
 	// Optonal meshes
-	mesh_cargo      = NULL;
-	mesh_platform   = NULL;
+	mesh_cargo      = 0;
+	mesh_platform   = 0;
 
 	// Visual handle
 	vis             = NULL;
@@ -367,7 +362,7 @@ void Atlantis::VLiftCoeff (double aoa, double M, double Re, double *cl, double *
 	// This uses a documented lift slope of 0.0437/deg, everything else is rather ad-hoc
 
 	aoa += PI;
-	int idx = max (0, min (23, (int)(aoa*istep)));
+	int idx = std::max (0, std::min (23, (int)(aoa*istep)));
 	double d = aoa*istep - idx;
 	*cl = CL[idx] + (CL[idx+1]-CL[idx])*d;
 	*cm = CM[idx] + (CM[idx+1]-CM[idx])*d;
@@ -388,7 +383,7 @@ void Atlantis::HLiftCoeff (double beta, double M, double Re, double *cl, double 
 	static const double CL[nabsc] = {0, 0.2, 0.3, 0.2, 0, -0.2, -0.3, -0.2, 0, 0.2, 0.3, 0.2, 0, -0.2, -0.3, -0.2, 0};
 
 	beta += PI;
-	int idx = max (0, min (15, (int)(beta*istep)));
+	int idx = std::max (0, std::min (15, (int)(beta*istep)));
 	double d = beta*istep - idx;
 	*cl = CL[idx] + (CL[idx+1]-CL[idx])*d;
 	*cm = 0.0;
@@ -407,7 +402,7 @@ bool Atlantis::EnableSSME (bool enable)
 		else return false; // can't activate without attached ET
 	}
 
-	for (DWORD i = 0; i < 3; i++)
+	for (int i = 0; i < 3; i++)
 		SetThrusterResource (th_main[i], hProp);
 
 	if (enable) {
@@ -428,7 +423,7 @@ void Atlantis::EnableOMS (bool enable)
 {
 	PROPELLANT_HANDLE hProp = (enable ? ph_oms : NULL);
 
-	for (DWORD i = 0; i < 2; i++)
+	for (int i = 0; i < 2; i++)
 		SetThrusterResource (th_oms[i], hProp);
 
 	if (enable) {
@@ -449,7 +444,7 @@ void Atlantis::EnableRCS (int mode)
 	bool enable = (mode != RCS_NONE);
 
 	PROPELLANT_HANDLE hProp = (enable ? ph_oms : NULL);
-	DWORD i;
+	int i;
 
 	for (i = 0; i < GetGroupThrusterCount (THGROUP_ATT_PITCHUP); i++)
 		SetThrusterResource (GetGroupThruster (THGROUP_ATT_PITCHUP, i), hProp);
@@ -489,15 +484,15 @@ void Atlantis::EnableRCS (int mode)
 // --------------------------------------------------------------
 void Atlantis::DefineAnimations (void)
 {
-	UINT midx = 1; // mesh index for all external animations
-	UINT vidx = 2; // mesh index for all VC animations
+	unsigned int midx = 1; // mesh index for all external animations
+	unsigned int vidx = 2; // mesh index for all VC animations
 
 	// ***** 1. Cargo door and radiator animations *****
 
-	static UINT RCargoDoorGrp[4] = {GRP_cargodooroutR,GRP_cargodoorinR,GRP_radiatorFR,GRP_radiatorBR};
+	static unsigned int RCargoDoorGrp[4] = {GRP_cargodooroutR,GRP_cargodoorinR,GRP_radiatorFR,GRP_radiatorBR};
 	static MGROUP_ROTATE RCargoDoor (midx, RCargoDoorGrp, 4,
 		_V(2.88, 1.3, 0), _V(0,0,1), (float)(-175.5*RAD));
-	static UINT LCargoDoorGrp[4] = {GRP_cargodooroutL,GRP_cargodoorinL,GRP_radiatorFL,GRP_radiatorBL};
+	static unsigned int LCargoDoorGrp[4] = {GRP_cargodooroutL,GRP_cargodoorinL,GRP_radiatorFL,GRP_radiatorBL};
 	static MGROUP_ROTATE LCargoDoor (midx, LCargoDoorGrp, 4,
 		_V(-2.88, 1.3, 0), _V(0,0,1), (float)(175.5*RAD));
 
@@ -505,10 +500,10 @@ void Atlantis::DefineAnimations (void)
 	AddAnimationComponent (anim_door, 0.0, 0.4632, &RCargoDoor);
 	AddAnimationComponent (anim_door, 0.5368, 1.0, &LCargoDoor);
 
-	static UINT RRadiatorGrp[1] = {GRP_radiatorFR};
+	static unsigned int RRadiatorGrp[1] = {GRP_radiatorFR};
 	static MGROUP_ROTATE RRadiator (midx, RRadiatorGrp, 1,
 		_V(2.88, 1.3, 0), _V(0,0,1), (float)(35.5*RAD));
-	static UINT LRadiatorGrp[1] = {GRP_radiatorFL};
+	static unsigned int LRadiatorGrp[1] = {GRP_radiatorFL};
 	static MGROUP_ROTATE LRadiator (midx, LRadiatorGrp, 1,
 		_V(-2.88, 1.3, 0), _V(0,0,1), (float)(-35.5*RAD));
 
@@ -518,22 +513,22 @@ void Atlantis::DefineAnimations (void)
 
 	// ***** 2. Landing gear animation *****
 
-	static UINT LNosewheelDoorGrp[1] = {GRP_nosedoorL};
+	static unsigned int LNosewheelDoorGrp[1] = {GRP_nosedoorL};
 	static MGROUP_ROTATE LNosewheelDoor (midx, LNosewheelDoorGrp, 1,
 		_V(-0.78, -2.15, 17), _V(0, 0.195, 0.981), (float)(-60.0*RAD));
-	static UINT RNosewheelDoorGrp[1] = {GRP_nosedoorR};
+	static unsigned int RNosewheelDoorGrp[1] = {GRP_nosedoorR};
 	static MGROUP_ROTATE RNosewheelDoor (midx, RNosewheelDoorGrp, 1,
 		_V(0.78, -2.15, 17), _V(0, 0.195, 0.981), (float)(60.0*RAD));
-	static UINT NosewheelGrp[2] = {GRP_nosewheel,GRP_nosegear};
+	static unsigned int NosewheelGrp[2] = {GRP_nosewheel,GRP_nosegear};
 	static MGROUP_ROTATE Nosewheel (midx, NosewheelGrp, 2,
 		_V(0.0, -1.95, 17.45), _V(1, 0, 0), (float)(109.0*RAD));
-	static UINT RGearDoorGrp[1] = {GRP_geardoorR};
+	static unsigned int RGearDoorGrp[1] = {GRP_geardoorR};
 	static MGROUP_ROTATE RGearDoor (midx, RGearDoorGrp, 1,
 		_V(4.35, -2.64, -1.69), _V(0, 0.02, 0.9), (float)(96.2*RAD));
-	static UINT LGearDoorGrp[1] = {GRP_geardoorL};
+	static unsigned int LGearDoorGrp[1] = {GRP_geardoorL};
 	static MGROUP_ROTATE LGearDoor (midx, LGearDoorGrp, 1,
 		_V(-4.35, -2.64, -1.69), _V(0, 0.02, 0.9), (float)(-96.2*RAD));
-	static UINT MainGearGrp[4] = {GRP_wheelR,GRP_gearR,GRP_wheelL,GRP_gearL};
+	static unsigned int MainGearGrp[4] = {GRP_wheelR,GRP_gearR,GRP_wheelL,GRP_gearL};
 	static MGROUP_ROTATE MainGear (midx, MainGearGrp, 4,
 		_V(0, -2.66, -3.68), _V(1, 0, 0), (float)(94.5*RAD));
 
@@ -547,13 +542,13 @@ void Atlantis::DefineAnimations (void)
 
 	// ***** 3. Ku-band antenna animation *****
 
-	static UINT KuBand1Grp[3] = {GRP_startrackers,GRP_KUband1,GRP_KUband2};
+	static unsigned int KuBand1Grp[3] = {GRP_startrackers,GRP_KUband1,GRP_KUband2};
 	static MGROUP_ROTATE KuBand1 (midx, KuBand1Grp, 3,
 		_V(2.85, 0.85, 0), _V(0,0,1), (float)(-18*RAD));
-	static UINT KuBand2Grp[1] = {GRP_KUband2};
+	static unsigned int KuBand2Grp[1] = {GRP_KUband2};
 	static MGROUP_ROTATE KuBand2 (midx, KuBand2Grp, 1,
 		_V(2.78, 1.7, 0), _V(0,0,1), (float)(-90*RAD));
-	static UINT KuBand3Grp[2] = {GRP_KUband1,GRP_KUband2};
+	static unsigned int KuBand3Grp[2] = {GRP_KUband1,GRP_KUband2};
 	static MGROUP_ROTATE KuBand3 (midx, KuBand3Grp, 2,
 		_V(2.75, 2.05, 11.47), _V(0,1,0), (float)(-113*RAD));
 
@@ -564,7 +559,7 @@ void Atlantis::DefineAnimations (void)
 
 	// ***** 4. Elevator animation of elevons *****
 
-	static UINT ElevGrp[4] = {GRP_flapR,GRP_flapL,GRP_aileronL,GRP_aileronR};
+	static unsigned int ElevGrp[4] = {GRP_flapR,GRP_flapL,GRP_aileronL,GRP_aileronR};
 	static MGROUP_ROTATE Elevator (midx, ElevGrp, 4,
 		_V(0,-2.173,-8.84), _V(1,0,0), (float)(30.0*RAD));
 	anim_elev = CreateAnimation (0.5);
@@ -572,10 +567,10 @@ void Atlantis::DefineAnimations (void)
 
 	// ***** 5. Aileron animation of elevons *****
 
-	static UINT LAileronGrp[2] = {GRP_flapL,GRP_aileronL};
+	static unsigned int LAileronGrp[2] = {GRP_flapL,GRP_aileronL};
 	static MGROUP_ROTATE LAileron (midx, LAileronGrp, 2,
 		_V(0,-2.173,-8.84), _V(-1,0,0), (float)(10.0*RAD));
-	static UINT RAileronGrp[2] = {GRP_flapR,GRP_aileronR};
+	static unsigned int RAileronGrp[2] = {GRP_flapR,GRP_aileronR};
 	static MGROUP_ROTATE RAileron (midx, RAileronGrp, 2,
 		_V(0,-2.173,-8.84), _V(1,0,0), (float)(10.0*RAD));
 	anim_laileron = CreateAnimation (0.5);
@@ -585,7 +580,7 @@ void Atlantis::DefineAnimations (void)
 
 	// ***** 6. Rudder animation *****
 
-	static UINT RudderGrp[2] = {GRP_rudderR,GRP_rudderL};
+	static unsigned int RudderGrp[2] = {GRP_rudderR,GRP_rudderL};
 	static MGROUP_ROTATE Rudder (midx, RudderGrp, 2,
 		_V(0,5.77,-12.17), _V(-0.037,0.833,-0.552), (float)(-54.2*RAD));
 	anim_rudder = CreateAnimation (0.5);
@@ -593,10 +588,10 @@ void Atlantis::DefineAnimations (void)
 
 	// ***** 7. Speedbrake animation *****
 
-	static UINT SB1Grp[1] = {GRP_rudderR};
+	static unsigned int SB1Grp[1] = {GRP_rudderR};
 	static MGROUP_ROTATE SB1 (midx, SB1Grp, 1,
 		_V(0.32,5.77,-12.17), _V(-0.037,0.833,-0.552), (float)(-49.3*RAD));
-	static UINT SB2Grp[1] = {GRP_rudderL};
+	static unsigned int SB2Grp[1] = {GRP_rudderL};
 	static MGROUP_ROTATE SB2 (midx, SB2Grp, 1,
 		_V(-0.32,5.77,-12.17), _V(0.037,0.833,-0.552), (float)(49.3*RAD));
 
@@ -610,31 +605,31 @@ void Atlantis::DefineAnimations (void)
 
 	ANIMATIONCOMPONENT_HANDLE parent;
 
-	static UINT RMSShoulderYawGrp[1] = {GRP_Shoulder};
+	static unsigned int RMSShoulderYawGrp[1] = {GRP_Shoulder};
 	rms_anim[0] = new MGROUP_ROTATE (midx, RMSShoulderYawGrp, 1,
 		_V(-2.26, 1.70, 9.65), _V(0, 1, 0), (float)(-360*RAD)); // -180 .. +180
 	anim_arm_sy = CreateAnimation (0.5);
 	parent = AddAnimationComponent (anim_arm_sy, 0, 1, rms_anim[0]);
 
-	static UINT RMSShoulderPitchGrp[1] = {GRP_Humerus};
+	static unsigned int RMSShoulderPitchGrp[1] = {GRP_Humerus};
 	rms_anim[1] = new MGROUP_ROTATE (midx, RMSShoulderPitchGrp, 1,
 		_V(-2.26, 1.70, 9.65), _V(1, 0, 0), (float)(147*RAD)); // -2 .. +145
 	anim_arm_sp = CreateAnimation (0.0136);
 	parent = AddAnimationComponent (anim_arm_sp, 0, 1, rms_anim[1], parent);
 
-	static UINT RMSElbowPitchGrp[3] = {GRP_radii,GRP_RMScamera,GRP_RMScamera_pivot};
+	static unsigned int RMSElbowPitchGrp[3] = {GRP_radii,GRP_RMScamera,GRP_RMScamera_pivot};
 	rms_anim[2] = new MGROUP_ROTATE (midx, RMSElbowPitchGrp, 3,
 		_V(-2.26,1.55,3.10), _V(1,0,0), (float)(-162*RAD)); // -160 .. +2
 	anim_arm_ep = CreateAnimation (0.0123);
 	parent = AddAnimationComponent (anim_arm_ep, 0, 1, rms_anim[2], parent);
 
-	static UINT RMSWristPitchGrp[1] = {GRP_wrist};
+	static unsigned int RMSWristPitchGrp[1] = {GRP_wrist};
 	rms_anim[3] = new MGROUP_ROTATE (midx, RMSWristPitchGrp, 1,
 		_V(-2.26,1.7,-3.55), _V(1,0,0), (float)(240*RAD)); // -120 .. +120
 	anim_arm_wp = CreateAnimation (0.5);
 	parent = AddAnimationComponent (anim_arm_wp, 0, 1, rms_anim[3], parent);
 
-	static UINT RMSWristYawGrp[1] = {GRP_endeffecter};
+	static unsigned int RMSWristYawGrp[1] = {GRP_endeffecter};
 	rms_anim[4] = new MGROUP_ROTATE (midx, RMSWristYawGrp, 1,
 		_V(-2.26,1.7,-4.9), _V(0,1,0), (float)(-240*RAD)); // -120 .. +120
 	anim_arm_wy = CreateAnimation (0.5);
@@ -650,15 +645,15 @@ void Atlantis::DefineAnimations (void)
 	float max_gimbal = (float)(-0.2*PI);
 	anim_ssme = CreateAnimation (init_gimbal/max_gimbal);
 
-	static UINT SSMEL_Grp = GRP_SSMEL;
+	static unsigned int SSMEL_Grp = GRP_SSMEL;
 	ssme_anim[0] = new MGROUP_ROTATE (midx, &SSMEL_Grp, 1, _V(-1.55,-0.37,-12.5), _V(-1,0,0), max_gimbal);
 	AddAnimationComponent (anim_ssme, 0, 1, ssme_anim[0]);
 
-	static UINT SSMER_Grp = GRP_SSMER;
+	static unsigned int SSMER_Grp = GRP_SSMER;
 	ssme_anim[1] = new MGROUP_ROTATE (midx, &SSMER_Grp, 1, _V( 1.55,-0.37,-12.5), _V(-1,0,0), max_gimbal);
 	AddAnimationComponent (anim_ssme, 0, 1, ssme_anim[1]);
 
-	static UINT SSMET_Grp = GRP_SSMET;
+	static unsigned int SSMET_Grp = GRP_SSMET;
 	ssme_anim[2] = new MGROUP_ROTATE (midx, &SSMET_Grp, 1, _V(0.0,  2.7, -12.5), _V(-1,0,0), max_gimbal);
 	AddAnimationComponent (anim_ssme, 0, 1, ssme_anim[2]);
 
@@ -673,7 +668,7 @@ void Atlantis::DefineAnimations (void)
 // --------------------------------------------------------------
 int Atlantis::RegisterAscentApMfd ()
 {
-	static char *name = "AscentAP";
+	static const char *name = "AscentAP";
 	MFDMODESPECEX spec;
 	spec.name = name;
 	spec.key = OAPI_KEY_B;
@@ -687,10 +682,12 @@ int Atlantis::RegisterAscentApMfd ()
 // --------------------------------------------------------------
 void Atlantis::CreateAscentAPDlg ()
 {
+	/*
 	if (!ascentApDlg) {
 		ascentApDlg = new AscentAPDlg(ascap);
 		ascentApDlg->Open (g_Param.hDLL, true);
 	}
+	*/
 }
 
 // --------------------------------------------------------------
@@ -698,10 +695,11 @@ void Atlantis::CreateAscentAPDlg ()
 // --------------------------------------------------------------
 void Atlantis::DestroyAscentAPDlg ()
 {
+	/*
 	if (ascentApDlg) {
 		delete ascentApDlg;
 		ascentApDlg = 0;
-	}
+	}*/
 }
 
 // --------------------------------------------------------------
@@ -758,24 +756,26 @@ void Atlantis::DetachChildWithMass(ATTACHMENTHANDLE attachment, double vel)
 
 void Atlantis::ToggleGrapple (void)
 {
-	HWND hDlg;
+	//HWND hDlg;
 	OBJHANDLE hV = GetAttachmentStatus (rms_attach);
 
 	if (hV) {  // release satellite
 
 		ATTACHMENTHANDLE hAtt = CanArrest();
 		DetachChildWithMass(rms_attach);
+/*
 		if (hDlg = oapiFindDialog (g_Param.hDLL, IDD_RMS)) {
 			SetWindowText (GetDlgItem (hDlg, IDC_GRAPPLE), "Grapple");
 			EnableWindow (GetDlgItem (hDlg, IDC_STOW), TRUE);
-		}
+		}*/
 		// check whether the object being ungrappled is ready to be clamped into the payload bay
 		if (hAtt) {
 			AttachChildWithMass(hV, sat_attach, hAtt);
+			/*
 			if (hDlg) {
 				SetWindowText (GetDlgItem (hDlg, IDC_PAYLOAD), "Purge");
 				EnableWindow (GetDlgItem (hDlg, IDC_PAYLOAD), TRUE);
-			}
+			}*/
 		}
 
 #ifdef UNDEF
@@ -783,8 +783,8 @@ void Atlantis::ToggleGrapple (void)
 		GetAttachmentParams (sat_attach, pos, dir, rot);
 		Local2Global (pos, gbay);
 		VESSEL *v = oapiGetVesselInterface (hV);
-		DWORD nAttach = v->AttachmentCount (true);
-		for (DWORD j = 0; j < nAttach; j++) { // now scan all attachment points
+		int nAttach = v->AttachmentCount (true);
+		for (int j = 0; j < nAttach; j++) { // now scan all attachment points
 			ATTACHMENTHANDLE hAtt = v->GetAttachmentHandle (true, j);
 			v->GetAttachmentParams (hAtt, pos, dir, rot);
 			v->Local2Global (pos, gpos);
@@ -802,14 +802,14 @@ void Atlantis::ToggleGrapple (void)
 		
 		// Search the complete vessel list for a grappling candidate.
 		// Not very scalable ...
-		for (DWORD i = 0; i < oapiGetVesselCount(); i++) {
+		for (int i = 0; i < oapiGetVesselCount(); i++) {
 			OBJHANDLE hV = oapiGetVesselByIndex (i);
 			if (hV == GetHandle()) continue; // we don't want to grapple ourselves ...
 			oapiGetGlobalPos (hV, &gpos);
 			if (dist (gpos, grms) < oapiGetSize (hV)) { // in range
 				VESSEL *v = oapiGetVesselInterface (hV);
-				DWORD nAttach = v->AttachmentCount (true);
-				for (DWORD j = 0; j < nAttach; j++) { // now scan all attachment points of the candidate
+				int nAttach = v->AttachmentCount (true);
+				for (int j = 0; j < nAttach; j++) { // now scan all attachment points of the candidate
 					ATTACHMENTHANDLE hAtt = v->GetAttachmentHandle (true, j);
 					const char *id = v->GetAttachmentId (hAtt);
 					if (strncmp (id, "GS", 2)) continue; // attachment point not compatible
@@ -820,10 +820,11 @@ void Atlantis::ToggleGrapple (void)
 						if (hV == GetAttachmentStatus(sat_attach))
 							DetachChildWithMass(sat_attach);
 						AttachChildWithMass(hV, rms_attach, hAtt);
+						/*
 						if (hDlg = oapiFindDialog (g_Param.hDLL, IDD_RMS)) {
 							SetWindowText (GetDlgItem (hDlg, IDC_GRAPPLE), "Release");
 							EnableWindow (GetDlgItem (hDlg, IDC_STOW), FALSE);
-						}
+						}*/
 						return;
 					}
 				}
@@ -860,13 +861,15 @@ void Atlantis::GetSRBGimbalPos (int which, double &pitch, double &yaw)
 
 void Atlantis::ToggleArrest (void)
 {
-	HWND hDlg;
+
+//	HWND hDlg;
 	if (SatStowed()) { // purge satellite
 		DetachChildWithMass(sat_attach, 0.1);
+		/*
 		if (hDlg = oapiFindDialog (g_Param.hDLL, IDD_RMS)) {
 			SetWindowText (GetDlgItem (hDlg, IDC_PAYLOAD), "Arrest");
 			EnableWindow (GetDlgItem (hDlg, IDC_PAYLOAD), CanArrest() ? TRUE:FALSE);
-		}
+		}*/
 	} else if (CanArrest()) {           // try to arrest satellite
 		ToggleGrapple();
 	}
@@ -878,11 +881,11 @@ ATTACHMENTHANDLE Atlantis::CanArrest (void) const
 	OBJHANDLE hV = GetAttachmentStatus (rms_attach);
 	if (!hV) return 0;
 	VESSEL *v = oapiGetVesselInterface (hV);
-	DWORD nAttach = v->AttachmentCount (true);
+	int nAttach = v->AttachmentCount (true);
 	VECTOR3 pos, dir, rot, gpos, gbay;
 	GetAttachmentParams (sat_attach, pos, dir, rot);
 	Local2Global (pos, gbay);
-	for (DWORD j = 0; j < nAttach; j++) {
+	for (int j = 0; j < nAttach; j++) {
 		ATTACHMENTHANDLE hAtt = v->GetAttachmentHandle (true, j);
 		if (strncmp (v->GetAttachmentId (hAtt), "XS", 2)) continue; // attachment point not compatible
 		v->GetAttachmentParams (hAtt, pos, dir, rot);
@@ -999,16 +1002,16 @@ void Atlantis::AutoGimbal (const VECTOR3 &tgt_rate)
 	// Pitch gimbal settings
 	maxdg = dt*0.3; // max gimbal speed [rad/s]
 	dgimbal = a_pitch*(avel.x-tgt_rate.x) + b_pitch*aacc.x;
-	dgimbal = max(-maxdg, min(maxdg, dgimbal));
-	gimbal_pos.x = min (0, max (pitch_gimbal_max, gimbal_pos.x+dgimbal));
+	dgimbal = std::max(-maxdg, std::min(maxdg, dgimbal));
+	gimbal_pos.x = std::min (0.0, std::max (pitch_gimbal_max, gimbal_pos.x+dgimbal));
 
 	// Yaw gimbal settings
 	dgimbal = a_yaw*(avel.y-tgt_rate.y) + b_yaw*aacc.y;
-	gimbal_pos.y = min (yaw_gimbal_max, max(-yaw_gimbal_max, gimbal_pos.y+dgimbal));
+	gimbal_pos.y = std::min (yaw_gimbal_max, std::max(-yaw_gimbal_max, gimbal_pos.y+dgimbal));
 
 	// Roll gimbal settings
 	dgimbal = a_roll*(avel.z-tgt_rate.z) + b_roll*aacc.z;
-	gimbal_pos.z = min (roll_gimbal_max, max(-roll_gimbal_max, gimbal_pos.z+dgimbal));
+	gimbal_pos.z = std::min (roll_gimbal_max, std::max(-roll_gimbal_max, gimbal_pos.z+dgimbal));
 
 	// Set SRB gimbals
 	if (status < 2 && pET) {
@@ -1043,31 +1046,31 @@ void Atlantis::AutoRCS (const VECTOR3 &tgt_rate)
 	// Pitch RCS settings
 	drcs = a_pitch*(tgt_rate.x-avel.x) - b_pitch*aacc.x;
 	if (drcs > 0.0) {
-		SetThrusterGroupLevel(THGROUP_ATT_PITCHUP, min(drcs, 1.0));
+		SetThrusterGroupLevel(THGROUP_ATT_PITCHUP, std::min(drcs, 1.0));
 		SetThrusterGroupLevel(THGROUP_ATT_PITCHDOWN, 0);
 	} else {
 		SetThrusterGroupLevel(THGROUP_ATT_PITCHUP, 0);
-		SetThrusterGroupLevel(THGROUP_ATT_PITCHDOWN, min(-drcs, 1.0));
+		SetThrusterGroupLevel(THGROUP_ATT_PITCHDOWN, std::min(-drcs, 1.0));
 	}
 
 	// Yaw RCS settings
 	drcs = a_yaw*(tgt_rate.y-avel.y) - b_yaw*aacc.y;
 	if (drcs > 0.0) {
-		SetThrusterGroupLevel(THGROUP_ATT_YAWLEFT, min(drcs, 1.0));
+		SetThrusterGroupLevel(THGROUP_ATT_YAWLEFT, std::min(drcs, 1.0));
 		SetThrusterGroupLevel(THGROUP_ATT_YAWRIGHT, 0);
 	} else {
 		SetThrusterGroupLevel(THGROUP_ATT_YAWLEFT, 0);
-		SetThrusterGroupLevel(THGROUP_ATT_YAWRIGHT, min(-drcs, 1.0));
+		SetThrusterGroupLevel(THGROUP_ATT_YAWRIGHT, std::min(-drcs, 1.0));
 	}
 
 	// Roll RCS settings
 	drcs = a_roll*(tgt_rate.z-avel.z) - b_roll*aacc.z;
 	if (drcs > 0.0) {
-		SetThrusterGroupLevel(THGROUP_ATT_BANKRIGHT, min(drcs, 1.0));
+		SetThrusterGroupLevel(THGROUP_ATT_BANKRIGHT, std::min(drcs, 1.0));
 		SetThrusterGroupLevel(THGROUP_ATT_BANKLEFT, 0);
 	} else {
 		SetThrusterGroupLevel(THGROUP_ATT_BANKRIGHT, 0);
-		SetThrusterGroupLevel(THGROUP_ATT_BANKLEFT, min(-drcs, 1.0));
+		SetThrusterGroupLevel(THGROUP_ATT_BANKLEFT, std::min(-drcs, 1.0));
 	}
 }
 
@@ -1194,8 +1197,8 @@ void Atlantis::UpdateMesh ()
 void Atlantis::SetBayDoorPosition (double pos)
 {
 	SetAnimation (anim_door, pos);
-	rdoor_drag = sqrt (min (1.0, pos*3.0));
-	ldoor_drag = sqrt (min (1.0, max(0.0, pos-0.3656)*3.0));
+	rdoor_drag = sqrt (std::min (1.0, pos*3.0));
+	ldoor_drag = sqrt (std::min (1.0, std::max(0.0, pos-0.3656)*3.0));
 }
 
 void Atlantis::SetRadiatorPosition (double pos)
@@ -1250,45 +1253,47 @@ void Atlantis::RevertSpeedbrake (void)
 		AnimState::OPENING : AnimState::CLOSING);
 }
 
-void Atlantis::SetAnimationArm (UINT anim, double state)
+void Atlantis::SetAnimationArm (unsigned int anim, double state)
 {
 	SetAnimation (anim, state);
 	arm_scheduled = true;
-
+/*
 	HWND hDlg;
 	if (!SatStowed() && (hDlg = oapiFindDialog (g_Param.hDLL, IDD_RMS))) {
 		SetWindowText (GetDlgItem (hDlg, IDC_PAYLOAD), "Arrest");
 		EnableWindow (GetDlgItem (hDlg, IDC_PAYLOAD), CanArrest() ? TRUE : FALSE);
-	}
+	}*/
 }
 
 void Atlantis::RedrawPanel_MFDButton (SURFHANDLE surf, int mfd)
 {
-	HDC hDC = oapiGetDC (surf);
-
+	oapi::Sketchpad *skp = oapiGetSketchpad (surf);
+	if(!skp)
+	  return;
 	// D. Beachy: BUGFIX: if MFD powered off, cover separator lines and do not paint buttons
     if (oapiGetMFDMode(mfd) == MFD_NONE) {
-        RECT r = { 0,0,255,13 };
-        FillRect(hDC, &r, (HBRUSH)GetStockObject(BLACK_BRUSH));
+        skp->Rectangle(0,0,255,13);
     } else {   // MFD powered on
-		HFONT pFont = (HFONT)SelectObject (hDC, g_Param.font[0]);
-		SetTextColor (hDC, RGB(0,255,216));
-		SetTextAlign (hDC, TA_CENTER);
-		SetBkMode (hDC, TRANSPARENT);
+//		HFONT pFont = (HFONT)SelectObject (hDC, g_Param.font[0]);
+//		SetTextColor (hDC, RGB(0,255,216));
+//		SetTextAlign (hDC, TA_CENTER);
+//		SetBkMode (hDC, TRANSPARENT);
+		skp->SetFont (g_Param.font[0]);
+		skp->SetTextAlign (oapi::Sketchpad::CENTER);
 		const char *label;
 		int x = 24;
 
 		for (int bt = 0; bt < 5; bt++) {
-			if (label = oapiMFDButtonLabel (mfd, bt)) {
-				TextOut (hDC, x, 1, label, strlen(label));
+			if ((label = oapiMFDButtonLabel (mfd, bt))) {
+				skp->Text(x, 1, label, strlen(label));
 				x += 42;
 			} else break;
 		}
-		TextOut (hDC, 234, 1, "PG", 2);
-		SelectObject (hDC, pFont);
+		skp->Text(234, 1, "PG", 2);
+		//SelectObject (hDC, pFont);
 	}
 
-	oapiReleaseDC (surf, hDC);
+	oapiReleaseSketchpad (skp);
 }
 
 // ==============================================================
@@ -1373,7 +1378,7 @@ void Atlantis::clbkLoadStateEx (FILEHANDLE scn, void *vs)
 	if (status == 0) {
 		VESSELSTATUS2 *vs2 = (VESSELSTATUS2*)vs;
 		if (vs2->status & 1) { // idle flag
-			launchelev = max (0, vs2->vrot.x - 18.962);
+			launchelev = std::max (0.0, vs2->vrot.x - 18.962);
 			if (vs2->arot.x > 4.0) {   // rotation matrix not defined - need to construct manually
 				double slng = sin (vs2->surf_lng), clng = cos (vs2->surf_lng);
 				double slat = sin (vs2->surf_lat), clat = cos (vs2->surf_lat);
@@ -1385,7 +1390,7 @@ void Atlantis::clbkLoadStateEx (FILEHANDLE scn, void *vs)
 		} else {
 			double rad = length(vs2->rpos);
 			double alt = rad - oapiGetSize(vs2->rbody);
-			launchelev = max (0, alt - 18.962);
+			launchelev = std::max (0.0, alt - 18.962);
 		}
 	}
 
@@ -1490,7 +1495,7 @@ void Atlantis::clbkPostCreation ()
 		pET = (Atlantis_Tank*)oapiGetVesselInterface(hET);
 		if (status < 2) {
 			pV = oapiGetVesselInterface (hET);
-			for (UINT i = 0; i < 2; i++) {
+			for (unsigned int i = 0; i < 2; i++) {
 				OBJHANDLE hSRB = pV->GetDockStatus (pV->GetDockHandle (i+1));
 				if (!hSRB) {
 					sprintf (name, "%s-SRB%d", GetName(), i+1);
@@ -1539,7 +1544,7 @@ void Atlantis::clbkFocusChanged (bool getfocus, OBJHANDLE newv, OBJHANDLE oldv)
 void Atlantis::clbkPreStep (double simt, double simdt, double mjd)
 {
 	ascap->Update (simt);
-	if (ascentApDlg) ascentApDlg->Update (simt);
+	//if (ascentApDlg) ascentApDlg->Update (simt);
 
 	//double met = (status == 0 ? 0.0 : simt-t0);
 	double met = ascap->GetMET (simt);
@@ -1632,10 +1637,10 @@ void Atlantis::clbkPreStep (double simt, double simdt, double mjd)
 	if (gear_status >= AnimState::CLOSING) {
 		double da = simdt * GEAR_OPERATING_SPEED;
 		if (gear_status == AnimState::CLOSING) { // retract gear
-			if (gear_proc > 0.0) gear_proc = max (0.0, gear_proc-da);
+			if (gear_proc > 0.0) gear_proc = std::max (0.0, gear_proc-da);
 			else                 gear_status = AnimState::CLOSED;
 		} else {                           // deploy gear
-			if (gear_proc < 1.0) gear_proc = min (1.0, gear_proc+da);
+			if (gear_proc < 1.0) gear_proc = std::min (1.0, gear_proc+da);
 			else                 gear_status = AnimState::OPEN;
 		}
 		SetAnimation (anim_gear, gear_proc);
@@ -1647,10 +1652,10 @@ void Atlantis::clbkPreStep (double simt, double simdt, double mjd)
 	if (spdb_status >= AnimState::CLOSING) {
 		double da = simdt * SPEEDBRAKE_OPERATING_SPEED;
 		if (spdb_status == AnimState::CLOSING) { // retract brake
-			if (spdb_proc > 0.0) spdb_proc = max (0.0, spdb_proc-da);
+			if (spdb_proc > 0.0) spdb_proc = std::max (0.0, spdb_proc-da);
 			else                 spdb_status = AnimState::CLOSED;
 		} else {                           // deploy antenna
-			if (spdb_proc < 1.0) spdb_proc = min (1.0, spdb_proc+da);
+			if (spdb_proc < 1.0) spdb_proc = std::min (1.0, spdb_proc+da);
 			else                 spdb_status = AnimState::OPEN;
 		}
 		SetAnimation (anim_spdb, spdb_proc);
@@ -1709,8 +1714,9 @@ void Atlantis::clbkPreStep (double simt, double simdt, double mjd)
 		center_arm_t = t0;
 		if (da) {
 			center_arm = false; // finished stowing
+			/*
 			HWND hDlg = oapiFindDialog (g_Param.hDLL, IDD_RMS);
-			if (hDlg) EnableWindow (GetDlgItem (hDlg, IDC_GRAPPLE), TRUE);
+			if (hDlg) EnableWindow (GetDlgItem (hDlg, IDC_GRAPPLE), TRUE);*/
 		}
 	}
 
@@ -1927,7 +1933,7 @@ void Atlantis::RegisterVC_AftMFD ()
 bool Atlantis::clbkLoadVC (int id)
 {
 	static VCHUDSPEC huds = {  // common HUD specs
-		mesh_vc,            // nmesh
+		(int)mesh_vc,            // nmesh
 		GRP_VirtualHUD_VC,  // ngroup
 		{0,0,0},            // hudcnt (to be filled)
 		0.176558            // size
@@ -1937,7 +1943,7 @@ bool Atlantis::clbkLoadVC (int id)
 	//};
 	static EXTMFDSPEC mfds = { // common MFD specs
 		{0,0,0,0},          // pos
-		mesh_vc,            // nmesh
+		(int)mesh_vc,            // nmesh
 		0,                  // ngroup (to be filled)
 		MFD_SHOWMODELABELS, // flag
 		5, 0,               // nbt1, nbt2
@@ -2047,10 +2053,10 @@ bool Atlantis::clbkVCMouseEvent (int id, int event, VECTOR3 &p)
 				t0 = oapiGetSysTime();
 				counting = true;
 			} else if ((event & PANEL_MOUSE_LBUP) && counting) {
-				oapiSendMFDKey (mfd, OAPI_KEY_F2);
+				oapiSendMFDKey(mfd, OAPI_KEY_F2);
 				counting = false;
 			} else if ((event & PANEL_MOUSE_LBPRESSED) && counting && (oapiGetSysTime()-t0 >= 1.0)) {
-				oapiSendMFDKey (mfd, OAPI_KEY_F1);
+				oapiSendMFDKey(mfd, OAPI_KEY_F1);
 				counting = false;
 			}
 		}
@@ -2092,8 +2098,8 @@ bool Atlantis::clbkVCMouseEvent (int id, int event, VECTOR3 &p)
 		} else if (event & PANEL_MOUSE_LBPRESSED) {
 			double dt = oapiGetSysTime()-t0;
 			double brt, dbrt = dt * 0.2;
-			if (up) brt = min (1.0, brt0 + dbrt);
-			else    brt = max (0.25, brt0 - dbrt);
+			if (up) brt = std::min (1.0, brt0 + dbrt);
+			else    brt = std::max (0.25, brt0 - dbrt);
 			mfdbright[mfd] = brt;
 			if (vis) {
 				MATERIAL mat;
@@ -2174,7 +2180,7 @@ bool Atlantis::clbkDrawHUD (int mode, const HUDPAINTSPEC *hps, oapi::Sketchpad *
 // --------------------------------------------------------------
 // Keyboard interface handler (buffered key events)
 // --------------------------------------------------------------
-int Atlantis::clbkConsumeBufferedKey (DWORD key, bool down, char *kstate)
+int Atlantis::clbkConsumeBufferedKey (int key, bool down, char *kstate)
 {
 	if (!down) return 0; // only process keydown events
 
@@ -2188,7 +2194,7 @@ int Atlantis::clbkConsumeBufferedKey (DWORD key, bool down, char *kstate)
 	} else if (KEYMOD_CONTROL (kstate)) {
 		switch (key) {
 		case OAPI_KEY_SPACE: // open RMS control dialog
-			oapiOpenDialogEx (g_Param.hDLL, IDD_CTRL, Atlantis_DlgProc, 0, this);
+			//oapiOpenDialogEx (g_Param.hDLL, IDD_CTRL, Atlantis_DlgProc, 0, this);
 			return 1;
 		case OAPI_KEY_B: // deploy/retract speedbrake
 			if (!Playback()) RevertSpeedbrake ();
@@ -2229,23 +2235,23 @@ int Atlantis::clbkConsumeBufferedKey (DWORD key, bool down, char *kstate)
 // --------------------------------------------------------------
 // Module initialisation
 // --------------------------------------------------------------
-DLLCLBK void InitModule (HINSTANCE hModule)
+DLLCLBK void InitModule (oapi::DynamicModule *hModule)
 {
 	g_Param.hDLL = hModule;
-	oapiRegisterCustomControls (hModule);
-	g_Param.tkbk_label = oapiCreateSurface (LOADBMP (IDB_TKBKLABEL));
+	//oapiRegisterCustomControls (hModule);
+	g_Param.tkbk_label = oapiLoadTexture ("Bitmaps/Atlantis/tkbk_label.bmp");
 
-	// allocate GDI resources
-	g_Param.font[0] = CreateFont (-11, 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 0, 0, "Arial");
+	// allocate GDI resources //(int height, bool prop, char *face, FontStyle style = FONT_NORMAL)
+	g_Param.font[0] = oapiCreateFont (-11, true, "Arial");
 }
 
-DLLCLBK void ExitModule (HINSTANCE hModule)
+DLLCLBK void ExitModule (oapi::DynamicModule *hModule)
 {
-	oapiUnregisterCustomControls (hModule);
+	//oapiUnregisterCustomControls (hModule);
 	oapiDestroySurface (g_Param.tkbk_label);
 
 	// deallocate GDI resources
-	DeleteObject (g_Param.font[0]);
+	oapiReleaseFont (g_Param.font[0]);
 }
 
 // --------------------------------------------------------------
@@ -2267,7 +2273,7 @@ DLLCLBK void ovcExit (VESSEL *vessel)
 // ==============================================================
 // Message callback function for Atlantis control dialog box
 // ==============================================================
-
+/*
 INT_PTR CALLBACK Atlantis_DlgProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	Atlantis *sts = (uMsg == WM_INITDIALOG ? (Atlantis*)lParam : (Atlantis*)oapiGetDialogContext (hWnd));
@@ -2291,7 +2297,8 @@ INT_PTR CALLBACK Atlantis_DlgProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM l
 		}
 		break;
 	}
-	return oapiDefDialogProc (hWnd, uMsg, wParam, lParam);
+	//return oapiDefDialogProc (hWnd, uMsg, wParam, lParam);
+	return true;
 }
 
 // ==============================================================
@@ -2343,40 +2350,40 @@ INT_PTR CALLBACK RMS_DlgProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 		if (wParam == 1) {
 			t1 = oapiGetSimTime();
 			if (SendDlgItemMessage (hWnd, IDC_SHOULDER_YAWLEFT, BM_GETSTATE, 0, 0) & BST_PUSHED) {
-				sts->arm_sy = min (1.0, sts->arm_sy + (t1-t0)*ARM_OPERATING_SPEED);
+				sts->arm_sy = std::min (1.0, sts->arm_sy + (t1-t0)*ARM_OPERATING_SPEED);
 				sts->SetAnimationArm (sts->anim_arm_sy, sts->arm_sy);
 			} else if (SendDlgItemMessage (hWnd, IDC_SHOULDER_YAWRIGHT, BM_GETSTATE, 0, 0) & BST_PUSHED) {
-				sts->arm_sy = max (0.0, sts->arm_sy - (t1-t0)*ARM_OPERATING_SPEED);
+				sts->arm_sy = std::max (0.0, sts->arm_sy - (t1-t0)*ARM_OPERATING_SPEED);
 				sts->SetAnimationArm (sts->anim_arm_sy, sts->arm_sy);
 			} else if (SendDlgItemMessage (hWnd, IDC_SHOULDER_PITCHUP, BM_GETSTATE, 0, 0) & BST_PUSHED) {
-				sts->arm_sp = min (1.0, sts->arm_sp + (t1-t0)*ARM_OPERATING_SPEED);
+				sts->arm_sp = std::min (1.0, sts->arm_sp + (t1-t0)*ARM_OPERATING_SPEED);
 				sts->SetAnimationArm (sts->anim_arm_sp, sts->arm_sp);
 			} else if (SendDlgItemMessage (hWnd, IDC_SHOULDER_PITCHDOWN, BM_GETSTATE, 0, 0) & BST_PUSHED) {
-				sts->arm_sp = max (0.0, sts->arm_sp - (t1-t0)*ARM_OPERATING_SPEED);
+				sts->arm_sp = std::max (0.0, sts->arm_sp - (t1-t0)*ARM_OPERATING_SPEED);
 				sts->SetAnimationArm (sts->anim_arm_sp, sts->arm_sp);
 			} else if (SendDlgItemMessage (hWnd, IDC_ELBOW_PITCHUP, BM_GETSTATE, 0, 0) & BST_PUSHED) {
-				sts->arm_ep = max (0.0, sts->arm_ep - (t1-t0)*ARM_OPERATING_SPEED);
+				sts->arm_ep = std::max (0.0, sts->arm_ep - (t1-t0)*ARM_OPERATING_SPEED);
 				sts->SetAnimationArm (sts->anim_arm_ep, sts->arm_ep);
 			} else if (SendDlgItemMessage (hWnd, IDC_ELBOW_PITCHDOWN, BM_GETSTATE, 0, 0) & BST_PUSHED) {
-				sts->arm_ep = min (1.0, sts->arm_ep + (t1-t0)*ARM_OPERATING_SPEED);
+				sts->arm_ep = std::min (1.0, sts->arm_ep + (t1-t0)*ARM_OPERATING_SPEED);
 				sts->SetAnimationArm (sts->anim_arm_ep, sts->arm_ep);
 			} else if (SendDlgItemMessage (hWnd, IDC_WRIST_PITCHUP, BM_GETSTATE, 0, 0) & BST_PUSHED) {
-				sts->arm_wp = min (1.0, sts->arm_wp + (t1-t0)*ARM_OPERATING_SPEED);
+				sts->arm_wp = std::min (1.0, sts->arm_wp + (t1-t0)*ARM_OPERATING_SPEED);
 				sts->SetAnimationArm (sts->anim_arm_wp, sts->arm_wp);
 			} else if (SendDlgItemMessage (hWnd, IDC_WRIST_PITCHDOWN, BM_GETSTATE, 0, 0) & BST_PUSHED) {
-				sts->arm_wp = max (0.0, sts->arm_wp - (t1-t0)*ARM_OPERATING_SPEED);
+				sts->arm_wp = std::max (0.0, sts->arm_wp - (t1-t0)*ARM_OPERATING_SPEED);
 				sts->SetAnimationArm (sts->anim_arm_wp, sts->arm_wp);
 			} else if (SendDlgItemMessage (hWnd, IDC_WRIST_YAWLEFT, BM_GETSTATE, 0, 0) & BST_PUSHED) {
-				sts->arm_wy = min (1.0, sts->arm_wy + (t1-t0)*ARM_OPERATING_SPEED);
+				sts->arm_wy = std::min (1.0, sts->arm_wy + (t1-t0)*ARM_OPERATING_SPEED);
 				sts->SetAnimationArm (sts->anim_arm_wy, sts->arm_wy);
 			} else if (SendDlgItemMessage (hWnd, IDC_WRIST_YAWRIGHT, BM_GETSTATE, 0, 0) & BST_PUSHED) {
-				sts->arm_wy = max (0.0, sts->arm_wy - (t1-t0)*ARM_OPERATING_SPEED);
+				sts->arm_wy = std::max (0.0, sts->arm_wy - (t1-t0)*ARM_OPERATING_SPEED);
 				sts->SetAnimationArm (sts->anim_arm_wy, sts->arm_wy);
 			} else if (SendDlgItemMessage (hWnd, IDC_WRIST_ROLLLEFT, BM_GETSTATE, 0, 0) & BST_PUSHED) {
-				sts->arm_wr = max (0.0, sts->arm_wr - (t1-t0)*ARM_OPERATING_SPEED);
+				sts->arm_wr = std::max (0.0, sts->arm_wr - (t1-t0)*ARM_OPERATING_SPEED);
 				sts->SetAnimationArm (sts->anim_arm_wr, sts->arm_wr);
 			} else if (SendDlgItemMessage (hWnd, IDC_WRIST_ROLLRIGHT, BM_GETSTATE, 0, 0) & BST_PUSHED) {
-				sts->arm_wr = min (1.0, sts->arm_wr + (t1-t0)*ARM_OPERATING_SPEED);
+				sts->arm_wr = std::min (1.0, sts->arm_wr + (t1-t0)*ARM_OPERATING_SPEED);
 				sts->SetAnimationArm (sts->anim_arm_wr, sts->arm_wr);
 			}
 			t0 = t1;
@@ -2406,5 +2413,7 @@ INT_PTR CALLBACK RMS_DlgProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 		}
 		break;
 	}
-	return oapiDefDialogProc (hWnd, uMsg, wParam, lParam);
+//	return oapiDefDialogProc (hWnd, uMsg, wParam, lParam);
+	return true;
 }
+*/

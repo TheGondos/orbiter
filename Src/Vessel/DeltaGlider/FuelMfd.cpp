@@ -15,6 +15,7 @@
 #include "ScramSubsys.h"
 #include "meshres_p0.h"
 #include "meshres_vc.h"
+#include <cstring>
 
 // ==============================================================
 
@@ -118,7 +119,7 @@ void FuelMFD::Redraw (NTVERTEX *Vtx, SURFHANDLE surf, float crd[4])
 
 	// main level
 	m = dg->GetPropellantMass (dg->ph_main);
-	lvl = m / max (1.0, dg->max_rocketfuel);
+	lvl = m / std::max (1.0, dg->max_rocketfuel);
 	isp = dg->GetThrusterIsp (dg->th_main[0]);
 	dv = isp * log(m0/(m0-m));
 	//y1 = (float)(fuely - lvl * fuelh);
@@ -161,7 +162,7 @@ void FuelMFD::Redraw (NTVERTEX *Vtx, SURFHANDLE surf, float crd[4])
 	if (isScram) {
 		// scram level
 		m = dg->SubsysScram()->GetPropellantMass ();
-		lvl = m / max (1.0, dg->SubsysScram()->GetPropellantMaxMass());
+		lvl = m / std::max (1.0, dg->SubsysScram()->GetPropellantMaxMass());
 		isp = dg->SubsysScram()->GetThrusterIsp (0);
 		dv = isp * log(m0/(m0-m));
 		//y1 = (float)(fuely - lvl * fuelh);

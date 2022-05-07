@@ -42,10 +42,10 @@ Nav::Nav (float _freq, float _range)
 void Nav::SetFreq (float _freq)
 {
 	freq = _freq;
-	step = (DWORD)((freq - NAV_RADIO_FREQ_MIN)*20.0 + 0.5);
+	step = (int)((freq - NAV_RADIO_FREQ_MIN)*20.0 + 0.5);
 }
 
-void Nav::SetStep (DWORD _step)
+void Nav::SetStep (int _step)
 {
 	step = _step;
 	freq = (float)(step*0.05 + NAV_RADIO_FREQ_MIN);
@@ -119,13 +119,13 @@ Nav_VOR::Nav_VOR (const Planet *_planet, const char *str)
 	planet = _planet;
 	sscanf (str, "%s%lf%lf%f%f", id, &lng, &lat, &freq, &range);
 	lng *= RAD, lat *= RAD, range *= 1e3;
-	step = (DWORD)((freq - NAV_RADIO_FREQ_MIN)*20.0 + 0.5);
+	step = (int)((freq - NAV_RADIO_FREQ_MIN)*20.0 + 0.5);
 	planet->EquatorialToLocal (lng, lat, planet->Size() + planet->Elevation (lng, lat), lpos);
 }
 
 int Nav_VOR::IdString (char *str, int len) const
 {
-	return _snprintf (str, len, "VOR %s", GetId());
+	return snprintf (str, len, "VOR %s", GetId());
 }
 
 void Nav_VOR::GPos (Vector &gp) const
@@ -155,7 +155,7 @@ Nav_VTOL::Nav_VTOL (const Base *_base, int _npad, double _lng, double _lat, floa
 
 int Nav_VTOL::IdString (char *str, int len) const
 {
-	return _snprintf (str, len, "VTOL Pad-%02d %s", GetPad()+1, GetBase()->Name());
+	return snprintf (str, len, "VTOL Pad-%02d %s", GetPad()+1, GetBase()->Name());
 }
 
 void Nav_VTOL::GetData (NAVDATA *data) const
@@ -178,7 +178,7 @@ Nav_ILS::Nav_ILS (const Base *_base, double _dir, double _lng, double _lat, floa
 
 int Nav_ILS::IdString (char *str, int len) const
 {
-	return _snprintf (str, len, "ILS Rwy %02d %s", (int)(ApprDir()*DEG*0.1+0.5), GetBase()->Name());
+	return snprintf (str, len, "ILS Rwy %02d %s", (int)(ApprDir()*DEG*0.1+0.5), GetBase()->Name());
 }
 
 void Nav_ILS::GetData (NAVDATA *data) const
@@ -201,13 +201,13 @@ Nav_IDS::Nav_IDS (const Vessel *_vessel, const PortSpec *_ps, float _freq, float
 
 int Nav_IDS::IdString (char *str, int len) const
 {
-	DWORD i;
+	int i;
 	for (i = 0; i < vessel->nDock(); i++)
 		if (vessel->GetDockParams(i) == ps) break;
 	if (i < vessel->nDock())
-		return _snprintf (str, len, "IDS D-%02d %s", i+1, vessel->Name());
+		return snprintf (str, len, "IDS D-%02d %s", i+1, vessel->Name());
 	else // should not happen
-		return _snprintf (str, len, "IDS %s", vessel->Name());
+		return snprintf (str, len, "IDS %s", vessel->Name());
 }
 
 void Nav_IDS::GPos (Vector &gp) const
@@ -234,7 +234,7 @@ Nav_XPDR::Nav_XPDR (const Vessel *_vessel, float _freq, float _range)
 
 int Nav_XPDR::IdString (char *str, int len) const
 {
-	return _snprintf (str, len, "XPDR %s", vessel->Name());
+	return snprintf (str, len, "XPDR %s", vessel->Name());
 }
 
 void Nav_XPDR::GetData (NAVDATA *data) const
@@ -260,7 +260,7 @@ NavManager::~NavManager ()
 void NavManager::Clear ()
 {
 	if (nbuf) {
-		for (DWORD i = 0; i < nnav; i++) delete []nav[i];
+		for (int i = 0; i < nnav; i++) delete []nav[i];
 		delete []nav;
 		nbuf = nnav = 0;
 	}
@@ -277,7 +277,7 @@ void NavManager::AddNav (Nav *_nav)
 		nav = tmp;
 	}
 	// sort new entry in
-	DWORD i;
+	int i;
 	for (i = nnav; i > 0; i--) {
 		if (nav[i-1]->freq > _nav->freq) nav[i] = nav[i-1];
 		else break;
@@ -286,7 +286,7 @@ void NavManager::AddNav (Nav *_nav)
 	nnav++;
 }
 
-DWORD NavManager::Read (ifstream &ifs, const Planet *planet, bool append)
+int NavManager::Read (ifstream &ifs, const Planet *planet, bool append)
 {
 	if (nnav && !append) Clear ();
 

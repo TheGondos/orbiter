@@ -22,7 +22,7 @@ target_include_directories(${CELBODY}
 
 target_link_libraries(${CELBODY}
 	${VSOP87_LIB}
-	${ORBITER_LIB}
+#	${ORBITER_LIB}
 	${ORBITER_SDK_LIB}
 )
 
@@ -45,7 +45,7 @@ set_target_properties(${CELBODY}
 #Installation
 install(TARGETS
 	${CELBODY}
-	RUNTIME
+	#RUNTIME
 	DESTINATION ${ORBITER_INSTALL_CELBODY_DIR}
 )
 install(DIRECTORY Config

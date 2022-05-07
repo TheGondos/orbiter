@@ -2,16 +2,16 @@
 // Licensed under the MIT License
 
 #include "PlBayOp.h"
-#include "resource.h"
 #include "meshres_vc.h"
-#include "DlgCtrl.h"
 #include <stdio.h>
+#include <cstring>
+
+#define _strnicmp strncasecmp
 
 extern GDIParams g_Param;
-extern HELPCONTEXT g_hc;
 extern char *ActionString[5];
 
-INT_PTR CALLBACK PlOp_DlgProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+//INT_PTR CALLBACK PlOp_DlgProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 static Atlantis *sts_dlg;
 
 // ==============================================================
@@ -19,7 +19,7 @@ static Atlantis *sts_dlg;
 PayloadBayOp::PayloadBayOp (Atlantis *_sts): sts(_sts)
 {
 	sts_dlg = sts;
-	hDlg = NULL;
+	//hDlg = NULL;
 
 	int i;
 
@@ -50,12 +50,12 @@ void PayloadBayOp::Step (double t, double dt)
 		double da = dt * DOOR_OPERATING_SPEED;
 		if (BayDoorStatus.Closing()) {
 			if (BayDoorStatus.pos > 0.0)
-				BayDoorStatus.pos = max (0.0, BayDoorStatus.pos-da);
+				BayDoorStatus.pos = std::max (0.0, BayDoorStatus.pos-da);
 			else
 				SetDoorAction (AnimState::CLOSED);
 		} else { // door opening
 			if (BayDoorStatus.pos < 1.0)
-				BayDoorStatus.pos = min (1.0, BayDoorStatus.pos+da);
+				BayDoorStatus.pos = std::min (1.0, BayDoorStatus.pos+da);
 			else
 				SetDoorAction (AnimState::OPEN);
 		}
@@ -67,12 +67,12 @@ void PayloadBayOp::Step (double t, double dt)
 		double da = dt * RAD_OPERATING_SPEED;
 		if (RadiatorStatus.Closing()) {
 			if (RadiatorStatus.pos > 0.0)
-				RadiatorStatus.pos = max (0.0, RadiatorStatus.pos-da);
+				RadiatorStatus.pos = std::max (0.0, RadiatorStatus.pos-da);
 			else
 				SetRadiatorAction (AnimState::CLOSED);
 		} else { // radiator deploying
 			if (RadiatorStatus.pos < 1.0)
-				RadiatorStatus.pos = min (1.0, RadiatorStatus.pos+da);
+				RadiatorStatus.pos = std::min (1.0, RadiatorStatus.pos+da);
 			else
 				SetRadiatorAction (AnimState::OPEN);
 		}
@@ -84,12 +84,12 @@ void PayloadBayOp::Step (double t, double dt)
 		double da = dt * RADLATCH_OPERATING_SPEED;
 		if (RadLatchStatus.Closing()) {
 			if (RadLatchStatus.pos > 0.0)
-				RadLatchStatus.pos = max (0.0, RadLatchStatus.pos-da);
+				RadLatchStatus.pos = std::max (0.0, RadLatchStatus.pos-da);
 			else
 				SetRadLatchAction (AnimState::CLOSED);
 		} else { // radiator latches releasing
 			if (RadLatchStatus.pos < 1.0)
-				RadLatchStatus.pos = min (1.0, RadLatchStatus.pos+da);
+				RadLatchStatus.pos = std::min (1.0, RadLatchStatus.pos+da);
 			else
 				SetRadLatchAction (AnimState::OPEN);
 		}
@@ -101,12 +101,12 @@ void PayloadBayOp::Step (double t, double dt)
 		double da = dt * KU_OPERATING_SPEED;
 		if (KuAntennaStatus.Closing()) {
 			if (KuAntennaStatus.pos > 0.0)
-				KuAntennaStatus.pos = max (0.0, KuAntennaStatus.pos-da);
+				KuAntennaStatus.pos = std::max (0.0, KuAntennaStatus.pos-da);
 			else
 				SetKuAntennaAction (AnimState::CLOSED);
 		} else { // antenna deploying
 			if (KuAntennaStatus.pos < 1.0)
-				KuAntennaStatus.pos = min (1.0, KuAntennaStatus.pos+da);
+				KuAntennaStatus.pos = std::min (1.0, KuAntennaStatus.pos+da);
 			else
 				SetKuAntennaAction (AnimState::OPEN);
 		}
@@ -143,7 +143,7 @@ void PayloadBayOp::SetDoorAction (AnimState::Action action, bool simple)
 	sts->RecordEvent ("CARGODOOR", ActionString[action]);
 
 	UpdateVC();
-	if (hDlg) UpdateDialog (hDlg);
+	//if (hDlg) UpdateDialog (hDlg);
 }
 
 // ==============================================================
@@ -174,7 +174,7 @@ void PayloadBayOp::SetRadiatorAction (AnimState::Action action)
 	sts->RecordEvent ("RADIATOR", ActionString[action]);
 
 	UpdateVC();
-	if (hDlg) UpdateDialog (hDlg);
+	//if (hDlg) UpdateDialog (hDlg);
 }
 
 // ==============================================================
@@ -207,7 +207,7 @@ void PayloadBayOp::SetRadLatchAction (AnimState::Action action)
 	sts->RecordEvent ("RADLATCH", ActionString[action]);
 
 	UpdateVC();
-	if (hDlg) UpdateDialog (hDlg);
+	//if (hDlg) UpdateDialog (hDlg);
 }
 
 // ==============================================================
@@ -224,7 +224,7 @@ void PayloadBayOp::SetKuAntennaAction (AnimState::Action action)
 	sts->RecordEvent ("KUBAND", ActionString[action]);
 
 	UpdateVC();
-	if (hDlg) UpdateDialog (hDlg);
+	//if (hDlg) UpdateDialog (hDlg);
 }
 
 // ==============================================================
@@ -270,16 +270,16 @@ void PayloadBayOp::SaveState (FILEHANDLE scn)
 }
 
 // ==============================================================
-
+/*
 void PayloadBayOp::OpenDialog ()
 {
 	if (hDlg) return; // dialog already open
 	hDlg = oapiOpenDialogEx (g_Param.hDLL, IDD_PLBAY, PlOp_DlgProc, 0, this);
 }
-
+*/
 // ==============================================================
 
-void PayloadBayOp::DefineAnimations (UINT vcidx)
+void PayloadBayOp::DefineAnimations (unsigned int vcidx)
 {
 	static VECTOR3 switch_rot = {0,0,1};
 	static VECTOR3 switch_row1 = {1.3068,2.1991,12.7983};
@@ -287,67 +287,67 @@ void PayloadBayOp::DefineAnimations (UINT vcidx)
 	static VECTOR3 switch_row3 = {1.1244,2.0794,12.7983};
 
 	// Animations for switches on panel R13L in the VC
-	static UINT VC_R13L_S1_Grp = GRP_SwitchR13L_1_VC;
+	static unsigned int VC_R13L_S1_Grp = GRP_SwitchR13L_1_VC;
 	static MGROUP_ROTATE VC_R13L_S1 (vcidx, &VC_R13L_S1_Grp, 1,
 		switch_row1, switch_rot, (float)(90.0*RAD));
 	anim_VC_R13L[0] = sts->CreateAnimation (0.5);
 	sts->AddAnimationComponent (anim_VC_R13L[0], 0, 1, &VC_R13L_S1);
 
-	static UINT VC_R13L_S2_Grp = GRP_SwitchR13L_2_VC;
+	static unsigned int VC_R13L_S2_Grp = GRP_SwitchR13L_2_VC;
 	static MGROUP_ROTATE VC_R13L_S2 (vcidx, &VC_R13L_S2_Grp, 1,
 		switch_row1, switch_rot, (float)(90.0*RAD));
 	anim_VC_R13L[1] = sts->CreateAnimation (0.5);
 	sts->AddAnimationComponent (anim_VC_R13L[1], 0, 1, &VC_R13L_S2);
 
-	static UINT VC_R13L_S3_Grp = GRP_SwitchR13L_3_VC;
+	static unsigned int VC_R13L_S3_Grp = GRP_SwitchR13L_3_VC;
 	static MGROUP_ROTATE VC_R13L_S3 (vcidx, &VC_R13L_S3_Grp, 1,
 		switch_row1, switch_rot, (float)(90.0*RAD));
 	anim_VC_R13L[2] = sts->CreateAnimation (0.5);
 	sts->AddAnimationComponent (anim_VC_R13L[2], 0, 1, &VC_R13L_S3);
 
-	static UINT VC_R13L_S4_Grp = GRP_SwitchR13L_4_VC;
+	static unsigned int VC_R13L_S4_Grp = GRP_SwitchR13L_4_VC;
 	static MGROUP_ROTATE VC_R13L_S4 (vcidx, &VC_R13L_S4_Grp, 1,
 		switch_row1, switch_rot, (float)(90.0*RAD));
 	anim_VC_R13L[3] = sts->CreateAnimation (0.5);
 	sts->AddAnimationComponent (anim_VC_R13L[3], 0, 1, &VC_R13L_S4);
 
-	static UINT VC_R13L_S5_Grp = GRP_SwitchR13L_5_VC;
+	static unsigned int VC_R13L_S5_Grp = GRP_SwitchR13L_5_VC;
 	static MGROUP_ROTATE VC_R13L_S5 (vcidx, &VC_R13L_S5_Grp, 1,
 		switch_row2, switch_rot, (float)(90.0*RAD));
 	anim_VC_R13L[4] = sts->CreateAnimation (0.5);
 	sts->AddAnimationComponent (anim_VC_R13L[4], 0, 1, &VC_R13L_S5);
 
-	static UINT VC_R13L_S6_Grp = GRP_SwitchR13L_6_VC;
+	static unsigned int VC_R13L_S6_Grp = GRP_SwitchR13L_6_VC;
 	static MGROUP_ROTATE VC_R13L_S6 (vcidx, &VC_R13L_S6_Grp, 1,
 		switch_row2, switch_rot, (float)(90.0*RAD));
 	anim_VC_R13L[5] = sts->CreateAnimation (0.5);
 	sts->AddAnimationComponent (anim_VC_R13L[5], 0, 1, &VC_R13L_S6);
 
-	static UINT VC_R13L_S7_Grp = GRP_SwitchR13L_7_VC;
+	static unsigned int VC_R13L_S7_Grp = GRP_SwitchR13L_7_VC;
 	static MGROUP_ROTATE VC_R13L_S7 (vcidx, &VC_R13L_S7_Grp, 1,
 		switch_row2, switch_rot, (float)(90.0*RAD));
 	anim_VC_R13L[6] = sts->CreateAnimation (0.5);
 	sts->AddAnimationComponent (anim_VC_R13L[6], 0, 1, &VC_R13L_S7);
 
-	static UINT VC_R13L_S8_Grp = GRP_SwitchR13L_8_VC;
+	static unsigned int VC_R13L_S8_Grp = GRP_SwitchR13L_8_VC;
 	static MGROUP_ROTATE VC_R13L_S8 (vcidx, &VC_R13L_S8_Grp, 1,
 		switch_row2, switch_rot, (float)(90.0*RAD));
 	anim_VC_R13L[7] = sts->CreateAnimation (0.5);
 	sts->AddAnimationComponent (anim_VC_R13L[7], 0, 1, &VC_R13L_S8);
 
-	static UINT VC_R13L_S9_Grp = GRP_SwitchR13L_9_VC;
+	static unsigned int VC_R13L_S9_Grp = GRP_SwitchR13L_9_VC;
 	static MGROUP_ROTATE VC_R13L_S9 (vcidx, &VC_R13L_S9_Grp, 1,
 		switch_row2, switch_rot, (float)(90.0*RAD));
 	anim_VC_R13L[8] = sts->CreateAnimation (0.5);
 	sts->AddAnimationComponent (anim_VC_R13L[8], 0, 1, &VC_R13L_S9);
 
-	static UINT VC_R13L_S10_Grp = GRP_SwitchR13L_10_VC;
+	static unsigned int VC_R13L_S10_Grp = GRP_SwitchR13L_10_VC;
 	static MGROUP_ROTATE VC_R13L_S10 (vcidx, &VC_R13L_S10_Grp, 1,
 		switch_row3, switch_rot, (float)(90.0*RAD));
 	anim_VC_R13L[9] = sts->CreateAnimation (0.5);
 	sts->AddAnimationComponent (anim_VC_R13L[9], 0, 1, &VC_R13L_S10);
 
-	static UINT VC_R13L_S11_Grp = GRP_SwitchR13L_11_VC;
+	static unsigned int VC_R13L_S11_Grp = GRP_SwitchR13L_11_VC;
 	static MGROUP_ROTATE VC_R13L_S11 (vcidx, &VC_R13L_S11_Grp, 1,
 		switch_row3, switch_rot, (float)(90.0*RAD));
 	anim_VC_R13L[10] = sts->CreateAnimation (0.5);
@@ -482,7 +482,7 @@ bool PayloadBayOp::VCMouseEvent (int id, int event, VECTOR3 &p)
 
 	if (action) {
 		UpdateVC ();
-		if (hDlg) UpdateDialog (hDlg);
+		//if (hDlg) UpdateDialog (hDlg);
 	}
 	return false;
 }
@@ -515,7 +515,7 @@ bool PayloadBayOp::VCRedrawEvent (int id, int event, SURFHANDLE surf)
 }
 
 // ==============================================================
-
+/*
 void PayloadBayOp::UpdateDialog (HWND hWnd)
 {
 	char cbuf[256];
@@ -559,9 +559,9 @@ void PayloadBayOp::UpdateDialog (HWND hWnd)
 	static char *KUstr[5] = {"===","STO","DPL","\\\\\\\\\\","\\\\\\\\\\"};
 	SetWindowText (GetDlgItem (hWnd, IDC_KU_TLKBK), KUstr[KuAntennaStatus.action]);
 }
-
+*/
 // ==============================================================
-
+/*
 INT_PTR PayloadBayOp::DlgProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	bool action = false;
@@ -732,13 +732,15 @@ INT_PTR PayloadBayOp::DlgProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 		}
 		break;
 	}
-	return oapiDefDialogProc (hWnd, uMsg, wParam, lParam);
+//	return oapiDefDialogProc (hWnd, uMsg, wParam, lParam);
+	return false;
 }
-
+*/
 // ==============================================================
 // Dialog callback hook
-
+/*
 INT_PTR CALLBACK PlOp_DlgProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	return sts_dlg->plop->DlgProc (hWnd, uMsg, wParam, lParam);
 }
+*/

@@ -29,7 +29,7 @@
 class CSphereManager;
 class vObject;
 class D3D7ParticleStream;
-
+class Camera;
 class Scene {
 	friend class Camera;
 

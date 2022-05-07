@@ -12,7 +12,7 @@
 // ==============================================================
 
 #define STRICT
-#include "D3d7util.h"
+#include "D3D7Util.h"
 
 // =======================================================================
 // Some utility methods for D3D vectors and matrices

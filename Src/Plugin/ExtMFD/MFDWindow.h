@@ -16,33 +16,21 @@
 #ifndef __MFDWINDOW_H
 #define __MFDWINDOW_H
 
-#define STRICT 1
-#include <windows.h>
-#include "orbitersdk.h"
+#include "Orbitersdk.h"
 
 class MFDWindow: public ExternMFD {
 public:
-	MFDWindow (HINSTANCE _hInst, const MFDSPEC &spec);
-	~MFDWindow ();
-	void Initialise (HWND _hDlg);
-	void SetVessel (OBJHANDLE hV);
-	void SetTitle ();
-	void Resize (bool fixaspect);
-	void RepaintDisplay (HWND hWnd);
-	void RepaintButton (HWND hWnd);
+	MFDWindow (const MFDSPEC &spec);
+	virtual ~MFDWindow ();
+	void SetVessel (OBJHANDLE hV) override;
 	void ProcessButton (int bt, int event);
 	void StickToVessel (bool stick);
 
-	void clbkRefreshDisplay (SURFHANDLE);
-	void clbkRefreshButtons ();
-	void clbkFocusChanged (OBJHANDLE hFocus);
+	void clbkFocusChanged (OBJHANDLE hFocus) override;
+	bool m_poweroff;
 
 private:
-	HINSTANCE hInst;  // instance handle
-	HWND hDlg, hDsp;  // dialog and MFD display handles
-	HFONT hBtnFnt;    // button font
 	int BW, BH;       // button width and height
-	int gap;          // geometry parameters
 	int fnth;         // button font height
 	bool vstick;      // stick to vessel
 };

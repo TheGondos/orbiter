@@ -15,6 +15,9 @@
 #include "meshres_p0.h"
 #include "meshres_vc.h"
 #include "dg_vc_anim.h"
+#include <cstring>
+#define _strnicmp strncasecmp
+#define _stricmp strcasecmp
 
 // constants for texture coordinates
 static const float texw = (float)PANEL2D_TEXW; // texture width
@@ -92,14 +95,14 @@ MainRetroThrottle::MainRetroThrottle (MainRetroSubsystem *_subsys)
 	ELID_LEVERS = AddElement (levers = new MainRetroThrottleLevers (this));
 
 	// VC animation: Left main engine throttle
-	static UINT MainThrottleLGrp[2] = {GRP_THROTTLE_MAIN_L1_VC,GRP_THROTTLE_MAIN_L2_VC};
+	static unsigned int MainThrottleLGrp[2] = {GRP_THROTTLE_MAIN_L1_VC,GRP_THROTTLE_MAIN_L2_VC};
 	static MGROUP_ROTATE MainThrottleL (1, MainThrottleLGrp, 2,
 		_V(0,0.72,6.9856), _V(1,0,0), (float)(50*RAD));
 	anim_lever[0] = DG()->CreateAnimation (0.4);
 	DG()->AddAnimationComponent (anim_lever[0], 0, 1, &MainThrottleL);
 
 	// VC animation: Right main engine throttle
-	static UINT MainThrottleRGrp[2] = {GRP_THROTTLE_MAIN_R1_VC,GRP_THROTTLE_MAIN_R2_VC};
+	static unsigned int MainThrottleRGrp[2] = {GRP_THROTTLE_MAIN_R1_VC,GRP_THROTTLE_MAIN_R2_VC};
 	static MGROUP_ROTATE MainThrottleR (1, MainThrottleRGrp, 2,
 		_V(0,0.72,6.9856), _V(1,0,0), (float)(50*RAD));
 	anim_lever[1] = DG()->CreateAnimation (0.4);
@@ -108,7 +111,7 @@ MainRetroThrottle::MainRetroThrottle (MainRetroSubsystem *_subsys)
 
 // --------------------------------------------------------------
 
-bool MainRetroThrottle::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH)
+bool MainRetroThrottle::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH)
 {
 	if (panelid != 0) return false;
 
@@ -154,7 +157,7 @@ void MainRetroThrottleLevers::Reset2D (int panelid, MESHHANDLE hMesh)
 void MainRetroThrottleLevers::ResetVC (DEVMESHHANDLE hMesh)
 {
 	for (int i = 0; i < 2; i++)
-		sliderpos[i] = (UINT)-1;
+		sliderpos[i] = (unsigned int)-1;
 }
 
 // --------------------------------------------------------------
@@ -191,15 +194,15 @@ bool MainRetroThrottleLevers::Redraw2D (SURFHANDLE surf)
 
 bool MainRetroThrottleLevers::RedrawVC (DEVMESHHANDLE hMesh, SURFHANDLE hSurf)
 {
-	UINT i, pos;
+	unsigned int i, pos;
 
 	DeltaGlider *dg = component->DG();
 	for (i = 0; i < 2; i++) {
 		double level = dg->GetMainThrusterLevel(i);
-		if (level > 0) pos = 150 + (UINT)(level*300.0);
+		if (level > 0) pos = 150 + (unsigned int)(level*300.0);
 		else {
 			level = dg->GetRetroThrusterLevel(i);
-			pos = 150 - (UINT)(level*150.0);
+			pos = 150 - (unsigned int)(level*150.0);
 		}
 		if (pos != sliderpos[i]) {
 			dg->SetAnimation (component->anim_lever[i], (sliderpos[i] = pos)/450.0);
@@ -248,7 +251,7 @@ bool MainRetroThrottleLevers::ProcessMouseVC (int event, VECTOR3 &p)
 				else if (lvl < 0.0) mode = 1;
 				double lmin = (mode == 0 ? 0.0 : -1.0); // prevent direct crossover from main to retro
 				double lmax = (mode == 1 ? 0.0 :  1.0); // prevent direct crossover from retro to main
-				lvl = max (lmin, min (lmax, lvl + 2.0*(p.y-py)));
+				lvl = std::max (lmin, std::min (lmax, lvl + 2.0*(p.y-py)));
 				if (fabs (lvl) < 0.01) lvl = 0.0;
 				if (lvl >= 0.0) dg->SetMainRetroLevel (i, lvl, 0.0);
 				else            dg->SetMainRetroLevel (i, 0.0, -lvl);
@@ -311,7 +314,7 @@ bool GimbalControl::IncMainPGimbal (int which, int dir)
 	for (int i = 0; i < 2; i++) {
 		if (dir && which & (1 << i)) {
 			if (mode == 2)
-				mpgimbal_cmd[i] = min (MAIN_PGIMBAL_RANGE, max (-MAIN_PGIMBAL_RANGE, mpgimbal_cmd[i]+dcmd));
+				mpgimbal_cmd[i] = std::min (MAIN_PGIMBAL_RANGE, std::max (-MAIN_PGIMBAL_RANGE, mpgimbal_cmd[i]+dcmd));
 			mpswitch[i] = 3-dir;
 		} else
 			mpswitch[i] = 0;
@@ -328,7 +331,7 @@ bool GimbalControl::IncMainYGimbal (int which, int dir)
 	for (int i = 0; i < 2; i++) {
 		if (dir && which & (1 << i)) {
 			if (mode == 2)
-				mygimbal_cmd[i] = min (MAIN_YGIMBAL_RANGE, max (-MAIN_YGIMBAL_RANGE, mygimbal_cmd[i]+dcmd));
+				mygimbal_cmd[i] = std::min (MAIN_YGIMBAL_RANGE, std::max (-MAIN_YGIMBAL_RANGE, mygimbal_cmd[i]+dcmd));
 			myswitch[i] = 3-dir;
 		} else
 			myswitch[i] = 0;
@@ -356,7 +359,7 @@ void GimbalControl::AutoMainGimbal ()
 	plvl[1] -= lvl;
 
 	// scale to range and apply
-	mlvl = max(fabs(plvl[0]), fabs(plvl[1]));
+	mlvl = std::max(fabs(plvl[0]), fabs(plvl[1]));
 	if (mlvl > 1.0) 
 		for (i = 0; i < 2; i++) plvl[i] /= mlvl;
 	for (i = 0; i < 2; i++)
@@ -375,7 +378,7 @@ void GimbalControl::AutoMainGimbal ()
 	mlvl += lvl;
 
 	// scale to range and apply
-	mlvl = min (1.0, max (-1.0, mlvl));
+	mlvl = std::min (1.0, std::max (-1.0, mlvl));
 	for (i = 0; i < 2; i++)
 		mygimbal_cmd[i] = mlvl*MAIN_YGIMBAL_RANGE;
 }
@@ -392,16 +395,16 @@ void GimbalControl::TrackMainGimbal ()
 		if (mpgimbal[i] != mpgimbal_cmd[i]) {
 			update = true;
 			if (mpgimbal[i] < mpgimbal_cmd[i])
-				mpgimbal[i] = min (mpgimbal[i]+dphi, mpgimbal_cmd[i]);
+				mpgimbal[i] = std::min (mpgimbal[i]+dphi, mpgimbal_cmd[i]);
 			else
-				mpgimbal[i] = max (mpgimbal[i]-dphi, mpgimbal_cmd[i]);
+				mpgimbal[i] = std::max (mpgimbal[i]-dphi, mpgimbal_cmd[i]);
 		}
 		if (mygimbal[i] != mygimbal_cmd[i]) {
 			update = true;
 			if (mygimbal[i] < mygimbal_cmd[i])
-				mygimbal[i] = min (mygimbal[i]+dphi, mygimbal_cmd[i]);
+				mygimbal[i] = std::min (mygimbal[i]+dphi, mygimbal_cmd[i]);
 			else
-				mygimbal[i] = max (mygimbal[i]-dphi, mygimbal_cmd[i]);
+				mygimbal[i] = std::max (mygimbal[i]-dphi, mygimbal_cmd[i]);
 		}
 	}
 	if (update) {
@@ -457,7 +460,7 @@ void GimbalControl::clbkPostStep (double simt, double simdt, double mjd)
 
 // --------------------------------------------------------------
 
-bool GimbalControl::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH)
+bool GimbalControl::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH)
 {
 	if (panelid != 0) return false;
 
@@ -585,7 +588,7 @@ MainGimbalDisp::MainGimbalDisp (GimbalControl *gc)
 	}
 	memset (&vc_grp, 0, sizeof(GROUPREQUESTSPEC));
 	for (int i = 0; i < 16; i++)
-		vperm[i] = (WORD)(i+VC_GIMBAL_INDICATOR_LEFT_vofs);
+		vperm[i] = (uint16_t)(i+VC_GIMBAL_INDICATOR_LEFT_vofs);
 }
 
 // --------------------------------------------------------------
@@ -840,7 +843,7 @@ YMainGimbalCtrl::YMainGimbalCtrl (GimbalControl *gc)
 	for (i = 0; i < 2; i++)
 		vc_state[i] = 0;
 	for (i = 0; i < nvtx_per_switch*2; i++)
-		vperm[i] = (WORD)(i+VC_GIMBAL_YSWITCH_vofs);
+		vperm[i] = (uint16_t)(i+VC_GIMBAL_YSWITCH_vofs);
 }
 
 // --------------------------------------------------------------
@@ -970,16 +973,16 @@ RetroCoverControl::RetroCoverControl (MainRetroSubsystem *_subsys)
 	ELID_INDICATOR = AddElement (indicator = new RetroCoverIndicator(this));
 
 	// Retro cover animation
-	static UINT RCoverTLGrp[2] = {GRP_RCoverTL1,GRP_RCoverTL2};
+	static unsigned int RCoverTLGrp[2] = {GRP_RCoverTL1,GRP_RCoverTL2};
 	static MGROUP_ROTATE RCoverTL (0, RCoverTLGrp, 2,
 		_V(-2.156,-0.49,6.886), _V(-0.423,0.23,-0.877), (float)( 70*RAD));
-	static UINT RCoverBLGrp[2] = {GRP_RCoverBL1,GRP_RCoverBL2};
+	static unsigned int RCoverBLGrp[2] = {GRP_RCoverBL1,GRP_RCoverBL2};
 	static MGROUP_ROTATE RCoverBL (0, RCoverBLGrp, 2,
 		_V(-2.156,-0.49,6.886), _V(-0.434,-0.037,-0.9), (float)(-70*RAD));
-	static UINT RCoverTRGrp[2] = {GRP_RCoverTR1,GRP_RCoverTR2};
+	static unsigned int RCoverTRGrp[2] = {GRP_RCoverTR1,GRP_RCoverTR2};
 	static MGROUP_ROTATE RCoverTR (0, RCoverTRGrp, 2,
 		_V( 2.156,-0.49,6.886), _V( 0.423,0.23,-0.877), (float)(-70*RAD));
-	static UINT RCoverBRGrp[2] = {GRP_RCoverBR1,GRP_RCoverBR2};
+	static unsigned int RCoverBRGrp[2] = {GRP_RCoverBR1,GRP_RCoverBR2};
 	static MGROUP_ROTATE RCoverBR (0, RCoverBRGrp, 2,
 		_V( 2.156,-0.49,6.886), _V( 0.434,-0.037,-0.9), (float)( 70*RAD));
 	anim_rcover = DG()->CreateAnimation (0);
@@ -994,11 +997,8 @@ RetroCoverControl::RetroCoverControl (MainRetroSubsystem *_subsys)
 
 void RetroCoverControl::OpenRetroCover ()
 {
-	void UpdateCtrlDialog (DeltaGlider *dg, HWND hWnd = 0);
-
 	rcover_state.Open();
 	DG()->UpdateStatusIndicators();
-	UpdateCtrlDialog (DG());
 	DG()->RecordEvent ("RCOVER", "OPEN");
 }
 
@@ -1006,11 +1006,8 @@ void RetroCoverControl::OpenRetroCover ()
 
 void RetroCoverControl::CloseRetroCover ()
 {
-	void UpdateCtrlDialog (DeltaGlider *dg, HWND hWnd = 0);
-
 	rcover_state.Close();
 	DG()->UpdateStatusIndicators();
-	UpdateCtrlDialog (DG());
 	DG()->EnableRetroThrusters (false);
 	DG()->RecordEvent ("RCOVER", "Close");
 }
@@ -1054,7 +1051,7 @@ void RetroCoverControl::clbkPostStep (double simt, double simdt, double mjd)
 
 // --------------------------------------------------------------
 
-bool RetroCoverControl::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH)
+bool RetroCoverControl::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH)
 {
 	if (panelid != 0) return false;
 
@@ -1115,6 +1112,7 @@ bool RetroCoverSwitch::ProcessMouse2D (int event, int mx, int my)
 		switch (state) {
 			case DGSwitch1::UP:   component->CloseRetroCover(); break;
 			case DGSwitch1::DOWN: component->OpenRetroCover(); break;
+			case DGSwitch1::CENTER: break;
 		}
 		return true;
 	}
@@ -1130,6 +1128,7 @@ bool RetroCoverSwitch::ProcessMouseVC (int event, VECTOR3 &p)
 		switch (state) {
 			case DGSwitch1::UP:   component->CloseRetroCover(); break;
 			case DGSwitch1::DOWN: component->OpenRetroCover(); break;
+			case DGSwitch1::CENTER: break;
 		}
 		return true;
 	}
@@ -1187,12 +1186,12 @@ bool RetroCoverIndicator::RedrawVC (DEVMESHHANDLE hMesh, SURFHANDLE surf)
 	bool showlights = (state.State() == 1.0 || (state.Speed() && modf(oapiGetSimTime()*1.7, &d) < 0.5));
 	if (showlights != vlight_VC) {
 		GROUPEDITSPEC ges;
-		static const WORD vtxofs = VC_RCOVER_INDICATOR_vofs;
-		static const DWORD nvtx = 4;
-		static WORD vidx[nvtx] = {vtxofs,vtxofs+1,vtxofs+2,vtxofs+3};
+		static const uint16_t vtxofs = VC_RCOVER_INDICATOR_vofs;
+		static const int nvtx = 4;
+		static uint16_t vidx[nvtx] = {vtxofs,vtxofs+1,vtxofs+2,vtxofs+3};
 		static const float u[2] = {0.0586f,0.0713f};
 		NTVERTEX vtx[nvtx];
-		for (DWORD i = 0; i < nvtx; i++)
+		for (int i = 0; i < nvtx; i++)
 			vtx[i].tu = u[showlights ? 1:0];
 		ges.flags = GRPEDIT_VTXTEXU;
 		ges.Vtx = vtx;

@@ -9,7 +9,6 @@
 #ifndef __NAV_H
 #define __NAV_H
 
-#include <windows.h>
 #include <fstream>
 #include "Vessel.h"
 
@@ -27,11 +26,12 @@ class Nav {
 	friend class NavManager;
 public:
 	Nav (float _freq = 100.0, float _range = 500e3);
-	virtual DWORD Type() const { return TRANSMITTER_NONE; }
+	virtual ~Nav() {}
+	virtual int Type() const { return TRANSMITTER_NONE; }
 	void SetFreq (float _freq);
-	void SetStep (DWORD _step);
+	void SetStep (int _step);
 	inline float GetFreq() const { return freq; }
-	inline DWORD GetStep() const { return step; }
+	inline int GetStep() const { return step; }
 	inline void SetRange (float _range) { range = _range; }
 	inline float GetRange() const { return range; }
 	inline const char *GetId() const { return id; }
@@ -43,7 +43,7 @@ public:
 	bool InRange (const Vector &gpos) const;
 
 protected:
-	DWORD step;
+	int step;
 	float freq;
 	float range;
 	char id[8];
@@ -59,7 +59,7 @@ public:
 	Nav_VOR (const Planet *_planet, double _lng, double _lat);
 	Nav_VOR (const Planet *_planet, double _lng, double _lat, float _freq, float _range = 500e3);
 	Nav_VOR (const Planet *_planet, const char *str);
-	virtual DWORD Type() const { return TRANSMITTER_VOR; }
+	virtual int Type() const { return TRANSMITTER_VOR; }
 	virtual int IdString (char *str, int len) const;
 	inline const Planet *GetPlanet() const { return planet; }
 	inline void GetEquPos (double &_lng, double &_lat) const { _lng = lng, _lat = lat; }
@@ -80,7 +80,7 @@ protected:
 class Nav_VTOL: public Nav_VOR {
 public:
 	Nav_VTOL (const Base *_base, int _npad, double _lng, double _lat, float _freq, float _range = 30e3);
-	inline DWORD Type () const { return TRANSMITTER_VTOL; }
+	inline int Type () const { return TRANSMITTER_VTOL; }
 	int IdString (char *str, int len) const;
 	inline int GetPad () const { return npad; }
 	inline const Base *GetBase () const { return base; }
@@ -98,7 +98,7 @@ private:
 class Nav_ILS: public Nav_VOR {
 public:
 	Nav_ILS (const Base *_base, double _dir, double _lng, double _lat, float _freq, float _range = 30e3);
-	inline DWORD Type () const { return TRANSMITTER_ILS; }
+	inline int Type () const { return TRANSMITTER_ILS; }
 	int IdString (char *str, int len) const;
 	inline double ApprDir () const { return dir; }
 	inline const Base *GetBase () const { return base; }
@@ -116,7 +116,7 @@ private:
 class Nav_IDS: public Nav {
 public:
 	Nav_IDS (const Vessel *_vessel, const PortSpec *_ps, float _freq, float _range = 2e4);
-	inline DWORD Type () const { return TRANSMITTER_IDS; }
+	inline int Type () const { return TRANSMITTER_IDS; }
 	int IdString (char *str, int len) const;
 	void GPos (Vector &gp) const;
 	inline const Vessel *GetVessel () const { return vessel; }
@@ -135,7 +135,7 @@ private:
 class Nav_XPDR: public Nav {
 public:
 	Nav_XPDR (const Vessel *_vessel, float _freq, float _range = 1e6);
-	inline DWORD Type () const { return TRANSMITTER_XPDR; }
+	inline int Type () const { return TRANSMITTER_XPDR; }
 	int IdString (char *str, int len) const;
 	inline void GPos (Vector &gp) const { gp.Set (vessel->GPos()); }
 	inline const Vessel *GetVessel () const { return vessel; }
@@ -155,14 +155,14 @@ public:
 	~NavManager ();
 	void Clear ();
 	void AddNav (Nav *_nav);
-	DWORD nNav() const { return nnav; }
-	inline const Nav *GetNav (DWORD i) const { return nav[i]; }
+	int nNav() const { return nnav; }
+	inline const Nav *GetNav (int i) const { return nav[i]; }
 	inline Nav **GetNavlist () { return nav; }
-	DWORD Read (std::ifstream &ifs, const Planet *planet = NULL, bool append = false);
+	int Read (std::ifstream &ifs, const Planet *planet = NULL, bool append = false);
 	
 private:
-	DWORD nnav;   // number of transmitters
-	DWORD nbuf;   // buffer length
+	int nnav;   // number of transmitters
+	int nbuf;   // buffer length
 	Nav **nav;    // list of transmitters
 };
 

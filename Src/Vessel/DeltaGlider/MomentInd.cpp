@@ -14,6 +14,7 @@
 #include "DeltaGlider.h"
 #include "meshres_p0.h"
 #include "meshres_vc.h"
+#include <cstring>
 
 // ==============================================================
 
@@ -86,7 +87,7 @@ void AngRateIndicator::ResetVC (DEVMESHHANDLE hMesh)
 	}
 }
 
-void AngRateIndicator::LoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH)
+void AngRateIndicator::LoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH)
 {
 	vtx0 = &vtxbuf_2D;
 	w0 = &w0_2D;
@@ -171,7 +172,7 @@ bool AngRateIndicator::RedrawVC (DEVMESHHANDLE hMesh, SURFHANDLE surf)
 	for (axis = 0; axis < 3; axis++) {
 		v = (axis == 0 ? -prm.y : axis == 1 ? prm.z : prm.x)*DEG;
 		if ((av = fabs(v)) > 1e-1) {
-			phi = min ((log10(av)+1.0)*40.0*RAD, 0.75*PI);
+			phi = std::min ((log10(av)+1.0)*40.0*RAD, 0.75*PI);
 			if (v < 0) phi = -phi;
 			UncoverScale (0, axis, phi, vtx);
 		}
@@ -184,7 +185,7 @@ bool AngRateIndicator::RedrawVC (DEVMESHHANDLE hMesh, SURFHANDLE surf)
 	for (axis = 0; axis < 3; axis++) {
 		v = (axis == 0 ? -prm.y : axis == 1 ? prm.z : prm.x)*DEG;
 		if ((av = fabs(v)) > 1e-1) {
-			phi = min ((log10(av)+1.0)*40.0*RAD, 0.75*PI);
+			phi = std::min ((log10(av)+1.0)*40.0*RAD, 0.75*PI);
 			if (v < 0) phi = -phi;
 			UncoverScale (1, axis, phi, vtx);
 		}
@@ -197,7 +198,7 @@ bool AngRateIndicator::RedrawVC (DEVMESHHANDLE hMesh, SURFHANDLE surf)
 	for (axis = 0; axis < 3; axis++) {
 		v = (axis == 0 ? -prm.y : axis == 1 ? prm.z : prm.x);
 		if ((av = fabs(v*1e-3)) > 1e-1) {
-			phi = min ((log10(av)+1.0)*40.0*RAD, 0.75*PI);
+			phi = std::min ((log10(av)+1.0)*40.0*RAD, 0.75*PI);
 			if (v < 0) phi = -phi;
 			UncoverScale (2, axis, phi, vtx);
 		}
@@ -226,7 +227,7 @@ bool AngRateIndicator::Redraw2D (SURFHANDLE surf)
 	for (axis = 0; axis < 3; axis++) {
 		v = (axis == 0 ? -prm.y : axis == 1 ? prm.z : prm.x)*DEG;
 		if ((av = fabs(v)) > 1e-1) {
-			phi = min ((log10(av)+1.0)*40.0*RAD, 0.75*PI);
+			phi = std::min ((log10(av)+1.0)*40.0*RAD, 0.75*PI);
 			if (v < 0) phi = -phi;
 			UncoverScale (0, axis, phi, grp->Vtx+vtxofs);
 		}
@@ -235,7 +236,7 @@ bool AngRateIndicator::Redraw2D (SURFHANDLE surf)
 	for (axis = 0; axis < 3; axis++) {
 		v = (axis == 0 ? -prm.y : axis == 1 ? prm.z : prm.x)*DEG;
 		if ((av = fabs(v)) > 1e-1) {
-			phi = min ((log10(av)+1.0)*40.0*RAD, 0.75*PI);
+			phi = std::min ((log10(av)+1.0)*40.0*RAD, 0.75*PI);
 			if (v < 0) phi = -phi;
 			UncoverScale (1, axis, phi, grp->Vtx+vtxofs);
 		}
@@ -244,7 +245,7 @@ bool AngRateIndicator::Redraw2D (SURFHANDLE surf)
 	for (axis = 0; axis < 3; axis++) {
 		v = (axis == 0 ? -prm.y : axis == 1 ? prm.z : prm.x);
 		if ((av = fabs(v*1e-3)) > 1e-1) {
-			phi = min ((log10(av)+1.0)*40.0*RAD, 0.75*PI);
+			phi = std::min ((log10(av)+1.0)*40.0*RAD, 0.75*PI);
 			if (v < 0) phi = -phi;
 			UncoverScale (2, axis, phi, grp->Vtx+vtxofs);
 		}

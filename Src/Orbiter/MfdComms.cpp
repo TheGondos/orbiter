@@ -4,7 +4,6 @@
 #include "MfdComms.h"
 #include "Nav.h"
 #include <stdio.h>
-#include <dinput.h>
 #include "Orbiter.h"
 
 using namespace std;
@@ -15,7 +14,7 @@ extern TimeData td;
 // class Instrument_Comms
 // navigation radio manipulation
 
-Instrument_Comms::Instrument_Comms (Pane *_pane, INT_PTR _id, const Spec &spec, Vessel *_vessel)
+Instrument_Comms::Instrument_Comms (Pane *_pane, MfdId _id, const Spec &spec, Vessel *_vessel)
 : Instrument (_pane, _id, spec, _vessel)
 {
 	sel = 0;
@@ -38,19 +37,12 @@ Instrument_Comms::~Instrument_Comms ()
 			if (brush[i]) gc->clbkReleaseBrush (brush[i]);
 }
 
-HELPCONTEXT *Instrument_Comms::HelpTopic () const
-{
-	extern HELPCONTEXT DefHelpContext;
-	DefHelpContext.topic = "/mfd_com.htm";
-	return &DefHelpContext;
-}
-
 bool Instrument_Comms::Update (double upDTscale)
 {
 	const double stept = 0.05;
 	if (scanning && td.SysT1-t_scan > stept) {
 		const Nav *nav;
-		if (nav = vessel->nav[sel].sender)
+		if ((nav = vessel->nav[sel].sender))
 			scanning = false;
 		else {
 			SwitchFreq (sel, scanning, false);
@@ -64,7 +56,7 @@ bool Instrument_Comms::Update (double upDTscale)
 
 void Instrument_Comms::UpdateDraw (oapi::Sketchpad *skp)
 {
-	DWORD n;
+	int n;
 	int i, sig, len, x = cw/2, y = (3*ch)/2, dy = ch, xx, yy, dd;
 	char cbuf[256];
 	float freq;
@@ -74,7 +66,7 @@ void Instrument_Comms::UpdateDraw (oapi::Sketchpad *skp)
 		sprintf (cbuf, "NAV%d: %6.2f MHz", n+1, vessel->nav[n].freq);
 		skp->SetTextColor (draw[n == sel ? 1:0][0].col);
 		skp->Text (x, y, cbuf, strlen (cbuf)); y += dy;
-		if (nav = vessel->nav[n].sender) {
+		if ((nav = vessel->nav[n].sender)) {
 			len = nav->IdString (cbuf, 256);
 			skp->Text (x+cw*3, y, cbuf, min (len, 30));
 			sig = min(5,1+(int)(0.5*log(nav->FieldStrength(vessel->GPos()))));
@@ -108,38 +100,38 @@ void Instrument_Comms::UpdateDraw (oapi::Sketchpad *skp)
 	DisplayTitle (skp, "NAV Receiver Stack");
 }
 
-bool Instrument_Comms::KeyBuffered (DWORD key)
+bool Instrument_Comms::KeyBuffered (int key)
 {
 	switch (key) {
-	case DIK_COMMA: // select radio (up)
+	case OAPI_KEY_COMMA: // select radio (up)
 		scanning = 0;
 		if (sel) { sel--; Refresh(); }
 		return true;
-	case DIK_PERIOD:
+	case OAPI_KEY_PERIOD:
 		scanning = 0;
 		if (sel < nsel-1) { sel++; Refresh(); }
 		return true;
-	case DIK_MINUS:
+	case OAPI_KEY_MINUS:
 		scanning = 0;
 		SwitchFreq (sel, -20, false);
 		Refresh();
 		return true;
-	case DIK_EQUALS:
+	case OAPI_KEY_EQUALS:
 		scanning = 0;
 		SwitchFreq (sel, 20, false);
 		Refresh();
 		return true;
-	case DIK_LBRACKET:
+	case OAPI_KEY_LBRACKET:
 		scanning = 0;
 		SwitchFreq (sel, -1, true);
 		Refresh();
 		return true;
-	case DIK_RBRACKET:
+	case OAPI_KEY_RBRACKET:
 		scanning = 0;
 		SwitchFreq (sel, 1, true);
 		Refresh();
 		return true;
-	case DIK_Z:
+	case OAPI_KEY_Z:
 		if (sel < vessel->nnav) {
 			SwitchFreq (sel, -1, false);
 			scanning = -1;
@@ -147,7 +139,7 @@ bool Instrument_Comms::KeyBuffered (DWORD key)
 			Refresh();
 		}
 		return true;
-	case DIK_X:
+	case OAPI_KEY_X:
 		if (sel < vessel->nnav) {
 			SwitchFreq (sel, 1, false);
 			scanning = 1;
@@ -159,12 +151,12 @@ bool Instrument_Comms::KeyBuffered (DWORD key)
 	return false;
 }
 
-void Instrument_Comms::SwitchFreq (DWORD line, int step, bool minor)
+void Instrument_Comms::SwitchFreq (int line, int step, bool minor)
 {
 	if (minor) {
-		DWORD ch = (line < vessel->nnav ? vessel->GetNavChannel(line) : vessel->GetXpdrChannel());
-		DWORD minor = ch % 20;
-		DWORD major = ch / 20;
+		int ch = (line < vessel->nnav ? vessel->GetNavChannel(line) : vessel->GetXpdrChannel());
+		int minor = ch % 20;
+		int major = ch / 20;
 		if (step > 0) minor = (minor < 19 ? minor+1 : 0);
 		else          minor = (minor >  0 ? minor-1 : 19);
 		step = major*20 + minor - ch;
@@ -175,8 +167,8 @@ void Instrument_Comms::SwitchFreq (DWORD line, int step, bool minor)
 
 bool Instrument_Comms::ProcessButton (int bt, int event)
 {
-	static const DWORD btkey[8] = {DIK_COMMA, DIK_PERIOD, DIK_LBRACKET, DIK_MINUS,
-		DIK_RBRACKET, DIK_EQUALS, DIK_Z, DIK_X
+	static const int btkey[8] = {OAPI_KEY_COMMA, OAPI_KEY_PERIOD, OAPI_KEY_LBRACKET, OAPI_KEY_MINUS,
+		OAPI_KEY_RBRACKET, OAPI_KEY_EQUALS, OAPI_KEY_Z, OAPI_KEY_X
 	};
 	if (event & PANEL_MOUSE_LBDOWN) {
 		if (bt < 8) return KeyBuffered (btkey[bt]);

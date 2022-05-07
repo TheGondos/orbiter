@@ -32,7 +32,7 @@ HBITMAP g_hPause;          // "pause" button bitmap
 // ==============================================================
 // Initialise module
 
-DLLCLBK void InitModule (HINSTANCE hDLL)
+DLLCLBK void InitModule (DynamicModule *hDLL)
 {
 	INITCOMMONCONTROLSEX cc = {sizeof(INITCOMMONCONTROLSEX),ICC_TREEVIEW_CLASSES};
 	InitCommonControlsEx(&cc);
@@ -51,7 +51,7 @@ DLLCLBK void InitModule (HINSTANCE hDLL)
 // ==============================================================
 // Clean up module
 
-DLLCLBK void ExitModule (HINSTANCE hDLL)
+DLLCLBK void ExitModule (DynamicModule *hDLL)
 {
 	// Delete editor instance
 	delete g_editor;

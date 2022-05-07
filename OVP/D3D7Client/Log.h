@@ -50,7 +50,7 @@ void LogOut_Warning (const char *msg, ...);            // Write general warning 
 
 #define ASSERT(test) { if (!(test)) { LogOut_Error (__FUNCTION__, __FILE__, __LINE__, "Assertion failure"); DebugBreak(); exit(1); }}
 
-#define CHECKCWD(cwd,name) { char c[512]; _getcwd(c,512); if(strcmp(c,cwd)) { _chdir(cwd); sprintf (c,"CWD modified by module %s - Fixing.",name); LogOut_Warning(c); } }
+#define CHECKCWD(cwd,name) { char c[512]; _getcwd(c,512); if(strcmp(c,cwd)) { _chdir(cwd); sprintf (c,"CWD modified by module %s - Fixing.\n",name); LogOut_Warning(c); } }
 
 #ifndef __LOG_CPP
 extern char logs[256];

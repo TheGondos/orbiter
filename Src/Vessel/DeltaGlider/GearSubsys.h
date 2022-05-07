@@ -49,20 +49,20 @@ public:
 	void RaiseGear ();
 	void RevertGear ();
 	inline const AnimState2 &GearState() const { return gear_state; }
-	void clbkPostStep (double simt, double simdt, double mjd);
-	bool clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH);
-	bool clbkLoadVC (int vcid);
-	void clbkSaveState (FILEHANDLE scn);
-	bool clbkParseScenarioLine (const char *line);
-	void clbkPostCreation ();
-	bool clbkDrawHUD (int mode, const HUDPAINTSPEC *hps, oapi::Sketchpad *skp);
-	bool clbkPlaybackEvent (double simt, double event_t, const char *event_type, const char *event);
-	int clbkConsumeBufferedKey (DWORD key, bool down, char *kstate);
+	void clbkPostStep (double simt, double simdt, double mjd) override;
+	bool clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH) override;
+	bool clbkLoadVC (int vcid) override;
+	void clbkSaveState (FILEHANDLE scn) override;
+	bool clbkParseScenarioLine (const char *line) override;
+	void clbkPostCreation () override;
+	bool clbkDrawHUD (int mode, const HUDPAINTSPEC *hps, oapi::Sketchpad *skp) override;
+	bool clbkPlaybackEvent (double simt, double event_t, const char *event_type, const char *event) override;
+	int clbkConsumeBufferedKey (int key, bool down, char *kstate) override;
 
 private:
 	AnimState2 gear_state, glever_state;
-	UINT anim_gear;             // handle for landing gear animation
-	UINT anim_gearlever;        // VC gear lever
+	unsigned int anim_gear;             // handle for landing gear animation
+	unsigned int anim_gearlever;        // VC gear lever
 
 	GearLever *lever;
 	GearIndicator *indicator;
@@ -110,7 +110,7 @@ class WheelbrakeLever;
 class Wheelbrake: public DGSubsystem {
 public:
 	Wheelbrake (GearSubsystem *_subsys);
-	bool clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH);
+	bool clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH) override;
 
 private:
 	WheelbrakeLever *lever;

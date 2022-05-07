@@ -18,6 +18,7 @@
 // Failure subsystem
 // ==============================================================
 
+class MwsButton;
 class FailureSubsystem: public DGSubsystem {
 	friend class MwsButton;
 
@@ -26,8 +27,8 @@ public:
 	inline bool MWSActive() const { return bMWSActive; }
 	inline void MWSActivate() { bMWSActive = true; }
 	inline void MWSReset() { bMWSActive = false; }
-	void clbkPostStep (double simt, double simdt, double mjd);
-	bool clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH);
+	void clbkPostStep (double simt, double simdt, double mjd) override;
+	bool clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH) override;
 
 private:
 	bool bMWSActive, bMWSOn;                     // master warning flags

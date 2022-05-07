@@ -12,16 +12,16 @@
 
 // convenience macros
 // Note: by design, string comparisons are case-insensitive
-#define SECTION_MATCHES(str)    (_stricmp(pSection, str) == 0)
-#define SECTION_STARTSWITH(str) (_strnicmp(pSection, str, (len = static_cast<int>(strlen(str)))) == 0) 
-#define PNAME_MATCHES(str)      (_stricmp(pPropertyName, str) == 0)  
-#define PNAME_STARTSWITH(str)   (_strnicmp(pPropertyName, str, (len = static_cast<int>(strlen(str)))) == 0) 
-#define VALUE_MATCHES(str)      (_stricmp(pValue, str) == 0)
+#define SECTION_MATCHES(str)    (strcasecmp(pSection, str) == 0)
+#define SECTION_STARTSWITH(str) (strncasecmp(pSection, str, (len = static_cast<int>(strlen(str)))) == 0) 
+#define PNAME_MATCHES(str)      (strcasecmp(pPropertyName, str) == 0)  
+#define PNAME_STARTSWITH(str)   (strncasecmp(pPropertyName, str, (len = static_cast<int>(strlen(str)))) == 0) 
+#define VALUE_MATCHES(str)      (strcasecmp(pValue, str) == 0)
 
 // Must terminate last byte in the string in case pValue is too long to fit.
 // maxLength does NOT include space for the trailing null, so dest must actually be maxLength+1 in size
 #define STRNCPY(dest, maxLength) strncpy(dest, pValue, maxLength); if (*pValue == 0) { WriteLog("Value is missing."); return false; } dest[maxLength] = 0; processed = true;
-#define CSTRING_CPY(cstr) { LPTSTR buff = cstr.GetBuffer(MAX_VALUE_LENGTH); strncpy(buff, pValue, MAX_VALUE_LENGTH); cstr.ReleaseBuffer(); if (cstr.IsEmpty()) { WriteLog("Value is invalid or missing"); return false; } processed = true; }
+#define CSTRING_CPY(cstr) { cstr = pValue;if (cstr.empty()) { WriteLog("Value is invalid or missing"); return false; } processed = true; }
 
 #define SSCANF_BOOL(formatStr, a1)  { char c; if (sscanf(pValue, formatStr, &c) < 1) { WriteLog("Value is invalid or missing"); return false; } *a1 = ((c - '0') != 0); processed = true; } /* ASCII 0,1 to true/false */
 #define SSCANF1(formatStr, a1)  if (sscanf(pValue, formatStr, a1) < 1) { WriteLog("Value is invalid or missing"); return false; } processed = true;

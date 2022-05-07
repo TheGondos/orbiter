@@ -15,11 +15,11 @@
 #ifndef __CAMERA_H
 #define __CAMERA_H
 
-#include <d3d.h>
 #include <fstream>
 #include "Vecmat.h"
 #include "elevmgr.h"
 #include "CamAPI.h"
+#include <glm/glm.hpp>
 
 class Body;
 class Planet;
@@ -231,39 +231,32 @@ public:
 	void SetGroundObserver_TargetLock (bool lock);
 	double GroundObserver_TerrainLimit() const { return go.terrain_limit; }
 	void SetGroundObserver_TerrainLimit (double alt);
-	void OutputGroundObserverParams () const;
 
-	bool ProcessMouse (UINT event, DWORD state, DWORD x, DWORD y, const char *kstate);
+	bool ProcessMouse (oapi::MouseEvent event, int state, int x, int y, const char *kstate);
 	void UpdateMouse ();
 
 	void ClearPresets ();
 	// clear list of preset modes
 
-	DWORD nPreset() const { return npreset; }
+	int nPreset() const { return npreset; }
 	// number of preset modes
 
-	DWORD AddPreset (CameraMode *mode = 0);
+	int AddPreset (CameraMode *mode = 0);
 	// add entry to list (if mode==0, add current active camera mode)
 	// return value is index of mode in the list
 
-	bool DelPreset (DWORD idx);
+	bool DelPreset (int idx);
 	// removes a preset mode from the list
 
-	void RecallPreset (DWORD idx);
+	void RecallPreset (int idx);
 	// set camera mode to a preset mode from the list
 
-	CameraMode *GetPreset (DWORD idx);
+	CameraMode *GetPreset (int idx);
 	// retrieve a camera mode from the preset list
 
 	void Update ();
 	// Propagate camera state from S0 to S1. Note: This is called after world state has
 	// been propagated to S1, but before S1 is copied back to S0.
-
-	void SendDlgMessage (int msgid, void *msg) const;
-	// Notify Camera dialog box of a change
-
-	//inline D3DMATRIX *D3D_ViewMatrix ()
-	//{ return &view_mat; }
 
 	MATRIX4 ProjectionMatrix() const;
 	// Return projection matrix in full resolution
@@ -271,7 +264,7 @@ public:
 	MATRIX4 ViewMatrix() const;
 	// Return view matrix in full resolution
 
-	D3DMATRIX *D3D_ProjViewMatrix ();
+	glm::fmat4 *ProjViewMatrix ();
 	// Return product ProjectionMatrix * ViewMatrix
 
 	void ViewportToGlobalDir (double sx, double sy, Vector &gdir) const;
@@ -308,13 +301,13 @@ private:
 	void StoreVCParams();
 	bool RecallVCParams();
 
-	DWORD UpdateExternalControl (ExternalCameraControl *ecc);
+	int UpdateExternalControl (ExternalCameraControl *ecc);
 	// update camera from an external control source
 
 	ExtCamMode extmode;    // external camara mode
 	IntCamMode intmode;    // internal camera mode
 	CamAction action;      // current camera auto-action
-	DWORD ExtCtrlMode;     // if camera is externally controlled, this contains bitflags for data types
+	int ExtCtrlMode;     // if camera is externally controlled, this contains bitflags for data types
 	                       // (see CAMDATA_xxx constants in CamAPI.h)
 
 	POINT pm;              // last cursor position
@@ -382,15 +375,15 @@ private:
 	} go;
 
 	CameraMode **preset;           // list of preset camera modes
-	DWORD npreset;                 // list length
+	int npreset;                 // list length
 
 	// mouse parameters
 	bool mbdown[2];         // mouse buttons down?
 	int mx, my;             // mouse position
 
-	D3DMATRIX view_mat;     // D3D view matrix for current camera state
-	D3DMATRIX proj_mat;     // D3D projection matrix for current camera state
-	D3DMATRIX pv_mat;       // projection * view matrix
+	glm::fmat4 view_mat;     // view matrix for current camera state
+	glm::fmat4 proj_mat;     // projection matrix for current camera state
+	glm::fmat4 pv_mat;       // projection * view matrix
 	bool pv_mat_valid;      // flag for validity of pv_mat
 
 	mutable std::vector<ElevationTile> etile;

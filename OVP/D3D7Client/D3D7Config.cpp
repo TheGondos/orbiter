@@ -12,7 +12,7 @@
 // ==============================================================
 
 #include "D3D7Config.h"
-#include "orbitersdk.h"
+#include "Orbitersdk.h"
 
 static char *cfgfile = "D3D7Client.cfg";
 
@@ -57,17 +57,17 @@ bool D3D7Config::ReadParams ()
 	FILEHANDLE hFile = oapiOpenFile (cfgfile, FILE_IN, ROOT);
 	if (!hFile) return false;
 	if (oapiReadItem_int (hFile, "PlanetPreloadMode", i))
-		PlanetPreloadMode = max (0, min (1, i));
+		PlanetPreloadMode = std::max (0, std::min (1, i));
 	if (oapiReadItem_int (hFile, "PlanetTexLoadFreq", i))
-		PlanetLoadFrequency = max (1, min (1000, i));
+		PlanetLoadFrequency = std::max (1, std::min (1000, i));
 	if (oapiReadItem_int (hFile, "PlanetMipmapMode", i))
-		PlanetMipmapMode = max (0, min (2, i));
+		PlanetMipmapMode = std::max (0, std::min (2, i));
 	if (oapiReadItem_int (hFile, "PlanetAnisoMode", i))
-		PlanetAnisoMode = max (1, min (16, i));
+		PlanetAnisoMode = std::max (1, std::min (16, i));
 	if (oapiReadItem_int (hFile, "PlanetTileLoadFlags", i))
-		PlanetTileLoadFlags = max(1, min (3, i));
+		PlanetTileLoadFlags = std::max(1, std::min (3, i));
 	if (oapiReadItem_float (hFile, "PlanetMipmapBias", d))
-		PlanetMipmapBias = max (-1.0, min (1.0, d));
+		PlanetMipmapBias = std::max (-1.0, std::min (1.0, d));
 	oapiCloseFile (hFile, FILE_IN);
 	return true;
 }

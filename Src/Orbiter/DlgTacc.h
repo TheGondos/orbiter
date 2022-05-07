@@ -1,23 +1,10 @@
-// Copyright (c) Martin Schweiger
-// Licensed under the MIT License
+#pragma once
 
-// ======================================================================
-// Time acceleration dialog
-// ======================================================================
+#include "OrbiterAPI.h"
 
-#ifndef __DLGTACC_H
-#define __DLGTACC_H
-
-#include "DialogWin.h"
-
-class DlgTacc: public DialogWin {
+class DlgTacc : public GUIElement {
 public:
-	DlgTacc (HINSTANCE hInstance, HWND hParent, void *context);
-	void Message (DWORD msg, void *data);
-	void RegisterWarp (HWND hDlg, double warp, bool commit = true, bool edit = true, bool slide = true);
-	BOOL OnInitDialog (HWND hDlg, WPARAM wParam, LPARAM lParam);
-	BOOL OnCommand (HWND hDlg, WORD id, WORD code, HWND hControl);
-	BOOL OnHScroll (HWND hDlg, WORD request, WORD curpos, HWND hControl);
+    DlgTacc(const std::string &name);
+    void Show() override;
+    static const std::string etype;
 };
-
-#endif // !__DLGTACC_H

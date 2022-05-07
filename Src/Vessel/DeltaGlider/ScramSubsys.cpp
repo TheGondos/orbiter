@@ -12,6 +12,7 @@
 #include "ScramSubsys.h"
 #include "meshres_p0.h"
 #include "meshres_vc.h"
+#include <cstring>
 
 // --------------------------------------------------------------
 // constructor
@@ -28,7 +29,7 @@ Scramjet::Scramjet (VESSEL *v)
 Scramjet::~Scramjet ()
 {
 	if (nthdef) {  // delete list of thruster definitions
-		for (UINT i = 0; i < nthdef; i++)
+		for (unsigned int i = 0; i < nthdef; i++)
 			delete thdef[i];
 		delete []thdef;
 	}
@@ -82,10 +83,10 @@ void Scramjet::Thrust (double *F) const
 		tr  = (1.0 + 0.5*(atm->gamma-1.0) * M*M);          // temperature ratio
 		Td  = T0 * tr;                                     // diffuser temperature
 		pd  = p0 * pow (Td/T0, atm->gamma/(atm->gamma-1.0)); // diffuser pressure
-		precov = max (0.0, 1.0-0.075*pow (max(M,1.0)-1.0, 1.35)); // pressure recovery
+		precov = std::max (0.0, 1.0-0.075*pow (std::max(M,1.0)-1.0, 1.35)); // pressure recovery
 		dmafac = dma_scale*precov*pd;
 
-		for (UINT i = 0; i < nthdef; i++) {
+		for (unsigned int i = 0; i < nthdef; i++) {
 			Tb0 = thdef[i]->Tb_max;                        // max burner temperature
 			if (Tb0 > Td) {                                // we are within operational range
 				lvl  = vessel->GetThrusterLevel (thdef[i]->th); // throttle level
@@ -103,7 +104,7 @@ void Scramjet::Thrust (double *F) const
 				Te   = Tb * pow (p0/pd, (atm->gamma-1.0)/atm->gamma); // exhaust temperature
 				ve   = sqrt (2.0*cp*(Tb-Te));              // exhaust velocity
 			    Fs  = (1.0+D)*ve - v0;                     // specific thrust
-				thdef[i]->F = F[i] = max (0.0, Fs*dma);    // thrust force
+				thdef[i]->F = F[i] = std::max (0.0, Fs*dma);    // thrust force
 				thdef[i]->dmf = dmf;
 				thdef[i]->T[1] = Tb;
 				thdef[i]->T[2] = Te;
@@ -120,7 +121,7 @@ void Scramjet::Thrust (double *F) const
 
 	} else {   // no atmospheric parameters
 
-		for (UINT i = 0; i < nthdef; i++) {
+		for (unsigned int i = 0; i < nthdef; i++) {
 			thdef[i]->F = F[i] = 0.0;
 			thdef[i]->dmf = 0.0;
 		}
@@ -130,7 +131,7 @@ void Scramjet::Thrust (double *F) const
 
 // --------------------------------------------------------------
 
-double Scramjet::TSFC (UINT idx) const
+double Scramjet::TSFC (unsigned int idx) const
 {
 	const double eps = 1e-5;
 	return thdef[idx]->dmf/(thdef[idx]->F+eps);
@@ -220,10 +221,10 @@ void ScramSubsystem::clbkPostStep (double simt, double simdt, double mjd)
 		double level = DG()->GetThrusterLevel (hScram[i]);
 		double Fmax  = Fscram[i]/(level+eps);
 		DG()->SetThrusterMax0 (hScram[i], Fmax);
-		DG()->SetThrusterIsp (hScram[i], max (1.0, Fscram[i]/(scram->DMF(i)+eps))); // don't allow ISP=0
+		DG()->SetThrusterIsp (hScram[i], std::max (1.0, Fscram[i]/(scram->DMF(i)+eps))); // don't allow ISP=0
 
 		// the following are used for calculating exhaust density
-		scram_max[i] = min (Fmax/Fnominal, 1.0);
+		scram_max[i] = std::min (Fmax/Fnominal, 1.0);
 		scram_intensity[i] = level * scram_max[i];
 	}
 }
@@ -255,14 +256,14 @@ ScramThrottle::ScramThrottle (DGSubsystem *_subsys)
 	ELID_LEVER = AddElement (lever = new ScramThrottleLever (this));
 
 	// VC animation: Left scram engine throttle
-	static UINT ScramThrottleLGrp[2] = {GRP_THROTTLE_SCRAM_L1_VC,GRP_THROTTLE_SCRAM_L2_VC};
+	static unsigned int ScramThrottleLGrp[2] = {GRP_THROTTLE_SCRAM_L1_VC,GRP_THROTTLE_SCRAM_L2_VC};
 	static MGROUP_ROTATE ScramThrottleL (1, ScramThrottleLGrp, 2,
 		_V(0,0.7849,6.96), _V(1,0,0), (float)(30*RAD));
 	anim_lever[0] = DG()->CreateAnimation (0);
 	DG()->AddAnimationComponent (anim_lever[0], 0, 1, &ScramThrottleL);
 
 	// VC animation: Right scram engine throttle
-	static UINT ScramThrottleRGrp[2] = {GRP_THROTTLE_SCRAM_R1_VC,GRP_THROTTLE_SCRAM_R2_VC};
+	static unsigned int ScramThrottleRGrp[2] = {GRP_THROTTLE_SCRAM_R1_VC,GRP_THROTTLE_SCRAM_R2_VC};
 	static MGROUP_ROTATE ScramThrottleR (1, ScramThrottleRGrp, 2,
 		_V(0,0.7849,6.96), _V(1,0,0), (float)(30*RAD));
 	anim_lever[1] =  DG()->CreateAnimation (0);
@@ -271,7 +272,7 @@ ScramThrottle::ScramThrottle (DGSubsystem *_subsys)
 
 // --------------------------------------------------------------
 
-bool ScramThrottle::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH)
+bool ScramThrottle::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH)
 {
 	if (panelid != 0) return false;
 
@@ -315,7 +316,7 @@ void ScramThrottleLever::Reset2D (int panelid, MESHHANDLE hMesh)
 void ScramThrottleLever::ResetVC (DEVMESHHANDLE hMesh)
 {
 	for (int i = 0; i < 2; i++)
-		sliderpos[i] = (UINT)-1;
+		sliderpos[i] = (unsigned int)-1;
 }
 
 // --------------------------------------------------------------
@@ -351,7 +352,7 @@ bool ScramThrottleLever::ProcessMouse2D (int event, int mx, int my)
 		else if (mx >= 37) ctrl = 1; // right engine
 		else               ctrl = 2; // both
 	}
-	((ScramSubsystem*)component->Parent())->SetThrusterLevel (ctrl, max (0.0, min (1.0, 1.0-my/84.0)));
+	((ScramSubsystem*)component->Parent())->SetThrusterLevel (ctrl, std::max (0.0, std::min (1.0, 1.0-my/84.0)));
 	return true;
 }
 
@@ -359,11 +360,11 @@ bool ScramThrottleLever::ProcessMouse2D (int event, int mx, int my)
 
 bool ScramThrottleLever::RedrawVC (DEVMESHHANDLE hMesh, SURFHANDLE hSurf)
 {
-	UINT i, pos;
+	unsigned int i, pos;
 
 	for (i = 0; i < 2; i++) {
 		double level = ((ScramSubsystem*)component->Parent())->GetThrusterLevel (i);
-		UINT pos = (UINT)(level*500.0);
+		unsigned int pos = (unsigned int)(level*500.0);
 		if (pos != sliderpos[i]) {
 			component->DG()->SetAnimation (component->anim_lever[i], level);
 			sliderpos[i] = pos;
@@ -388,7 +389,7 @@ bool ScramThrottleLever::ProcessMouseVC (int event, VECTOR3 &p)
 		for (int i = 0; i < 2; i++) {
 			if (ctrl == i || ctrl == 2) {
 				double lvl = ((ScramSubsystem*)component->Parent())->GetThrusterLevel (i);
-				lvl = max (0.0, min (1.0, lvl + (p.y-py)));
+				lvl = std::max (0.0, std::min (1.0, lvl + (p.y-py)));
 				if (lvl < 0.01) lvl = 0.0;
 				((ScramSubsystem*)component->Parent())->SetThrusterLevel (i, lvl);
 			}

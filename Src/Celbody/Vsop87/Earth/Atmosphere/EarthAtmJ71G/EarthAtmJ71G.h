@@ -5,7 +5,7 @@
 #define __EARTHATMJ71G_H
 
 #include "OrbiterAPI.h"
-#include "CelbodyAPI.h"
+#include "CelBodyAPI.h"
 
 // ======================================================================
 // class EarthAtmosphere_J71G
@@ -15,9 +15,9 @@
 class EarthAtmosphere_J71G: public ATMOSPHERE {
 public:
 	EarthAtmosphere_J71G (CELBODY2 *body);
-	const char *clbkName () const;
-	bool clbkConstants (ATMCONST *atmc) const;
-	bool clbkParams (const PRM_IN *prm_in, PRM_OUT *prm);
+	const char *clbkName () const override;
+	bool clbkConstants (ATMCONST *atmc) const override;
+	bool clbkParams (const PRM_IN *prm_in, PRM_OUT *prm) override;
 
 private:
 	OBJHANDLE hBody;   // handle for the associated celestial body

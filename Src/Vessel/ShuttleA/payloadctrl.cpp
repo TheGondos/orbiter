@@ -11,6 +11,7 @@
 
 #define STRICT 1
 #include "payloadctrl.h"
+#include <cstring>
 
 static const float texw = (float)PANELEL_TEXW;
 static const float texh = (float)PANELEL_TEXH;
@@ -33,10 +34,10 @@ PayloadRelease::PayloadRelease (ShuttleA *v, MESHHANDLE hMesh)
 
 // --------------------------------------------------------------
 
-void PayloadRelease::AddMeshData2D (MESHHANDLE hMesh, DWORD grpidx)
+void PayloadRelease::AddMeshData2D (MESHHANDLE hMesh, int grpidx)
 {
-	static const DWORD nvtx = 4*6;
-	static const DWORD nidx = 6*6;
+	static const int nvtx = 4*6;
+	static const int nidx = 6*6;
 	static NTVERTEX vtx[nvtx];
 	int i, j, ofs;
 	float x0, y0;
@@ -51,7 +52,7 @@ void PayloadRelease::AddMeshData2D (MESHHANDLE hMesh, DWORD grpidx)
 			vtx[ofs+2].tv = vtx[ofs+3].tv = tx_dy/texh + (vtx[ofs].tv = vtx[ofs+1].tv = tx_y0/texh);
 		}
 	}
-	static WORD idx[nidx];
+	static uint16_t idx[nidx];
 	for (i = j = 0; i < 6; i++) {
 		ofs = i*4;
 		idx[j++] = ofs;

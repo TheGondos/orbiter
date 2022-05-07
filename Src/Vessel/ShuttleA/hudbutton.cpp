@@ -32,10 +32,10 @@ HUDButton::HUDButton (VESSEL3 *v): PanelElement (v)
 
 // ==============================================================
 
-void HUDButton::AddMeshData2D (MESHHANDLE hMesh, DWORD grpidx)
+void HUDButton::AddMeshData2D (MESHHANDLE hMesh, int grpidx)
 {
-	const DWORD nvtx = 4*3;
-	const DWORD nidx = 6*3;
+	const int nvtx = 4*3;
+	const int nidx = 6*3;
 	static NTVERTEX vtx[nvtx] = {
 		// "Orbit" button
 		{bb_x0,                 bb_y0,      0,  0,0,0,  tx_x0/texw,             tx_y0/texh},
@@ -53,7 +53,7 @@ void HUDButton::AddMeshData2D (MESHHANDLE hMesh, DWORD grpidx)
 		{bb_x0+2.0f*bb_dx,      bb_y0+tx_dy,0,  0,0,0,  (tx_x0+2.0f*tx_dx)/texw,tx_y0/texh},
 		{bb_x0+2.0f*bb_dx+tx_dx,bb_y0+tx_dy,0,  0,0,0,  (tx_x0+3.0f*tx_dx)/texw,tx_y0/texh}
 	};
-	static WORD idx[nidx] = {
+	static uint16_t idx[nidx] = {
 		0,1,2, 3,2,1,
 		4,5,6, 7,6,5,
 		8,9,10, 11,10,9

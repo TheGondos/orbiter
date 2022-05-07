@@ -13,8 +13,8 @@
 
 #include "Atlantis.h"
 #include "AscentAP.h"
-#include "resource.h"
-#include "Common\Dialog\Graph.h"
+#include <cstring>
+#define _strnicmp strncasecmp
 
 extern GDIParams g_Param;
 
@@ -58,7 +58,7 @@ void AscentAP::Update (double simt)
 	if (active) {
 		if (vessel->status == 0) {
 			if (met < 0.0) {
-				vessel->SetEngineLevel (ENGINE_MAIN, min (1.0, (SRB_STABILISATION_TIME+met)*0.4));
+				vessel->SetEngineLevel (ENGINE_MAIN, std::min (1.0, (SRB_STABILISATION_TIME+met)*0.4));
 			} else {
 				t_launch = vessel->t0 = simt;
 				vessel->pET->IgniteSRBs ();
@@ -213,7 +213,7 @@ double AscentAP::SSMEThrustProfile(double met)
 
 	if (vessel->status == 0) { // pre-launch
 		if (met < 0) {
-			return min(1.0, (SRB_STABILISATION_TIME + met)*0.4); // power up for liftoff
+			return std::min(1.0, (SRB_STABILISATION_TIME + met)*0.4); // power up for liftoff
 		}
 	}
 	else if (vessel->status < 3) {
@@ -243,7 +243,7 @@ double AscentAP::SSMEThrustProfile(double met)
 					if (dt > 0.0)
 						dacc_dt = dacc / dt;
 					double dth = a * (acc - acc_tgt) + b * dacc_dt;
-					th = max(0.0, min(1.0, vessel->GetThrusterGroupLevel(THGROUP_MAIN) + dth*dt));
+					th = std::max(0.0, std::min(1.0, vessel->GetThrusterGroupLevel(THGROUP_MAIN) + dth*dt));
 				}
 			}
 			pt = t;
@@ -491,7 +491,7 @@ double AscentAP::GetTargetRollRate (double tgt, bool tgt_is_heading) const
 		else if (dh < -PI) dh += PI2;
 	}
 
-	double rate = min (maxrate, max (-maxrate, a*dh + b*droll));
+	double rate = std::min (maxrate, std::max (-maxrate, a*dh + b*droll));
 	
 	return rate;
 }
@@ -533,13 +533,13 @@ bool AscentAP::ParseScenarioLine (const char *line)
 // class AscentApMfd: MFD interface for ascent autopilot
 // ==============================================================
 
-AscentApMfd::AscentApMfd (DWORD w, DWORD h, VESSEL *v)
+AscentApMfd::AscentApMfd (int w, int h, VESSEL *v)
 : MFD2 (w, h, v)
 {
 	ap = ((Atlantis*)v)->AscentAutopilot();
 	ap->SetLaunchAzimuth (ap->GetLaunchAzimuth());
 	cpg = 0;
-	pen[0] = oapiCreatePen(1, 1, RGB(96,96,96));
+	pen[0] = oapiCreatePen(1, 1, 0x606060);
 }
 
 // --------------------------------------------------------------
@@ -581,9 +581,9 @@ void AscentApMfd::UpdatePg_Prm (oapi::Sketchpad *skp)
 	char cbuf[256];
 
 	if (!ap->GetVessel()->status) {
-		sprintf (cbuf, "Launch azimuth: %0.1fº", ap->GetLaunchAzimuth()*DEG);
+		sprintf (cbuf, "Launch azimuth: %0.1fï¿½", ap->GetLaunchAzimuth()*DEG);
 		skp->Text (cw/2, (ch*3)/2, cbuf, strlen(cbuf));
-		sprintf (cbuf, "Orbit inc:      %0.1fº", ap->GetTargetInclination()*DEG);
+		sprintf (cbuf, "Orbit inc:      %0.1fï¿½", ap->GetTargetInclination()*DEG);
 		skp->Text (cw/2, (ch*5)/2, cbuf, strlen(cbuf));
 		sprintf (cbuf, "Orbit altitude: %0.1fkm", ap->GetOrbitAltitude()*1e-3);
 		skp->Text (cw/2, (ch*7)/2, cbuf, strlen(cbuf));
@@ -606,14 +606,14 @@ void AscentApMfd::UpdatePg_Prm (oapi::Sketchpad *skp)
 		ap->GetVessel()->GetPeDist(alt_pe_cur);
 		alt_ap_cur -= R; alt_pe_cur -= R;
 		skp->Text (cw*13, ch*2, "Cur    Tgt    D", 15);
-		skp->Text (cw/2, ch*3, "Azimuth [º]", 11);
+		skp->Text (cw/2, ch*3, "Azimuth [ï¿½]", 11);
 		sprintf (cbuf, "%0.1lf", az_cur*DEG);
 		skp->Text (cw*13, ch*3, cbuf, strlen(cbuf));
 		sprintf (cbuf, "%0.1lf", az_tgt*DEG);
 		skp->Text (cw*20, ch*3, cbuf, strlen(cbuf));
 		sprintf (cbuf, "%+0.2f", az_err*DEG);
 		skp->Text (cw*27, ch*3, cbuf, strlen(cbuf));
-		skp->Text (cw/2, ch*4, "Pitch [º]", 9);
+		skp->Text (cw/2, ch*4, "Pitch [ï¿½]", 9);
 		sprintf (cbuf, "%0.1lf", pt_cur*DEG);
 		skp->Text (cw*13, ch*4, cbuf, strlen(cbuf));
 		sprintf (cbuf, "%0.1lf", pt_tgt*DEG);
@@ -710,20 +710,20 @@ void AscentApMfd::DrawGimbal (oapi::Sketchpad *skp, int cx, int cy, double pitch
 
 // --------------------------------------------------------------
 
-char *AscentApMfd::ButtonLabel (int bt)
+const char *AscentApMfd::ButtonLabel (int bt)
 {
 	if (!bt)
-		return (ap->Active() ? "DA" : ap->GetVessel()->status == 0 ? "L" : "EA");
+		return const_cast< char * >(ap->Active() ? "DA" : ap->GetVessel()->status == 0 ? "L" : "EA");
 
 	if (bt <= 2) {
-		static char *label[2] = {"PG-", "PG+"};
+		static const char *label[2] = {"PG-", "PG+"};
 		return label[bt-1];
 	}
 
 	switch (cpg) {
 		case 0: {
 			if (ap->Active() || ap->GetVessel()->status) return 0;
-			static char *label[5] = {"AZ-", "AZ+", "AL-", "AL+", "OM2"};
+			static const char *label[5] = {"AZ-", "AZ+", "AL-", "AL+", "OM2"};
 			return (bt < 8 ? label[bt-3] : 0);
 		}
 	}
@@ -766,7 +766,7 @@ int AscentApMfd::ButtonMenu (const MFDBUTTONMENU **menu) const
 
 // --------------------------------------------------------------
 
-bool AscentApMfd::ConsumeKeyBuffered (DWORD key)
+bool AscentApMfd::ConsumeKeyBuffered (int key)
 {
 	switch (key) {
 	case OAPI_KEY_L:
@@ -806,20 +806,20 @@ bool AscentApMfd::ConsumeButton (int bt, int event)
 {
 	if (!bt) {
 		if (event & PANEL_MOUSE_LBDOWN) {
-			DWORD btkey = (ap->Active() ? OAPI_KEY_D : ap->GetVessel()->status == 0 ? OAPI_KEY_L : OAPI_KEY_E);
+			int btkey = (ap->Active() ? OAPI_KEY_D : ap->GetVessel()->status == 0 ? OAPI_KEY_L : OAPI_KEY_E);
 			return ConsumeKeyBuffered (btkey);
 		}
 	}
 
 	if (bt < 3) {
 		if (event & PANEL_MOUSE_LBDOWN) {
-			static const DWORD btkey[2] = {OAPI_KEY_COMMA, OAPI_KEY_PERIOD};
+			static const int btkey[2] = {OAPI_KEY_COMMA, OAPI_KEY_PERIOD};
 			return ConsumeKeyBuffered (btkey[bt-1]);
 		}
 	}
 
 	if (bt < 8 && cpg == 0 && !ap->Active() && ap->GetVessel()->status == 0) {
-		static const DWORD btkey[5] = {OAPI_KEY_SEMICOLON, OAPI_KEY_APOSTROPHE, OAPI_KEY_MINUS, OAPI_KEY_EQUALS, OAPI_KEY_O};
+		static const int btkey[5] = {OAPI_KEY_SEMICOLON, OAPI_KEY_APOSTROPHE, OAPI_KEY_MINUS, OAPI_KEY_EQUALS, OAPI_KEY_O};
 		if (event & PANEL_MOUSE_LBDOWN) {
 			return ConsumeKeyBuffered(btkey[bt-3]);
 		} else if (event & PANEL_MOUSE_LBUP) {
@@ -844,7 +844,7 @@ bool AscentApMfd::ConsumeButton (int bt, int event)
 
 void AscentApMfd::DecPage ()
 {
-	const DWORD npage = 4;
+	const int npage = 4;
 	cpg = (cpg == 0 ? npage-3 : cpg-1);
 	InvalidateButtons();
 	InvalidateDisplay();
@@ -854,7 +854,7 @@ void AscentApMfd::DecPage ()
 
 void AscentApMfd::IncPage ()
 {
-	const DWORD npage = 4;
+	const int npage = 4;
 	cpg = (cpg == npage-1 ? 0 : cpg+1);
 	InvalidateButtons();
 	InvalidateDisplay();
@@ -901,7 +901,7 @@ void AscentApMfd::InitDecAzimuth ()
 {
 	set_mode = MODE_AZIMUTH_DEC;
 	ref_t = oapiGetSysTime();
-	ref_val = max(ap->GetLaunchAzimuth()-RAD*0.1, 0);
+	ref_val = std::max(ap->GetLaunchAzimuth()-RAD*0.1, 0.0);
 	ap->SetLaunchAzimuth(ref_val);
 	InvalidateDisplay();
 }
@@ -912,7 +912,7 @@ void AscentApMfd::InitIncAzimuth ()
 {
 	set_mode = MODE_AZIMUTH_INC;
 	ref_t = oapiGetSysTime();
-	ref_val = min(ap->GetLaunchAzimuth()+RAD*0.1, PI2);
+	ref_val = std::min(ap->GetLaunchAzimuth()+RAD*0.1, PI2);
 	ap->SetLaunchAzimuth(ref_val);
 	InvalidateDisplay();
 }
@@ -923,12 +923,12 @@ void AscentApMfd::DecAzimuth()
 {
 	double dt = oapiGetSysTime()-ref_t;
 	if (dt < 0.2) return;
-	double da = -min(3.0,dt)*RAD*0.2;
+	double da = -std::min(3.0,dt)*RAD*0.2;
 	if (dt > 3.0)
-		da -= min(dt-3.0,3.0)*RAD*2.0;
+		da -= std::min(dt-3.0,3.0)*RAD*2.0;
 	if (dt > 6.0)
 		da -= (dt-6.0)*RAD*20.0;
-	double az = max(ref_val + da, 0);
+	double az = std::max(ref_val + da, 0.0);
 	ap->SetLaunchAzimuth (az);
 	InvalidateDisplay();
 }
@@ -939,12 +939,12 @@ void AscentApMfd::IncAzimuth()
 {
 	double dt = oapiGetSysTime()-ref_t;
 	if (dt < 0.2) return;
-	double da = min(3.0,dt)*RAD*0.2;
+	double da = std::min(3.0,dt)*RAD*0.2;
 	if (dt > 3.0)
-		da += min(dt-3.0,3.0)*RAD*2.0;
+		da += std::min(dt-3.0,3.0)*RAD*2.0;
 	if (dt > 6.0)
 		da += (dt-6.0)*RAD*20.0;
-	double az = min(ref_val + da, PI2);
+	double az = std::min(ref_val + da, PI2);
 	ap->SetLaunchAzimuth (az);
 	InvalidateDisplay();
 }
@@ -955,7 +955,7 @@ void AscentApMfd::InitDecAltitude ()
 {
 	set_mode = MODE_AZIMUTH_DEC;
 	ref_t = oapiGetSysTime();
-	ref_val = max(ap->GetOrbitAltitude()-100, 0);
+	ref_val = std::max(ap->GetOrbitAltitude()-100, 0.0);
 	ap->SetOrbitAltitude(ref_val);
 	InvalidateDisplay();
 }
@@ -977,12 +977,12 @@ void AscentApMfd::DecAltitude()
 {
 	double dt = oapiGetSysTime()-ref_t;
 	if (dt < 0.2) return;
-	double da = -min(3.0,dt)*1e3*0.2;
+	double da = -std::min(3.0,dt)*1e3*0.2;
 	if (dt > 3.0)
-		da -= min(dt-3.0,3.0)*1e3*2.0;
+		da -= std::min(dt-3.0,3.0)*1e3*2.0;
 	if (dt > 6.0)
 		da -= (dt-6.0)*1e3*20.0;
-	double alt = max(ref_val + da, 0);
+	double alt = std::max(ref_val + da, 0.0);
 	ap->SetOrbitAltitude (alt);
 	InvalidateDisplay();
 }
@@ -993,9 +993,9 @@ void AscentApMfd::IncAltitude()
 {
 	double dt = oapiGetSysTime()-ref_t;
 	if (dt < 0.2) return;
-	double da = min(3.0,dt)*1e3*0.2;
+	double da = std::min(3.0,dt)*1e3*0.2;
 	if (dt > 3.0)
-		da += min(dt-3.0,3.0)*1e3*2.0;
+		da += std::min(dt-3.0,3.0)*1e3*2.0;
 	if (dt > 6.0)
 		da += (dt-6.0)*1e3*20.0;
 	double alt = ref_val + da;
@@ -1012,12 +1012,12 @@ void AscentApMfd::ToggleOMS2Schedule ()
 }
 
 // --------------------------------------------------------------
-
-OAPI_MSGTYPE AscentApMfd::MsgProc (UINT msg, UINT mfd, WPARAM wparam, LPARAM lparam)
+OAPI_MSGTYPE AscentApMfd::MsgProc (MFD_msg msg, MfdId mfd, MFDMODEOPENSPEC *param, VESSEL *vessel)
 {
 	switch (msg) {
-	case OAPI_MSG_MFD_OPENED:
-		return (OAPI_MSGTYPE)(new AscentApMfd (LOWORD(wparam), HIWORD(wparam), (VESSEL*)lparam));
+	case OAPI_MSG_MFD_OPENEDEX:
+		return (OAPI_MSGTYPE)(new AscentApMfd (param->h, param->w, vessel));
+	default: break;
 	}
 	return 0;
 }
@@ -1026,7 +1026,7 @@ OAPI_MSGTYPE AscentApMfd::MsgProc (UINT msg, UINT mfd, WPARAM wparam, LPARAM lpa
 // ==============================================================
 // class AscentAPDlg: dialog interface for ascent autopilot
 // ==============================================================
-
+/*
 AscentAPDlg::AscentAPDlg (AscentAP *_ap): TabbedDialog (IDD_ASCENTAP, IDC_TAB1)
 {
 	ap = _ap;
@@ -1180,7 +1180,7 @@ INT_PTR AscentAPDlgTabGimbal::DlgProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
 	case WM_INITDIALOG: {
 		RECT rect;
 		GetClientRect (GetDlgItem (hWnd, IDC_SSME_L), &rect);
-		rad = min (rect.right-rect.left, rect.bottom-rect.top)*0.5;
+		rad = std::min (rect.right-rect.left, rect.bottom-rect.top)*0.5;
 		} return TRUE;
 	case WM_PAINT:
 		RepaintAll (hWnd);
@@ -1248,12 +1248,12 @@ void AscentAPDlgTabGimbal::PaintGimbalCross (HDC hDC, const RECT &rect, int x, i
 	cnty = (ymin+ymax)/2;
 	x += cntx, y += cnty;
 	if (x >= xmin && x < xmax) {
-		MoveToEx (hDC, x, max(y-10, ymin), NULL);
-		LineTo (hDC, x, min(y+11, ymax));
+		MoveToEx (hDC, x, std::max(y-10, ymin), NULL);
+		LineTo (hDC, x, std::min(y+11, ymax));
 	}
 	if (y >= ymin && y < ymax) {
-		MoveToEx (hDC, max(x-10, xmin), y, NULL);
-		LineTo (hDC, min(x+11,xmax), y);
+		MoveToEx (hDC, std::max(x-10, xmin), y, NULL);
+		LineTo (hDC, std::min(x+11,xmax), y);
 	}
 }
 
@@ -1440,7 +1440,7 @@ INT_PTR AscentAPDlgTabAltitude::DlgProc (HWND hWnd, UINT uMsg, WPARAM wParam, LP
 	}
 	return FALSE;
 }
-
+*/
 // ==============================================================
 // auxiliary functions
 // ==============================================================
@@ -1459,7 +1459,7 @@ const char *MetStr (double met)
 	m = (int)(met/60.0);
 	met -= m*60;
 	int nh = (h < 100 ? 2:3);
-	h = min(h,999);
+	h = std::min(h,999);
 	sprintf (str+1, "%0*d:%02d:%04.1f", nh, h, m, met);
 	return str;
 }

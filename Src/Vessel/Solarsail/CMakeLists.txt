@@ -21,9 +21,9 @@ target_include_directories(Solarsail
 )
 
 target_link_libraries(Solarsail
-	${ORBITER_LIB}
+#	${ORBITER_LIB}
 	${ORBITER_SDK_LIB}
-	${LUA_LIB}
+	lua::lib
 )
 
 add_custom_command(
@@ -67,7 +67,7 @@ set_target_properties(Solarsail_Prerequisites
 
 # Installation
 install(TARGETS Solarsail
-	RUNTIME
+#	RUNTIME
 	DESTINATION ${ORBITER_INSTALL_MODULE_DIR}
 )
 install(DIRECTORY ${CONFIG_SOURCE_DIR}/

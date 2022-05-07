@@ -1,7 +1,8 @@
 // Copyright (c) Martin Schweiger
 // Licensed under the MIT License
 
-#include <d3d.h>
+#undef min
+#undef max
 #include <stdio.h>
 #include <iostream>
 #include <fstream>
@@ -12,14 +13,8 @@
 #include "Base.h"
 #include "Camera.h"
 #include "Log.h"
-#include "Shadow.h"
 #include "Util.h"
-
-#ifdef INLINEGRAPHICS
-#include "OGraphics.h"
-#include "Mesh.h"
-#include "Scene.h"
-#endif // INLINEGRAPHICS
+#include <cmath>
 
 using namespace std;
 
@@ -149,12 +144,12 @@ void BaseObject::Setup ()
 	relpos.y += yofs;
 }
 
-D3DVALUE BaseObject::ElevCorrection (D3DVALUE px, D3DVALUE pz)
+double BaseObject::ElevCorrection (double px, double pz)
 {
 	double r = base->RefPlanet()->Size();
 	double r2 = r*r;
 	double d2 = px*px + pz*pz;
-	return D3DVAL(r - sqrt (r2+d2));
+	return r - sqrt (r2+d2);
 }
 
 void BaseObject::MapToCurvature (NTVERTEX *vtx, int nvtx)
@@ -183,7 +178,7 @@ void BaseObject::MapToAltitude (NTVERTEX *vtx, int nvtx)
 void BaseObject::ParseError (const char *msg) const
 {
 	char errmsg[256];
-	_snprintf (errmsg, 255, "Parse error from base definition file for %s: %s", base->Name(), msg);
+	snprintf (errmsg, 255, "Parse error from base definition file for %s: %s", base->Name(), msg);
 	LOGOUT_ERR(errmsg);
 }
 
@@ -207,7 +202,7 @@ MeshObject::~MeshObject ()
 	if (fname) free (fname);
 	if (mesh) delete mesh;
 }
-
+#define _strdup strdup
 int MeshObject::ParseLine (const char *label, const char *value)
 {
 	int res = 0;
@@ -283,7 +278,7 @@ void MeshObject::Deactivate ()
 #endif
 }
 
-bool MeshObject::GetGroupSpec (int grp, DWORD &nvtx, DWORD &nidx, LONGLONG &_texid,
+bool MeshObject::GetGroupSpec (int grp, int &nvtx, int &nidx, uint64_t &_texid,
 	bool &undershadow, bool &groundshadow)
 {
 	GroupSpec *gs = mesh->GetGroup (grp);
@@ -296,13 +291,13 @@ bool MeshObject::GetGroupSpec (int grp, DWORD &nvtx, DWORD &nidx, LONGLONG &_tex
 	return true;
 }
 
-void MeshObject::ExportGroup (int grp, NTVERTEX *vtx, WORD *idx, DWORD &idx_ofs)
+void MeshObject::ExportGroup (int grp, NTVERTEX *vtx, uint16_t *idx, int &idx_ofs)
 {
 	GroupSpec *gs = mesh->GetGroup (grp);
 	if (gs) {
-		WORD iofs = (WORD)idx_ofs;
+		uint16_t iofs = (uint16_t)idx_ofs;
 		memcpy (vtx, gs->Vtx, gs->nVtx*sizeof(NTVERTEX));
-		for (DWORD i = 0; i < gs->nIdx; i++)
+		for (int i = 0; i < gs->nIdx; i++)
 			idx[i] = gs->Idx[i]+iofs;
 	}
 }
@@ -316,7 +311,7 @@ Mesh* MeshObject::ExportMesh ()
 Mesh *MeshObject::ExportShadowMesh (double &shelev)
 {
 	if (!(specs & OBJSPEC_EXPORTSHADOWMESH)) return NULL;
-	DWORD i, j, nvtx = 0, nidx = 0, ngrp = mesh->nGroup();
+	int i, j, nvtx = 0, nidx = 0, ngrp = mesh->nGroup();
 	for (i = 0; i < ngrp; i++) {
 		GroupSpec *grp = mesh->GetGroup(i);
 		if (grp->UsrFlag & 0x1) continue; // no shadows
@@ -324,14 +319,14 @@ Mesh *MeshObject::ExportShadowMesh (double &shelev)
 		nidx += grp->nIdx;
 	}
 	NTVERTEX *vtx = new NTVERTEX[nvtx]; TRACENEW
-	WORD *idx = new WORD[nidx]; TRACENEW
+	uint16_t *idx = new uint16_t[nidx]; TRACENEW
 	nvtx = nidx = 0;
 	for (i = 0; i < ngrp; i++) {
 		GroupSpec *grp = mesh->GetGroup(i);
 		if (grp->UsrFlag & 0x1) continue; // no shadows
 		memcpy (vtx+nvtx, grp->Vtx, grp->nVtx*sizeof(NTVERTEX));
 		for (j = 0; j < grp->nIdx; j++)
-			idx[nidx+j] = grp->Idx[j]+(WORD)nvtx;
+			idx[nidx+j] = grp->Idx[j]+(uint16_t)nvtx;
 		nvtx += grp->nVtx;
 		nidx += grp->nIdx;
 	}
@@ -369,41 +364,6 @@ bool MeshObject::LoadMesh (char *fname)
 	return true;
 }
 
-void MeshObject::UpdateShadow (Vector &fromsun, double azim)
-{
-	ax = (float)fromsun.x;
-	az = (float)fromsun.z;
-}
-
-void MeshObject::Render (LPDIRECT3DDEVICE7 dev, bool day)
-{
-#ifndef NOGRAPHICS
-	dev->SetRenderState (D3DRENDERSTATE_ALPHABLENDENABLE, TRUE);
-	mesh->Render (dev);
-	dev->SetRenderState (D3DRENDERSTATE_ALPHABLENDENABLE, FALSE);
-#endif // !NOGRAPHICS
-}
-
-void MeshObject::RenderShadow (LPDIRECT3DDEVICE7 dev)
-{
-#ifndef NOGRAPHICS
-	DWORD i, v, ng = mesh->nGroup();
-	VERTEX_XYZ *shvtx;
-
-	for (i = 0; i < ng; i++) {
-		if (mesh->GetGroupUsrFlag (i) & 1) continue; // "no shadow" flag
-		GroupSpec *gs = mesh->GetGroup (i);
-		shvtx = GetVertexXYZ (gs->nVtx);
-		for (v = 0; v < gs->nVtx; v++) {
-			shvtx[v].x = gs->Vtx[v].x + ax*(gs->Vtx[v].y-yofs);
-			shvtx[v].z = gs->Vtx[v].z + az*(gs->Vtx[v].y-yofs);
-			shvtx[v].y = yofs;
-		}
-		dev->DrawIndexedPrimitive (D3DPT_TRIANGLELIST, D3DFVF_XYZ, shvtx, gs->nVtx, gs->Idx, gs->nIdx, 0);
-	}
-#endif // !NOGRAPHICS
-}
-
 // ==============================================================================
 // class Block (simple buildings etc.)
 
@@ -426,7 +386,7 @@ int Block::ParseLine (const char *label, const char *value)
 {
 	int res = 0;
 	if (!_strnicmp (label, "TEX", 3)) {
-		D3DVALUE su, sv;
+		float su, sv;
 		int i;
 		char name[32];
 		if (sscanf (label+3, "%d", &i) != 1 || i < 1 || i > 3) {
@@ -448,11 +408,11 @@ void Block::Activate ()
 {
 	if (dyndata) return;  // active already
 	dyndata = new struct DYNDATA; TRACENEW
-	dyndata->databuf = new D3DVALUE[13]; TRACENEW
-	D3DVALUE dx = 0.5f*scale.x, dy = scale.y, dz = 0.5f*scale.z;
-	D3DVALUE srot = (D3DVALUE)sin(rot), crot = (D3DVALUE)cos(rot);
-	D3DVALUE dxcrot = dx*crot, dxsrot = dx*srot;
-	D3DVALUE dzsrot = dz*srot, dzcrot = dz*crot;
+	dyndata->databuf = new float[13]; TRACENEW
+	float dx = 0.5f*scale.x, dy = scale.y, dz = 0.5f*scale.z;
+	float srot = (float)sin(rot), crot = (float)cos(rot);
+	float dxcrot = dx*crot, dxsrot = dx*srot;
+	float dzsrot = dz*srot, dzcrot = dz*crot;
 	dyndata->databuf[0] =  dxcrot + dzsrot + relpos.x;
 	dyndata->databuf[1] = -dxcrot + dzsrot + relpos.x;
 	dyndata->databuf[2] = -dxcrot - dzsrot + relpos.x;
@@ -477,13 +437,13 @@ void Block::Deactivate ()
 	}
 }
 
-bool Block::GetGroupSpec (int grp, DWORD &nvtx, DWORD &nidx, LONGLONG &_texid,
+bool Block::GetGroupSpec (int grp, int &nvtx, int &nidx, uint64_t &_texid,
 	bool &undershadow, bool &groundshadow)
 {
 	if (grp < 0 || grp >= 3) return false;
 
-	static DWORD nv[3] = {8,8,4};
-	static DWORD ni[3] = {12,12,6};
+	static int nv[3] = {8,8,4};
+	static int ni[3] = {12,12,6};
 	nvtx = nv[grp];
 	nidx = ni[grp];
 	undershadow = false;
@@ -492,12 +452,12 @@ bool Block::GetGroupSpec (int grp, DWORD &nvtx, DWORD &nidx, LONGLONG &_texid,
 	return true;
 }
 
-void Block::ExportGroup (int grp, NTVERTEX *vtx, WORD *idx, DWORD &idx_ofs)
+void Block::ExportGroup (int grp, NTVERTEX *vtx, uint16_t *idx, int &idx_ofs)
 {
-	static WORD sidx[12] = {0,1,2,2,3,0,4,5,6,6,7,4};
-	DWORD i;
-	WORD iofs = (WORD)idx_ofs;
-	D3DVALUE *db = dyndata->databuf;
+	static uint16_t sidx[12] = {0,1,2,2,3,0,4,5,6,6,7,4};
+	int i;
+	uint16_t iofs = (uint16_t)idx_ofs;
+	float *db = dyndata->databuf;
 
 	switch (grp) {
 	case 0:
@@ -572,12 +532,12 @@ void Block::ExportGroup (int grp, NTVERTEX *vtx, WORD *idx, DWORD &idx_ofs)
 
 Mesh *Block::ExportShadowMesh (double &shelev)
 {
-	static WORD sidx[30] = {0,1,4, 4,1,5, 1,2,5, 5,2,6, 2,3,6, 6,3,7, 3,0,7, 7,0,4, 4,5,6, 6,7,4};
-	D3DVALUE *db = dyndata->databuf;
-	DWORD i, nvtx = 8, nidx = 30;
+	static uint16_t sidx[30] = {0,1,4, 4,1,5, 1,2,5, 5,2,6, 2,3,6, 6,3,7, 3,0,7, 7,0,4, 4,5,6, 6,7,4};
+	float *db = dyndata->databuf;
+	int i, nvtx = 8, nidx = 30;
 	NTVERTEX *vtx = new NTVERTEX[nvtx]; TRACENEW
-	WORD *idx = new WORD[nidx]; TRACENEW
-	memcpy (idx, sidx, nidx*sizeof(WORD));
+	uint16_t *idx = new uint16_t[nidx]; TRACENEW
+	memcpy (idx, sidx, nidx*sizeof(uint16_t));
 	memset (vtx, 0, nvtx*sizeof(NTVERTEX));
 	for (i = 0; i < 8; i++)	{
 		vtx[i].x = db[i%4];
@@ -587,70 +547,6 @@ Mesh *Block::ExportShadowMesh (double &shelev)
 	shelev = yofs;
 	TRACENEW; return new Mesh (vtx, nvtx, idx, nidx);
 }
-
-#ifdef UNDEF
-bool Block::GetShadowSpec (DWORD &nvtx, DWORD &nidx)
-{
-	nvtx = 6;
-	nidx = 12;
-	return true;
-}
-
-void Block::ExportShadow (VERTEX_XYZ *vtx, WORD *idx)
-{
-	static WORD sidx[12] = {0,1,2,2,1,3,2,3,4,4,3,5};
-	DWORD i;
-	for (i = 0; i < 12; i++) idx[i] = sidx[i];
-	for (i = 0; i < 6; i++) vtx[i].y = dyndata->databuf[12];
-	dyndata->shvtx = vtx;
-}
-
-void Block::UpdateShadow (Vector &fromsun, double az)
-{
-	D3DVALUE dx0 = pos.y*(D3DVALUE)fromsun.x;
-	D3DVALUE dx1 = (pos.y+scale.y)*(D3DVALUE)fromsun.x;
-	D3DVALUE dz0 = pos.y*(D3DVALUE)fromsun.z;
-	D3DVALUE dz1 = (pos.y+scale.y)*(D3DVALUE)fromsun.z;
-	D3DVERTEX *gv0 = dyndata->gv0;
-	VERTEX_XYZ *vptr = dyndata->shvtx;
-	az -= rot;
-	if (az < -Pi) az += Pi2;
-	else if (az > Pi) az -= Pi2;
-	if (az >= 0) {
-		if (az < Pi05) {
-			vptr->x = gv0[1].x + dx0;  vptr->z = gv0[1].z + dz0;  vptr++;
-			vptr->x = gv0[4].x + dx0;  vptr->z = gv0[4].z + dz0;  vptr++;
-			vptr->x = gv0[0].x + dx0;  vptr->z = gv0[0].z + dz0;  vptr++;
-			vptr->x = gv0[7].x + dx1;  vptr->z = gv0[7].z + dz1;  vptr++;
-			vptr->x = gv0[3].x + dx1;  vptr->z = gv0[3].z + dz1;  vptr++;
-			vptr->x = gv0[6].x + dx1;  vptr->z = gv0[6].z + dz1;
-		} else {
-			vptr->x = gv0[0].x + dx0;  vptr->z = gv0[0].z + dz0;  vptr++;
-			vptr->x = gv0[1].x + dx0;  vptr->z = gv0[1].z + dz0;  vptr++;
-			vptr->x = gv0[5].x + dx0;  vptr->z = gv0[5].z + dz0;  vptr++;
-			vptr->x = gv0[2].x + dx1;  vptr->z = gv0[2].z + dz1;  vptr++;
-			vptr->x = gv0[6].x + dx1;  vptr->z = gv0[6].z + dz1;  vptr++;
-			vptr->x = gv0[7].x + dx1;  vptr->z = gv0[7].z + dz1;
-		}
-	} else {
-		if (az > -Pi05) {
-			vptr->x = gv0[4].x + dx0;  vptr->z = gv0[4].z + dz0;  vptr++;
-			vptr->x = gv0[5].x + dx0;  vptr->z = gv0[5].z + dz0;  vptr++;
-			vptr->x = gv0[1].x + dx0;  vptr->z = gv0[1].z + dz0;  vptr++;
-			vptr->x = gv0[6].x + dx1;  vptr->z = gv0[6].z + dz1;  vptr++;
-			vptr->x = gv0[2].x + dx1;  vptr->z = gv0[2].z + dz1;  vptr++;
-			vptr->x = gv0[3].x + dx1;  vptr->z = gv0[3].z + dz1;
-		} else {
-			vptr->x = gv0[5].x + dx0;  vptr->z = gv0[5].z + dz0;  vptr++;
-			vptr->x = gv0[0].x + dx0;  vptr->z = gv0[0].z + dz0;  vptr++;
-			vptr->x = gv0[4].x + dx0;  vptr->z = gv0[4].z + dz0;  vptr++;
-			vptr->x = gv0[3].x + dx1;  vptr->z = gv0[3].z + dz1;  vptr++;
-			vptr->x = gv0[7].x + dx1;  vptr->z = gv0[7].z + dz1;  vptr++;
-			vptr->x = gv0[2].x + dx1;  vptr->z = gv0[2].z + dz1;
-		}
-	}
-}
-#endif
 
 // ==============================================================================
 // class Hangar: a block with a barrel roof
@@ -674,7 +570,7 @@ int Hangar::ParseLine (const char *label, const char *value)
 {
 	int res = 0;
 	if (!_strnicmp (label, "TEX", 3)) {
-		D3DVALUE su, sv;
+		float su, sv;
 		int i;
 		char name[32];
 		if (sscanf (label+3, "%d", &i) != 1 || i < 1 || i > 3) {
@@ -698,15 +594,15 @@ void Hangar::Activate ()
 	dyndata = new struct DYNDATA; TRACENEW
 	dyndata->Vtx = new NTVERTEX[44]; TRACENEW
 	NTVERTEX *Vtx = dyndata->Vtx;
-	D3DVALUE dx = 0.5f*scale.x, dy = scale.y, dz = 0.5f*scale.z;
-	D3DVALUE dy1 = 0.5f*dy; // side wall height
-	D3DVALUE dy2 = dy-dy1;  // roof height
-	D3DVALUE srot = (D3DVALUE)sin(rot), crot = (D3DVALUE)cos(rot);
-	D3DVALUE dxcrot = dx*crot, dxsrot = dx*srot;
-	D3DVALUE dzsrot = dz*srot, dzcrot = dz*crot;
-	D3DVALUE dxcrot1 = 0.72f*dxcrot, dxcrot2 = 0.28f*dxcrot;
-	D3DVALUE dxsrot1 = 0.72f*dxsrot, dxsrot2 = 0.28f*dxsrot;
-	D3DVALUE tufac = tuscale[0]*dz/dx;
+	float dx = 0.5f*scale.x, dy = scale.y, dz = 0.5f*scale.z;
+	float dy1 = 0.5f*dy; // side wall height
+	float dy2 = dy-dy1;  // roof height
+	float srot = (float)sin(rot), crot = (float)cos(rot);
+	float dxcrot = dx*crot, dxsrot = dx*srot;
+	float dzsrot = dz*srot, dzcrot = dz*crot;
+	float dxcrot1 = 0.72f*dxcrot, dxcrot2 = 0.28f*dxcrot;
+	float dxsrot1 = 0.72f*dxsrot, dxsrot2 = 0.28f*dxsrot;
+	float tufac = tuscale[0]*dz/dx;
 
 	Vtx[0].x  = Vtx[7].x  = Vtx[17].x = Vtx[18].x = Vtx[29].x =  dxcrot  + dzsrot + relpos.x;
 	Vtx[1].x  = Vtx[2].x  = Vtx[20].x = Vtx[23].x = Vtx[39].x = -dxcrot  + dzsrot + relpos.x;
@@ -789,13 +685,13 @@ void Hangar::Deactivate ()
 	}
 }
 
-bool Hangar::GetGroupSpec (int grp, DWORD &nvtx, DWORD &nidx, LONGLONG &_texid,
+bool Hangar::GetGroupSpec (int grp, int &nvtx, int &nidx, uint64_t &_texid,
 	bool &undershadow, bool &groundshadow)
 {
 	if (grp < 0 || grp >= 3) return false;
 
-	static DWORD nv[3] = {28,4,12};
-	static DWORD ni[3] = {54,6,30};
+	static int nv[3] = {28,4,12};
+	static int ni[3] = {54,6,30};
 	nvtx = nv[grp];
 	nidx = ni[grp];
 	_texid = texid[grp];
@@ -804,15 +700,15 @@ bool Hangar::GetGroupSpec (int grp, DWORD &nvtx, DWORD &nidx, LONGLONG &_texid,
 	return true;
 }
 
-void Hangar::ExportGroup (int grp, NTVERTEX *vtx, WORD *idx, DWORD &idx_ofs)
+void Hangar::ExportGroup (int grp, NTVERTEX *vtx, uint16_t *idx, int &idx_ofs)
 {
-	static WORD sidx0[54] = {0,24,7,27,7,24,25,1,26,2,26,1,6,7,2,2,3,6,5,6,3,3,4,5,
+	static uint16_t sidx0[54] = {0,24,7,27,7,24,25,1,26,2,26,1,6,7,2,2,3,6,5,6,3,3,4,5,
 		                     8,9,10,10,15,8,15,10,11,11,14,15,14,11,12,12,13,14,
 							 16,17,19,18,19,17,20,21,23,22,23,21};
-	static WORD sidx1[6]  = {0,1,3,2,3,1};
-	static WORD sidx2[30] = {0,1,2,3,2,1,2,3,4,5,4,3,4,5,6,7,6,5,6,7,8,9,8,7,8,9,10,11,10,9};
-	DWORD i;
-	WORD iofs = (WORD)idx_ofs;
+	static uint16_t sidx1[6]  = {0,1,3,2,3,1};
+	static uint16_t sidx2[30] = {0,1,2,3,2,1,2,3,4,5,4,3,4,5,6,7,6,5,6,7,8,9,8,7,8,9,10,11,10,9};
+	int i;
+	uint16_t iofs = (uint16_t)idx_ofs;
 
 	switch (grp) {
 	case 0:
@@ -832,67 +728,25 @@ void Hangar::ExportGroup (int grp, NTVERTEX *vtx, WORD *idx, DWORD &idx_ofs)
 
 Mesh *Hangar::ExportShadowMesh (double &shelev)
 {
-	static WORD sidx[78] = {
+	static uint16_t sidx[78] = {
 		0,1,2,3,2,1,2,3,4,5,4,3,4,5,6,7,6,5,6,7,8,9,8,7,8,9,10,11,10,9, // roof
 		0,12,1, 12,13,1, 11,15,10, 15,14,10,            // side walls
 		10,14,12, 0,10,12, 8,10,0, 2,8,0, 6,8,2, 4,6,2, // front wall
 		1,13,15, 11,1,15, 3,1,11, 9,3,11, 5,3,9, 7,5,9  // back wall
 	};
-	DWORD nvtx = 16;
-	DWORD nidx = 78;
+	int nvtx = 16;
+	int nidx = 78;
 	NTVERTEX *vtx = new NTVERTEX[nvtx]; TRACENEW
-	WORD *idx = new WORD[nidx]; TRACENEW
+	uint16_t *idx = new uint16_t[nidx]; TRACENEW
 	memcpy (vtx, dyndata->Vtx+28, 12*sizeof(NTVERTEX));
 	vtx[12] = dyndata->Vtx[9];
 	vtx[13] = dyndata->Vtx[0];
 	vtx[14] = dyndata->Vtx[8];
 	vtx[15] = dyndata->Vtx[1];
-	memcpy (idx, sidx, nidx*sizeof(WORD));
+	memcpy (idx, sidx, nidx*sizeof(uint16_t));
 	shelev = yofs;
 	TRACENEW; return new Mesh (vtx, nvtx, idx, nidx);
 }
-
-#ifdef UNDEF
-bool Hangar::GetShadowSpec (DWORD &nvtx, DWORD &nidx)
-{
-	nvtx = 10;
-	nidx = 24;
-	return true;
-}
-
-void Hangar::ExportShadow (VERTEX_XYZ *vtx, WORD *idx)
-{
-	for (WORD i = 0; i < 8; i++) {
-		*idx++ = 0;
-		*idx++ = i+2;
-		*idx++ = i+1;
-	}
-	for (i = 0; i < 10; i++) vtx[i].y = 0.0;
-	dyndata->shvtx = vtx;
-}
-
-void Hangar::UpdateShadow (Vector &fromsun, double az)
-{
-	static VECTOR2D proj[16];
-	D3DVALUE dx = (D3DVALUE)fromsun.x, dz = (D3DVALUE)fromsun.z;
-	DWORD i, nCH;
-	WORD *CHidx;
-	D3DVERTEX *Vtx = dyndata->Vtx;
-	VERTEX_XYZ *vptr = dyndata->shvtx;
-
-	// project bounding vertices onto y=0
-	for (i = 0; i < 16; i++) {
-		proj[i].x = Vtx[i].x + dx*Vtx[i].y;
-		proj[i].y = Vtx[i].z + dz*Vtx[i].y;
-	}
-	Find2DConvexHull(16, proj, &nCH, &CHidx);
-	// we assume that nCH is 10
-	for (i = 0; i < 10; i++) {
-		vptr[i].x = proj[CHidx[i]].x;
-		vptr[i].z = proj[CHidx[i]].y;
-	}
-}
-#endif
 
 // ==============================================================================
 // class Hangar2: a block with a tent-shaped roof
@@ -922,7 +776,7 @@ int Hangar2::ParseLine (const char *label, const char *value)
 			res = 2;
 		}
 	} else if (!_strnicmp (label, "TEX", 3)) {
-		D3DVALUE su, sv;
+		float su, sv;
 		int i;
 		char name[32];
 		if (sscanf (label+3, "%d", &i) != 1 || i < 1 || i > 3) {
@@ -940,13 +794,13 @@ int Hangar2::ParseLine (const char *label, const char *value)
 	return res;
 }
 
-bool Hangar2::GetGroupSpec (int grp, DWORD &nvtx, DWORD &nidx, LONGLONG &_texid,
+bool Hangar2::GetGroupSpec (int grp, int &nvtx, int &nidx, uint64_t &_texid,
 	bool &undershadow, bool &groundshadow)
 {
 	if (grp < 0 || grp >= 3) return false;
 
-	static DWORD nv[3] = {10,8,8};
-	static DWORD ni[3] = {18,12,12};
+	static int nv[3] = {10,8,8};
+	static int ni[3] = {18,12,12};
 	nvtx = nv[grp];
 	nidx = ni[grp];
 	_texid = texid[grp];
@@ -955,12 +809,12 @@ bool Hangar2::GetGroupSpec (int grp, DWORD &nvtx, DWORD &nidx, LONGLONG &_texid,
 	return true;
 }
 
-void Hangar2::ExportGroup (int grp, NTVERTEX *vtx, WORD *idx, DWORD &idx_ofs)
+void Hangar2::ExportGroup (int grp, NTVERTEX *vtx, uint16_t *idx, int &idx_ofs)
 {
-	static WORD sidx0[18] = {0,1,2,2,4,0,4,2,3,6,5,9,9,7,6,7,9,8};
-	static WORD sidx1[12] = {0,1,3,2,3,1,5,4,6,7,6,4};
-	DWORD i;
-	WORD iofs = (WORD)idx_ofs;
+	static uint16_t sidx0[18] = {0,1,2,2,4,0,4,2,3,6,5,9,9,7,6,7,9,8};
+	static uint16_t sidx1[12] = {0,1,3,2,3,1,5,4,6,7,6,4};
+	int i;
+	uint16_t iofs = (uint16_t)idx_ofs;
 
 	switch (grp) {
 	case 0:
@@ -980,62 +834,20 @@ void Hangar2::ExportGroup (int grp, NTVERTEX *vtx, WORD *idx, DWORD &idx_ofs)
 
 Mesh *Hangar2::ExportShadowMesh (double &shelev)
 {
-	static WORD sidx[42] = {
+	static uint16_t sidx[42] = {
 		0,1,2,2,4,0,4,2,3,6,5,9,9,7,6,7,9,8, // front and back walls
 		0,4,5, 9,5,4, 1,6,7, 7,2,1,          // side walls
 		3,9,4, 9,3,8, 3,2,8, 2,7,8           // roof
 	};
-	DWORD nvtx = 10;
-	DWORD nidx = 42;
+	int nvtx = 10;
+	int nidx = 42;
 	NTVERTEX *vtx = new NTVERTEX[nvtx]; TRACENEW
-	WORD *idx = new WORD[nidx]; TRACENEW
+	uint16_t *idx = new uint16_t[nidx]; TRACENEW
 	memcpy (vtx, dyndata->Vtx, 10*sizeof(NTVERTEX));
-	memcpy (idx, sidx, nidx*sizeof(WORD));
+	memcpy (idx, sidx, nidx*sizeof(uint16_t));
 	shelev = yofs;
 	TRACENEW; return new Mesh (vtx, nvtx, idx, nidx);
 }
-
-#ifdef UNDEF
-bool Hangar2::GetShadowSpec (DWORD &nvtx, DWORD &nidx)
-{
-	nvtx = 7;
-	nidx = 15;
-	return true;
-}
-
-void Hangar2::ExportShadow (VERTEX_XYZ *vtx, WORD *idx)
-{
-	for (WORD i = 0; i < 5; i++) {
-		*idx++ = 0;
-		*idx++ = i+2;
-		*idx++ = i+1;
-	}
-	for (i = 0; i < 7; i++) vtx[i].y = 0.0;
-	dyndata->shvtx = vtx;
-}
-
-void Hangar2::UpdateShadow (Vector &fromsun, double az)
-{
-	static VECTOR2D proj[10];
-	D3DVALUE dx = (D3DVALUE)fromsun.x, dz = (D3DVALUE)fromsun.z;
-	DWORD i, nCH;
-	WORD *CHidx;
-	D3DVERTEX *Vtx = dyndata->Vtx;
-	VERTEX_XYZ *vptr = dyndata->shvtx;
-
-	// project bounding vertices onto y=0
-	for (i = 0; i < 10; i++) {
-		proj[i].x = Vtx[i].x + dx*Vtx[i].y;
-		proj[i].y = Vtx[i].z + dz*Vtx[i].y;
-	}
-	Find2DConvexHull(10, proj, &nCH, &CHidx);
-	// we assume that nCH is 7
-	for (i = 0; i < 7; i++) {
-		vptr[i].x = proj[CHidx[i]].x;
-		vptr[i].z = proj[CHidx[i]].y;
-	}
-}
-#endif
 
 void Hangar2::Activate ()
 {
@@ -1043,13 +855,13 @@ void Hangar2::Activate ()
     dyndata = new struct DYNDATA; TRACENEW
     dyndata->Vtx = new NTVERTEX[26]; TRACENEW
     NTVERTEX *Vtx = dyndata->Vtx;
-    D3DVALUE dx = 0.5f*scale.x, dy = scale.y, dz = 0.5f*scale.z;
-    D3DVALUE dy2 = (roofh < 0.0 || roofh > dy ? 0.5f*dy : roofh); // roof height
-    D3DVALUE dy1 = dy - dy2; // side wall height
-    D3DVALUE srot = (D3DVALUE)sin(rot), crot = (D3DVALUE)cos(rot);
-    D3DVALUE dxcrot = dx*crot, dxsrot = dx*srot;
-    D3DVALUE dzsrot = dz*srot, dzcrot = dz*crot;
-    D3DVALUE tufac = tuscale[0]*dz/dx;
+    float dx = 0.5f*scale.x, dy = scale.y, dz = 0.5f*scale.z;
+    float dy2 = (roofh < 0.0 || roofh > dy ? 0.5f*dy : roofh); // roof height
+    float dy1 = dy - dy2; // side wall height
+    float srot = (float)sin(rot), crot = (float)cos(rot);
+    float dxcrot = dx*crot, dxsrot = dx*srot;
+    float dzsrot = dz*srot, dzcrot = dz*crot;
+    float tufac = tuscale[0]*dz/dx;
 
     Vtx[0].x = Vtx[4].x = Vtx[11].x = Vtx[12].x = Vtx[19].x =  dxcrot + dzsrot + relpos.x;
     Vtx[1].x = Vtx[2].x = Vtx[15].x = Vtx[16].x = Vtx[23].x = -dxcrot + dzsrot + relpos.x;
@@ -1127,7 +939,7 @@ int Hangar3::ParseLine (const char *label, const char *value)
 {
 	int res = 0;
 	if (!_strnicmp (label, "TEX", 3)) {
-		D3DVALUE su, sv;
+		float su, sv;
 		int i;
 		char name[32];
 		if (sscanf (label+3, "%d", &i) != 1 || i < 1 || i > 3) {
@@ -1145,13 +957,13 @@ int Hangar3::ParseLine (const char *label, const char *value)
 	return res;
 }
 
-bool Hangar3::GetGroupSpec (int grp, DWORD &nvtx, DWORD &nidx, LONGLONG &_texid,
+bool Hangar3::GetGroupSpec (int grp, int &nvtx, int &nidx, uint64_t &_texid,
 	bool &undershadow, bool &groundshadow)
 {
 	if (grp < 0 || grp >= 3) return false;
 
-	static DWORD nv[3] = {18,8,14};
-	static DWORD ni[3] = {36,24,36};
+	static int nv[3] = {18,8,14};
+	static int ni[3] = {36,24,36};
 	nvtx = nv[grp];
 	nidx = ni[grp];
 	_texid = texid[grp];
@@ -1160,14 +972,14 @@ bool Hangar3::GetGroupSpec (int grp, DWORD &nvtx, DWORD &nidx, LONGLONG &_texid,
 	return true;
 }
 
-void Hangar3::ExportGroup (int grp, NTVERTEX *vtx, WORD *idx, DWORD &idx_ofs)
+void Hangar3::ExportGroup (int grp, NTVERTEX *vtx, uint16_t *idx, int &idx_ofs)
 {
-	static WORD sidx0[60] = {0,6,1,1,6,5,1,5,2,2,5,4,2,4,3, // back wall
+	static uint16_t sidx0[60] = {0,6,1,1,6,5,1,5,2,2,5,4,2,4,3, // back wall
 	          				 7,8,14,8,9,14,9,10,16,16,10,17,10,11,17,11,12,15,12,13,15}; // front wall
-	static WORD sidx1[24] = {0,1,5,5,4,0,6,7,4,4,5,6,2,3,7,7,6,2,1,2,6,6,5,1}; // entry
-	static WORD sidx2[36] = {0,1,7,8,7,1,1,2,8,9,8,2,2,3,9,10,9,3,3,4,10,4,11,10,4,5,11,12,11,5,5,6,12,13,12,6}; // roof
-	DWORD i;
-	WORD iofs = (WORD)idx_ofs;
+	static uint16_t sidx1[24] = {0,1,5,5,4,0,6,7,4,4,5,6,2,3,7,7,6,2,1,2,6,6,5,1}; // entry
+	static uint16_t sidx2[36] = {0,1,7,8,7,1,1,2,8,9,8,2,2,3,9,10,9,3,3,4,10,4,11,10,4,5,11,12,11,5,5,6,12,13,12,6}; // roof
+	int i;
+	uint16_t iofs = (uint16_t)idx_ofs;
 
 	switch (grp) {
 	case 0:
@@ -1187,78 +999,36 @@ void Hangar3::ExportGroup (int grp, NTVERTEX *vtx, WORD *idx, DWORD &idx_ofs)
 
 Mesh *Hangar3::ExportShadowMesh (double &shelev)
 {
-	static WORD sidx[66] = {
+	static uint16_t sidx[66] = {
 		0,1,7,8,7,1,1,2,8,9,8,2,2,3,9,10,9,3,3,4,10,4,11,10,4,5,11,12,11,5,5,6,12,13,12,6,
 		0,6,1, 1,6,5, 1,5,2, 2,5,4, 3,2,4, // front wall
 		7,8,13, 8,12,13, 9,12,8, 9,11,12, 9,10,11 // back wall
 	}; // roof
-	DWORD nvtx = 14;
-	DWORD nidx = 66;
+	int nvtx = 14;
+	int nidx = 66;
 	NTVERTEX *vtx = new NTVERTEX[nvtx]; TRACENEW
-	WORD *idx = new WORD[nidx]; TRACENEW
+	uint16_t *idx = new uint16_t[nidx]; TRACENEW
 	memcpy (vtx, dyndata->Vtx+26, nvtx*sizeof(NTVERTEX));
-	memcpy (idx, sidx, nidx*sizeof(WORD));
+	memcpy (idx, sidx, nidx*sizeof(uint16_t));
 	shelev = yofs;
 	TRACENEW; return new Mesh (vtx, nvtx, idx, nidx);
 }
 
-#ifdef UNDEF
-bool Hangar3::GetShadowSpec (DWORD &nvtx, DWORD &nidx)
-{
-	nvtx = 9;
-	nidx = 21;
-	return true;
-}
-
-void Hangar3::ExportShadow (VERTEX_XYZ *vtx, WORD *idx)
-{
-	for (WORD i = 0; i < 7; i++) {
-		*idx++ = 0;
-		*idx++ = i+2;
-		*idx++ = i+1;
-	}
-	for (i = 0; i < 9; i++) vtx[i].y = 0.0;
-	dyndata->shvtx = vtx;
-}
-
-void Hangar3::UpdateShadow (Vector &fromsun, double az)
-{
-	static VECTOR2D proj[14];
-	D3DVALUE dx = (D3DVALUE)fromsun.x, dz = (D3DVALUE)fromsun.z;
-	DWORD i, nCH;
-	WORD *CHidx;
-	D3DVERTEX *Vtx = dyndata->Vtx;
-	VERTEX_XYZ *vptr = dyndata->shvtx;
-
-	// project bounding vertices onto y=0
-	for (i = 0; i < 14; i++) {
-		proj[i].x = Vtx[i].x + dx*Vtx[i].y;
-		proj[i].y = Vtx[i].z + dz*Vtx[i].y;
-	}
-	Find2DConvexHull(14, proj, &nCH, &CHidx);
-	// we assume that nCH is 9
-	for (i = 0; i < 9; i++) {
-		vptr[i].x = proj[CHidx[i]].x;
-		vptr[i].z = proj[CHidx[i]].y;
-	}
-}
-#endif
-
 void Hangar3::Activate ()
 {
-    static D3DVALUE recess = 2.0f; // should be configurable
+    static float recess = 2.0f; // should be configurable
     if (dyndata) return; // active already
     dyndata = new struct DYNDATA; TRACENEW
     dyndata->Vtx = new NTVERTEX[40]; TRACENEW
     NTVERTEX *Vtx = dyndata->Vtx;
-    D3DVALUE dx = 0.5f*scale.x, dy = scale.y, dz = 0.5f*scale.z;
-    D3DVALUE h1 = 0.543f*dy, h2 = 0.884f*dy, h3 = dy;
-    D3DVALUE srot = (D3DVALUE)sin(rot), crot = (D3DVALUE)cos(rot);
-    D3DVALUE dxcrot = dx*crot, dxsrot = dx*srot;
-    D3DVALUE dzsrot = dz*srot, dzcrot = dz*crot;
-    D3DVALUE dxcrot1 = 0.707f*dxcrot, dxcrot2 = 0.366f*dxcrot;
-    D3DVALUE dxsrot1 = 0.707f*dxsrot, dxsrot2 = 0.366f*dxsrot;
-    D3DVALUE dzcrot1 = (dz-recess)*crot, dzsrot1 = (dz-recess)*srot;
+    float dx = 0.5f*scale.x, dy = scale.y, dz = 0.5f*scale.z;
+    float h1 = 0.543f*dy, h2 = 0.884f*dy, h3 = dy;
+    float srot = (float)sin(rot), crot = (float)cos(rot);
+    float dxcrot = dx*crot, dxsrot = dx*srot;
+    float dzsrot = dz*srot, dzcrot = dz*crot;
+    float dxcrot1 = 0.707f*dxcrot, dxcrot2 = 0.366f*dxcrot;
+    float dxsrot1 = 0.707f*dxsrot, dxsrot2 = 0.366f*dxsrot;
+    float dzcrot1 = (dz-recess)*crot, dzsrot1 = (dz-recess)*srot;
     Vtx[ 0].x = Vtx[26].x =  dxcrot  + dzsrot + relpos.x;
     Vtx[ 1].x = Vtx[27].x =  dxcrot1 + dzsrot + relpos.x;
     Vtx[ 2].x = Vtx[28].x =  dxcrot2 + dzsrot + relpos.x;
@@ -1367,7 +1137,7 @@ int Tank::ParseLine (const char *label, const char *value)
 		}
 		if (nstep < 3) nstep = 3;
 	} else if (!_strnicmp (label, "TEX", 3)) {
-		D3DVALUE su, sv;
+		float su, sv;
 		int i;
 		char name[32];
 		if (sscanf (label+3, "%d", &i) != 1 || i < 1 || i > 2) {
@@ -1391,16 +1161,16 @@ void Tank::Activate ()
 	dyndata = new struct DYNDATA; TRACENEW
 	dyndata->Vtx = new NTVERTEX[nstep*3+3]; TRACENEW
 	NTVERTEX *Vtx = dyndata->Vtx;
-	D3DVALUE dx, dz, dnx, dnz, fac, ifac = 1.0f/(D3DVALUE)nstep;
-	D3DVALUE srot = (D3DVALUE)sin(rot), crot = (D3DVALUE)cos(rot);
-	DWORD i, ofs1 = nstep+1, ofs2 = 2*nstep+2;
+	float dx, dz, dnx, dnz, fac, ifac = 1.0f/(float)nstep;
+	float srot = (float)sin(rot), crot = (float)cos(rot);
+	int i, ofs1 = nstep+1, ofs2 = 2*nstep+2;
 	double alpha;
 
 	for (i = 0; i < nstep; i++) {
-		fac = (D3DVALUE)i*ifac;
+		fac = (float)i*ifac;
 		alpha = Pi2*fac;
-		dx = (dnx = (D3DVALUE)cos(alpha)) * scale.x;
-		dz = (dnz = (D3DVALUE)sin(alpha)) * scale.z;
+		dx = (dnx = (float)cos(alpha)) * scale.x;
+		dz = (dnz = (float)sin(alpha)) * scale.z;
 		Vtx[i].x = Vtx[ofs1+i].x = Vtx[ofs2+i].x = crot*dx - srot*dz + relpos.x;
 		Vtx[i].z = Vtx[ofs1+i].z = Vtx[ofs2+i].z = srot*dx + crot*dz + relpos.z;
 		Vtx[i].y = relpos.y;
@@ -1435,7 +1205,7 @@ void Tank::Deactivate ()
 	}
 }
 
-bool Tank::GetGroupSpec (int grp, DWORD &nvtx, DWORD &nidx, LONGLONG &_texid,
+bool Tank::GetGroupSpec (int grp, int &nvtx, int &nidx, uint64_t &_texid,
 	bool &undershadow, bool &groundshadow)
 {
 	switch (grp) {
@@ -1458,9 +1228,9 @@ bool Tank::GetGroupSpec (int grp, DWORD &nvtx, DWORD &nidx, LONGLONG &_texid,
 	}
 }
 
-void Tank::ExportGroup (int grp, NTVERTEX *vtx, WORD *idx, DWORD &idx_ofs)
+void Tank::ExportGroup (int grp, NTVERTEX *vtx, uint16_t *idx, int &idx_ofs)
 {
-	WORD i, ofs = (WORD)(nstep+1), iofs = (WORD)idx_ofs;
+	uint16_t i, ofs = (uint16_t)(nstep+1), iofs = (uint16_t)idx_ofs;
 
 	switch (grp) {
 	case 0:
@@ -1487,14 +1257,14 @@ void Tank::ExportGroup (int grp, NTVERTEX *vtx, WORD *idx, DWORD &idx_ofs)
 
 Mesh *Tank::ExportShadowMesh (double &shelev)
 {
-	DWORD nvtx = nstep*2;
-	DWORD nidx = nstep*6 + (nstep-2)*3;
+	int nvtx = nstep*2;
+	int nidx = nstep*6 + (nstep-2)*3;
 	NTVERTEX *vtx = new NTVERTEX[nvtx]; TRACENEW
-	WORD *id, *idx = new WORD[nidx]; TRACENEW
+	uint16_t *id, *idx = new uint16_t[nidx]; TRACENEW
 	memcpy (vtx, dyndata->Vtx, nstep*sizeof(NTVERTEX));
 	memcpy (vtx+nstep, dyndata->Vtx+nstep+1, nstep*sizeof(NTVERTEX));
 
-	WORD i, ofs = (WORD)nstep, ns = (WORD)nstep;
+	uint16_t i, ofs = (uint16_t)nstep, ns = (uint16_t)nstep;
 	for (i = 0, id = idx; i < ns; i++) {
 		*id++ = i;
 		*id++ = ofs+i;
@@ -1511,53 +1281,6 @@ Mesh *Tank::ExportShadowMesh (double &shelev)
 	shelev = yofs;
 	TRACENEW; return new Mesh (vtx, nvtx, idx, nidx);
 }
-
-#ifdef UNDEF
-bool Tank::GetShadowSpec (DWORD &nvtx, DWORD &nidx)
-{
-	nvtx = nstep+2;
-	nidx = nstep*3;
-	return true;
-}
-
-void Tank::ExportShadow (VERTEX_XYZ *vtx, WORD *idx)
-{
-	for (WORD i = 0; i < nstep; i++) {
-		*idx++ = 0;
-		*idx++ = i+2;
-		*idx++ = i+1;
-	}
-	for (i = 0; i < nstep+2; i++) vtx[i].y = dyndata->dh;
-	dyndata->shvtx = vtx;
-}
-
-void Tank::UpdateShadow (Vector &fromsun, double az)
-{
-	static DWORD nproj = 24;
-	static VECTOR2D *proj = new VECTOR2D[24];
-	D3DVALUE dx = (D3DVALUE)fromsun.x, dz = (D3DVALUE)fromsun.z;
-	DWORD i, nCH;
-	WORD *CHidx;
-	D3DVERTEX *Vtx = dyndata->Vtx;
-	VERTEX_XYZ *vptr = dyndata->shvtx;
-
-	if (nstep*2 > nproj) {
-		delete []proj;
-		proj = new VECTOR2D[nproj = nstep*2]; TRACENEW
-	}
-	// project bounding vertices onto y=0
-	for (i = 0; i < nstep; i++) {
-		proj[i+nstep].x = (proj[i].x = Vtx[i+1].x) + dx*scale.y;
-		proj[i+nstep].y = (proj[i].y = Vtx[i+1].z) + dz*scale.y;
-	}
-	Find2DConvexHull(nstep*2, proj, &nCH, &CHidx);
-	// we assume that nCH is nstep+2
-	for (i = 0; i < nstep+2; i++) {
-		vptr[i].x = proj[CHidx[i]].x;
-		vptr[i].z = proj[CHidx[i]].y;
-	}
-}
-#endif
 
 // ======================================================================================
 // class Lpad: base class for landing pads
@@ -1620,7 +1343,7 @@ NTVERTEX Lpad01::Vtx[44] = {
 	{-17.334f,0,-41.848f,-0.270598f,0.707107f,-0.653282f, 0.9375,0.5}
 };
 
-WORD Lpad01::Idx[144] = {
+uint16_t Lpad01::Idx[144] = {
 	0,1,6,1,7,6,1,8,7,1,9,8,1,2,9,2,10,9,2,11,10,2,3,11,
 	3,4,11,4,12,11,4,13,12,4,14,13,4,5,14,5,15,14,5,6,15,5,0,6,
 	16,19,17,18,17,19,
@@ -1654,7 +1377,7 @@ int Lpad01::ParseLine (const char *label, const char *value)
 	return res;
 }
 
-bool Lpad01::GetGroupSpec (int grp, DWORD &nvtx, DWORD &nidx, LONGLONG &_texid,
+bool Lpad01::GetGroupSpec (int grp, int &nvtx, int &nidx, uint64_t &_texid,
 	bool &undershadow, bool &groundshadow)
 {
 	if (grp == 0) {
@@ -1667,12 +1390,12 @@ bool Lpad01::GetGroupSpec (int grp, DWORD &nvtx, DWORD &nidx, LONGLONG &_texid,
 	} else return false;
 }
 
-void Lpad01::ExportGroup (int grp, NTVERTEX *vtx, WORD *idx, DWORD &idx_ofs)
+void Lpad01::ExportGroup (int grp, NTVERTEX *vtx, uint16_t *idx, int &idx_ofs)
 {
 	if (grp == 0) {
-		D3DVALUE cosr = scale.x*(D3DVALUE)cos(rot), sinr = scale.x*(D3DVALUE)sin(rot);
-		DWORD i;
-		WORD iofs = (WORD)idx_ofs;
+		float cosr = scale.x*(float)cos(rot), sinr = scale.x*(float)sin(rot);
+		int i;
+		uint16_t iofs = (uint16_t)idx_ofs;
 		NTVERTEX *src = Vtx;
 		memcpy (vtx, src, 44*sizeof(NTVERTEX));
 		vtx[16].tu = vtx[17].tu = (vtx[18].tu = vtx[19].tu = ((padno+1)%5)*0.1875f) + 0.1875f;
@@ -1726,7 +1449,7 @@ NTVERTEX Lpad02::Vtx[28] = {
 	{-15,0,-17.5,  0,1,0,   0.1875f,0.5     }
 };
 
-WORD Lpad02::Idx[60] = {
+uint16_t Lpad02::Idx[60] = {
 	0,1,2, 2,1,3, 2,3,5, 5,4,2, 4,5,7, 7,6,4, 6,7,8, 8,7,9,
 	9,11,8, 8,11,10, 10,11,1, 1,0,10,
 	12,13,15, 14,15,13, 16,17,19, 18,19,17,
@@ -1753,7 +1476,7 @@ int Lpad02::ParseLine (const char *label, const char *value)
 	return res;
 }
 
-bool Lpad02::GetGroupSpec (int grp, DWORD &nvtx, DWORD &nidx, LONGLONG &_texid,
+bool Lpad02::GetGroupSpec (int grp, int &nvtx, int &nidx, uint64_t &_texid,
 	bool &undershadow, bool &groundshadow)
 {
 	if (grp == 0) {
@@ -1766,12 +1489,12 @@ bool Lpad02::GetGroupSpec (int grp, DWORD &nvtx, DWORD &nidx, LONGLONG &_texid,
 	} else return false;
 }
 
-void Lpad02::ExportGroup (int grp, NTVERTEX *vtx, WORD *idx, DWORD &idx_ofs)
+void Lpad02::ExportGroup (int grp, NTVERTEX *vtx, uint16_t *idx, int &idx_ofs)
 {
 	if (grp == 0) {
-		D3DVALUE cosr = scale.x*(D3DVALUE)cos(rot), sinr = scale.x*(D3DVALUE)sin(rot);
-		DWORD i;
-		WORD iofs = (WORD)idx_ofs;
+		float cosr = scale.x*(float)cos(rot), sinr = scale.x*(float)sin(rot);
+		int i;
+		uint16_t iofs = (uint16_t)idx_ofs;
 		NTVERTEX *src = Vtx;
 		memcpy (vtx, src, 28*sizeof(NTVERTEX));
 		// set pad number
@@ -1842,7 +1565,7 @@ NTVERTEX Lpad02a::Vtx[37] = {
 	{-10,0,  2.917f,  0,1,0,    0.375f, 0.0547f}
 };
 
-WORD Lpad02a::Idx[96] = {
+uint16_t Lpad02a::Idx[96] = {
 	4,13,12,  3,4,12,  3,12,9,  0,3,9,  0,9,1,  1,9,10,
 	4,14,13,  5,14,4,  5,11,14, 2,11,5, 1,11,2, 1,10,11,
 	4,15,16,  3,15,4,  3,18,15, 6,18,3, 6,7,18, 18,7,19,
@@ -1871,7 +1594,7 @@ int Lpad02a::ParseLine (const char *label, const char *value)
 	return res;
 }
 
-bool Lpad02a::GetGroupSpec (int grp, DWORD &nvtx, DWORD &nidx, LONGLONG &_texid,
+bool Lpad02a::GetGroupSpec (int grp, int &nvtx, int &nidx, uint64_t &_texid,
 	bool &undershadow, bool &groundshadow)
 {
 	if (grp == 0) {
@@ -1884,12 +1607,12 @@ bool Lpad02a::GetGroupSpec (int grp, DWORD &nvtx, DWORD &nidx, LONGLONG &_texid,
 	} else return false;
 }
 
-void Lpad02a::ExportGroup (int grp, NTVERTEX *vtx, WORD *idx, DWORD &idx_ofs)
+void Lpad02a::ExportGroup (int grp, NTVERTEX *vtx, uint16_t *idx, int &idx_ofs)
 {
 	if (grp == 0) {
-		D3DVALUE cosr = scale.x*(D3DVALUE)cos(rot), sinr = scale.x*(D3DVALUE)sin(rot);
-		DWORD i;
-		WORD iofs = (WORD)idx_ofs;
+		float cosr = scale.x*(float)cos(rot), sinr = scale.x*(float)sin(rot);
+		int i;
+		uint16_t iofs = (uint16_t)idx_ofs;
 		NTVERTEX *src = Vtx;
 		memcpy (vtx, src, 37*sizeof(NTVERTEX));
 
@@ -1947,7 +1670,7 @@ Runway::~Runway ()
 	if (nrwseg) delete []rwseg;
 }
 
-bool Runway::GetGroupSpec (int grp, DWORD &nvtx, DWORD &nidx, LONGLONG &_texid,
+bool Runway::GetGroupSpec (int grp, int &nvtx, int &nidx, uint64_t &_texid,
 	bool &undershadow, bool &groundshadow)
 {
 	switch (grp) {
@@ -1963,10 +1686,10 @@ bool Runway::GetGroupSpec (int grp, DWORD &nvtx, DWORD &nidx, LONGLONG &_texid,
 	}
 }
 
-void Runway::ExportGroup (int grp, NTVERTEX *vtx, WORD *idx, DWORD &idx_ofs)
+void Runway::ExportGroup (int grp, NTVERTEX *vtx, uint16_t *idx, int &idx_ofs)
 {
-	DWORD i;
-	WORD iofs = (WORD)idx_ofs;
+	int i;
+	uint16_t iofs = (uint16_t)idx_ofs;
 
 	switch (grp) {
 	case 0:
@@ -1980,7 +1703,7 @@ int Runway::Read (istream &is)
 {
 	char cbuf[256], *cp, label[32];
 	int i;
-	DWORD k;
+	int k;
 
 	do {
 		if (!is.getline (cbuf, 256)) return 1; // premature end of file
@@ -2012,8 +1735,8 @@ int Runway::Read (istream &is)
 				}
 			}
 		} else if (!_strnicmp (label, "RWSEG", 5)) {
-			D3DVALUE seglen, tu0, tu1, tv0, tv1;
-			DWORD subseg;
+			float seglen, tu0, tu1, tv0, tv1;
+			int subseg;
 			sscanf (cp+5, "%d%d%f%f%f%f%f", &i, &subseg, &seglen, &tu0, &tu1, &tv0, &tv1);
 			if (--i >= 0 && i < (int)nrwseg) {
 				rwseg[i].subseg = subseg;
@@ -2036,8 +1759,8 @@ void Runway::Activate ()
 	if (dyndata) return; // active already
 	dyndata = new struct DYNDATA; TRACENEW
 
-	DWORD i, j, k, m;
-	WORD ofs;
+	int i, j, k, m;
+	uint16_t ofs;
 
 	dyndata->nRwVtx = dyndata->nRwIdx = 0;
 	for (i = 0; i < nrwseg; i++) {
@@ -2047,15 +1770,15 @@ void Runway::Activate ()
 		}
 	}
 	dyndata->RwVtx = new NTVERTEX[dyndata->nRwVtx]; TRACENEW
-	dyndata->RwIdx = new WORD[dyndata->nRwIdx]; TRACENEW
+	dyndata->RwIdx = new uint16_t[dyndata->nRwIdx]; TRACENEW
 
-	D3DVALUE x, z, step;
-	D3DVALUE dx = end2.x - end1.x;
-	D3DVALUE dz = end2.z - end1.z;
-	D3DVALUE len = D3DVAL(_hypot (dx, dz));
-	D3DVALUE dwx = (width/len) * dz;
-	D3DVALUE dwz = (width/len) * dx;
-	D3DVALUE s0, x0, z0, ddx, ddz;
+	float x, z, step;
+	float dx = end2.x - end1.x;
+	float dz = end2.z - end1.z;
+	float len = std::hypot (dx, dz);
+	float dwx = (width/len) * dz;
+	float dwz = (width/len) * dx;
+	float s0, x0, z0, ddx, ddz;
 
 	for (i = k = m = 0, s0 = 0.0f; i < nrwseg; i++) {
 		x0 = dx*s0 + end1.x;
@@ -2063,7 +1786,7 @@ void Runway::Activate ()
 		ddx = rwseg[i].len * dx;
 		ddz = rwseg[i].len * dz;
 		for (j = 0; j < rwseg[i].subseg; j++) {
-			ofs = (WORD)(k + j*2);
+			ofs = (uint16_t)(k + j*2);
 			dyndata->RwIdx[m++] = ofs;
 			dyndata->RwIdx[m++] = ofs+1;
 			dyndata->RwIdx[m++] = ofs+2;
@@ -2072,7 +1795,7 @@ void Runway::Activate ()
 			dyndata->RwIdx[m++] = ofs+1;
 		}
 		for (j = 0; j <= rwseg[i].subseg; j++) {
-			step = D3DVAL(j)/D3DVAL(rwseg[i].subseg);
+			step = (float)(j)/(float)(rwseg[i].subseg);
 			x = x0 + step*ddx;
 			z = z0 + step*ddz;
 			dyndata->RwVtx[k].x = x + dwx;
@@ -2172,51 +1895,11 @@ void RunwayLights::Setup ()
 	end2.x = vtx[1].x, end2.y = vtx[1].y, end2.z = vtx[1].z;
 }
 
-void RunwayLights::Render (LPDIRECT3DDEVICE7 dev, bool day)
-{
-#ifdef INLINEGRAPHICS
-	static D3DMATERIAL7 mat_white = {
-		{0,0,0,1}, {0,0,0,1}, {0,0,0,0}, {1,1,1,1}, 0.0
-	};
-	static D3DMATERIAL7 mat_red = {
-		{0,0,0,1}, {0,0,0,1}, {0,0,0,0}, {1,0,0,1}, 0.0
-	};
-
-	dev->SetTexture (0, dyndata->tex);
-	dev->SetRenderState (D3DRENDERSTATE_ALPHABLENDENABLE, TRUE);
-
-	dev->SetMaterial (&mat_red);
-	dev->DrawIndexedPrimitive (
-		D3DPT_TRIANGLELIST, POSTEXVERTEXFLAG, dyndata->Vtx_red, dyndata->nVtx_red,
-		dyndata->Idx_red, dyndata->nIdx_red, 0);
-	if (papi && dyndata->PAPIwhite != 4)
-		dev->DrawIndexedPrimitive (
-			D3DPT_TRIANGLELIST, POSTEXVERTEXFLAG, dyndata->Vtx_PAPI, 32,
-			dyndata->Idx_PAPI_r, (4-dyndata->PAPIwhite)*12, 0);
-
-	dev->SetMaterial (&mat_white);
-	if (dyndata->night)
-		dev->DrawIndexedPrimitive (
-			D3DPT_TRIANGLELIST, POSTEXVERTEXFLAG, dyndata->Vtx_white_night, dyndata->nVtx_white_night,
-			dyndata->Idx_white_night, dyndata->nIdx_white_night, 0);
-	dev->DrawIndexedPrimitive (
-		D3DPT_TRIANGLELIST, POSTEXVERTEXFLAG, dyndata->Vtx_white_day, dyndata->nVtx_white_day,
-		dyndata->Idx_white_day, dyndata->nIdx_white_day, 0);
-	if (papi && dyndata->PAPIwhite)
-		dev->DrawIndexedPrimitive (
-			D3DPT_TRIANGLELIST, POSTEXVERTEXFLAG, dyndata->Vtx_PAPI, 32,
-			dyndata->Idx_PAPI_w, 12*dyndata->PAPIwhite, 0);
-
-	dev->SetRenderState (D3DRENDERSTATE_ALPHABLENDENABLE, FALSE);
-	g_pOrbiter->GetInlineGraphicsClient()->GetScene()->SetDefaultMaterial();
-#endif // INLINEGRAPHICS
-}
-
-void RunwayLights::VertexArray (DWORD count, const Vector &cpos, const Vector &pos, const Vector &ofs, double size, POSTEXVERTEX *&Vtx)
+void RunwayLights::VertexArray (int count, const Vector &cpos, const Vector &pos, const Vector &ofs, double size, POSTEXVERTEX *&Vtx)
 {
 	size *= 0.15; // for distance resizing (see below bsize)
 
-	DWORD i;
+	int i;
 	double bsize, ap = g_camera->Aperture();
 	Vector p(pos), bdir, v1, v2;
 
@@ -2290,7 +1973,7 @@ void RunwayLights::Update ()
 		int nwhite = (int)((alpha-papi->apprangle)/papi->aperture + 2.5);
 		if      (nwhite < 0) nwhite = 0;
 		else if (nwhite > 4) nwhite = 4;
-		dyndata->PAPIwhite = (DWORD)nwhite;
+		dyndata->PAPIwhite = (int)nwhite;
 	}
 
 	dyndata->night = (*dyndata->csun < 0.2);
@@ -2380,9 +2063,9 @@ void RunwayLights::Activate ()
 {
 	if (dyndata) return; // active already
 
-	DWORD i, j, ii, n, nv, ni, nbc, nbs, nba, nbe, nbvw, nbvr, nbwn, nbwd, nbr, nbp, nbt;
+	int i, j, ii, n, nv, ni, nbc, nbs, nba, nbe, nbvw, nbvr, nbwn, nbwd, nbr, nbp, nbt;
 	POSTEXVERTEX *Vtx;
-	WORD *Idx;
+	uint16_t *Idx;
 
 	dyndata = new struct DYNDATA; TRACENEW
 
@@ -2417,7 +2100,7 @@ void RunwayLights::Activate ()
 
 	Vtx = dyndata->Vtx = new POSTEXVERTEX[dyndata->nVtx = nv = nbt*4]; TRACENEW
 	ni = nbt*6; if (papi) ni += 8*6; // we have separate indices for white and red PAPI lights
-	Idx = dyndata->Idx = new WORD[dyndata->nIdx = ni]; TRACENEW
+	Idx = dyndata->Idx = new uint16_t[dyndata->nIdx = ni]; TRACENEW
 	dyndata->Vtx_white_night = Vtx; dyndata->nVtx_white_night = nbwn*4;
 	dyndata->Idx_white_night = Idx; dyndata->nIdx_white_night = nbwn*6;
 	dyndata->Vtx_white_day   = dyndata->Vtx_white_night + nbwn*4; dyndata->nVtx_white_day = nbwd*4;
@@ -2438,7 +2121,7 @@ void RunwayLights::Activate ()
 		case 2: Idx = dyndata->Idx_red;         n = nbr;  break;
 		}
 		for (i = ii = 0; i < n; i++) {
-			WORD idx = (WORD)(i*4);
+			uint16_t idx = (uint16_t)(i*4);
 			Idx[ii++] = idx;
 			Idx[ii++] = idx+2;
 			Idx[ii++] = idx+1;
@@ -2451,7 +2134,7 @@ void RunwayLights::Activate ()
 		dyndata->Vtx_PAPI = dyndata->Vtx_red + nbr*4;
 		dyndata->Idx_PAPI_r = dyndata->Idx_red + nbr*6;
 		dyndata->Idx_PAPI_w = dyndata->Idx_PAPI_r + 8*6;
-		static WORD idx[96] = {0,2,1,3,2,0,16,18,17,19,18,16,       // red (inner lights)
+		static uint16_t idx[96] = {0,2,1,3,2,0,16,18,17,19,18,16,       // red (inner lights)
 			                   4,6,5,7,6,4,20,22,21,23,22,20,       // red (inner-mid lights)
 							   8,10,9,11,10,8,24,26,25,27,26,24,    // red (outer-mid lights)
 							   12,14,13,15,14,12,28,30,29,31,30,28, // red (outer lights)
@@ -2459,13 +2142,13 @@ void RunwayLights::Activate ()
 							   8,10,9,11,10,8,24,26,25,27,26,24,    // white (outer-mid lights)
 			                   4,6,5,7,6,4,20,22,21,23,22,20,       // white (inner-mid-lights)
 							   0,2,1,3,2,0,16,18,17,19,18,16};      // white (inner lights)
-		memcpy (dyndata->Idx_PAPI_r, idx, 96*sizeof(WORD));
+		memcpy (dyndata->Idx_PAPI_r, idx, 96*sizeof(uint16_t));
 	}
 	dyndata->csun = &base->SunDirectionBuffered()->y;
 
 	static char texname[8] = {'B','A','L','L',0,0,0,0};
 	SURFHANDLE dummy;
-	base->GetGenericTexture (*(LONGLONG*)texname, (SURFHANDLE&)dyndata->tex, dummy);
+	base->GetGenericTexture (*(uint64_t*)texname, (SURFHANDLE&)dyndata->tex, dummy);
 }
 
 void RunwayLights::Deactivate ()
@@ -2510,24 +2193,11 @@ int BeaconArray::Read (istream &is)
 	return 0;
 }
 
-void BeaconArray::Render (LPDIRECT3DDEVICE7 dev, bool day)
-{
-#ifdef INLINEGRAPHICS
-	dev->SetTexture (0,tex);
-	dev->SetMaterial (lightmat);
-	dev->SetRenderState (D3DRENDERSTATE_ALPHABLENDENABLE, TRUE);
-	dev->DrawIndexedPrimitive (
-		D3DPT_TRIANGLELIST, POSTEXVERTEXFLAG, Vtx, nVtx, Idx, nIdx, 0);
-	dev->SetRenderState (D3DRENDERSTATE_ALPHABLENDENABLE, FALSE);
-	g_pOrbiter->GetInlineGraphicsClient()->GetScene()->SetDefaultMaterial();
-#endif // INLINEGRAPHICS
-}
-
 void BeaconArray::Update ()
 {
 	const double resize_fac = 0.1;
 
-	DWORD i;
+	int i;
 	Vector p, v1, v2;
 	double bsize = size;
 
@@ -2571,10 +2241,10 @@ void BeaconArray::Update ()
 
 void BeaconArray::Activate ()
 {
-	DWORD i, ii;
+	int i, ii;
 
 	Vtx = new POSTEXVERTEX[nVtx = count*4]; TRACENEW
-	Idx = new WORD[nIdx = count*6]; TRACENEW
+	Idx = new uint16_t[nIdx = count*6]; TRACENEW
 	Pos = new Vector[count]; TRACENEW
 
 	double ici, ic = 1.0/(count-1);
@@ -2591,7 +2261,7 @@ void BeaconArray::Activate ()
 	}
 
 	for (i = ii = 0; i < count; i++) {
-		WORD idx = (WORD)(i*4);
+		uint16_t idx = (uint16_t)(i*4);
 		Idx[ii++] = idx;
 		Idx[ii++] = idx+2;
 		Idx[ii++] = idx+1;
@@ -2599,12 +2269,12 @@ void BeaconArray::Activate ()
 		Idx[ii++] = idx+2;
 		Idx[ii++] = idx;
 	}
-	lightmat = new D3DMATERIAL7; TRACENEW
+	lightmat = new MATERIAL; TRACENEW
 	lightmat->emissive.r = col_r;
 	lightmat->emissive.g = col_g;
 	lightmat->emissive.b = col_b;
 
-	static LONGLONG texid = NameToId ("Ball");
+	static uint64_t texid = NameToId ("Ball");
 	SURFHANDLE dummy;
 	base->GetGenericTexture (texid, (SURFHANDLE&)tex, dummy);
 }
@@ -2628,14 +2298,14 @@ Train::Train (const Base *_base): BaseObject (_base)
 	slowzone = 100.0f;
 }
 
-void Train::Init (const D3DVECTOR &_end1, const D3DVECTOR &_end2)
+void Train::Init (const glm::fvec3 &_end1, const glm::fvec3 &_end2)
 {
 	end1 = _end1;
 	end2 = _end2;
 	dir.x = end2.x - end1.x;
 	dir.y = end2.y - end1.y;
 	dir.z = end2.z - end1.z;
-	length = (D3DVALUE)sqrt (dir.x*dir.x + dir.y*dir.y + dir.z*dir.z);
+	length = (float)sqrt (dir.x*dir.x + dir.y*dir.y + dir.z*dir.z);
 	dir.x /= length;
 	dir.y /= length;
 	dir.z /= length;
@@ -2653,18 +2323,18 @@ void Train::Setup ()
 	end2.y += base->RefPlanet()->Elevation (lng, lat)-base->Elevation();
 }
 
-void Train::SetCabin (DWORD nvtx, const NTVERTEX *ref, NTVERTEX *res, const D3DVECTOR &pos, const D3DVECTOR &ofs)
+void Train::SetCabin (int nvtx, const NTVERTEX *ref, NTVERTEX *res, const glm::fvec3 &pos, const glm::fvec3 &ofs)
 {
 	// rotation matrix
-	D3DVALUE sinth, costh, cosph, sinph, vx, vy, vz;
-	costh = (D3DVALUE)cos (asin (sinth = (end2.y-end1.y)/length));
+	float sinth, costh, cosph, sinph, vx, vy, vz;
+	costh = (float)cos (asin (sinth = (end2.y-end1.y)/length));
 	double ph = atan2 (end2.x-end1.x, end2.z-end1.z);
-	cosph = (D3DVALUE)cos(ph), sinph = (D3DVALUE)sin(ph);
-	D3DVALUE r11 =  cosph, r12 = -sinph*sinth, r13 = sinph*costh;
-	D3DVALUE r21 =  0.0,   r22 =  costh,       r23 = sinth;
-	D3DVALUE r31 = -sinph, r32 = -cosph*sinth, r33 = cosph*costh;
+	cosph = (float)cos(ph), sinph = (float)sin(ph);
+	float r11 =  cosph, r12 = -sinph*sinth, r13 = sinph*costh;
+	float r21 =  0.0,   r22 =  costh,       r23 = sinth;
+	float r31 = -sinph, r32 = -cosph*sinth, r33 = cosph*costh;
 
-	for (DWORD i = 0; i < nvtx; i++) {
+	for (int i = 0; i < nvtx; i++) {
 		const NTVERTEX &vtx = ref[i];
 		vx = vtx.x + ofs.x;
 		vy = vtx.y + ofs.y;
@@ -2675,10 +2345,10 @@ void Train::SetCabin (DWORD nvtx, const NTVERTEX *ref, NTVERTEX *res, const D3DV
 	}
 }
 
-D3DVALUE Train::MoveCabin (D3DVALUE &pos, D3DVALUE &vel, bool &atmin)
+float Train::MoveCabin (float &pos, float &vel, bool &atmin)
 {
 	atmin = false;
-	D3DVALUE ds = vel*(D3DVALUE)td.SimDT;
+	float ds = vel*(float)td.SimDT;
 	if ((pos += ds) < slowzone) {
 		if (pos < minpos) ds -= pos-minpos, pos = minpos, vel = 1.0, atmin = true;
 		else vel = ((pos-minpos)*speedfac+1.0f) * (vel > 0.0 ? 1.0f:-1.0f);
@@ -2725,7 +2395,7 @@ static NTVERTEX cabin1[30] = {
 	{-2.2f,0.5,-9.5,  -0.866f,-0.5,0, 0.95f,1},
 };
 
-static WORD cabin1_idx[78] = {
+static uint16_t cabin1_idx[78] = {
 	0,1,2,3,2,1,2,3,4,5,4,3,4,5,6,7,6,5,6,7,8,9,8,7,8,9,10,11,10,9,
 	10,11,12,13,12,11,12,13,14,15,14,13,14,15,16,17,16,15,
 	18,19,20,21,20,19,20,21,22,23,22,21,24,25,26,27,26,25,26,27,28,29,28,27
@@ -2742,7 +2412,7 @@ static NTVERTEX mrail1[8] = {
 	{ 2.5,0,1,   0.707f,0.707f,0,   6,0.5}
 };
 
-static WORD mrail1_idx[18] = {
+static uint16_t mrail1_idx[18] = {
 	0,1,2,3,2,1,2,3,4,5,4,3,4,5,6,7,6,5
 };
 
@@ -2789,7 +2459,7 @@ void Train1::Activate ()
 {
 	if (dyndata) return; // already active
 
-	DWORD i;
+	int i;
 	dyndata = new struct DYNDATA; TRACENEW
 	dyndata->Vtx = new NTVERTEX[38]; TRACENEW
 	dyndata->tick = rand()%10000;
@@ -2797,13 +2467,13 @@ void Train1::Activate ()
 	NTVERTEX *Vtx = dyndata->Vtx;
 
 	// rotation matrix
-	D3DVALUE sinth, costh, cosph, sinph;
-	costh = (D3DVALUE)cos (asin (sinth = (end2.y-end1.y)/length));
+	float sinth, costh, cosph, sinph;
+	costh = (float)cos (asin (sinth = (end2.y-end1.y)/length));
 	double ph = atan2 (end2.x-end1.x, end2.z-end1.z);
-	cosph = (D3DVALUE)cos(ph), sinph = (D3DVALUE)sin(ph);
-	D3DVALUE r11 =  cosph, r12 = -sinph*sinth, r13 = sinph*costh;
-	D3DVALUE r21 =  0.0,   r22 =  costh,       r23 = sinth;
-	D3DVALUE r31 = -sinph, r32 = -cosph*sinth, r33 = cosph*costh;
+	cosph = (float)cos(ph), sinph = (float)sin(ph);
+	float r11 =  cosph, r12 = -sinph*sinth, r13 = sinph*costh;
+	float r21 =  0.0,   r22 =  costh,       r23 = sinth;
+	float r31 = -sinph, r32 = -cosph*sinth, r33 = cosph*costh;
 
 	// cabin vertices
 	for (i = 0; i < 30; i++) {
@@ -2820,7 +2490,7 @@ void Train1::Activate ()
 	for (i = 0; i < 8; i++) {
 		NTVERTEX &src = mrail1[i];
 		NTVERTEX &tgt = Vtx[30+i];
-		D3DVALUE vz = (i%2 ? length : 0.0f);
+		float vz = (i%2 ? length : 0.0f);
 		tgt.x  = src.x*r11 + src.y*r12 + vz*r13 + end1.x;
 		tgt.y  = src.x*r21 + src.y*r22 + vz*r23 + end1.y;
 		tgt.z  = src.x*r31 + src.y*r32 + vz*r33 + end1.z;
@@ -2835,7 +2505,7 @@ void Train1::Activate ()
 	base->GetGenericTexture (texid, (SURFHANDLE&)dyndata->tex, dummy);
 
 	cpos = minpos, cvel = 1.0;
-	D3DVECTOR ofs; ofs.x = ofs.y = 0; ofs.z = minpos;
+	glm::fvec3 ofs; ofs.x = ofs.y = 0; ofs.z = minpos;
 	SetCabin (30, cabin1, Vtx, end1, ofs);
 }
 
@@ -2848,7 +2518,7 @@ void Train1::Deactivate ()
 	}
 }
 
-bool Train1::GetGroupSpec (int grp, DWORD &nvtx, DWORD &nidx, LONGLONG &_texid,
+bool Train1::GetGroupSpec (int grp, int &nvtx, int &nidx, uint64_t &_texid,
 	bool &undershadow, bool &groundshadow)
 {
 	switch (grp) {
@@ -2871,10 +2541,10 @@ bool Train1::GetGroupSpec (int grp, DWORD &nvtx, DWORD &nidx, LONGLONG &_texid,
 	}
 }
 
-void Train1::ExportGroup (int grp, NTVERTEX *vtx, WORD *idx, DWORD &idx_ofs)
+void Train1::ExportGroup (int grp, NTVERTEX *vtx, uint16_t *idx, int &idx_ofs)
 {
-	DWORD i;
-	WORD iofs = (WORD)idx_ofs;
+	int i;
+	uint16_t iofs = (uint16_t)idx_ofs;
 
 	switch (grp) {
 	case 0:
@@ -2889,16 +2559,16 @@ void Train1::ExportGroup (int grp, NTVERTEX *vtx, WORD *idx, DWORD &idx_ofs)
 	}
 }
 
-bool Train1::GetShadowSpec (DWORD &nvtx, DWORD &nidx)
+bool Train1::GetShadowSpec (int &nvtx, int &nidx)
 {
 	nvtx = 8;
 	nidx = 18;
 	return true;
 }
 
-void Train1::ExportShadow (VERTEX_XYZ *vtx, WORD *idx)
+void Train1::ExportShadow (VERTEX_XYZ *vtx, uint16_t *idx)
 {
-	WORD i;
+	uint16_t i;
 
 	for (i = 0; i < 6; i++) {
 		*idx++ = 0;
@@ -2911,13 +2581,13 @@ void Train1::ExportShadow (VERTEX_XYZ *vtx, WORD *idx)
 
 void Train1::Update ()
 {
-	DWORD i;
+	int i;
 	// update cabin position
 	bool reset;
-	D3DVALUE shift = MoveCabin (cpos, cvel, reset);
-	D3DVALUE dx = shift*dir.x, dy = shift*dir.y, dz = shift*dir.z;
+	float shift = MoveCabin (cpos, cvel, reset);
+	float dx = shift*dir.x, dy = shift*dir.y, dz = shift*dir.z;
 	if (reset && ++dyndata->tick > 10000) {
-		D3DVECTOR ofs; ofs.x = ofs.y = 0.0f; ofs.z = minpos;
+		glm::fvec3 ofs; ofs.x = ofs.y = 0.0f; ofs.z = minpos;
 		SetCabin (30, cabin1, cabinvtx, end1, ofs);
 		dyndata->tick = 0;
 	} else {
@@ -2930,29 +2600,6 @@ void Train1::Update ()
 	if (_shvtx) 
 		for (i = 0; i < 8; i++)
 			_shvtx[i].x += dx, _shvtx[i].z += dz;
-}
-
-void Train1::UpdateShadow (Vector &fromsun, double az)
-{
-	static DWORD i, j, nCH, ii[12] = {2,3,4,5,6,7,10,11,12,13,14,15};
-	static VECTOR2D proj[12];
-	D3DVALUE dx = (D3DVALUE)fromsun.x, dz = (D3DVALUE)fromsun.z;
-	WORD *CHidx;
-	NTVERTEX *cvtx = cabinvtx;
-	VERTEX_XYZ *vptr = shvtx;
-
-	// project bounding vertices onto y=0
-	for (i = 0; i < 12; i++) {
-		j = ii[i];
-		proj[i].x = cvtx[j].x + dx*cvtx[j].y;
-		proj[i].y = cvtx[j].z + dz*cvtx[j].y;
-	}
-	Find2DConvexHull(12, proj, &nCH, &CHidx);
-	// we assume that nCH is 8
-	for (i = 0; i < 8; i++) {
-		vptr[i].x = proj[CHidx[i]].x;
-		vptr[i].z = proj[CHidx[i]].y;
-	}
 }
 
 // ======================================================================================
@@ -3074,24 +2721,24 @@ void Train2::Activate ()
 	shvtx = 0;
 	dyndata->tick = rand()%10000;
 
-	D3DVALUE dx = (end2.x-end1.x)/(D3DVALUE)ng;
-	D3DVALUE dy = (end2.y-end1.y)/(D3DVALUE)ng;
-	D3DVALUE dz = (end2.z-end1.z)/(D3DVALUE)ng;
+	float dx = (end2.x-end1.x)/(float)ng;
+	float dy = (end2.y-end1.y)/(float)ng;
+	float dz = (end2.z-end1.z)/(float)ng;
 
 	// rotation matrix
 	double ph = atan2 (end2.x-end1.x, end2.z-end1.z);
-	D3DVALUE sinth = (end2.y-end1.y)/length, costh = (D3DVALUE)(cos(asin(sinth)));
-	D3DVALUE cosph = (D3DVALUE)cos(ph), sinph = (D3DVALUE)sin(ph);
-	D3DVALUE r11 =  cosph, r12 = -sinph*sinth, r13 = sinph*costh;
-	D3DVALUE r21 =  0.0f,  r22 =  costh,       r23 = sinth;
-	D3DVALUE r31 = -sinph, r32 = -cosph*sinth, r33 = cosph*costh;
+	float sinth = (end2.y-end1.y)/length, costh = (float)(cos(asin(sinth)));
+	float cosph = (float)cos(ph), sinph = (float)sin(ph);
+	float r11 =  cosph, r12 = -sinph*sinth, r13 = sinph*costh;
+	float r21 =  0.0f,  r22 =  costh,       r23 = sinth;
+	float r31 = -sinph, r32 = -cosph*sinth, r33 = cosph*costh;
 
 	// first girder
 	for (i = 0; i < 12; i++) {
 		// note we don't tilt girders even if p1.y != p2.y
 		NTVERTEX &src = girder_template[i];
 		NTVERTEX &tgt = dyndata->rail[i];
-		D3DVALUE vy = (i%2 ? (i==5 || i==11 ? 0:height+4) : (i==0 || i==6 ? 0:height));
+		float vy = (i%2 ? (i==5 || i==11 ? 0:height+4) : (i==0 || i==6 ? 0:height));
 		tgt.x  =  src.x*cosph + src.z*sinph + end1.x;
 		tgt.y  =  vy + end1.y;
 		tgt.z  = -src.x*sinph + src.z*cosph + end1.z;
@@ -3113,7 +2760,7 @@ void Train2::Activate ()
 	for (i = 0; i < 8; i++) { // rotate and move to start position
 		NTVERTEX &src = support_template[i];
 		NTVERTEX &tgt = dyndata->rail[(ng+1)*12+i];
-		D3DVALUE vz = (i==2 || i==3 || i==6 || i==7 ? length/(D3DVALUE)dyndata->ng : 0.0f);
+		float vz = (i==2 || i==3 || i==6 || i==7 ? length/(float)dyndata->ng : 0.0f);
 		tgt.x  = src.x*r11 + vz*r13 + end1.x;
 		tgt.y  = src.x*r21 + vz*r23 + end1.y + height;
 		tgt.z  = src.x*r31 + vz*r33 + end1.z;
@@ -3132,7 +2779,7 @@ void Train2::Activate ()
 	}
 
 	// rail shadow
-	D3DCOLOR shcol = D3DRGBA(0,0,0,0.3);
+	//D3DCOLOR shcol = D3DRGBA(0,0,0,0.3);
 	for (i = 0; i < (ng+1)*2; i++) {
 		dyndata->rshvtx[i].y = 0.0;
 		//dyndata->rshvtx[i].col = shcol;
@@ -3154,7 +2801,7 @@ void Train2::Deactivate ()
 	}
 }
 
-bool Train2::GetGroupSpec (int grp, DWORD &nvtx, DWORD &nidx, LONGLONG &_texid,
+bool Train2::GetGroupSpec (int grp, int &nvtx, int &nidx, uint64_t &_texid,
 	bool &undershadow, bool &groundshadow)
 {
 	switch (grp) {
@@ -3171,19 +2818,19 @@ bool Train2::GetGroupSpec (int grp, DWORD &nvtx, DWORD &nidx, LONGLONG &_texid,
 	}
 }
 
-void Train2::ExportGroup (int grp, NTVERTEX *vtx, WORD *idx, DWORD &idx_ofs)
+void Train2::ExportGroup (int grp, NTVERTEX *vtx, uint16_t *idx, int &idx_ofs)
 {
-	DWORD i;
-	WORD iofs = (WORD)idx_ofs;
-	D3DVECTOR ofs;
+	int i;
+	uint16_t iofs = (uint16_t)idx_ofs;
+	glm::fvec3 ofs;
 
 	// rotation matrix
 	double ph = atan2 (end2.x-end1.x, end2.z-end1.z);
-	D3DVALUE sinth = (end2.y-end1.y)/length, costh = (D3DVALUE)(cos(asin(sinth)));
-	D3DVALUE cosph = (D3DVALUE)cos(ph), sinph = (D3DVALUE)sin(ph);
-	D3DVALUE r11 =  cosph, r12 = -sinph*sinth, r13 = sinph*costh;
-	D3DVALUE r21 =  0.0f,  r22 =  costh,       r23 = sinth;
-	D3DVALUE r31 = -sinph, r32 = -cosph*sinth, r33 = cosph*costh;
+	float sinth = (end2.y-end1.y)/length, costh = (float)(cos(asin(sinth)));
+	float cosph = (float)cos(ph), sinph = (float)sin(ph);
+	float r11 =  cosph, r12 = -sinph*sinth, r13 = sinph*costh;
+	float r21 =  0.0f,  r22 =  costh,       r23 = sinth;
+	float r31 = -sinph, r32 = -cosph*sinth, r33 = cosph*costh;
 
 	switch (grp) {
 	case 0:
@@ -3206,16 +2853,16 @@ void Train2::ExportGroup (int grp, NTVERTEX *vtx, WORD *idx, DWORD &idx_ofs)
 	}
 }
 
-bool Train2::GetShadowSpec (DWORD &nvtx, DWORD &nidx)
+bool Train2::GetShadowSpec (int &nvtx, int &nidx)
 {
 	nvtx = 16;
 	nidx = 36;
 	return true;
 }
 
-void Train2::ExportShadow (VERTEX_XYZ *vtx, WORD *idx)
+void Train2::ExportShadow (VERTEX_XYZ *vtx, uint16_t *idx)
 {
-	WORD i, j;
+	uint16_t i, j;
 
 	for (j = 0; j < 2; j++) {
 		for (i = 0; i < 6; i++) {
@@ -3230,14 +2877,14 @@ void Train2::ExportShadow (VERTEX_XYZ *vtx, WORD *idx)
 
 void Train2::Update ()
 {
-	DWORD i, j;
+	int i, j;
 	// update cabin position
 	bool reset;
 	for (j = 0; j < 2; j++) {
-		D3DVALUE shift = MoveCabin (dyndata->cpos[j], dyndata->cvel[j], reset);
-		D3DVALUE dx = shift*dir.x, dy = shift*dir.y, dz = shift*dir.z;
+		float shift = MoveCabin (dyndata->cpos[j], dyndata->cvel[j], reset);
+		float dx = shift*dir.x, dy = shift*dir.y, dz = shift*dir.z;
 		if (reset && ++dyndata->tick > 10000) {
-			D3DVECTOR ofs;
+			glm::fvec3 ofs;
 			ofs.x = (j ? -2.5f:2.5f);
 			ofs.y = height-1.0f;
 			ofs.z = minpos;
@@ -3255,82 +2902,6 @@ void Train2::Update ()
 				_shvtx[i].x += dx, _shvtx[i].z += dz;
 		}
 	}
-}
-
-void Train2::UpdateShadow (Vector &fromsun, double az)
-{
-	static DWORD i, j, nCH, ii[12] = {2,3,4,5,6,7,10,11,12,13,14,15};
-	static VECTOR2D proj[12];
-	D3DVALUE dx = (D3DVALUE)fromsun.x, dz = (D3DVALUE)fromsun.z;
-	WORD *CHidx;
-	NTVERTEX *vtx = cabinvtx[0];
-	VERTEX_XYZ *vptr = shvtx;
-	D3DVALUE ddx = cabinvtx[1][0].x - vtx[0].x;
-	D3DVALUE ddz = cabinvtx[1][0].z - vtx[0].z;
-
-	// project bounding vertices onto y=0
-	for (i = 0; i < 12; i++) {
-		j = ii[i];
-		proj[i].x = vtx[j].x + dx*vtx[j].y;
-		proj[i].y = vtx[j].z + dz*vtx[j].y;
-	}
-	Find2DConvexHull(12, proj, &nCH, &CHidx);
-	// we assume that nCH is 8
-	for (i = 0; i < 8; i++) {
-		vptr[i+8].x = (vptr[i].x = proj[CHidx[i]].x) + ddx;
-		vptr[i+8].z = (vptr[i].z = proj[CHidx[i]].y) + ddz;
-	}
-
-	// update rail shadow
-	ddx = (end2.x-end1.x)/(D3DVALUE)dyndata->ng;
-	ddz = (end2.z-end1.z)/(D3DVALUE)dyndata->ng;
-	WORD ng = dyndata->ng;
-	for (i = 0; i < 2; i++) {
-		vptr = dyndata->rshvtx+i;
-		vtx = dyndata->rail+(ng+1)*12+i;
-		vptr->x = vtx->x + dx*vtx->y;
-		vptr->z = vtx->z + dz*vtx->y;
-		for (j = 1; j <= ng; j++) {
-			(vptr+2)->x = vptr->x + ddx;
-			(vptr+2)->z = vptr->z + ddz;
-			vptr += 2;
-		}
-	}
-}
-
-void Train2::Render (LPDIRECT3DDEVICE7 dev, bool day)
-{
-	int i;
-	NTVERTEX *vtx = dyndata->rail;
-	DWORD ambient;
-
-	dev->SetRenderState (D3DRENDERSTATE_ALPHABLENDENABLE, TRUE);
-	dev->SetTexture (0, day ? dyndata->dtex : dyndata->ntex);
-
-	if (!day) {
-		dev->GetRenderState (D3DRENDERSTATE_AMBIENT, &ambient);
-		dev->SetRenderState (D3DRENDERSTATE_AMBIENT, ambient*16);
-	}
-
-	// render girders
-	for (i = 0; i <= dyndata->ng; i++) {
-		dev->DrawPrimitive (D3DPT_TRIANGLESTRIP, D3DFVF_VERTEX, vtx, 6, NULL); vtx += 6;
-		dev->DrawPrimitive (D3DPT_TRIANGLESTRIP, D3DFVF_VERTEX, vtx, 6, NULL); vtx += 6;
-	}
-	// render traverses
-	for (i = 0; i < dyndata->ng; i++) {
-		dev->DrawPrimitive (D3DPT_TRIANGLESTRIP, D3DFVF_VERTEX, vtx, 4, NULL); vtx += 4;
-		dev->DrawPrimitive (D3DPT_TRIANGLESTRIP, D3DFVF_VERTEX, vtx, 4, NULL); vtx += 4;
-	}
-
-	dev->SetRenderState (D3DRENDERSTATE_ALPHABLENDENABLE, FALSE);
-	if (!day) dev->SetRenderState (D3DRENDERSTATE_AMBIENT, ambient);
-}
-
-void Train2::RenderShadow (LPDIRECT3DDEVICE7 dev)
-{
-	dev->DrawPrimitive (
-		D3DPT_TRIANGLESTRIP, D3DFVF_XYZ /*| D3DFVF_DIFFUSE*/, dyndata->rshvtx, (dyndata->ng+1)*2, NULL);
 }
 
 // ==============================================================================
@@ -3373,9 +2944,9 @@ int SolarPlant::Read (istream &is)
 			sscanf (cp+4, "%d%d", &nrow, &ncol);
 		else if (!_stricmp (label, "ROT")) {
 			sscanf (cp+3, "%f", &rot);
-			rot *= (D3DVALUE)RAD;
+			rot *= (float)RAD;
 		} else if (!_stricmp (label, "TEX")) {
-			D3DVALUE su, sv;
+			float su, sv;
 			i = sscanf (cp+3, "%s%f%f", label, &su, &sv);
 			texid = NameToId (label);
 			if (i > 1) tuscale = su;
@@ -3386,53 +2957,14 @@ int SolarPlant::Read (istream &is)
 	return 0;
 }
 
-void SolarPlant::Render (LPDIRECT3DDEVICE7 dev, bool)
-{
-	int i, j;
-
-	// check for flashing panels
-	Vector pc, cdir (tmul (base->GRot(), g_camera->GPos()-base->GPos()));
-	bool anyflash = false;
-	double alpha;
-	for (i = 0; i < npanel; i++) {
-		pc.Set (cdir.x - ppos[i].x, cdir.y - ppos[i].y, cdir.z - ppos[i].z);
-		pc.unify();
-		alpha = dotp (pc, nml);
-		if (alpha > 0.999) {
-			anyflash = flash[i] = true;
-			for (j = i*4; j < (i+1)*4; j++) Vtx[j].tu += 0.25;
-		}
-	}
-
-	// render panels and stands
-	dev->SetTexture (0, tex);
-	dev->SetRenderState (D3DRENDERSTATE_ALPHABLENDENABLE, TRUE);
-	dev->DrawIndexedPrimitive (
-		D3DPT_TRIANGLELIST, D3DFVF_VERTEX, Vtx, nVtx, Idx, nIdx, 0);
-	if (anyflash)
-		for (i = 0; i < npanel; i++)
-			if (flash[i]) {
-				for (j = i*4; j < (i+1)*4; j++) Vtx[j].tu -= 0.25;
-				flash[i] = false;
-			}
-	dev->SetRenderState (D3DRENDERSTATE_ALPHABLENDENABLE, FALSE);
-}
-
-void SolarPlant::RenderShadow (LPDIRECT3DDEVICE7 dev)
-{
-	if (have_shadows)
-		dev->DrawIndexedPrimitive (
-			D3DPT_TRIANGLELIST, D3DFVF_XYZ /*| D3DFVF_DIFFUSE*/, ShVtx, nShVtx, ShIdx, nShIdx, 0);
-}
-
 void SolarPlant::Activate ()
 {
 	int i, j, idx, idx_ofs, vtx_ofs;
-	DWORD n;
-	D3DVALUE x, z;
-	D3DVALUE crot = (D3DVALUE)cos(rot);
-	D3DVALUE srot = (D3DVALUE)sin(rot);
-	ppos = new D3DVECTOR[npanel]; TRACENEW
+	int n;
+	float x, z;
+	float crot = (float)cos(rot);
+	float srot = (float)sin(rot);
+	ppos = new glm::fvec3[npanel]; TRACENEW
 	for (i = idx = 0; i < nrow; i++) {
 		x = sepx * (i-0.5f*(nrow-1));
 		for (j = 0; j < ncol; j++) {
@@ -3444,7 +2976,7 @@ void SolarPlant::Activate ()
 		}
 	}
 	Vtx = new NTVERTEX[nVtx = npanel*12]; TRACENEW
-	Idx = new WORD[nIdx = npanel*21]; TRACENEW
+	Idx = new uint16_t[nIdx = npanel*21]; TRACENEW
 	flash = new bool[npanel]; TRACENEW
 
 	// mesh for all panels
@@ -3483,7 +3015,7 @@ void SolarPlant::Activate ()
 	}
 	// the panel stands
 	idx_ofs = npanel*12; vtx_ofs = npanel*8;
-	D3DVALUE v1 = 2.89f*scale, v2 = 2.5f*scale, v3 = 1.44f*scale;
+	float v1 = 2.89f*scale, v2 = 2.5f*scale, v3 = 1.44f*scale;
 	for (i = 0; i < npanel; i++) {
 		Idx[idx_ofs++] = vtx_ofs;
 		Idx[idx_ofs++] = vtx_ofs+1;
@@ -3511,8 +3043,8 @@ void SolarPlant::Activate ()
 	// shadow mesh
 	if (g_pOrbiter->Cfg()->CfgVisualPrm.bShadows) {
 		ShVtx = new VERTEX_XYZ[nShVtx = npanel*4]; TRACENEW
-		ShIdx = new WORD[nShIdx = npanel*6]; TRACENEW
-		D3DCOLOR shcol = base->ShadowColor();
+		ShIdx = new uint16_t[nShIdx = npanel*6]; TRACENEW
+		//D3DCOLOR shcol = D3DRGBA(0,0,0,0.7);
 		for (n = 0; n < nShVtx; n++) {
 			ShVtx[n].y = 0.0f;
 			//ShVtx[n].col = shcol;
@@ -3556,15 +3088,15 @@ void SolarPlant::Update ()
 	}
 
 	int i, vtx_ofs = npanel*4;
-	D3DVALUE dx = 8.0f*scale, dz = 4.0f*scale;
+	float dx = 8.0f*scale, dz = 4.0f*scale;
 	double tht = acos (nml.y);         // tilt angle
 	double phi = atan2 (nml.z, nml.x); // rotation angle
-	D3DVALUE ctht = (D3DVALUE)cos(tht), stht = (D3DVALUE)sin(tht);
-	D3DVALUE cphi = (D3DVALUE)cos(phi), sphi = (D3DVALUE)sin(phi);
+	float ctht = (float)cos(tht), stht = (float)sin(tht);
+	float cphi = (float)cos(phi), sphi = (float)sin(phi);
 	// rotation matrix
-	D3DVALUE r11 = cphi*ctht, r12 = cphi*stht, r13 = -sphi;
-	D3DVALUE r21 = -stht,     r22 = ctht,      r23 = 0.0f;
-	D3DVALUE r31 = sphi*ctht, r32 = sphi*stht, r33 = cphi;
+	float r11 = cphi*ctht, r12 = cphi*stht, r13 = -sphi;
+	float r21 = -stht,     r22 = ctht,      r23 = 0.0f;
+	float r31 = sphi*ctht, r32 = sphi*stht, r33 = cphi;
 
 	for (i = 0; i < npanel; i++) { // rotate panels into sun
 		Vtx[i*4].x   = Vtx[vtx_ofs+i*4].x   = ppos[i].x - r11*dx - r13*dz;
@@ -3579,30 +3111,12 @@ void SolarPlant::Update ()
 		Vtx[i*4+3].x = Vtx[vtx_ofs+i*4+3].x = ppos[i].x + r11*dx - r13*dz;
 		Vtx[i*4+3].y = Vtx[vtx_ofs+i*4+3].y = ppos[i].y + r21*dx;
 		Vtx[i*4+3].z = Vtx[vtx_ofs+i*4+3].z = ppos[i].z + r31*dx - r33*dz;
-		Vtx[i*4].nx = Vtx[i*4+1].nx = Vtx[i*4+2].nx = Vtx[i*4+3].nx = (D3DVALUE)nml.x;
-		Vtx[i*4].ny = Vtx[i*4+1].ny = Vtx[i*4+2].ny = Vtx[i*4+3].ny = (D3DVALUE)nml.y;
-		Vtx[i*4].nz = Vtx[i*4+1].nz = Vtx[i*4+2].nz = Vtx[i*4+3].nz = (D3DVALUE)nml.z;
-		Vtx[vtx_ofs+i*4].nx = Vtx[vtx_ofs+i*4+1].nx = Vtx[vtx_ofs+i*4+2].nx = Vtx[vtx_ofs+i*4+3].nx = -(D3DVALUE)nml.x;
-		Vtx[vtx_ofs+i*4].ny = Vtx[vtx_ofs+i*4+1].ny = Vtx[vtx_ofs+i*4+2].ny = Vtx[vtx_ofs+i*4+3].ny = -(D3DVALUE)nml.x;
-		Vtx[vtx_ofs+i*4].nz = Vtx[vtx_ofs+i*4+1].nz = Vtx[vtx_ofs+i*4+2].nz = Vtx[vtx_ofs+i*4+3].nz = -(D3DVALUE)nml.x;
+		Vtx[i*4].nx = Vtx[i*4+1].nx = Vtx[i*4+2].nx = Vtx[i*4+3].nx = (float)nml.x;
+		Vtx[i*4].ny = Vtx[i*4+1].ny = Vtx[i*4+2].ny = Vtx[i*4+3].ny = (float)nml.y;
+		Vtx[i*4].nz = Vtx[i*4+1].nz = Vtx[i*4+2].nz = Vtx[i*4+3].nz = (float)nml.z;
+		Vtx[vtx_ofs+i*4].nx = Vtx[vtx_ofs+i*4+1].nx = Vtx[vtx_ofs+i*4+2].nx = Vtx[vtx_ofs+i*4+3].nx = -(float)nml.x;
+		Vtx[vtx_ofs+i*4].ny = Vtx[vtx_ofs+i*4+1].ny = Vtx[vtx_ofs+i*4+2].ny = Vtx[vtx_ofs+i*4+3].ny = -(float)nml.x;
+		Vtx[vtx_ofs+i*4].nz = Vtx[vtx_ofs+i*4+1].nz = Vtx[vtx_ofs+i*4+2].nz = Vtx[vtx_ofs+i*4+3].nz = -(float)nml.x;
 	}
 	updT = td.SimT1 + 60.0;
-}
-
-void SolarPlant::UpdateShadow (Vector &fromsun, double az)
-{
-	if (!g_pOrbiter->Cfg()->CfgVisualPrm.bShadows) return;
-	if (have_shadows = (nml.y > 0.2)) {
-		int i, j;
-		double a;
-		D3DVALUE anx, anz;
-		for (i = 0; i < 4; i++) {
-			a = Vtx[i].y/nml.y;
-			anx = (D3DVALUE)(a*nml.x), anz = (D3DVALUE)(a*nml.z);
-			for (j = 0; j < npanel; j++) {
-				ShVtx[j*4+i].x = Vtx[j*4+i].x - anx;
-				ShVtx[j*4+i].z = Vtx[j*4+i].z - anz;
-			}
-		}
-	}
 }

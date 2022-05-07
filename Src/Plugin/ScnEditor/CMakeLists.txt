@@ -5,7 +5,6 @@ add_library(ScnEditor SHARED
 	ScnEditor.cpp
 	Editor.cpp
 	Convert.cpp
-	ScnEditor.rc
 )
 
 target_include_directories(ScnEditor
@@ -15,8 +14,6 @@ target_include_directories(ScnEditor
 target_link_libraries(ScnEditor
 	${ORBITER_LIB}
 	${ORBITER_SDK_LIB}
-	${ORBITER_DLGCTRL_LIB}
-	comctl32.lib
 )
 
 set_target_properties(ScnEditor
@@ -38,7 +35,6 @@ add_custom_target(deploy_api
 add_dependencies(ScnEditor
 	${OrbiterTgt}
 	Orbitersdk
-	DlgCtrl
 	deploy_api
 )
 

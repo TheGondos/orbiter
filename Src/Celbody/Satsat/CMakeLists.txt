@@ -23,7 +23,7 @@ target_include_directories(Satsat
 )
 
 target_link_libraries(Satsat
-	${ORBITER_LIB}
+#	${ORBITER_LIB}
 	${ORBITER_SDK_LIB}
 )
 
@@ -47,7 +47,7 @@ add_subdirectory(Iapetus)
 # Installation
 install(TARGETS
 	Satsat
-	RUNTIME
+#	RUNTIME
 	DESTINATION ${ORBITER_INSTALL_MODULE_DIR}
 )
 install(FILES tass17.dat

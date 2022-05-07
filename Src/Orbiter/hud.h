@@ -32,13 +32,13 @@ public:
 
 	void Render ();
 
-	virtual DWORD Configure (DWORD item, DWORD value) { return 0; }
+	virtual int Configure (int item, int value) { return 0; }
 	// generic HUD customisation which can be used by individual HUD modes
 	// to set vessel-specific behaviour
 
 protected:
 	SURFHANDLE LoadTexture (int idx);
-	virtual char *ModeIDString() const = 0;
+	virtual const char *ModeIDString() const = 0;
 	virtual void Display (oapi::Sketchpad *skp) = 0;
 
 	virtual void UpdateMesh (int &ivtx, int &iidx) {}
@@ -135,7 +135,7 @@ public:
 	void SelectReference ();
 
 protected:
-	char *ModeIDString() const { return "ORBIT"; }
+	const char *ModeIDString() const { return "ORBIT"; }
 	void Display (oapi::Sketchpad *skp);
 	void UpdateMesh (int &ivtx, int &iidx);
 	void WriteParams (std::ostream &ofs) const;
@@ -143,8 +143,8 @@ protected:
 
 private:
 	const Body *ref; // orbit reference body (0 for auto)
-	static bool ClbkName_Ref (InputBox*, char *str, void *data);
-	bool SelectRef (char *str);
+	static bool ClbkName_Ref (InputBox*, const char *str, void *data);
+	bool SelectRef (const char *str);
 	char refname[64];
 	int refwidth;
 
@@ -165,7 +165,7 @@ public:
 	void SwitchColour (int idx);
 
 protected:
-	char *ModeIDString() const { return "SRFCE"; }
+	const char *ModeIDString() const { return "SRFCE"; }
 	void Display (oapi::Sketchpad *skp);
 	void UpdateMesh (int &ivtx, int &iidx);
 	void WriteParams (std::ostream &ofs) const;
@@ -187,8 +187,8 @@ public:
 	~HUD_Docking ();
 	int Mode() const { return HUD_DOCKING; }
 	void SwitchColour (int idx);
-	void SetNav (DWORD setnv);
-	DWORD GetNav () const { return nv; }
+	void SetNav (int setnv);
+	int GetNav () const { return nv; }
 	void SetReference (const Body *ref, int port);
 	void SelectReference ();
 	void SelectReferenceOld ();
@@ -196,27 +196,27 @@ public:
 	void ProcessMessage (int msg, void *data);
 
 protected:
-	char *ModeIDString() const { return "DOCK"; }
+	const char *ModeIDString() const { return "DOCK"; }
 	void Display (oapi::Sketchpad *skp);
 	void UpdateMesh (int &ivtx, int &iidx);
 	void WriteParams (std::ostream &ofs) const;
 	void ReadParams (std::ifstream &ifs);
 
 private:
-	DWORD nv;        // slaved NAV receiver
+	int nv;        // slaved NAV receiver
 
 	// Legacy code
 	bool bUseLegacyReference;  // flag for old-style reference selection
 	const Body *Legacy_ref;    // target station/vessel (legacy method)
 	int Legacy_port;           // target docking port (legacy method)
-	static bool ClbkName_Ref (InputBox*, char *str, void *data);
-	bool SelectRef (char *str);
+	static bool ClbkName_Ref (InputBox*, const char *str, void *data);
+	bool SelectRef (const char *str);
 	char refname[128], navname[128], vstr1[128], pstr1[128];
 	int refwidth, navwidth, vstr1width, pstr1width;
 
 	static struct SavePrm {    // persistent data storage
 		Vessel *vessel;        //     current vessel
-		DWORD nv;              //     slaved NAV receiver
+		int nv;              //     slaved NAV receiver
 		const Body *lref;      //     legacy reference
 		int lport;             //     legacy port
 		bool luse;             //     use legacy mechanism?

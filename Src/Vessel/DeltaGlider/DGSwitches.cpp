@@ -32,7 +32,7 @@ DGSwitch1::DGSwitch1 (VESSEL3 *v, Mode m)
 // --------------------------------------------------------------
 
 void DGSwitch1::DefineAnimationVC (const VECTOR3 &ref, const VECTOR3 &axis,
-	DWORD meshgrp, int vtxofs)
+	int meshgrp, int vtxofs)
 {
 	rf = ref;
 	ax = axis;
@@ -42,7 +42,7 @@ void DGSwitch1::DefineAnimationVC (const VECTOR3 &ref, const VECTOR3 &axis,
 
 // --------------------------------------------------------------
 
-void DGSwitch1::DefineAnimation2D (MESHHANDLE hMesh, DWORD meshgrp, int vtxofs)
+void DGSwitch1::DefineAnimation2D (MESHHANDLE hMesh, int meshgrp, int vtxofs)
 {
 	grp = oapiMeshGroup (hMesh, meshgrp);
 	mgrp = meshgrp;
@@ -99,7 +99,7 @@ bool DGSwitch1::RedrawVC (DEVMESHHANDLE hMesh, SURFHANDLE surf)
 		MATRIX3 R = rotm(ax,dphi); // rotation matrix from current to new state
 
 		NTVERTEX vtx[nvtx];
-		WORD vperm[nvtx];
+		uint16_t vperm[nvtx];
 		for (i = 0; i < nvtx; i++) vperm[i] = vofs + i;
 		GROUPREQUESTSPEC grs = {vtx, nvtx, vperm, 0, 0, 0, 0, 0};
 		oapiGetMeshGroup (hMesh, mgrp, &grs);
@@ -186,7 +186,7 @@ DGSwitch2::DGSwitch2 (VESSEL3 *v)
 
 // --------------------------------------------------------------
 
-void DGSwitch2::DefineAnimation2D (Orientation o, DWORD meshgrp, DWORD vofs)
+void DGSwitch2::DefineAnimation2D (Orientation o, int meshgrp, int vofs)
 {
 	orient = o;
 	mgrp = meshgrp;
@@ -196,7 +196,7 @@ void DGSwitch2::DefineAnimation2D (Orientation o, DWORD meshgrp, DWORD vofs)
 // --------------------------------------------------------------
 
 void DGSwitch2::DefineAnimationVC (const VECTOR3 &ref, const VECTOR3 &axis,
-	DWORD meshgrp, DWORD vofs)
+	int meshgrp, int vofs)
 {
 	rf = ref;
 	ax = axis;
@@ -265,8 +265,8 @@ bool DGSwitch2::RedrawVC (DEVMESHHANDLE hMesh, SURFHANDLE surf)
 		MATRIX3 R = rotm(ax,dphi); // rotation matrix from current to new state
 
 		NTVERTEX vtx[nvtx];
-		WORD vperm[nvtx];
-		for (i = 0; i < nvtx; i++) vperm[i] = (WORD)(vtxofs + i);
+		uint16_t vperm[nvtx];
+		for (i = 0; i < nvtx; i++) vperm[i] = (uint16_t)(vtxofs + i);
 		GROUPREQUESTSPEC grs = {vtx, nvtx, vperm, 0, 0, 0, 0, 0};
 		oapiGetMeshGroup (hMesh, mgrp, &grs);
 		for (i = 0; i < nvtx; i++) {
@@ -318,7 +318,7 @@ DGDial1::DGDial1 (VESSEL3 *v, int np, double pos0, double delta)
 
 // --------------------------------------------------------------
 
-void DGDial1::DefineAnimationVC (const VECTOR3 &ref, const VECTOR3 &axis, DWORD meshgrp, int vtxofs)
+void DGDial1::DefineAnimationVC (const VECTOR3 &ref, const VECTOR3 &axis, int meshgrp, int vtxofs)
 {
 	rf = ref;
 	ax = axis;
@@ -357,7 +357,7 @@ bool DGDial1::RedrawVC (DEVMESHHANDLE hMesh, SURFHANDLE surf)
 		MATRIX3 R = rotm(ax,dphi);
 
 		NTVERTEX vtx[nvtx];
-		WORD vperm[nvtx];
+		uint16_t vperm[nvtx];
 		for (i = 0; i < nvtx; i++) vperm[i] = vofs + i;
 		GROUPREQUESTSPEC grs = {vtx, nvtx, vperm, 0, 0, 0, 0, 0};
 		oapiGetMeshGroup (hMesh, mgrp, &grs);
@@ -426,7 +426,7 @@ DGButton2::DGButton2 (VESSEL3 *v)
 
 // --------------------------------------------------------------
 
-void DGButton2::DefineAnimationVC (const VECTOR3 &axis, DWORD meshgrp, DWORD vofs)
+void DGButton2::DefineAnimationVC (const VECTOR3 &axis, int meshgrp, int vofs)
 {
 	mgrp = meshgrp;
 	vtxofs = vofs;
@@ -458,8 +458,8 @@ bool DGButton2::RedrawVC (DEVMESHHANDLE hMesh, SURFHANDLE surf)
 
 		// animate button
 		NTVERTEX vtx[nvtx];
-		WORD vperm[nvtx];
-		for (i = 0; i < nvtx; i++) vperm[i] = (WORD)(vtxofs+i);
+		uint16_t vperm[nvtx];
+		for (i = 0; i < nvtx; i++) vperm[i] = (uint16_t)(vtxofs+i);
 		GROUPREQUESTSPEC grs = {vtx, nvtx, vperm, 0, 0, 0, 0, 0};
 		oapiGetMeshGroup (hMesh, mgrp, &grs);
 		for (i = 0; i < nvtx; i++) {
@@ -498,7 +498,7 @@ DGButton3::DGButton3 (VESSEL3 *v)
 
 // --------------------------------------------------------------
 
-void DGButton3::DefineAnimation2D (DWORD meshgrp, DWORD vofs)
+void DGButton3::DefineAnimation2D (int meshgrp, int vofs)
 {
 	mgrp = meshgrp;
 	vtxofs = vofs;
@@ -506,8 +506,8 @@ void DGButton3::DefineAnimation2D (DWORD meshgrp, DWORD vofs)
 
 // --------------------------------------------------------------
 
-void DGButton3::DefineAnimationVC (const VECTOR3 &axis, DWORD meshgrp, DWORD meshgrp_label,
-	DWORD vofs, DWORD vofs_label)
+void DGButton3::DefineAnimationVC (const VECTOR3 &axis, int meshgrp, int meshgrp_label,
+	int vofs, int vofs_label)
 {
 	mgrp = meshgrp;
 	mgrp_lbl = meshgrp_label;
@@ -567,8 +567,8 @@ bool DGButton3::RedrawVC (DEVMESHHANDLE hMesh, SURFHANDLE surf)
 
 		// animate button
 		NTVERTEX vtx[nvtx];
-		WORD vperm[nvtx];
-		for (i = 0; i < nvtx; i++) vperm[i] = (WORD)(vtxofs+i);
+		uint16_t vperm[nvtx];
+		for (i = 0; i < nvtx; i++) vperm[i] = (uint16_t)(vtxofs+i);
 		GROUPREQUESTSPEC grs = {vtx, nvtx, vperm, 0, 0, 0, 0, 0};
 		oapiGetMeshGroup (hMesh, mgrp, &grs);
 		for (i = 0; i < nvtx; i++) {
@@ -581,8 +581,8 @@ bool DGButton3::RedrawVC (DEVMESHHANDLE hMesh, SURFHANDLE surf)
 
 		// animate label
 		NTVERTEX vtx_lbl[nvtx_lbl];
-		WORD vperm_lbl[nvtx_lbl];
-		for (i = 0; i < nvtx_lbl; i++) vperm_lbl[i] = (WORD)(vtxofs_lbl+i);
+		uint16_t vperm_lbl[nvtx_lbl];
+		for (i = 0; i < nvtx_lbl; i++) vperm_lbl[i] = (uint16_t)(vtxofs_lbl+i);
 		GROUPREQUESTSPEC grs_lbl = {vtx_lbl, nvtx_lbl, vperm_lbl, 0, 0, 0, 0, 0};
 		oapiGetMeshGroup (hMesh, mgrp_lbl, &grs_lbl);
 		for (i = 0; i < nvtx_lbl; i++) {
@@ -592,7 +592,7 @@ bool DGButton3::RedrawVC (DEVMESHHANDLE hMesh, SURFHANDLE surf)
 		}
 
 		// show/hide indicator
-		DWORD ges_flag = GRPEDIT_VTXCRD;
+		int ges_flag = GRPEDIT_VTXCRD;
 		bool have_ind = (vstate != OFF);
 		bool need_ind = (state != OFF);
 		if (have_ind != need_ind) {

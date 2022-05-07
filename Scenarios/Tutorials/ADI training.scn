@@ -5,7 +5,7 @@ END_DESC
 BEGIN_ENVIRONMENT
   System Sol
   Date MJD 51982.1616949959
-  Script shuttlea/adi
+  Script ShuttleA/adi
 END_ENVIRONMENT
 
 BEGIN_FOCUS

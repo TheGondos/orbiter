@@ -70,7 +70,7 @@ void vVessel::GlobalExit ()
 	}
 }
 
-void vVessel::clbkEvent (DWORD event, DWORD_PTR context)
+void vVessel::clbkEvent (visevent event, DWORD_PTR context)
 {
 	switch (event) {
 	case EVENT_VESSEL_INSMESH:
@@ -535,7 +535,7 @@ void vVessel::RenderGroundShadow (LPDIRECT3DDEVICE7 dev, OBJHANDLE hPlanet)
 	DWORD tfactor;
 	bool resetalpha = false;
 	if (gc->UseStencilBuffer()) {
-		double scale = min (1, (csun-0.07)/0.015);
+		double scale = std::min (1.0, (csun-0.07)/0.015);
 		if (scale < 1) {
 			dev->GetRenderState (D3DRENDERSTATE_TEXTUREFACTOR, &tfactor);
 			float modalpha = (float)(scale*RGBA_GETALPHA(tfactor)/256.0);
@@ -654,7 +654,7 @@ bool vVessel::ModLighting (LPD3DLIGHT7 light)
 						if (phi < ap-as) {                // totality (sun below horizon)
 							plight.x = plight.y = plight.z = 0.0;
 						} else {
-							double dispersion = max (0.02, min (0.9, log (atm->rho0+1.0)));
+							double dispersion = std::max (0.02, std::min (0.9, log (atm->rho0+1.0)));
 							double r0 = 1.0-0.35*dispersion;
 							double g0 = 1.0-0.75*dispersion;
 							double b0 = 1.0-1.0 *dispersion;
@@ -681,7 +681,7 @@ bool vVessel::ModLighting (LPD3DLIGHT7 light)
 							dt = 0.1;
 						}
 					}
-					for	(j = 0; j < 3; j++) lcol.data[j] = min (lcol.data[j], plight.data[j]);
+					for	(j = 0; j < 3; j++) lcol.data[j] = std::min (lcol.data[j], plight.data[j]);
 					lightmod = true;
 				}
 
@@ -689,12 +689,12 @@ bool vVessel::ModLighting (LPD3DLIGHT7 light)
 				if (!i && vessel->GetAtmRef()) {
 					double sunelev = phi-ap;
 					if (sunelev > - 14.0*RAD) {
-						double amb0 = min (0.7, log (atm->rho0+1.0)*0.4);
+						double amb0 = std::min (0.7, log (atm->rho0+1.0)*0.4);
 						double alt = p-psize;
 						amb = amb0 / (alt*0.5e-4 + 1.0);
-						amb *= min (1.0, (sunelev+14.0*RAD)/(20.0*RAD));
+						amb *= std::min (1.0, (sunelev+14.0*RAD)/(20.0*RAD));
 						if (!lightmod) lightmod = (amb > 0.05);
-						amb = max (0, amb-0.05);
+						amb = std::max (0.0, amb-0.05);
 						// reduce direct light component to avoid overexposure
 						lcol *= 1.0-amb*0.5;
 					}
@@ -720,7 +720,7 @@ bool vVessel::ModLighting (LPD3DLIGHT7 light)
 							dt = 0.1;
 						}
 					}
-					for (j = 0; j < 3; j++) lcol.data[j] = min (lcol.data[j], lfrac);
+					for (j = 0; j < 3; j++) lcol.data[j] = std::min (lcol.data[j], lfrac);
 					lightmod = true;
 				}
 			}
@@ -897,4 +897,3 @@ void TransformDirection (VECTOR3 &a, const D3DMATRIX &T, bool normalise)
 		a.z /= len;
 	}
 }
-

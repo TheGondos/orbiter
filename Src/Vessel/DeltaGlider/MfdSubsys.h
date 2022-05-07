@@ -28,8 +28,8 @@ public:
 	inline int MfdId() const { return mfdid; }
 	inline SURFHANDLE VcTex() const { return vctex; }
 	void ModeChanged ();
-	bool clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH);
-	bool clbkLoadVC (int vcid);
+	bool clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH) override;
+	bool clbkLoadVC (int vcid) override;
 
 private:
 	int mfdid;
@@ -48,15 +48,15 @@ private:
 
 class MfdButtonGrp: public PanelElement {
 public:
-	MfdButtonGrp (MfdSubsystem *_subsys, DWORD _nbtn);
+	MfdButtonGrp (MfdSubsystem *_subsys, int _nbtn);
 	~MfdButtonGrp ();
 
 protected:
 	void PushButtonVC (DEVMESHHANDLE hMesh, int meshgrp, int btn, bool down);
 	MfdSubsystem *subsys;
-	DWORD nbtn;           // number of buttons in the group
-	DWORD pending_btn;    // button waiting to be animated
-	DWORD pending_action; // 0=none, 1=down, 2=up
+	int nbtn;           // number of buttons in the group
+	int pending_btn;    // button waiting to be animated
+	int pending_action; // 0=none, 1=down, 2=up
 	bool *ispushed;
 };
 
@@ -89,7 +89,7 @@ public:
 
 private:
 	int sd;       // 0=left, 1=right button column
-	DWORD xcnt;   // x-offset of button centre line in texture
+	int xcnt;   // x-offset of button centre line in texture
 	int curbtn;   // currently pressed button
 };
 

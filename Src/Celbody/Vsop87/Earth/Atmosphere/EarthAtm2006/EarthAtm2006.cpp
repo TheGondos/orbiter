@@ -21,7 +21,7 @@ bool EarthAtmosphere_2006::clbkConstants (ATMCONST *atmc) const
 
 const char *EarthAtmosphere_2006::clbkName () const
 {
-	static char *name = "2006 Edition model";
+	static const char *name = "2006 Edition model";
 	return name;
 }
 
@@ -99,10 +99,10 @@ bool EarthAtmosphere_2006::clbkParams (const PRM_IN *prm_in, PRM_OUT *prm)
 // API interface
 // ======================================================================
 
-DLLCLBK void InitModule (HINSTANCE hModule)
+DLLCLBK void InitModule (oapi::DynamicModule *hModule)
 {}
 
-DLLCLBK void ExitModule (HINSTANCE hModule)
+DLLCLBK void ExitModule (oapi::DynamicModule *hModule)
 {}
 
 DLLCLBK ATMOSPHERE *CreateAtmosphere (CELBODY2 *cbody)
@@ -115,14 +115,14 @@ DLLCLBK void DeleteAtmosphere (ATMOSPHERE *atm)
 	delete (EarthAtmosphere_2006*)atm;
 }
 
-DLLCLBK char *ModelName ()
+DLLCLBK const char *ModelName ()
 {
-	static char *name = "Orbiter 2006 Legacy Model";
+	static const char *name = "Orbiter 2006 Legacy Model";
 	return name;
 }
 
-DLLCLBK char *ModelDesc ()
+DLLCLBK const char *ModelDesc ()
 {
-	static char *desc = "A simple static atmosphere model. This model was used in Orbiter 2006. It underestimates atmospheric density and pressure above ~120km and terminates at 200km, which simplifies orbit-keeping for LEO objects.";
+	static const char *desc = "A simple static atmosphere model. This model was used in Orbiter 2006. It underestimates atmospheric density and pressure above ~120km and terminates at 200km, which simplifies orbit-keeping for LEO objects.";
 	return desc;
 }

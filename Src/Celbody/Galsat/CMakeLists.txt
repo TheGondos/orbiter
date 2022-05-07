@@ -23,7 +23,7 @@ target_include_directories(Galsat
 )
 
 target_link_libraries(Galsat
-	${ORBITER_LIB}
+#	${ORBITER_LIB}
 	${ORBITER_SDK_LIB}
 )
 
@@ -43,7 +43,7 @@ add_subdirectory(Callisto)
 # Installation
 install(TARGETS
 	Galsat
-	RUNTIME
+#	RUNTIME
 	DESTINATION ${ORBITER_INSTALL_MODULE_DIR}
 )
 install(FILES ephem_e15.dat

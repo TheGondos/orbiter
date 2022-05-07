@@ -20,7 +20,6 @@
 #include "Celbody.h"
 #include "Nav.h"
 #include "GraphicsAPI.h"
-#include "VObject.h" // temporary
 
 #define FILETYPE_MARKER 1
 
@@ -38,10 +37,10 @@ struct _finddata_t;
 #pragma pack(push,1)
 
 typedef struct {          // texture tile hierarchy element
-	WORD nSubtile;        // number of children at next higher level
+	uint16_t nSubtile;        // number of children at next higher level
 	bool bCover;          // children cover tile completely
-	DWORD ChildFlag[4];   // subtile flags. bit0: subtile area contains land; bit1: subtile area contains water; bit2: subtile is present
-	DWORD ChildIdx[4];    // texture indices for children ((DWORD)-1: child subtile not present)
+	int ChildFlag[4];   // subtile flags. bit0: subtile area contains land; bit1: subtile area contains water; bit2: subtile is present
+	int ChildIdx[4];    // texture indices for children (-1: child subtile not present)
 
 	// the following fields are transient visibility flags which change
 	// with each frame
@@ -69,14 +68,15 @@ typedef struct {
 
 // =======================================================================
 // Class Planet
+class TileManager;
+template<class T> class TileManager2;
 
 class Planet: public CelestialBody {
-	friend class VPlanet;
 	friend class TileManager;
 	template<class T> friend class TileManager2;
 
 public:
-	Planet (double _mass, double _mean_radius);
+//	Planet (double _mass, double _mean_radius);
 	// create a new planet
 
 	Planet (char *fname);
@@ -88,7 +88,7 @@ public:
 
 	int Type() const { return OBJTP_PLANET; }
 
-	const void *GetParam (DWORD paramtype) const;
+	const void *GetParam (int paramtype) const;
 
 	void SetPsys (const PlanetarySystem *_psys)
 	{ psys = _psys; }
@@ -96,16 +96,16 @@ public:
 	const PlanetarySystem *GetPsys () const
 	{ return psys; }
 
-	inline DWORD nNav() const { return nnav; }
+	inline int nNav() const { return nnav; }
 	inline NavManager &NavMgr() { return navlist; }
 	inline const NavManager &NavMgr() const { return navlist; }
 
-	inline DWORD nBase() const { return nbase; }
+	inline int nBase() const { return nbase; }
 
 	bool AddBase (Base *_base);
 	// Add _base to planet's base list. Returns false if base with this name already exists
 
-	Base *GetBase (DWORD i) const { return baselist[i]; }
+	Base *GetBase (int i) const { return baselist[i]; }
 	// return the planet's i'th surface base (assuming all children are bases)
 
 	Base *GetBase (const char *_name, bool ignorecase = false);
@@ -147,7 +147,7 @@ public:
 	inline double ShadowDepth () const { return shadowalpha; }
 	inline double CloudRotationAngle () const { return cloudrot; }
 	inline float CloudShadowDepth () const { return cloudshadowcol; }
-	inline DWORD MaxPatchLevel() const { return max_patch_level; }
+	inline int MaxPatchLevel() const { return max_patch_level; }
 	inline double BBExcess() const { return bb_excess; }
 	inline double ElevationResolution() const { return elev_res; }
 	inline int LabelFormat() const { return label_version; }
@@ -246,7 +246,7 @@ private:
 
 	const PlanetarySystem *psys; // system the planet belongs to
 
-	DWORD nbase;
+	int nbase;
 	Base **baselist;
 	// list of surface bases
 
@@ -261,19 +261,11 @@ private:
 	int nlabellist;
 	char *labelpath;
 
-	DWORD max_patch_level;
+	int max_patch_level;
 	// resolution limit for sphere patch representation of planet's visual (<= 10)
 
 	int min_cloud_level;
 	int max_cloud_level;
-	// separate cloud layer is rendered from this resolution
-
-	LPDIRECTDRAWSURFACE7 *cloudtex;   // textures for cloud layer - TODO: replace with SURFHANDLE!
-	int ncloudtex;
-
-	LPDIRECTDRAWSURFACE7 *ringtex;    // textures for ring system (if bHasRings) - TODO: replace with SURFHANDLE!
-	int nringtex;
-
 	int tmgr_version;                 // which tile manager?
 	int cmgr_version;                 // which cloud manager?
 	int label_version;				  // what method to render surface labels?

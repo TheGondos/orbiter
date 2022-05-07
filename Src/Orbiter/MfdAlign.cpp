@@ -7,15 +7,13 @@
 #include "Psys.h"
 #include "Log.h"
 #include "Select.h"
-#include <dinput.h>
 #include <iomanip>
 
 using namespace std;
 
+extern Orbiter *g_pOrbiter;
 extern PlanetarySystem *g_psys;
 extern TimeData td;
-extern InputBox *g_input;
-extern Select *g_select;
 extern char DBG_MSG[256];
 
 static const Body *last_target = 0;
@@ -23,9 +21,9 @@ static const Body *last_target = 0;
 // =======================================================================
 // class Instrument_OPlaneAlign
 
-struct Instrument_OPlaneAlign::SavePrm Instrument_OPlaneAlign::saveprm = {0,0,0,0.0,0.0,false};
+struct Instrument_OPlaneAlign::SavePrm Instrument_OPlaneAlign::saveprm = {0,0,0,false,0.0,0.0};
 
-Instrument_OPlaneAlign::Instrument_OPlaneAlign (Pane *_pane, INT_PTR _id, const Spec &spec, Vessel *_vessel, bool restore)
+Instrument_OPlaneAlign::Instrument_OPlaneAlign (Pane *_pane, MfdId _id, const Spec &spec, Vessel *_vessel, bool restore)
 : Instrument (_pane, _id, spec, _vessel)
 {
 	shpel = new Elements(); TRACENEW
@@ -74,14 +72,7 @@ Instrument_OPlaneAlign::~Instrument_OPlaneAlign ()
 	delete tgtel;
 }
 
-HELPCONTEXT *Instrument_OPlaneAlign::HelpTopic () const
-{
-	extern HELPCONTEXT DefHelpContext;
-	DefHelpContext.topic = "/mfd_align.htm";
-	return &DefHelpContext;
-}
-
-bool Instrument_OPlaneAlign::SelectRef (char *name)
+bool Instrument_OPlaneAlign::SelectRef (const char *name)
 {
 	CelestialBody *obj = g_psys->GetGravObj (name, true);
 	if (!obj) return false;
@@ -154,7 +145,7 @@ void Instrument_OPlaneAlign::UpdateDraw (oapi::Sketchpad *skp)
 	DisplayTitle (skp, "Align plane");
 	const char *modestr[3] = { "Orbit  ", "Ballist", "Surface" };
 	if (elref) {
-		skp->Text (cw*17, 1, elref->Name(), min (16, strlen(elref->Name())));
+		skp->Text (cw*17, 1, elref->Name(), std::min ((size_t)16, strlen(elref->Name())));
 		strcpy (cbuf, tgt ? tgt->Name() : customel ? "[Custom]" : "[None]");
 		skp->Text (cw*17, 1+ch, cbuf, strlen (cbuf));
 		skp->Text(cw * 5, 1 + ch, modestr[mode], 7);
@@ -285,14 +276,14 @@ void Instrument_OPlaneAlign::UpdateDraw (oapi::Sketchpad *skp)
 	skp->Line(x, y, x + cw * 11, y);
 	skp->Line(x + cw * 12, y, x + cw * 23, y);
 	skp->Line(x + cw * 24, y, x + cw * 36, y); y += 1;
-	sprintf (cbuf, "Inc% 7.2fº Inc% 7.2fº RInc%7.2fº", Deg(shpel->i), Deg(tgtel->i), Deg(reli));
+	sprintf (cbuf, "Inc% 7.2fï¿½ Inc% 7.2fï¿½ RInc%7.2fï¿½", Deg(shpel->i), Deg(tgtel->i), Deg(reli));
 	skp->Text(x, y, cbuf, strlen(cbuf)); y += ch;
-	sprintf (cbuf, "LAN% 7.2fº LAN% 7.2fº R %+7.3fº/s", Deg(shpel->theta), Deg(tgtel->theta), Deg(didt));
+	sprintf (cbuf, "LAN% 7.2fï¿½ LAN% 7.2fï¿½ R %+7.3fï¿½/s", Deg(shpel->theta), Deg(tgtel->theta), Deg(didt));
 	skp->Text(x, y, cbuf, strlen(cbuf)); y += 2 * ch;
 
 	// node encounter data
 	skp->Text(x, y, "Node encounter", 14); y += ch;
-	skp->Text(x + cw * 3, y, "dA[º] TtN[s]", 12); y += ch + 1;
+	skp->Text(x + cw * 3, y, "dA[ï¿½] TtN[s]", 12); y += ch + 1;
 	skp->Line(x + cw * 3, y, x + cw * 8, y);
 	skp->Line(x + cw * 9, y, x + cw * 15, y); y += 1;
 	// ascending node
@@ -319,7 +310,7 @@ void Instrument_OPlaneAlign::UpdateDraw (oapi::Sketchpad *skp)
 	skp->Line(x + cw * 10, y, x + cw * 17, y);
 	skp->Line(x + cw * 19, y, x + cw * 25, y);
 	skp->Line(x + cw * 27, y, x + cw * 33, y); y += 1;
-	sprintf(cbuf, have_intersection ? "AN  NML- %s" : "CE  90º  %s", FloatStr(dVan));
+	sprintf(cbuf, have_intersection ? "AN  NML- %s" : "CE  90ï¿½  %s", FloatStr(dVan));
 	y1 = (an_is_next ? y : y + ch);
 	skp->Text(x, y1, cbuf, strlen(cbuf));
 	strcpy(cbuf, FloatStr(burnTan, 3));
@@ -484,22 +475,25 @@ bool Instrument_OPlaneAlign::GetTimingsFromSurface(double &Tan, double &Aan, dou
 	}
 }
 
-bool Instrument_OPlaneAlign::KeyBuffered (DWORD key)
+bool Instrument_OPlaneAlign::KeyBuffered (int key)
 {
 	switch (key) {
-	case DIK_A:  // auto reference
+	case OAPI_KEY_A:  // auto reference
 		SelectAutoRef ();
 		return true;
-	case DIK_E:  // custom elements
-		g_input->Open ("Ecliptic inclination and longitude of asc. node [deg.]:", 0, 30, Instrument_OPlaneAlign::CallbackElements, (void*)this);
+	case OAPI_KEY_E:  // custom elements
+	{
+		InputBox *input = (InputBox *)g_pOrbiter->m_pGUIManager->GetCtrl<InputBox>();
+		input->Open ("Ecliptic inclination and longitude of asc. node [deg.]:", 0, 30, Instrument_OPlaneAlign::CallbackElements, (void*)this);
 		return true;
-	case DIK_R:  // select reference
+	}
+	case OAPI_KEY_R:  // select reference
 		OpenSelect_CelBody ("Align MFD: Reference", ClbkEnter_Ref);
 		return true;
-	case DIK_T:  // select target
+	case OAPI_KEY_T:  // select target
 		OpenSelect_Tgt ("Align MFD: Target", ClbkEnter_Tgt, elref, 0);
 		return true;
-	case DIK_M:  // mode selection
+	case OAPI_KEY_M:  // mode selection
 		CycleModes();
 		return true;
 	}
@@ -508,7 +502,7 @@ bool Instrument_OPlaneAlign::KeyBuffered (DWORD key)
 
 bool Instrument_OPlaneAlign::ProcessButton (int bt, int event)
 {
-	static const DWORD btkey[5] = { DIK_R, DIK_A, DIK_T, DIK_E, DIK_M };
+	static const int btkey[5] = { OAPI_KEY_R, OAPI_KEY_A, OAPI_KEY_T, OAPI_KEY_E, OAPI_KEY_M };
 	if (event & PANEL_MOUSE_LBDOWN) {
 		if (bt < 5) return KeyBuffered (btkey[bt]);
 	}
@@ -534,19 +528,19 @@ int Instrument_OPlaneAlign::BtnMenu (const MFDBUTTONMENU **menu) const
 	return 5;
 }
 
-bool Instrument_OPlaneAlign::ClbkEnter_Ref (Select *menu, int item, char *str, void *data)
+bool Instrument_OPlaneAlign::ClbkEnter_Ref (Select *menu, int item, const char *str, void *data)
 {
 	Instrument_OPlaneAlign *mfd = (Instrument_OPlaneAlign*)data;
 	return mfd->SelectRef (str);
 }
 
-bool Instrument_OPlaneAlign::ClbkEnter_Tgt (Select *menu, int item, char *str, void *data)
+bool Instrument_OPlaneAlign::ClbkEnter_Tgt (Select *menu, int item, const char *str, void *data)
 {
 	Instrument_OPlaneAlign* mfd = (Instrument_OPlaneAlign*)data;
 	return mfd->SelectTarget (str);
 }
 
-bool Instrument_OPlaneAlign::CallbackElements (InputBox*, char *str, void *data)
+bool Instrument_OPlaneAlign::CallbackElements (InputBox*, const char *str, void *data)
 {
 	Instrument_OPlaneAlign* instr = (Instrument_OPlaneAlign*)data;
 	double i, theta;
@@ -557,7 +551,7 @@ bool Instrument_OPlaneAlign::CallbackElements (InputBox*, char *str, void *data)
 	return false;
 }
 
-bool Instrument_OPlaneAlign::SelectTarget (char *name)
+bool Instrument_OPlaneAlign::SelectTarget (const char *name)
 {
 	const Body *obj = g_psys->GetObj (name, true);
 	if (obj && obj != elref) {

@@ -11,6 +11,7 @@
 #include "Pane.h"
 #include "Log.h"
 #include <fstream>
+#include <cmath>
 
 using namespace std;
 
@@ -19,7 +20,6 @@ extern Camera *g_camera;
 extern Vessel *g_focusobj;
 extern PlanetarySystem *g_psys;
 extern Pane *g_pane;
-extern InputBox *g_input;
 extern char DBG_MSG[256];
 
 const double MAXALT_HUD = 1e15; // make user-selectable
@@ -32,7 +32,7 @@ void BoxCoord (const Vector &dockpos, const Vector &dockdir,
 
 static double hudtexw = 512.0;
 static double hudtexh = 256.0;
-static WORD rectidx[6] = {0,2,1, 2,3,1};
+static uint16_t rectidx[6] = {0,2,1, 2,3,1};
 
 Mesh HUD::hudMesh;
 
@@ -67,7 +67,7 @@ void HUD::SwitchColour (int idx)
 
 SURFHANDLE HUD::LoadTexture (int idx)
 {
-	char cbuf[64] = "Cockpit\\hud";
+	char cbuf[64] = "Cockpit/hud";
 	switch (idx) {
 		case 1: strcat (cbuf, "_red"); break;
 		case 2: strcat (cbuf, "_yellow"); break;
@@ -94,9 +94,9 @@ void HUD::Draw (oapi::Sketchpad *skp)
 		spec.CX = HRES05 - (int)HUDofs.x, spec.CY = VRES05 + (int)HUDofs.y;
 		bCNTvis = (spec.CX >= 0 && spec.CX < spec.W && spec.CY >= 0 && spec.CY < spec.H);
 	} else {
-		D3DVECTOR homog;
+		glm::fvec3 homog;
 		bCNTvis = pane->GlobalToHomog (mul (g_focusobj->GRot(), Vector(0,0,1)), homog);
-		if (bCNTforward = (homog.z > 0.0)) {
+		if ((bCNTforward = (homog.z > 0.0))) {
 			spec.CX = (int)(HRES05*(1.0f+homog.x));
 			spec.CY = (int)(VRES05*(1.0f-homog.y));
 		} else {
@@ -129,8 +129,8 @@ void HUD::RenderDefault ()
 	if (ivtx && iidx) {
 		static MATRIX3 transf = {1,-0.5,0, 0,1,-0.5, 0,0,1};
 		GroupSpec *gs = hudMesh.GetGroup(0);
-		DWORD nvtx = gs->nVtx;
-		DWORD nidx = gs->nIdx;
+		int nvtx = gs->nVtx;
+		int nidx = gs->nIdx;
 		gs->nVtx = ivtx;
 		gs->nIdx = iidx;
 		float intens = (float)g_pane->HudIntens();
@@ -156,9 +156,9 @@ void HUD::Render ()
 		spec.CX = HRES05 - (int)HUDofs.x, spec.CY = VRES05 + (int)HUDofs.y;
 		bCNTvis = (spec.CX >= 0 && spec.CX < spec.W && spec.CY >= 0 && spec.CY < spec.H);
 	} else {
-		D3DVECTOR homog;
+		glm::fvec3 homog;
 		bCNTvis = pane->GlobalToHomog (mul (g_focusobj->GRot(), Vector(0,0,1)), homog);
-		if (bCNTforward = (homog.z > 0.0)) {
+		if ((bCNTforward = (homog.z > 0.0))) {
 			spec.CX = (int)(HRES05*(1.0f+homog.x));
 			spec.CY = (int)(VRES05*(1.0f-homog.y));
 		} else {
@@ -213,9 +213,9 @@ void HUD::Resize (bool isVC)
 			oapi::Sketchpad *skp = gc->clbkGetSketchpad (hudsurf);
 			if (skp) {
 				skp->SetFont (font);
-				DWORD charsize = skp->GetCharSize();
-				fW = HIWORD(charsize);
-				fH = LOWORD(charsize);
+				int charsize = skp->GetCharSize();
+				fW = (charsize>>16)&0xffff;
+				fH = charsize&0xffff;
 				gc->clbkReleaseSketchpad (skp);
 			}
 		}
@@ -246,10 +246,10 @@ GroupSpec *HUD::EnsureMeshBuffer(int grp, int nvtx, int nidx)
 		gs->nVtx = nvtx;
 	}
 	if (gs->nIdx < nidx) {
-		WORD *idx = new WORD[nidx];
-		memset(idx, 0, nidx*sizeof(WORD));
+		uint16_t *idx = new uint16_t[nidx];
+		memset(idx, 0, nidx*sizeof(uint16_t));
 		if (gs->nIdx) {
-			memcpy (idx, gs->Idx, gs->nIdx*sizeof(WORD));
+			memcpy (idx, gs->Idx, gs->nIdx*sizeof(uint16_t));
 			delete []gs->Idx;
 		}
 		gs->Idx = idx;
@@ -415,7 +415,7 @@ void HUD::AddMesh_DirectionMarker (int &ivtx, int &iidx, const Vector &dir, bool
 	Vector d;
 	if (bVC) d.Set (tmul (g_focusobj->GRot(), dir));
 	else     d.Set (tmul (g_camera->GRot(), dir));
-	double len = _hypot (d.x, d.y);
+	double len = std::hypot (d.x, d.y);
 	if (!len) return;
 	double cosa = d.y/len, sina = -d.x/len;
 
@@ -568,9 +568,9 @@ void HUD::AddMesh_LadderBar (int &ivtx, int &iidx, double sina, double cosa,
 		if (lab) {
 			static const int nvtx = 22;
 			static const int nidx = 36;
-			static WORD idx1[nidx] = {0,1,2, 2,1,3, 2,3,4, 4,3,5,  6,8,7, 8,9,7, 10,12,11, 12,13,11, 14,16,15, 16,17,15,  18,20,19, 20,21,19};
-			static WORD idx2[nidx] = {0,2,1, 2,3,1, 2,4,3, 4,5,3,  6,8,7, 8,9,7, 10,12,11, 12,13,11, 14,16,15, 16,17,15,  18,20,19, 20,21,19};
-			WORD *idx;
+			static uint16_t idx1[nidx] = {0,1,2, 2,1,3, 2,3,4, 4,3,5,  6,8,7, 8,9,7, 10,12,11, 12,13,11, 14,16,15, 16,17,15,  18,20,19, 20,21,19};
+			static uint16_t idx2[nidx] = {0,2,1, 2,3,1, 2,4,3, 4,5,3,  6,8,7, 8,9,7, 10,12,11, 12,13,11, 14,16,15, 16,17,15,  18,20,19, 20,21,19};
+			uint16_t *idx;
 			double x0, x2l, x3l, x4l, x2r, x3r, x4r, y0, y1, y2;
 			x0 = scal*120.0;
 			x2l = -scal*160.0, x3l = -scal*150.0, x4l = -scal*130.0;
@@ -681,7 +681,7 @@ void HUD::AddMesh_HeadingTape (int &ivtx, int &iidx, double hdg, bool marker, do
 	const int nvtx = 8 + 6*4;
 	const int nidx = 12 + 6*6;
 	const double range05 = 30; // half-range in deg
-	const WORD idx[nidx] = {
+	const uint16_t idx[nidx] = {
 		0,2,1, 2,3,1, 4,6,5, 6,7,5, // tape
 		8,10,9, 10,11,9, 12,14,13, 14,15,13, 16,18,17, 18,19,17, 20,22,21, 22,23,21, 24,26,25, 26,27,25, 28,30,29, 30,31,29 // labels
 	};
@@ -736,7 +736,7 @@ void HUD::AddMesh_HeadingTape (int &ivtx, int &iidx, double hdg, bool marker, do
 	if (marker) {
 		const int nvtx = 4;
 		const int nidx = 6;
-		static const WORD idx[nidx] = {0,2,1, 2,3,1};
+		static const uint16_t idx[nidx] = {0,2,1, 2,3,1};
 		gs = EnsureMeshBuffer (0, ivtx+nvtx, iidx+nidx);
 		double ddir = markerhdg-hdg;
 		while (fabs(ddir) > 180.0) {
@@ -955,8 +955,8 @@ void HUD::AddMesh_DockApproachGates (int &ivtx, int &iidx, const Body *tgt, cons
 	GroupSpec *gs = EnsureMeshBuffer (0, ivtx+nvtx, iidx+nidx);
 	const float tu = (float)(2.0/hudtexw);
 	const float tv = (float)(109.0/hudtexh);
-	const WORD boxidx1[30] = {0,1,4, 1,5,4, 6,7,3, 7,2,3, 4,8,6, 8,11,6, 9,5,10, 5,7,10, 12,13,15, 13,14,15};
-	const WORD boxidx2[30] = {0,4,1, 1,4,5, 6,3,7, 7,3,2, 4,6,8, 8,6,11, 9,10,5, 5,10,7, 12,15,13, 13,15,14};
+	const uint16_t boxidx1[30] = {0,1,4, 1,5,4, 6,7,3, 7,2,3, 4,8,6, 8,11,6, 9,5,10, 5,7,10, 12,13,15, 13,14,15};
+	const uint16_t boxidx2[30] = {0,4,1, 1,4,5, 6,3,7, 7,3,2, 4,6,8, 8,6,11, 9,10,5, 5,10,7, 12,15,13, 13,15,14};
 	NTVERTEX *vtx = gs->Vtx+ivtx;
 	bool need_setup = true;
 	for (i = 0; i < 10; i++) {
@@ -967,11 +967,11 @@ void HUD::AddMesh_DockApproachGates (int &ivtx, int &iidx, const Body *tgt, cons
 			if (need_setup) {
 				rx = x[3]-x[0];
 				ry = y[3]-y[0];
-				double d  = _hypot(rx,ry);
+				double d  = std::hypot(rx,ry);
 				dx1 = rx*linew/d, dy1 = ry*linew/d;
 				rx = x[1]-x[0];
 				ry = y[1]-y[0];
-				d = _hypot(rx,ry);
+				d = std::hypot(rx,ry);
 				dx2 = rx*linew/d, dy2 = ry*linew/d;
 				need_setup = false;
 			}
@@ -1024,7 +1024,7 @@ void HUD::DrawLadderBar (oapi::Sketchpad *skp, double lwcosa, double lwsina,
 	double dcosa, double dsina, int phi10, bool mark_subzero)
 {
 	int x1, y1, x2, y2, dx, dy, dx1, dy1, dx2, dy2;
-	char cbuf[5];
+	char cbuf[16];
 
 	bool is_subzero = (phi10 < 0);
 	bool revert = false;
@@ -1124,7 +1124,7 @@ void HUD::DrawTiltedRibbon (oapi::Sketchpad *skp, double phi, double alpha)
 	int    dtx = (int)(0.5*s*sina);
 	int    dty = (int)(0.5*s*cosa);
 	int x0, y0, iphin;
-	char cbuf[4];
+	char cbuf[16];
 	
 	skp->SetTextAlign (oapi::Sketchpad::CENTER);
 	double d1;
@@ -1143,7 +1143,7 @@ void HUD::DrawTiltedRibbon (oapi::Sketchpad *skp, double phi, double alpha)
 			skp->Line (x0-dtx, y0+dty, x0+dtx, y0-dty);
 		} else {
 			skp->Line (x0-dsx, y0+dsy, x0+dsx, y0-dsy);
-			_itoa (iphin, cbuf, 10);
+			sprintf(cbuf, "%d", iphin);
 			skp->Text (x0+dsx*2, y0-dsy*2-fH/2, cbuf, strlen(cbuf));
 		}
 	}
@@ -1157,7 +1157,7 @@ void HUD::DrawTiltedRibbon (oapi::Sketchpad *skp, double phi, double alpha)
 			skp->Line (x0-dtx, y0+dty, x0+dtx, y0-dty);
 		} else {
 			skp->Line (x0-dsx, y0+dsy, x0+dsx, y0-dsy);
-			_itoa (iphin, cbuf, 10);
+			sprintf(cbuf, "%d", iphin);
 			skp->Text (x0+dsx*2, y0-dsy*2-fH/2, cbuf, strlen(cbuf));
 		}
 	}
@@ -1230,7 +1230,7 @@ oapi::IVECTOR2 *HUD::OffscreenDirMarker (const Vector &dir) const
 	} else {
 		d.Set (tmul (g_camera->GRot(), dir));
 	}
-	double len = _hypot (d.y, d.x);
+	double len = std::hypot (d.y, d.x);
 	double scale = spec.Markersize * 0.6;
 	double dx = d.x/len*scale;
 	double dy = d.y/len*scale;
@@ -1508,16 +1508,17 @@ void HUD_Orbit::SetReference (const Body *bref)
 
 void HUD_Orbit::SelectReference ()
 {
-	g_input->Open ("HUD reference body (a for auto):", 0, 20, HUD_Orbit::ClbkName_Ref, (void*)this);
+	InputBox *input = (InputBox *)g_pOrbiter->m_pGUIManager->GetCtrl<InputBox>();
+	input->Open ("HUD reference body (a for auto):", 0, 20, HUD_Orbit::ClbkName_Ref, (void*)this);
 }
 
-bool HUD_Orbit::ClbkName_Ref (InputBox*, char *str, void *data)
+bool HUD_Orbit::ClbkName_Ref (InputBox*, const char *str, void *data)
 {
 	HUD_Orbit* hud = (HUD_Orbit*)data;
 	return hud->SelectRef (str);
 }
 
-bool HUD_Orbit::SelectRef (char *str)
+bool HUD_Orbit::SelectRef (const char *str)
 {
 	if (toupper(str[0]) == 'A' && str[1] == '\0') {
 		ref = 0;
@@ -1829,7 +1830,7 @@ void HUD_Docking::Display (oapi::Sketchpad *skp)
 			sprintf (cbuf+strlen(cbuf), " [port %d]", Legacy_port+1);
 			if (tgt->Type() == OBJTP_VESSEL) {
 				const Vessel *vessel = (const Vessel*)tgt;
-				if ((DWORD)Legacy_port < vessel->nDock())
+				if (Legacy_port < vessel->nDock())
 					ps = vessel->GetDockParams (Legacy_port);
 			}
 		}
@@ -1958,7 +1959,7 @@ void HUD_Docking::UpdateMesh (int &ivtx, int &iidx)
 			sprintf (refstr+strlen(refstr), " [port %d]", Legacy_port+1);
 			if (tgt->Type() == OBJTP_VESSEL) {
 				const Vessel *vessel = (const Vessel*)tgt;
-				if ((DWORD)Legacy_port < vessel->nDock())
+				if (Legacy_port < vessel->nDock())
 					ps = vessel->GetDockParams (Legacy_port);
 			}
 		}
@@ -2041,7 +2042,7 @@ void HUD_Docking::UpdateMesh (int &ivtx, int &iidx)
 	}
 }
 
-void HUD_Docking::SetNav (DWORD setnav)
+void HUD_Docking::SetNav (int setnav)
 {
 	nv = setnav;
 	bUseLegacyReference = false;
@@ -2064,7 +2065,8 @@ void HUD_Docking::SelectReferenceOld ()
 {
 	// legacy method for docking target selection
 	// this should probably be dropped at some stage
-	g_input->Open ("Docking target (+ optional port #), e.g. 'ISS 1':", 0, 20, HUD_Docking::ClbkName_Ref, (void*)this);
+	InputBox *input = (InputBox *)g_pOrbiter->m_pGUIManager->GetCtrl<InputBox>();
+	input->Open ("Docking target (+ optional port #), e.g. 'ISS 1':", 0, 20, HUD_Docking::ClbkName_Ref, (void*)this);
 }
 
 void HUD_Docking::ProcessMessage (int msg, void *data)
@@ -2081,16 +2083,16 @@ void HUD_Docking::ProcessMessage (int msg, void *data)
 	}
 }
 
-bool HUD_Docking::ClbkName_Ref (InputBox*, char *str, void *data)
+bool HUD_Docking::ClbkName_Ref (InputBox*, const char *str, void *data)
 {
 	HUD_Docking* hud = (HUD_Docking*)data;
 	return hud->SelectRef (str);
 }
 
-bool HUD_Docking::SelectRef (char *str)
+bool HUD_Docking::SelectRef (const char *str)
 {
 	char name[256];
-	DWORD dock;
+	int dock;
 	bool bdock = (sscanf (str, "%s%d", name, &dock) == 2);
 	Vessel *obj = g_psys->GetVessel (name, true);
 	if (!obj) return false;

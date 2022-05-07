@@ -117,9 +117,9 @@ void CelestialSphere::LoadStars ()
 				v.y = (float)(sphere_r * sin (rec.lat));
 
 				if (prm->map_log)
-					c = (float)min (1.0, max (prm->brt_min, exp(-(rec.mag-prm->mag_hi)*a)));
+					c = (float)std::min (1.0, std::max (prm->brt_min, exp(-(rec.mag-prm->mag_hi)*a)));
 				else
-					c = (float)min (1.0, max (prm->brt_min, a*rec.mag+b));
+					c = (float)std::min (1.0, std::max (prm->brt_min, a*rec.mag+b));
 
 				v.col = D3DRGBA (c,c,c,1);
 				lvl = (int)(c*256.0*0.5);
@@ -236,12 +236,12 @@ void CelestialSphere::RenderStars (LPDIRECT3DDEVICE7 dev, DWORD nmax, const VECT
 	DWORD i, j, ns = nsvtx;
 
 	if (bgcol) { // suppress stars darker than the background
-		int bglvl = min (255, (int)((min(bgcol->x,1.0) + min(bgcol->y,1.0) + min(bgcol->z,1.0))*128.0));
-		ns = min ((int)ns, lvlid[bglvl]);
+		int bglvl = std::min (255, (int)((std::min(bgcol->x,1.0) + std::min(bgcol->y,1.0) + std::min(bgcol->z,1.0))*128.0));
+		ns = std::min ((int)ns, lvlid[bglvl]);
 	}
 
 	for (i = j = 0; i < ns; i += D3DMAXNUMVERTICES, j++)
-		dev->DrawPrimitiveVB (D3DPT_POINTLIST, svtx[j], 0, min (ns-i, D3DMAXNUMVERTICES), 0);
+		dev->DrawPrimitiveVB (D3DPT_POINTLIST, svtx[j], 0, std::min (ns-i, (DWORD)D3DMAXNUMVERTICES), 0);
 }
 
 // ==============================================================

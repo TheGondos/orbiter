@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 
-int Date2Int (char *date)
+int Date2Int (const char *date)
 {
 	static char *mstr[12] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 	char ms[32];

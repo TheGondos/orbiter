@@ -12,14 +12,13 @@
 
 class Instrument_OPlaneAlign: public Instrument {
 public:
-	Instrument_OPlaneAlign (Pane *_pane, INT_PTR _id, const Spec &spec, Vessel *_vessel, bool restore);
+	Instrument_OPlaneAlign (Pane *_pane, MfdId _id, const Spec &spec, Vessel *_vessel, bool restore);
 	virtual ~Instrument_OPlaneAlign();
 	int Type () const { return MFD_OPLANEALIGN; }
 	char ModeSelKey () const { return 'A'; }
-	HELPCONTEXT *HelpTopic () const;
 	void SetCustomEls (double i, double theta); // set custom target elements
 	void UpdateDraw (oapi::Sketchpad *skp);
-	bool KeyBuffered (DWORD key);
+	bool KeyBuffered (int key);
 	bool ProcessButton (int bt, int event);
 	const char *BtnLabel (int bt) const;
 	int BtnMenu (const MFDBUTTONMENU **menu) const;
@@ -31,13 +30,13 @@ protected:
 	void WriteParams (std::ostream &ofs) const;
 
 private:
-	static bool ClbkEnter_Ref (Select *menu, int item, char *str, void *data);
-	static bool ClbkEnter_Tgt (Select *menu, int item, char *str, void *data);
-	static bool CallbackElements (InputBox *inp, char *str, void *data);
-	bool SelectRef (char *name);
+	static bool ClbkEnter_Ref (Select *menu, int item, const char *str, void *data);
+	static bool ClbkEnter_Tgt (Select *menu, int item, const char *str, void *data);
+	static bool CallbackElements (InputBox *inp, const char *str, void *data);
+	bool SelectRef (const char *name);
 	void SelectAutoRef ();
 	void SetRef (const CelestialBody *cbody);
-	bool SelectTarget (char *name);
+	bool SelectTarget (const char *name);
 	void SetTarget (const Body *target);        // set target body for target elements
 	void CycleModes();
 

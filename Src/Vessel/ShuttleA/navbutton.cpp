@@ -33,10 +33,10 @@ NavButton::NavButton (VESSEL3 *v): PanelElement (v)
 
 // ==============================================================
 
-void NavButton::AddMeshData2D (MESHHANDLE hMesh, DWORD grpidx)
+void NavButton::AddMeshData2D (MESHHANDLE hMesh, int grpidx)
 {
-	const DWORD nvtx = 4*6;
-	const DWORD nidx = 6*6;
+	const int nvtx = 4*6;
+	const int nidx = 6*6;
 	static NTVERTEX vtx[nvtx] = {
 		// "Kill rot" button
 		{bb_x0+5.0f*bb_dx,      bb_y0,      0,  0,0,0,  (tx_x0+5.0f*tx_dx)/texw,tx_y0/texh},
@@ -69,7 +69,7 @@ void NavButton::AddMeshData2D (MESHHANDLE hMesh, DWORD grpidx)
 		{bb_x0,                 bb_y0+tx_dy,0,  0,0,0,  tx_x0/texw,             tx_y0/texh},
 		{bb_x0+tx_dx,           bb_y0+tx_dy,0,  0,0,0,  (tx_x0+tx_dx)/texw,     tx_y0/texh}
 	};
-	static WORD idx[nidx] = {
+	static uint16_t idx[nidx] = {
 		0,1,2, 3,2,1,
 		4,5,6, 7,6,5,
 		8,9,10, 11,10,9,
@@ -89,7 +89,7 @@ bool NavButton::Redraw2D (SURFHANDLE surf)
 	static const float tv_active = (tx_y0+tx_dy)/texh;
 	int vofs;
 
-	for (DWORD i = NAVMODE_KILLROT; i <= NAVMODE_ANTINORMAL; i++) {
+	for (int i = NAVMODE_KILLROT; i <= NAVMODE_ANTINORMAL; i++) {
 		vofs = vtxofs+(i-NAVMODE_KILLROT)*4;
 		grp->Vtx[vofs+2].tv = grp->Vtx[vofs+3].tv =
 			(vessel->GetNavmodeState(i) ? tv_active : tv_idle);

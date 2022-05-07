@@ -5,7 +5,6 @@
 #define OAPI_IMPLEMENTATION
 
 #include "Orbiter.h"
-#include "Launchpad.h"
 #include "Psys.h"
 #include "Camera.h"
 #include "Pane.h"
@@ -13,21 +12,15 @@
 #include "Panel2D.h"
 #include "Vessel.h"
 #include "Select.h"
-#include "DlgMgr.h"
 #include "Config.h"
 #include "cmdline.h"
 #include "Script.h"
 #include "Util.h"
 #include "Log.h"
-#include "Dialogs.h"
-#include "resource.h"
 #include "Mesh.h"
 #include "MenuInfoBar.h"
-#include "zlib.h"
 
-#ifdef INLINEGRAPHICS  // should be temporary
-#include "OGraphics.h"
-#endif // INLINEGRAPHICS
+#include "zlib.h"
 
 #include "Orbitersdk.h"
 
@@ -39,7 +32,6 @@ extern PlanetarySystem *g_psys;
 extern Camera *g_camera;
 extern Pane *g_pane;
 extern Vessel *g_focusobj;
-extern InputBox *g_input;
 extern bool g_bShowGrapple;
 extern char DBG_MSG[256];
 
@@ -53,11 +45,6 @@ DLLEXPORT void FormatValue (char *cbuf, int n, double f, int precision)
 	strncpy (cbuf, s, n);
 }
 
-DLLEXPORT HINSTANCE oapiGetOrbiterInstance ()
-{
-	return g_pOrbiter->GetInstance();
-}
-
 DLLEXPORT int oapiGetOrbiterVersion ()
 {
 	return g_pOrbiter->GetVersion();
@@ -68,7 +55,7 @@ DLLEXPORT const char *oapiGetCmdLine ()
 	return orbiter::CommandLine::Instance().CmdLine();
 }
 
-DLLEXPORT void oapiGetViewportSize (DWORD *w, DWORD *h, DWORD *bpp)
+DLLEXPORT void oapiGetViewportSize (int *w, int *h, int *bpp)
 {
 	*w = g_pOrbiter->ViewW();
 	*h = g_pOrbiter->ViewH();
@@ -93,7 +80,7 @@ DLLEXPORT void oapiRegisterModule (oapi::Module *module)
 	g_pOrbiter->register_module = module;
 }
 
-DLLEXPORT OBJHANDLE oapiGetObjectByName (char *name)
+DLLEXPORT OBJHANDLE oapiGetObjectByName (const char *name)
 {
 	return (OBJHANDLE)(g_psys ? g_psys->GetObj (name, true) : 0);
 }
@@ -103,7 +90,7 @@ DLLEXPORT OBJHANDLE oapiGetObjectByIndex (int index)
 	return (OBJHANDLE)(g_psys ? g_psys->GetObj (index) : 0);
 }
 
-DLLEXPORT DWORD oapiGetObjectCount ()
+DLLEXPORT int oapiGetObjectCount ()
 {
 	return (g_psys ? g_psys->nObj() : 0);
 }
@@ -144,7 +131,7 @@ DLLEXPORT int oapiGetObjectType (OBJHANDLE hObj)
 	return OBJTP_INVALID;
 }
 
-DLLEXPORT const void *oapiGetObjectParam (OBJHANDLE hObj, DWORD paramtype)
+DLLEXPORT const void *oapiGetObjectParam (OBJHANDLE hObj, int paramtype)
 {
 	switch (((Body*)hObj)->Type()) {
 	case OBJTP_VESSEL:
@@ -156,7 +143,7 @@ DLLEXPORT const void *oapiGetObjectParam (OBJHANDLE hObj, DWORD paramtype)
 	}
 }
 
-DLLEXPORT OBJHANDLE oapiGetVesselByName (char *name)
+DLLEXPORT OBJHANDLE oapiGetVesselByName (const char *name)
 {
 	return (OBJHANDLE)(g_psys ? g_psys->GetVessel (name, true) : 0);
 }
@@ -167,7 +154,7 @@ DLLEXPORT OBJHANDLE oapiGetVesselByIndex (int index)
 	return (OBJHANDLE)g_psys->GetVessel (index);
 }
 
-DLLEXPORT DWORD oapiGetVesselCount ()
+DLLEXPORT int oapiGetVesselCount ()
 {
 	return (g_psys ? g_psys->nVessel() : 0);
 }
@@ -197,7 +184,7 @@ DLLEXPORT OBJHANDLE oapiGetStationByIndex (int index)
 	return 0;
 }
 
-DLLEXPORT DWORD oapiGetStationCount ()
+DLLEXPORT int oapiGetStationCount ()
 {
 	static bool bWarning = true;
 	if (bWarning) {
@@ -207,7 +194,7 @@ DLLEXPORT DWORD oapiGetStationCount ()
 	return 0;
 }
 
-DLLEXPORT OBJHANDLE oapiGetGbodyByName (char *name)
+DLLEXPORT OBJHANDLE oapiGetGbodyByName (const char *name)
 {
 	return (g_psys ? g_psys->GetGravObj (name, true) : 0);
 }
@@ -222,7 +209,7 @@ DLLEXPORT OBJHANDLE oapiGetGbodyParent (OBJHANDLE hBody)
 	return (OBJHANDLE)((CelestialBody*)hBody)->Primary();
 }
 
-DLLEXPORT OBJHANDLE oapiGetGbodyChild (OBJHANDLE hBody, DWORD index)
+DLLEXPORT OBJHANDLE oapiGetGbodyChild (OBJHANDLE hBody, int index)
 {
 	CelestialBody* cbody = (CelestialBody*)hBody;
 	if (index < cbody->nSecondary())
@@ -231,12 +218,12 @@ DLLEXPORT OBJHANDLE oapiGetGbodyChild (OBJHANDLE hBody, DWORD index)
 		return NULL;
 }
 
-DLLEXPORT DWORD oapiGetGbodyCount ()
+DLLEXPORT int oapiGetGbodyCount ()
 {
 	return (g_psys ? g_psys->nGrav() : 0);
 }
 
-DLLEXPORT OBJHANDLE oapiGetBaseByName (OBJHANDLE hPlanet, char *name)
+DLLEXPORT OBJHANDLE oapiGetBaseByName (OBJHANDLE hPlanet, const char *name)
 {
 	Body *body = (Body*)hPlanet;
 	return (OBJHANDLE)(body->Type() == OBJTP_PLANET ? ((Planet*)hPlanet)->GetBase (name, true) : 0);
@@ -249,7 +236,7 @@ DLLEXPORT OBJHANDLE oapiGetBaseByIndex (OBJHANDLE hPlanet, int index)
 	return (OBJHANDLE)p->GetBase (index);
 }
 
-DLLEXPORT DWORD oapiGetBaseCount (OBJHANDLE hPlanet)
+DLLEXPORT int oapiGetBaseCount (OBJHANDLE hPlanet)
 {
 	Body *body = (Body*)hPlanet;
 	return (body->Type() == OBJTP_PLANET ? ((Planet*)body)->nBase() : 0);
@@ -351,13 +338,13 @@ DLLEXPORT double oapiGetPropellantMass (PROPELLANT_HANDLE ph)
 	return ((TankSpec*)ph)->mass;
 }
 
-DLLEXPORT PROPELLANT_HANDLE oapiGetPropellantHandle (OBJHANDLE hVessel, DWORD idx)
+DLLEXPORT PROPELLANT_HANDLE oapiGetPropellantHandle (OBJHANDLE hVessel, int idx)
 {
 	Vessel *vessel = (Vessel*)hVessel;
 	return (idx < vessel->ntank ? (PROPELLANT_HANDLE)vessel->tank[idx] : 0);
 }
 
-DLLEXPORT DOCKHANDLE oapiGetDockHandle (OBJHANDLE hVessel, UINT n)
+DLLEXPORT DOCKHANDLE oapiGetDockHandle (OBJHANDLE hVessel, unsigned int n)
 {
 	Vessel *vessel = (Vessel*)hVessel;
 	if (n < vessel->nDock()) return (DOCKHANDLE)vessel->GetDockParams(n);
@@ -479,140 +466,140 @@ DLLEXPORT double oapiOrthodome (double lng1, double lat1, double lng2, double la
 	return Orthodome (lng1, lat1, lng2, lat2);
 }
 
-DLLEXPORT BOOL oapiGetAltitude (OBJHANDLE hVessel, double *alt)
+DLLEXPORT bool oapiGetAltitude (OBJHANDLE hVessel, double *alt)
 {
 	const SurfParam *sp = ((Vessel*)hVessel)->GetSurfParam();
 	if (sp) {
 		*alt = sp->alt0;
-		return TRUE;
+		return true;
 	} else {
-		return FALSE;
+		return false;
 	}
 }
 
-DLLEXPORT BOOL oapiGetAltitude (OBJHANDLE hVessel, AltitudeMode mode, double *alt)
+DLLEXPORT bool oapiGetAltitude (OBJHANDLE hVessel, AltitudeMode mode, double *alt)
 {
 	const SurfParam *sp = ((Vessel*)hVessel)->GetSurfParam();
 	if (sp) {
 		*alt = (mode == ALTMODE_MEANRAD ? sp->alt0 : sp->alt);
-		return TRUE;
+		return true;
 	} else {
-		return FALSE;
+		return false;
 	}	
 }
 
-DLLEXPORT BOOL oapiGetPitch (OBJHANDLE hVessel, double *pitch)
+DLLEXPORT bool oapiGetPitch (OBJHANDLE hVessel, double *pitch)
 {
 	const SurfParam *sp = ((Vessel*)hVessel)->GetSurfParam();
 	if (sp) {
 		*pitch = sp->pitch;
-		return TRUE;
+		return true;
 	} else {
-		return FALSE;
+		return false;
 	}
 }
 
-DLLEXPORT BOOL oapiGetBank (OBJHANDLE hVessel, double *bank)
+DLLEXPORT bool oapiGetBank (OBJHANDLE hVessel, double *bank)
 {
 	const SurfParam *sp = ((Vessel*)hVessel)->GetSurfParam();
 	if (sp) {
 		*bank = sp->bank;
-		return TRUE;
+		return true;
 	} else {
-		return FALSE;
+		return false;
 	}
 }
 
-DLLEXPORT BOOL oapiGetHeading (OBJHANDLE hVessel, double *heading)
+DLLEXPORT bool oapiGetHeading (OBJHANDLE hVessel, double *heading)
 {
 	const SurfParam *sp = ((Vessel*)hVessel)->GetSurfParam();
 	if (sp) {
 		*heading = sp->dir;
-		return TRUE;
+		return true;
 	} else {
-		return FALSE;
+		return false;
 	}
 }
 
-DLLEXPORT BOOL oapiGetEquPos (OBJHANDLE hVessel, double *longitude, double *latitude, double *radius)
+DLLEXPORT bool oapiGetEquPos (OBJHANDLE hVessel, double *longitude, double *latitude, double *radius)
 {
 	const SurfParam *sp = ((Vessel*)hVessel)->GetSurfParam();
 	if (sp) {
 		*longitude = sp->lng;
 		*latitude  = sp->lat;
 		*radius    = sp->rad;
-		return TRUE;
+		return true;
 	} else {
-		return FALSE;
+		return false;
 	}
 }
 
-DLLEXPORT BOOL oapiGetFocusAltitude (double *alt)
+DLLEXPORT bool oapiGetFocusAltitude (double *alt)
 {
 	const SurfParam *sp = g_focusobj->GetSurfParam();
 	if (sp) {
 		*alt = sp->alt;
-		return TRUE;
+		return true;
 	} else {
-		return FALSE;
+		return false;
 	}
 }
 
-DLLEXPORT BOOL oapiGetFocusPitch (double *pitch)
+DLLEXPORT bool oapiGetFocusPitch (double *pitch)
 {
 	const SurfParam *sp = g_focusobj->GetSurfParam();
 	if (sp) {
 		*pitch = sp->pitch;
-		return TRUE;
+		return true;
 	} else {
-		return FALSE;
+		return false;
 	}
 }
 
-DLLEXPORT BOOL oapiGetFocusBank (double *bank)
+DLLEXPORT bool oapiGetFocusBank (double *bank)
 {
 	const SurfParam *sp = g_focusobj->GetSurfParam();
 	if (sp) {
 		*bank = sp->bank;
-		return TRUE;
+		return true;
 	} else {
-		return FALSE;
+		return false;
 	}
 }
 
-DLLEXPORT BOOL oapiGetFocusHeading (double *heading)
+DLLEXPORT bool oapiGetFocusHeading (double *heading)
 {
 	const SurfParam *sp = g_focusobj->GetSurfParam();
 	if (sp) {
 		*heading = sp->dir;
-		return TRUE;
+		return true;
 	} else {
-		return FALSE;
+		return false;
 	}
 }
 
-DLLEXPORT BOOL oapiGetFocusEquPos (double *longitude, double *latitude, double *radius)
+DLLEXPORT bool oapiGetFocusEquPos (double *longitude, double *latitude, double *radius)
 {
 	const SurfParam *sp = g_focusobj->GetSurfParam();
 	if (sp) {
 		*longitude = sp->lng;
 		*latitude  = sp->lat;
 		*radius    = sp->rad;
-		return TRUE;
+		return true;
 	} else {
-		return FALSE;
+		return false;
 	}
 }
 
-DLLEXPORT BOOL oapiGetGroundspeed (OBJHANDLE hVessel, double *groundspeed)
+DLLEXPORT bool oapiGetGroundspeed (OBJHANDLE hVessel, double *groundspeed)
 {
 	Vessel *v = (hVessel ? (Vessel*)hVessel : g_focusobj);
 	const SurfParam *sp = v->GetSurfParam();
 	if (sp) {
 		*groundspeed = sp->groundspd;
-		return TRUE;
+		return true;
 	} else {
-		return FALSE;
+		return false;
 	}
 }
 
@@ -647,15 +634,15 @@ DLLEXPORT bool oapiGetGroundspeedVector (OBJHANDLE hVessel, REFFRAME frame, VECT
 	}
 }
 
-DLLEXPORT BOOL oapiGetAirspeed (OBJHANDLE hVessel, double *airspeed)
+DLLEXPORT bool oapiGetAirspeed (OBJHANDLE hVessel, double *airspeed)
 {
 	Vessel *v = (hVessel ? (Vessel*)hVessel : g_focusobj);
 	const SurfParam *sp = v->GetSurfParam();
 	if (sp) {
 		*airspeed = sp->airspd;
-		return TRUE;
+		return true;
 	} else {
-		return FALSE;
+		return false;
 	}
 }
 
@@ -690,7 +677,7 @@ DLLEXPORT bool oapiGetAirspeedVector (OBJHANDLE hVessel, REFFRAME frame, VECTOR3
 	}
 }
 
-DLLEXPORT BOOL oapiGetAirspeedVector (OBJHANDLE hVessel, VECTOR3 *speedvec)
+DLLEXPORT bool oapiGetAirspeedVector (OBJHANDLE hVessel, VECTOR3 *speedvec)
 {
 	LOGOUT_OBSOLETE;
 	const SurfParam *sp = ((Vessel*)hVessel)->GetSurfParam();
@@ -698,37 +685,37 @@ DLLEXPORT BOOL oapiGetAirspeedVector (OBJHANDLE hVessel, VECTOR3 *speedvec)
 		Vector hvel (tmul (sp->ref->GRot(), sp->airvel_glob));
 		hvel.Set (mul (sp->L2H, hvel));
 		speedvec->x = hvel.x, speedvec->y = hvel.y, speedvec->z = hvel.z;
-		return TRUE;
+		return true;
 	} else {
-		return FALSE;
+		return false;
 	}
 }
 
-DLLEXPORT BOOL oapiGetShipAirspeedVector (OBJHANDLE hVessel, VECTOR3 *speedvec)
+DLLEXPORT bool oapiGetShipAirspeedVector (OBJHANDLE hVessel, VECTOR3 *speedvec)
 {
 	LOGOUT_OBSOLETE;
 	const SurfParam *sp = ((Vessel*)hVessel)->GetSurfParam();
 	if (sp) {
 		speedvec->x = sp->airvel_ship.x, speedvec->y = sp->airvel_ship.y, speedvec->z = sp->airvel_ship.z;
-		return TRUE;
+		return true;
 	} else {
-		return FALSE;
+		return false;
 	}
 }
 
-DLLEXPORT BOOL oapiGetFocusAirspeed (double *airspeed)
+DLLEXPORT bool oapiGetFocusAirspeed (double *airspeed)
 {
 	LOGOUT_OBSOLETE;
 	const SurfParam *sp = g_focusobj->GetSurfParam();
 	if (sp) {
 		*airspeed = sp->airspd;
-		return TRUE;
+		return true;
 	} else {
-		return FALSE;
+		return false;
 	}
 }
 
-DLLEXPORT BOOL oapiGetFocusAirspeedVector (VECTOR3 *speedvec)
+DLLEXPORT bool oapiGetFocusAirspeedVector (VECTOR3 *speedvec)
 {
 	LOGOUT_OBSOLETE;
 	const SurfParam *sp = g_focusobj->GetSurfParam();
@@ -736,21 +723,21 @@ DLLEXPORT BOOL oapiGetFocusAirspeedVector (VECTOR3 *speedvec)
 		Vector hvel (tmul (sp->ref->GRot(), sp->airvel_glob));
 		hvel.Set (mul (sp->L2H, hvel));
 		speedvec->x = hvel.x, speedvec->y = hvel.y, speedvec->z = hvel.z;
-		return TRUE;
+		return true;
 	} else {
-		return FALSE;
+		return false;
 	}
 }
 
-DLLEXPORT BOOL oapiGetFocusShipAirspeedVector (VECTOR3 *speedvec)
+DLLEXPORT bool oapiGetFocusShipAirspeedVector (VECTOR3 *speedvec)
 {
 	LOGOUT_OBSOLETE;
 	const SurfParam *sp = g_focusobj->GetSurfParam();
 	if (sp) {
 		speedvec->x = sp->airvel_ship.x, speedvec->y = sp->airvel_ship.y, speedvec->z = sp->airvel_ship.z;
-		return TRUE;
+		return true;
 	} else {
-		return FALSE;
+		return false;
 	}
 }
 
@@ -845,21 +832,22 @@ DLLEXPORT void oapiSetEngineLevel (OBJHANDLE hVessel, ENGINETYPE engine, double 
 			//vessel->SetThrustHover (level);
 			vessel->SetThrusterGroupLevel (THGROUP_HOVER, level);
 			break;
+		case ENGINE_ATTITUDE: break;
 		}
 	}
 }
 
-DLLEXPORT SURFHANDLE oapiRegisterExhaustTexture (char *name)
+DLLEXPORT SURFHANDLE oapiRegisterExhaustTexture (const char *name)
 {
 	return g_pOrbiter->RegisterExhaustTexture (name);
 }
 
-DLLEXPORT SURFHANDLE oapiRegisterReentryTexture (char *name)
+DLLEXPORT SURFHANDLE oapiRegisterReentryTexture (const char *name)
 {
 	return g_pOrbiter->RegisterExhaustTexture (name);
 }
 
-DLLEXPORT SURFHANDLE oapiRegisterParticleTexture (char *name)
+DLLEXPORT SURFHANDLE oapiRegisterParticleTexture (const char *name)
 {
 	return g_pOrbiter->RegisterExhaustTexture (name);
 }
@@ -1134,12 +1122,12 @@ DLLEXPORT const ATMCONST *oapiGetPlanetAtmConstants (OBJHANDLE hPlanet)
 	return ((Planet*)hPlanet)->AtmParams ();
 }
 
-DLLEXPORT DWORD oapiGetPlanetJCoeffCount (OBJHANDLE hPlanet)
+DLLEXPORT int oapiGetPlanetJCoeffCount (OBJHANDLE hPlanet)
 {
 	return ((CelestialBody*)hPlanet)->nJcoeff();
 }
 
-DLLEXPORT double oapiGetPlanetJCoeff (OBJHANDLE hPlanet, DWORD n)
+DLLEXPORT double oapiGetPlanetJCoeff (OBJHANDLE hPlanet, int n)
 {
 	CelestialBody *cb = (CelestialBody*)hPlanet;
 	return (n < cb->nJcoeff() ? cb->Jcoeff(n) : 0.0);
@@ -1197,12 +1185,12 @@ DLLEXPORT void oapiGetBaseEquPos (OBJHANDLE hBase, double *lng, double *lat, dou
 	if (rad) *rad = base->RefPlanet()->Size(); // for now
 }
 
-DLLEXPORT DWORD oapiGetBasePadCount (OBJHANDLE hBase)
+DLLEXPORT int oapiGetBasePadCount (OBJHANDLE hBase)
 {
 	return ((Base*)hBase)->nPad();
 }
 
-DLLEXPORT bool oapiGetBasePadEquPos (OBJHANDLE hBase, DWORD pad, double *lng, double *lat, double *rad)
+DLLEXPORT bool oapiGetBasePadEquPos (OBJHANDLE hBase, int pad, double *lng, double *lat, double *rad)
 {
 	Base *base = (Base*)hBase;
 	if (pad >= base->nPad()) return false;
@@ -1211,7 +1199,7 @@ DLLEXPORT bool oapiGetBasePadEquPos (OBJHANDLE hBase, DWORD pad, double *lng, do
 	return true;
 }
 
-DLLEXPORT bool oapiGetBasePadStatus (OBJHANDLE hBase, DWORD pad, int *status)
+DLLEXPORT bool oapiGetBasePadStatus (OBJHANDLE hBase, int pad, int *status)
 {
 	Base *base = (Base*)hBase;
 	if (pad >= base->nPad()) return false;
@@ -1219,7 +1207,7 @@ DLLEXPORT bool oapiGetBasePadStatus (OBJHANDLE hBase, DWORD pad, int *status)
 	return true;
 }
 
-DLLEXPORT NAVHANDLE oapiGetBasePadNav (OBJHANDLE hBase, DWORD pad)
+DLLEXPORT NAVHANDLE oapiGetBasePadNav (OBJHANDLE hBase, int pad)
 {
 	Base *base = (Base*)hBase;
 	if (pad >= base->nPad()) return 0;
@@ -1237,7 +1225,7 @@ DLLEXPORT void oapiGetNavPos (NAVHANDLE hNav, VECTOR3 *gpos)
 	gpos->z = p.z;
 }
 
-DLLEXPORT DWORD oapiGetNavChannel (NAVHANDLE hNav)
+DLLEXPORT int oapiGetNavChannel (NAVHANDLE hNav)
 {
 	return ((Nav*)hNav)->GetStep();
 }
@@ -1257,9 +1245,9 @@ DLLEXPORT float oapiGetNavRange (NAVHANDLE hNav)
 	return ((Nav*)hNav)->GetRange();
 }
 
-DLLEXPORT DWORD oapiGetNavType (NAVHANDLE hNav)
+DLLEXPORT int oapiGetNavType (NAVHANDLE hNav)
 {
-	return (DWORD)((Nav*)hNav)->Type();
+	return (int)((Nav*)hNav)->Type();
 }
 
 DLLEXPORT int oapiGetNavData (NAVHANDLE hNav, NAVDATA *data)
@@ -1328,10 +1316,10 @@ DLLEXPORT const MESHHANDLE oapiLoadMeshGlobal (const char *fname, LoadMeshClbkFu
 	return (const MESHHANDLE)g_pOrbiter->LoadMeshGlobal (fname, fClbk);
 }
 
-DLLEXPORT MESHHANDLE oapiCreateMesh (DWORD ngrp, MESHGROUP *grp)
+DLLEXPORT MESHHANDLE oapiCreateMesh (int ngrp, MESHGROUP *grp)
 {
 	Mesh *mesh = new Mesh;
-	for (DWORD i = 0; i < ngrp; i++) {
+	for (int i = 0; i < ngrp; i++) {
 		mesh->AddGroup (grp[i].Vtx, grp[i].nVtx, grp[i].Idx, grp[i].nIdx, grp[i].MtrlIdx, grp[i].TexIdx, grp[i].zBias, 0, true);
 	}
 	return (MESHHANDLE)mesh;
@@ -1348,12 +1336,12 @@ DLLEXPORT void oapiParticleSetLevelRef (PSTREAM_HANDLE ph, double *lvl)
 	((oapi::ParticleStream*)ph)->SetLevelPtr (lvl);
 }
 
-DLLEXPORT DWORD oapiMeshTextureCount (MESHHANDLE hMesh)
+DLLEXPORT int oapiMeshTextureCount (MESHHANDLE hMesh)
 {
 	return ((Mesh*)hMesh)->nTexture();
 }
 
-DLLEXPORT SURFHANDLE oapiGetTextureHandle (MESHHANDLE hMesh, DWORD texidx)
+DLLEXPORT SURFHANDLE oapiGetTextureHandle (MESHHANDLE hMesh, int texidx)
 {
 	Mesh *mesh = (Mesh*)hMesh;
 	return (mesh ? mesh->GetTexture (texidx-1) : 0);
@@ -1366,25 +1354,39 @@ DLLEXPORT SURFHANDLE oapiLoadTexture (const char *fname, bool dynamic)
 	else return NULL;
 }
 
+DLLEXPORT bool oapiGetTextureSize (SURFHANDLE hTex, int *w, int *h)
+{
+	oapi::GraphicsClient *gc = g_pOrbiter->GetGraphicsClient();
+	if (gc) return gc->clbkGetSurfaceSize (hTex, w, h);
+	return false;
+}
+
 DLLEXPORT void oapiReleaseTexture (SURFHANDLE hTex)
 {
 	oapi::GraphicsClient *gc = g_pOrbiter->GetGraphicsClient();
 	if (gc) gc->clbkReleaseTexture (hTex);
 }
 
-DLLEXPORT bool oapiSetTexture (MESHHANDLE hMesh, DWORD texidx, SURFHANDLE tex)
+DLLEXPORT bool oapiSetTexture (MESHHANDLE hMesh, int texidx, SURFHANDLE tex)
 {
 	Mesh *mesh = (Mesh*)hMesh;
 	return mesh->SetTexture (texidx-1, tex);
 }
 
-DLLEXPORT bool oapiSetTexture (DEVMESHHANDLE hMesh, DWORD texidx, SURFHANDLE tex)
+DLLEXPORT bool oapiSetTexture (DEVMESHHANDLE hMesh, int texidx, SURFHANDLE tex)
 {
 	oapi::GraphicsClient *gc = g_pOrbiter->GetGraphicsClient();
 	return (gc ? gc->clbkSetMeshTexture (hMesh, texidx, tex) : false);
 }
 
-DLLEXPORT DWORD oapiMeshGroupCount (MESHHANDLE hMesh)
+DLLEXPORT void oapiIncrTextureRef (SURFHANDLE hTex)
+{
+	oapi::GraphicsClient *gc = g_pOrbiter->GetGraphicsClient();
+	if (gc) gc->clbkIncrSurfaceRef (hTex);
+}
+
+
+DLLEXPORT int oapiMeshGroupCount (MESHHANDLE hMesh)
 {
 	if (!hMesh) {
 		static bool errecho = true;
@@ -1397,7 +1399,7 @@ DLLEXPORT DWORD oapiMeshGroupCount (MESHHANDLE hMesh)
 	return ((Mesh*)hMesh)->nGroup();
 }
 
-DLLEXPORT DWORD oapiGetMeshFlags (MESHHANDLE hMesh)
+DLLEXPORT int oapiGetMeshFlags (MESHHANDLE hMesh)
 {
 	if (!hMesh) {
 		static bool errecho = true;
@@ -1410,7 +1412,7 @@ DLLEXPORT DWORD oapiGetMeshFlags (MESHHANDLE hMesh)
 	return ((Mesh*)hMesh)->GetFlags();
 }
 
-DLLEXPORT MESHGROUP *oapiMeshGroup (MESHHANDLE hMesh, DWORD idx)
+DLLEXPORT MESHGROUP *oapiMeshGroup (MESHHANDLE hMesh, int idx)
 {
 	if (!hMesh) {
 		static bool errecho = true;
@@ -1423,80 +1425,80 @@ DLLEXPORT MESHGROUP *oapiMeshGroup (MESHHANDLE hMesh, DWORD idx)
 	return (MESHGROUP*)(((Mesh*)hMesh)->GetGroup (idx));
 }
 
-DLLEXPORT MESHGROUP *oapiMeshGroup (DEVMESHHANDLE hMesh, DWORD idx)
+DLLEXPORT MESHGROUP *oapiMeshGroup (DEVMESHHANDLE hMesh, int idx)
 {
 	// Device-specific meshes don't allow direct access to group data
 	return NULL;
 }
 
-DLLEXPORT MESHGROUPEX *oapiMeshGroupEx (MESHHANDLE hMesh, DWORD idx)
+DLLEXPORT MESHGROUPEX *oapiMeshGroupEx (MESHHANDLE hMesh, int idx)
 {
 	return (MESHGROUPEX*)(((Mesh*)hMesh)->GetGroup (idx));
 }
 
-DLLEXPORT DWORD oapiAddMeshGroup (MESHHANDLE hMesh, MESHGROUP *grp)
+DLLEXPORT int oapiAddMeshGroup (MESHHANDLE hMesh, MESHGROUP *grp)
 {
-	return (DWORD)((Mesh*)hMesh)->AddGroup (grp->Vtx, grp->nVtx, grp->Idx, grp->nIdx,
+	return (int)((Mesh*)hMesh)->AddGroup (grp->Vtx, grp->nVtx, grp->Idx, grp->nIdx,
 		grp->MtrlIdx, grp->TexIdx, grp->zBias, 0, true);
 }
 
-DLLEXPORT bool oapiAddMeshGroupBlock (MESHHANDLE hMesh, DWORD grpidx,
-	const NTVERTEX *vtx, DWORD nvtx, const WORD *idx, DWORD nidx)
+DLLEXPORT bool oapiAddMeshGroupBlock (MESHHANDLE hMesh, int grpidx,
+	const NTVERTEX *vtx, int nvtx, const uint16_t *idx, int nidx)
 {
 	return ((Mesh*)hMesh)->AddGroupBlock (grpidx, vtx, nvtx, idx, nidx);
 }
 
-DLLEXPORT int oapiGetMeshGroup (DEVMESHHANDLE hMesh, DWORD grpidx, GROUPREQUESTSPEC *grs)
+DLLEXPORT int oapiGetMeshGroup (DEVMESHHANDLE hMesh, int grpidx, GROUPREQUESTSPEC *grs)
 {
 	oapi::GraphicsClient *gc = g_pOrbiter->GetGraphicsClient();
 	return (gc ? gc->clbkGetMeshGroup (hMesh, grpidx, grs) : -1);
 }
 
-DLLEXPORT int oapiEditMeshGroup (MESHHANDLE hMesh, DWORD grpidx, GROUPEDITSPEC *ges)
+DLLEXPORT int oapiEditMeshGroup (MESHHANDLE hMesh, int grpidx, GROUPEDITSPEC *ges)
 {
 	return ((Mesh*)hMesh)->EditGroup (grpidx, ges);
 }
 
-DLLEXPORT int oapiEditMeshGroup (DEVMESHHANDLE hMesh, DWORD grpidx, GROUPEDITSPEC *ges)
+DLLEXPORT int oapiEditMeshGroup (DEVMESHHANDLE hMesh, int grpidx, GROUPEDITSPEC *ges)
 {
 	oapi::GraphicsClient *gc = g_pOrbiter->GetGraphicsClient();
 	return (gc ? gc->clbkEditMeshGroup (hMesh, grpidx, ges) : -1);
 }
 
-DLLEXPORT DWORD oapiMeshMaterialCount (MESHHANDLE hMesh)
+DLLEXPORT int oapiMeshMaterialCount (MESHHANDLE hMesh)
 {
 	return ((Mesh*)hMesh)->nMaterial();
 }
 
-DLLEXPORT MATERIAL *oapiMeshMaterial (MESHHANDLE hMesh, DWORD idx)
+DLLEXPORT MATERIAL *oapiMeshMaterial (MESHHANDLE hMesh, int idx)
 {
 	return (MATERIAL*)(((Mesh*)hMesh)->GetMaterial (idx));
 }
 
-DLLEXPORT int oapiMeshMaterial (DEVMESHHANDLE hMesh, DWORD matidx, MATERIAL *mat)
+DLLEXPORT int oapiMeshMaterial (DEVMESHHANDLE hMesh, int matidx, MATERIAL *mat)
 {
 	oapi::GraphicsClient *gc = g_pOrbiter->GetGraphicsClient();
 	return (gc ? gc->clbkMeshMaterial (hMesh, matidx, mat) : 1);
 }
 
-DLLEXPORT int oapiSetMaterial (DEVMESHHANDLE hMesh, DWORD matidx, const MATERIAL *mat)
+DLLEXPORT int oapiSetMaterial (DEVMESHHANDLE hMesh, int matidx, const MATERIAL *mat)
 {
 	oapi::GraphicsClient *gc = g_pOrbiter->GetGraphicsClient();
 	return (gc ? gc->clbkSetMeshMaterial (hMesh, matidx, mat) : 1);
 }
 
-DLLEXPORT DWORD oapiAddMaterial (MESHHANDLE hMesh, MATERIAL *mat)
+DLLEXPORT int oapiAddMaterial (MESHHANDLE hMesh, MATERIAL *mat)
 {
-	D3DMATERIAL7 *m = (D3DMATERIAL7*)mat;
+	MATERIAL *m = (MATERIAL*)mat;
 	return ((Mesh*)hMesh)->AddMaterial (*m);
 }
 
-DLLEXPORT bool oapiDeleteMaterial (MESHHANDLE hMesh, DWORD idx)
+DLLEXPORT bool oapiDeleteMaterial (MESHHANDLE hMesh, int idx)
 {
 	return ((Mesh*)hMesh)->DeleteMaterial (idx);
 }
 
-DLLEXPORT bool oapiSetMeshProperty (MESHHANDLE hMesh, DWORD property, DWORD value)
+DLLEXPORT bool oapiSetMeshProperty (MESHHANDLE hMesh, int property, int value)
 {
 	Mesh *mesh = (Mesh*)hMesh;
 	switch (property) {
@@ -1507,7 +1509,7 @@ DLLEXPORT bool oapiSetMeshProperty (MESHHANDLE hMesh, DWORD property, DWORD valu
 	return false;
 }
 
-DLLEXPORT bool oapiSetMeshProperty (DEVMESHHANDLE hMesh, DWORD property, DWORD value)
+DLLEXPORT bool oapiSetMeshProperty (DEVMESHHANDLE hMesh, int property, int value)
 {
 	oapi::GraphicsClient *gc = g_pOrbiter->GetGraphicsClient();
 	return (gc ? gc->clbkSetMeshProperty (hMesh, property, value) : false);
@@ -1563,12 +1565,12 @@ DLLEXPORT void oapiRenderHUD (MESHHANDLE hMesh, SURFHANDLE *hTex)
 	if (g_pane) g_pane->RenderCustomHUD (hMesh, hTex);
 }
 
-DLLEXPORT void oapiOpenMFD (int mode, int mfd)
+DLLEXPORT void oapiOpenMFD (int mode, MfdId mfd)
 {
 	if (g_pane) g_pane->OpenMFD (mfd, mode);
 }
 
-DLLEXPORT void oapiToggleMFD_on (int mfd)
+DLLEXPORT void oapiToggleMFD_on (MfdId mfd)
 {
 	if (g_pane) g_pane->ToggleMFD_on (mfd);
 }
@@ -1589,7 +1591,7 @@ DLLEXPORT bool oapiUnregisterMFDMode (int mode)
 	return Instrument::UnregisterUserMode (mode);
 }
 
-DLLEXPORT int oapiGetMFDMode (int mfd)
+DLLEXPORT int oapiGetMFDMode (MfdId mfd)
 {
 	return (g_pane->MFD(mfd) ? g_pane->MFD(mfd)->Type() : MFD_NONE);
 }
@@ -1604,7 +1606,7 @@ DLLEXPORT int oapiBroadcastMFDMessage (int mfdmode, int msg, void *data)
 	return g_pane->BroadcastMFDMessage (mfdmode, msg, data);
 }
 
-DLLEXPORT int oapiSendMFDKey (int mfd, DWORD key)
+DLLEXPORT int oapiSendMFDKey (MfdId mfd, int key)
 {
 	return g_pane->MFDConsumeKeyBuffered (mfd, key);
 }
@@ -1615,14 +1617,14 @@ DLLEXPORT void oapiRefreshMFDButtons (int mfd, OBJHANDLE hVessel)
 		g_focusobj->MFDchanged (mfd, MFD_REFRESHBUTTONS);
 }
 
-DLLEXPORT bool oapiProcessMFDButton (int mfd, int bt, int event)
+DLLEXPORT bool oapiProcessMFDButton (MfdId mfd, int bt, int event)
 {
 	Instrument *MFD = g_pane->MFD(mfd);
 	if (MFD) return MFD->ConsumeButton (bt, event);
 	else     return false;
 }
 
-DLLEXPORT const char *oapiMFDButtonLabel (int mfd, int bt)
+DLLEXPORT const char *oapiMFDButtonLabel (MfdId mfd, int bt)
 {
 	return (g_pane->MFD(mfd) ? g_pane->MFD(mfd)->ButtonLabel(bt) : 0);
 }
@@ -1676,9 +1678,9 @@ DLLEXPORT void oapiVCRegisterHUD (const VCHUDSPEC *spec)
 		g_pane->RegisterVCHUD (spec);
 }
 
-DLLEXPORT void oapiRegisterPanelBackground (HBITMAP hBmp, DWORD flag, DWORD ck)
+DLLEXPORT void oapiRegisterPanelBackground (SURFHANDLE surf, int flag)
 {
-	g_pane->RegisterPanelBackground (hBmp, flag, ck);
+	g_pane->RegisterPanelBackground (surf, flag);
 }
 
 DLLEXPORT void oapiRegisterPanelArea (int id, const RECT &pos, int draw_event, int mouse_event, int bkmode)
@@ -1792,7 +1794,7 @@ DLLEXPORT void oapiReleaseSketchpad (oapi::Sketchpad *skp)
 	if (gc && skp) gc->clbkReleaseSketchpad (skp);
 }
 
-DLLEXPORT oapi::Font *oapiCreateFont (int height, bool prop, char *face, FontStyle style)
+DLLEXPORT oapi::Font *oapiCreateFont (int height, bool prop, const char *face, FontStyle style)
 {
 	oapi::GraphicsClient *gc = g_pOrbiter->GetGraphicsClient();
 	oapi::Font *font = NULL;
@@ -1814,7 +1816,7 @@ DLLEXPORT void oapiReleaseFont (oapi::Font *font)
 	if (gc) gc->clbkReleaseFont (font);
 }
 
-DLLEXPORT oapi::Pen *oapiCreatePen (int style, int width, DWORD col)
+DLLEXPORT oapi::Pen *oapiCreatePen (int style, int width, uint32_t col)
 {
 	oapi::GraphicsClient *gc = g_pOrbiter->GetGraphicsClient();
 	if (gc) return gc->clbkCreatePen (style, width, col);
@@ -1827,7 +1829,7 @@ DLLEXPORT void oapiReleasePen (oapi::Pen *pen)
 	if (gc) gc->clbkReleasePen (pen);
 }
 
-DLLEXPORT oapi::Brush *oapiCreateBrush (DWORD col)
+DLLEXPORT oapi::Brush *oapiCreateBrush (uint32_t col)
 {
 	oapi::GraphicsClient *gc = g_pOrbiter->GetGraphicsClient();
 	if (gc) return gc->clbkCreateBrush (col);
@@ -1840,45 +1842,20 @@ DLLEXPORT void oapiReleaseBrush (oapi::Brush *brush)
 	if (gc) gc->clbkReleaseBrush (brush);
 }
 
-DLLEXPORT HDC oapiGetDC (SURFHANDLE surf)
-{
-	oapi::GraphicsClient *gc = g_pOrbiter->GetGraphicsClient();
-	HDC hDC = NULL;
-	if (gc && surf)
-		hDC = gc->clbkGetSurfaceDC (surf);
-	return hDC;
-}
-
-DLLEXPORT void oapiReleaseDC (SURFHANDLE surf, HDC hDC)
-{
-	oapi::GraphicsClient *gc = g_pOrbiter->GetGraphicsClient();
-	if (gc && surf && hDC)
-		gc->clbkReleaseSurfaceDC (surf, hDC);
-}
-
 DLLEXPORT SURFHANDLE oapiCreateSurface (int width, int height)
 {
 	oapi::GraphicsClient *gc = g_pOrbiter->GetGraphicsClient();
 	return (gc ? gc->clbkCreateSurface (width, height) : NULL);
 }
 
-DLLEXPORT SURFHANDLE oapiCreateSurfaceEx (int width, int height, DWORD attrib)
+DLLEXPORT SURFHANDLE oapiCreateSurfaceEx (int width, int height, int attrib)
 {
 	oapi::GraphicsClient *gc = g_pOrbiter->GetGraphicsClient();
 	SURFHANDLE surf = NULL;
 	if (gc) {
-		//DWORD attrib = OAPISURFACE_RENDERTARGET | OAPISURFACE_GDI | OAPISURFACE_SKETCHPAD;
+		//int attrib = OAPISURFACE_RENDERTARGET | OAPISURFACE_GDI | OAPISURFACE_SKETCHPAD;
 		surf = gc->clbkCreateSurfaceEx (width, height, attrib);
 	}
-	return surf;
-}
-
-DLLEXPORT SURFHANDLE oapiCreateSurface (HBITMAP hBmp, bool release_bmp)
-{
-	oapi::GraphicsClient *gc = g_pOrbiter->GetGraphicsClient();
-	SURFHANDLE surf = NULL;
-	if (gc) surf = gc->clbkCreateSurface (hBmp);
-	if (release_bmp) DeleteObject ((HGDIOBJ)hBmp);
 	return surf;
 }
 
@@ -1894,14 +1871,14 @@ DLLEXPORT void oapiDestroySurface (SURFHANDLE surf)
 	if (gc) gc->clbkReleaseSurface (surf);
 }
 
-DLLEXPORT void oapiClearSurface (SURFHANDLE surf, DWORD col)
+DLLEXPORT void oapiClearSurface (SURFHANDLE surf, uint32_t col)
 {
 	if (!surf) return;
 	oapi::GraphicsClient *gc = g_pOrbiter->GetGraphicsClient();
 	if (gc) gc->clbkFillSurface (surf, col);
 }
 
-DLLEXPORT void oapiSetSurfaceColourKey (SURFHANDLE surf, DWORD ck)
+DLLEXPORT void oapiSetSurfaceColourKey (SURFHANDLE surf, uint32_t ck)
 {
 	if (!surf) return;
 	oapi::GraphicsClient *gc = g_pOrbiter->GetGraphicsClient();
@@ -1913,15 +1890,18 @@ DLLEXPORT void oapiClearSurfaceColourKey (SURFHANDLE surf)
 	if (!surf) return;
 	oapi::GraphicsClient *gc = g_pOrbiter->GetGraphicsClient();
 	//if (gc) gc->clbClearSurfaceColourKey (surf); // TODO
-	((LPDIRECTDRAWSURFACE7)surf)->SetColorKey (DDCKEY_SRCBLT, 0);
+	fprintf(stderr, "oapiClearSurfaceColourKey: unimpl\n");
+	assert(false);
+	exit(-1);
+//	((LPDIRECTDRAWSURFACE7)surf)->SetColorKey (DDCKEY_SRCBLT, 0);
 }
 
-DLLEXPORT DWORD oapiGetColour (DWORD red, DWORD green, DWORD blue)
+DLLEXPORT uint32_t oapiGetColour (uint32_t red, uint32_t green, uint32_t blue)
 {
 	return GetSurfColour (red, green, blue);
 }
 
-DLLEXPORT void oapiBlt (SURFHANDLE tgt, SURFHANDLE src, int tgtx, int tgty, int srcx, int srcy, int w, int h, DWORD ck)
+DLLEXPORT void oapiBlt (SURFHANDLE tgt, SURFHANDLE src, int tgtx, int tgty, int srcx, int srcy, int w, int h, uint32_t ck)
 {
 	if (!src || !tgt) return;
 
@@ -1929,23 +1909,18 @@ DLLEXPORT void oapiBlt (SURFHANDLE tgt, SURFHANDLE src, int tgtx, int tgty, int 
 	if (gc) {
 
 		if (ck != SURF_NO_CK) {
-#ifdef INLINEGRAPHICS // TEMPORARY: colour-keys only supported by inline client
-			((OrbiterGraphics*)gc)->clbkBltCK (tgt, tgtx, tgty, src, srcx, srcy, w, h, ck);
-			return;
-#else
 			static bool bWarnCK = true;
 			if (bWarnCK) {
-				LogOut_Obsolete (__FUNCTION__, "Colour key argument not supported by graphics client");
+				printf ("%s %s\n",__FUNCTION__, "Colour key argument not supported by graphics client");
 				bWarnCK = false;
 			}
-#endif
 		}
 
 		dASSERT (gc->clbkBlt (tgt, tgtx, tgty, src, srcx, srcy, w, h), "GraphicsClient::clbkBlt failed");
 	}
 }
 
-DLLEXPORT void oapiBlt (SURFHANDLE tgt, SURFHANDLE src, RECT *tgtr, RECT *srcr, DWORD ck, DWORD rotation)
+DLLEXPORT void oapiBlt (SURFHANDLE tgt, SURFHANDLE src, RECT *tgtr, RECT *srcr, uint32_t ck, int rotation)
 {
 	if (!src || !tgt) return;
 
@@ -1954,22 +1929,16 @@ DLLEXPORT void oapiBlt (SURFHANDLE tgt, SURFHANDLE src, RECT *tgtr, RECT *srcr, 
 
 		static bool bWarnRot = true;
 		if (rotation != SURF_NO_ROTATION) {
-			LogOut_Obsolete (__FUNCTION__, "Rotation argument no longer supported");
+			printf ("%s %s\n",__FUNCTION__, "Rotation argument no longer supported");
 			bWarnRot = false;
 		}
 
 		if (ck != SURF_NO_CK) {
-#ifdef INLINEGRAPHICS // TEMPORARY: colour-keys only supported by inline client
-			((OrbiterGraphics*)gc)->clbkScaleBltCK (tgt, tgtr->left, tgtr->top, tgtr->right-tgtr->left, tgtr->bottom-tgtr->top,
-				src, srcr->left, srcr->top, srcr->right-srcr->left, srcr->bottom-srcr->top, ck);
-			return;
-#else
 			static bool bWarnCK = true;
 			if (bWarnCK) {
-				LogOut_Obsolete (__FUNCTION__, "Colour key argument not supported by graphics client");
+				printf ("%s %s\n",__FUNCTION__, "Colour key argument not supported by graphics client");
 				bWarnCK = false;
 			}
-#endif
 		}
 		gc->clbkScaleBlt (tgt, tgtr->left, tgtr->top, tgtr->right-tgtr->left, tgtr->bottom-tgtr->top,
 			src, srcr->left, srcr->top, srcr->right-srcr->left, srcr->bottom-srcr->top);
@@ -1988,7 +1957,7 @@ DLLEXPORT int oapiEndBltGroup ()
 	return (gc ? gc->clbkEndBltGroup () : -1);
 }
 
-DLLEXPORT void oapiColourFill (SURFHANDLE tgt, DWORD fillcolor, int tgtx, int tgty, int w, int h)
+DLLEXPORT void oapiColourFill (SURFHANDLE tgt, uint32_t fillcolor, int tgtx, int tgty, int w, int h)
 {
 	if (!tgt) return;
 	oapi::GraphicsClient *gc = g_pOrbiter->GetGraphicsClient();
@@ -2011,23 +1980,26 @@ DLLEXPORT bool oapiAcceptDelayedKey (char key, double interval)
 	lastkeytime = td.SysT0;
 	return true;
 }
-
+/*
 DLLEXPORT LAUNCHPADITEM_HANDLE oapiRegisterLaunchpadItem (LaunchpadItem *item, LAUNCHPADITEM_HANDLE parent)
 {
-	return (LAUNCHPADITEM_HANDLE)g_pOrbiter->Launchpad()->RegisterExtraParam (item, (HTREEITEM)parent);
+	return NULL;
+	//return (LAUNCHPADITEM_HANDLE)g_pOrbiter->Launchpad()->RegisterExtraParam (item, (HTREEITEM)parent);
 }
 
 DLLEXPORT bool oapiUnregisterLaunchpadItem (LaunchpadItem *item)
 {
-	return g_pOrbiter->Launchpad()->UnregisterExtraParam (item);
+	return NULL;
+	//return g_pOrbiter->Launchpad()->UnregisterExtraParam (item);
 }
 
 DLLEXPORT LAUNCHPADITEM_HANDLE oapiFindLaunchpadItem (const char *name, LAUNCHPADITEM_HANDLE parent)
 {
-	return g_pOrbiter->Launchpad()->FindExtraParam (name, (HTREEITEM)parent);
-}
+	return NULL;
+	//return g_pOrbiter->Launchpad()->FindExtraParam (name, (HTREEITEM)parent);
+}*/
 
-DLLEXPORT DWORD oapiRegisterCustomCmd (char *label, char *desc, CustomFunc func, void *context)
+DLLEXPORT int oapiRegisterCustomCmd (const char *label, const char *desc, CustomFunc func, void *context)
 {
 	return g_pOrbiter->RegisterCustomCmd (label, desc, func, context);
 }
@@ -2037,88 +2009,41 @@ DLLEXPORT bool oapiUnregisterCustomCmd (int cmdId)
 	return g_pOrbiter->UnregisterCustomCmd (cmdId);
 }
 
-DLLEXPORT HWND oapiOpenDialog (HINSTANCE hDLLInst, int resourceId, DLGPROC msgProc, void *context)
+DLLEXPORT void oapiOpenDialog (GUIElement *e)
 {
-	return g_pOrbiter->OpenDialog (hDLLInst, resourceId, msgProc, context);
+	g_pOrbiter->RegisterGUIElement (e);
+	e->show = true;
 }
 
-DLLEXPORT HWND oapiOpenDialogEx (HINSTANCE hDLLInst, int resourceId, DLGPROC msgProc, DWORD flag, void *context)
+DLLEXPORT void oapiCloseDialog (GUIElement *e)
 {
-	return g_pOrbiter->OpenDialogEx (hDLLInst, resourceId, msgProc, flag, context);
+	g_pOrbiter->UnregisterGUIElement (e);
+}
+DLLEXPORT void oapiDrawDialogs ()
+{
+	for(auto &ctrl: g_pOrbiter->m_pGUIManager->m_GUICtrls) {
+		if(ctrl->show) {
+			ctrl->Show();
+		}
+	}
 }
 
-DLLEXPORT HWND oapiFindDialog (HINSTANCE hDLLInst, int resourceId)
-{
-	return g_pOrbiter->IsDialog (hDLLInst, resourceId);
-}
-
-DLLEXPORT void oapiCloseDialog (HWND hDlg)
-{
-	g_pOrbiter->CloseDialog (hDlg);
-}
-
-DLLEXPORT void *oapiGetDialogContext (HWND hDlg)
-{
-	DialogManager *dlgmgr = g_pOrbiter->DlgMgr();
-	return (dlgmgr ? dlgmgr->GetDialogContext (hDlg) : NULL);
-}
-
-DLLEXPORT bool oapiRegisterWindow (HINSTANCE hDLLInst, HWND hWnd, DWORD flag)
-{
-	return g_pOrbiter->RegisterWindow (hDLLInst, hWnd, flag); 
-}
-
-DLLEXPORT bool oapiAddTitleButton (DWORD msgid, HBITMAP hBmp, DWORD flag)
-{
-	DialogManager *dlgmgr = g_pOrbiter->DlgMgr();
-	return (dlgmgr ? dlgmgr->AddTitleButton (msgid, hBmp, flag) : false);
-}
-
-DLLEXPORT DWORD oapiGetTitleButtonState (HWND hDlg, DWORD msgid)
-{
-	DialogManager *dlgmgr = g_pOrbiter->DlgMgr();
-	return (dlgmgr ? dlgmgr->GetTitleButtonState (hDlg, msgid) : 0);
-}
-
-DLLEXPORT bool oapiSetTitleButtonState (HWND hDlg, DWORD msgid, DWORD state)
-{
-	DialogManager *dlgmgr = g_pOrbiter->DlgMgr();
-	return (dlgmgr ? dlgmgr->SetTitleButtonState (hDlg, msgid, state) : false);
-}
-
-DLLEXPORT INT_PTR oapiDefDialogProc (HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
-{
-	return OrbiterDefDialogProc (hDlg, uMsg, wParam, lParam);
-}
-
-DLLEXPORT bool oapiOpenHelp (HELPCONTEXT *hcontext)
-{
-	HWND hDlg = g_pOrbiter->OpenHelp (hcontext);
-	return true;
-}
-
-DLLEXPORT bool oapiOpenLaunchpadHelp (HELPCONTEXT *hcontext)
-{
-	g_pOrbiter->OpenLaunchpadHelp (hcontext);
-	return true;
-}
-
-DLLEXPORT DWORD oapiGetMainMenuVisibilityMode()
+DLLEXPORT int oapiGetMainMenuVisibilityMode()
 {
 	return g_pane->MIBar()->GetMenuMode();
 }
 
-DLLEXPORT void oapiSetMainMenuVisibilityMode (DWORD mode)
+DLLEXPORT void oapiSetMainMenuVisibilityMode (int mode)
 {
 	g_pane->MIBar()->SetMenuMode (mode);
 }
 
-DLLEXPORT DWORD oapiGetMainInfoVisibilityMode()
+DLLEXPORT int oapiGetMainInfoVisibilityMode()
 {
 	return g_pane->MIBar()->GetInfoMode();
 }
 
-DLLEXPORT void oapiSetMainInfoVisibilityMode (DWORD mode)
+DLLEXPORT void oapiSetMainInfoVisibilityMode (int mode)
 {
 	g_pane->MIBar()->SetInfoMode (mode);
 }
@@ -2187,19 +2112,20 @@ DLLEXPORT bool oapiSaveScenario (const char *fname, const char *desc)
 	return g_pOrbiter->SaveScenario (fname, desc);
 }
 
-DLLEXPORT void oapiWriteLine (FILEHANDLE file, char *line)
+DLLEXPORT void oapiWriteLine (FILEHANDLE file, const char *line)
 {
 	ofstream &ofs = *(ofstream*)file;
 	ofs << line << endl;
 }
 
-DLLEXPORT void oapiWriteLog (char *line)
+DLLEXPORT void oapiWriteLog (const char *line)
 {
 	LOGOUT (line);
 }
 
 DLLEXPORT void oapiExitOrbiter(int code)
 {
+	printf("oapiExitOrbiter\n");
 	exit(code);
 }
 
@@ -2223,25 +2149,25 @@ DLLEXPORT void __writeLogError(const char *func, const char *file, int line, con
 #endif
 }
 
-DLLEXPORT void oapiWriteScenario_string (FILEHANDLE file, char *item, char *string)
+DLLEXPORT void oapiWriteScenario_string (FILEHANDLE file, const char *item, const char *string)
 {
 	ofstream &ofs = *(ofstream*)file;
 	ofs << "  " << item << ' ' << string << endl;
 }
 
-DLLEXPORT void oapiWriteScenario_int (FILEHANDLE file, char *item, int i)
+DLLEXPORT void oapiWriteScenario_int (FILEHANDLE file, const char *item, int i)
 {
 	ofstream &ofs = *(ofstream*)file;
 	ofs << "  " << item << ' ' << i << endl;
 }
 
-DLLEXPORT void oapiWriteScenario_float (FILEHANDLE file, char *item, double d)
+DLLEXPORT void oapiWriteScenario_float (FILEHANDLE file, const char *item, double d)
 {
 	ofstream &ofs = *(ofstream*)file;
 	ofs << "  " << item << ' ' << d << endl;
 }
 
-DLLEXPORT void oapiWriteScenario_vec (FILEHANDLE file, char *item, const VECTOR3 &vec)
+DLLEXPORT void oapiWriteScenario_vec (FILEHANDLE file, const char *item, const VECTOR3 &vec)
 {
 	ofstream &ofs = *(ofstream*)file;
 	ofs << "  " << item << ' ' << vec.x << ' ' << vec.y << ' ' << vec.z << endl;
@@ -2257,57 +2183,57 @@ DLLEXPORT bool oapiReadScenario_nextline (FILEHANDLE file, char *&line)
 	return true;
 }
 
-DLLEXPORT void oapiWriteItem_string (FILEHANDLE file, char *item, char *string)
+DLLEXPORT void oapiWriteItem_string (FILEHANDLE file, const char *item, char *string)
 {
 	ofstream &ofs = *(ofstream*)file;
 	ofs << item << " = " << string << endl;
 }
 
-DLLEXPORT void oapiWriteItem_float (FILEHANDLE file, char *item, double d)
+DLLEXPORT void oapiWriteItem_float (FILEHANDLE file, const char *item, double d)
 {
 	ofstream &ofs = *(ofstream*)file;
 	ofs << item << " = " << d << endl;
 }
 
-DLLEXPORT void oapiWriteItem_int (FILEHANDLE file, char *item, int i)
+DLLEXPORT void oapiWriteItem_int (FILEHANDLE file, const char *item, int i)
 {
 	ofstream &ofs = *(ofstream*)file;
 	ofs << item << " = " << i << endl;
 }
 
-DLLEXPORT void oapiWriteItem_bool (FILEHANDLE file, char *item, bool b)
+DLLEXPORT void oapiWriteItem_bool (FILEHANDLE file, const char *item, bool b)
 {
 	ofstream &ofs = *(ofstream*)file;
 	ofs << item << " = " << (b ? "TRUE":"FALSE") << endl;
 }
 
-DLLEXPORT void oapiWriteItem_vec (FILEHANDLE file, char *item, const VECTOR3 &vec)
+DLLEXPORT void oapiWriteItem_vec (FILEHANDLE file, const char *item, const VECTOR3 &vec)
 {
 	ofstream &ofs = *(ofstream*)file;
 	ofs << item << " = " << vec.x << ' ' << vec.y << ' ' << vec.z << endl;
 }
 
-DLLEXPORT bool oapiReadItem_string (FILEHANDLE f, char *item, char *string)
+DLLEXPORT bool oapiReadItem_string (FILEHANDLE f, const char *item, char *string)
 {
 	return GetItemString (*(ifstream*)f, item, string);
 }
 
-DLLEXPORT bool oapiReadItem_float (FILEHANDLE f, char *item, double &val)
+DLLEXPORT bool oapiReadItem_float (FILEHANDLE f, const char *item, double &val)
 {
 	return GetItemReal (*(ifstream*)f, item, val);
 }
 
-DLLEXPORT bool oapiReadItem_int (FILEHANDLE f, char *item, int &val)
+DLLEXPORT bool oapiReadItem_int (FILEHANDLE f, const char *item, int &val)
 {
 	return GetItemInt (*(ifstream*)f, item, val);
 }
 
-DLLEXPORT bool oapiReadItem_bool (FILEHANDLE f, char *item, bool &val)
+DLLEXPORT bool oapiReadItem_bool (FILEHANDLE f, const char *item, bool &val)
 {
 	return GetItemBool (*(ifstream*)f, item, val);
 }
 
-DLLEXPORT bool oapiReadItem_vec (FILEHANDLE f, char *item, VECTOR3 &val)
+DLLEXPORT bool oapiReadItem_vec (FILEHANDLE f, const char *item, VECTOR3 &val)
 {
 	Vector vec;
 	bool res = GetItemVector (*(ifstream*)f, item, vec);
@@ -2317,18 +2243,20 @@ DLLEXPORT bool oapiReadItem_vec (FILEHANDLE f, char *item, VECTOR3 &val)
 	return res;
 }
 
-DLLEXPORT void oapiOpenInputBox (char *title, bool (*Clbk)(void*,char*,void*), char *buf, int vislen, void *usrdata)
+DLLEXPORT void oapiOpenInputBox (const char *title, bool (*Clbk)(void*,const char*,void*), const char *buf, int vislen, void *usrdata)
 {
-	g_input->Open (title, buf, vislen, (InputBox::Callbk)Clbk, usrdata);
+	InputBox *input = (InputBox *)g_pOrbiter->m_pGUIManager->GetCtrl<InputBox>();
+	input->Open (title, buf, vislen, (InputBox::Callbk)Clbk, usrdata);
 }
 
-DLLEXPORT void oapiOpenInputBoxEx (const char *title, bool (*Clbk_enter)(void*,char*,void*), bool (*Clbk_cancel)(void*,char*,void*),
-	char *buf, int vislen, void *usrdata, DWORD flags)
+DLLEXPORT void oapiOpenInputBoxEx (const char *title, bool (*Clbk_enter)(void*,const char*,void*), bool (*Clbk_cancel)(void*,const char*,void*),
+	char *buf, int vislen, void *usrdata, int flags)
 {
-	g_input->OpenEx (title, buf, vislen, (InputBox::Callbk)Clbk_enter, (InputBox::Callbk)Clbk_cancel, usrdata, flags);
+	InputBox *input = (InputBox *)g_pOrbiter->m_pGUIManager->GetCtrl<InputBox>();
+	input->OpenEx (title, buf, vislen, (InputBox::Callbk)Clbk_enter, (InputBox::Callbk)Clbk_cancel, usrdata, flags);
 }
 
-DLLEXPORT bool oapiSimulateBufferedKey (DWORD key, DWORD *mod, DWORD nmod, bool onRunningOnly)
+DLLEXPORT bool oapiSimulateBufferedKey (int key, int *mod, int nmod, bool onRunningOnly)
 {
 	return g_pOrbiter->SendKbdBuffered (key, mod, nmod, onRunningOnly);
 }
@@ -2368,7 +2296,7 @@ DLLEXPORT void oapiAnnotationSetColour (NOTEHANDLE hNote, const VECTOR3 &col)
 	}
 }
 
-DLLEXPORT void oapiAnnotationSetText (NOTEHANDLE hNote, char *note)
+DLLEXPORT void oapiAnnotationSetText (NOTEHANDLE hNote, const char *note)
 {
 	if (hNote) {
 		oapi::ScreenAnnotation *sn = (oapi::ScreenAnnotation*)hNote;
@@ -2396,7 +2324,7 @@ DLLEXPORT double oapiRand ()
 	return (double)rand() * irmax;
 }
 
-DLLEXPORT DWORD oapiDeflate (const BYTE *inp, DWORD ninp, BYTE *outp, DWORD noutp)
+DLLEXPORT int oapiDeflate (const uint8_t *inp, int ninp, uint8_t *outp, int noutp)
 {
 	int ret, ndata;
 	z_stream strm;
@@ -2406,7 +2334,7 @@ DLLEXPORT DWORD oapiDeflate (const BYTE *inp, DWORD ninp, BYTE *outp, DWORD nout
 	ret = deflateInit(&strm, Z_DEFAULT_COMPRESSION);
 
 	strm.avail_in = ninp;
-	strm.next_in = (BYTE*)inp;
+	strm.next_in = (uint8_t*)inp;
 
 	strm.avail_out = noutp;
 	strm.next_out = outp;
@@ -2417,29 +2345,29 @@ DLLEXPORT DWORD oapiDeflate (const BYTE *inp, DWORD ninp, BYTE *outp, DWORD nout
 	return ndata;
 }
 
-DLLEXPORT DWORD oapiInflate (const BYTE *inp, DWORD ninp, BYTE *outp, DWORD noutp)
+DLLEXPORT int oapiInflate (const uint8_t *inp, int ninp, uint8_t *outp, int noutp)
 {
-	DWORD ndata = noutp;
+	unsigned long ndata = noutp;
 	if (uncompress (outp, &ndata, inp, ninp) != Z_OK)
 		return 0;
-	return ndata;
+	return (int)ndata;
 }
 
 // ------------------------------------------------------------------------------
 // Undocumented interface functions
 // ------------------------------------------------------------------------------
 
-DLLEXPORT void InitLib (HINSTANCE hModule)
+DLLEXPORT void InitLib (oapi::DynamicModule *hModule)
 {
-	typedef void (*OPC_DLLInit)(HINSTANCE hDLL);
+	typedef void (*OPC_DLLInit)(oapi::DynamicModule *hDLL);
 	OPC_DLLInit DLLInit;
-	char cbuf[256], mname[256], *mp;
+	char cbuf[280], mname[256]="xxxmodule", *mp;
 	int i, len;
 
 	if (td.SimT0 < 1) {
 		// don't write during simulation, since unnecessary file access
 		// can cause time waste
-		GetModuleFileName (hModule, mname, 256);
+		//GetModuleFileName (hModule, mname, 256);
 		for (i = 0, mp = mname; mname[i]; i++)
 			if (mname[i] == '\\') mp = mname+i+1;
 		sprintf (cbuf, "Module %s ", mp);
@@ -2448,15 +2376,15 @@ DLLEXPORT void InitLib (HINSTANCE hModule)
 			cbuf[i] = '\0';
 		}
 
-		char *(*mdate)() = (char*(*)())GetProcAddress (hModule, "ModuleDate");
+		char *(*mdate)() = (char*(*)())(*hModule)["ModuleDate"];
 		if (mdate) {
-			int Date2Int (char *date);
+			int Date2Int (const char *date);
 			sprintf (cbuf+strlen(cbuf), " [Build %06d", Date2Int(mdate()));
 		} else {
 			strcat (cbuf, " [Build ******");
 		}
 
-		int (*fversion)() = (int(*)())GetProcAddress (hModule, "GetModuleVersion");
+		int (*fversion)() = (int(*)())(*hModule)["GetModuleVersion"];
 		if (fversion) {
 			sprintf (cbuf+strlen(cbuf), ", API %06d]", fversion());
 		} else {
@@ -2466,23 +2394,23 @@ DLLEXPORT void InitLib (HINSTANCE hModule)
 		LOGOUT (cbuf);
 	}
 
-	DLLInit = (OPC_DLLInit)GetProcAddress (hModule, "InitModule");
-	if (!DLLInit) DLLInit = (OPC_DLLInit)GetProcAddress (hModule, "opcDLLInit");
+	DLLInit = (OPC_DLLInit)(*hModule)["InitModule"];
+	if (!DLLInit) DLLInit = (OPC_DLLInit)(*hModule)["opcDLLInit"];
 	if (DLLInit) (*DLLInit)(hModule);
 }
 
-DLLEXPORT void ExitLib (HINSTANCE hModule)
+DLLEXPORT void ExitLib (oapi::DynamicModule *hModule)
 {
-	typedef void (*OPC_DLLExit)(HINSTANCE hDLL);
+	typedef void (*OPC_DLLExit)(oapi::DynamicModule *hDLL);
 	OPC_DLLExit DLLExit;
-	DLLExit = (OPC_DLLExit)GetProcAddress (hModule, "ExitModule");
-	if (!DLLExit) DLLExit = (OPC_DLLExit)GetProcAddress (hModule, "opcDLLExit");
+	DLLExit = (OPC_DLLExit)(*hModule)["ExitModule"];
+	if (!DLLExit) DLLExit = (OPC_DLLExit)(*hModule)["opcDLLExit"];
 	if (DLLExit) (*DLLExit)(hModule);
 }
 
-DLLEXPORT int Date2Int (char *date)
+DLLEXPORT int Date2Int (const char *date)
 {
-	static char *mstr[12] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+	static const char *mstr[12] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 	char ms[32];
 	int day, month, year, v;
 	sscanf (date, "%s%d%d", ms, &day, &year);
@@ -2492,7 +2420,7 @@ DLLEXPORT int Date2Int (char *date)
 	return v;
 }
 
-DLLEXPORT void WriteScenario_state (FILEHANDLE f, char *tag, const AnimState &s)
+DLLEXPORT void WriteScenario_state (FILEHANDLE f, const char *tag, const AnimState &s)
 {
 	char cbuf[256];
 	sprintf (cbuf, "%d %0.4f", s.action-1, s.pos);
@@ -2506,4 +2434,86 @@ DLLEXPORT void sscan_state (char *str, AnimState &s)
 	sscanf (str, "%d%lf", &a, &p);
 	s.action = (AnimState::Action)(a+1);
 	s.pos = p;
+}
+
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <sys/types.h>
+#include <arpa/inet.h>
+#include <fcntl.h>
+#define SOCK2HANDLE(s) ((SOCKETHANDLE)(ptrdiff_t)(s))
+#define HANDLE2SOCK(h) ((int)(ptrdiff_t)(h))
+DLLEXPORT SOCKETHANDLE oapiSocketCreate() {
+	int s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	if(s != -1) {
+		fcntl (s, F_SETFL, O_NONBLOCK);
+	}
+	return SOCK2HANDLE(s);
+}
+
+DLLEXPORT void oapiSocketClose (SOCKETHANDLE h) {
+	int s = HANDLE2SOCK(h);
+	shutdown(s, SHUT_RDWR);
+	close(s);
+}
+
+DLLEXPORT bool oapiSocketConnect (SOCKETHANDLE h, const char *addr, int port) {
+	int s = HANDLE2SOCK(h);
+	struct sockaddr_in sa;
+
+	sa.sin_family = AF_INET;
+	sa.sin_addr.s_addr = inet_addr(addr);
+	sa.sin_port = htons(port);
+	return connect(s, (struct sockaddr*)&sa, sizeof(sa)) == 0;
+}
+
+DLLEXPORT bool oapiSocketBind (SOCKETHANDLE h, const char *addr, int port) {
+	int s = HANDLE2SOCK(h);
+	struct sockaddr_in sa;
+	sa.sin_family = AF_INET;
+	sa.sin_addr.s_addr = inet_addr(addr);
+	sa.sin_port = htons( port );
+
+	return bind( s, (struct sockaddr*)&sa, sizeof(sa) ) == 0;
+}
+
+DLLEXPORT bool oapiSocketListen (SOCKETHANDLE h, int backlog) {
+	int s = HANDLE2SOCK(h);
+	return listen( s, backlog ) == 0;
+}
+
+DLLEXPORT SOCKETHANDLE oapiSocketAccept (SOCKETHANDLE h) {
+	int s = HANDLE2SOCK(h);
+	return SOCK2HANDLE(accept( s, NULL, NULL ));
+}
+#include <errno.h>
+DLLEXPORT ssize_t oapiSocketSend (SOCKETHANDLE h, const void *buf, size_t len) {
+	int s = HANDLE2SOCK(h);
+	ssize_t sent = send(s, buf, len, MSG_DONTWAIT );
+	if(sent < 0) {
+		switch(errno) {
+			case EINTR:
+			case EAGAIN:
+			case EBUSY:
+				return OAPI_SOCKET_ERROR_RETRY;
+			default:
+				return OAPI_SOCKET_ERROR;
+		}
+	}
+	return sent;
+}
+DLLEXPORT ssize_t oapiSocketRecv (SOCKETHANDLE h, void *buf, size_t len) {
+	int s = HANDLE2SOCK(h);
+	ssize_t received = recv( s, buf, len, MSG_DONTWAIT );
+	if(received < 0) {
+		switch(errno) {
+			case EINTR:
+			case EAGAIN:
+			case EBUSY:
+				return OAPI_SOCKET_ERROR_RETRY;
+			default:
+				return OAPI_SOCKET_ERROR;
+		}
+	}
+	return received;
 }

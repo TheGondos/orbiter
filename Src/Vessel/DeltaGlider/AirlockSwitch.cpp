@@ -24,7 +24,7 @@ static const float bb_x0 = 241.0f;      // left edge of left-most button
 static const float bb_y0 =  26.0f;      // top edge of button row
 static const float bb_dx =  61.0f;       // button spacing
 
-const DWORD nbutton = 3;
+const int nbutton = 3;
 
 // ==============================================================
 
@@ -36,21 +36,20 @@ AirlockSwitch::AirlockSwitch (VESSEL3 *v): PanelElement (v)
 
 void AirlockSwitch::Reset2D ()
 {
-	DWORD i;
-	for (i = 0; i < nbutton; i++) btnstate[i] = 0;
+	for (int i = 0; i < nbutton; i++) btnstate[i] = 0;
 }
 
 // ==============================================================
 
-void AirlockSwitch::AddMeshData2D (MESHHANDLE hMesh, DWORD grpidx)
+void AirlockSwitch::AddMeshData2D (MESHHANDLE hMesh, int grpidx)
 {
-	const DWORD NVTX = 4*nbutton;
-	const DWORD NIDX = 6*nbutton;
-	const WORD IDX_TPL[6] = {0,1,2,3,2,1};
+	const int NVTX = 4*nbutton;
+	const int NIDX = 6*nbutton;
+	const uint16_t IDX_TPL[6] = {0,1,2,3,2,1};
 	NTVERTEX VTX[NVTX];
-	WORD IDX[NIDX];
+	uint16_t IDX[NIDX];
 
-	DWORD i, j;
+	int i, j;
 	memset (VTX, 0, NVTX*sizeof(NTVERTEX));
 	for (i = 0; i < nbutton; i++) {
 		for (j = 0; j < 4; j++) {
@@ -60,7 +59,7 @@ void AirlockSwitch::AddMeshData2D (MESHHANDLE hMesh, DWORD grpidx)
 			VTX[i*4+j].tv = (tx_y0 + (j/2)*tx_dy)/texh;
 		}
 		for (j = 0; j < 6; j++)
-			IDX[i*6+j] = (WORD)(i*4)+IDX_TPL[j];
+			IDX[i*6+j] = (uint16_t)(i*4)+IDX_TPL[j];
 	}
 	AddGeometry(hMesh, grpidx, VTX, NVTX, IDX, NIDX);
 }

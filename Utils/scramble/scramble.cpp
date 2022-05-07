@@ -5,6 +5,7 @@
 
 #define _CRT_SECURE_NO_WARNINGS
 
+#include <wchar.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -19,17 +20,12 @@ char versionstr[64];
 
 void Setup ()
 {
-	char *monstr[12] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
-	char cbuf[256];
-	int mon, day, year;
-
+	// FIXME: STUB (remove scrambling altogether?)
 	// prepare compile date string
-	_strdate (cbuf);
-	sscanf (cbuf, "%d/%d/%d", &mon, &day, &year);
-	sprintf (datestr, "%d %s 20%02d", day, monstr[mon-1], year);
+	sprintf (datestr, "29 Dec 1980");
 
 	// prepare version string
-	sprintf (versionstr, "%02d%02d%02d", year, mon, day);
+	sprintf (versionstr, "801229");
 }
 
 int main (int argc, char *argv[])

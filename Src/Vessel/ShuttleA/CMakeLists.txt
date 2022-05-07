@@ -26,7 +26,6 @@ add_library(ShuttleA SHARED
 	ShuttleALua.cpp
 	sliderpair.cpp
 	switches.cpp
-	ShuttleA.rc
 	${VESSEL_COMMON_DIR}/Instrument.cpp
 )
 
@@ -42,16 +41,14 @@ target_include_directories(ShuttleA
 )
 
 target_link_libraries(ShuttleA
-	${ORBITER_LIB}
+#	${ORBITER_LIB}
 	${ORBITER_SDK_LIB}
-	${ORBITER_DLGCTRL_LIB}
-	${LUA_LIB}
+	lua::lib
 )
 
 add_dependencies(ShuttleA
 	${OrbiterTgt}
 	Orbitersdk
-	DlgCtrl
 )
 
 add_custom_command(
@@ -79,7 +76,7 @@ add_subdirectory(ShuttleA_PL)
 
 # Installation
 install(TARGETS ShuttleA
-	RUNTIME
+#	RUNTIME
 	DESTINATION ${ORBITER_INSTALL_MODULE_DIR}
 )
 install(DIRECTORY ${CONFIG_SOURCE_DIR}/
@@ -93,6 +90,11 @@ install(DIRECTORY ${TEXTURE_SOURCE_DIR}/
 )
 install(DIRECTORY ${SCRIPT_SOURCE_DIR}/
 	DESTINATION ${ORBITER_INSTALL_ROOT_DIR}/Script/ShuttleA
+)
+
+set(BITMAP_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/Bitmaps)
+install(DIRECTORY ${BITMAP_SOURCE_DIR}/
+	DESTINATION ${ORBITER_INSTALL_ROOT_DIR}/Bitmaps/ShuttleA
 )
 
 if(ORBITER_MAKE_DOC)

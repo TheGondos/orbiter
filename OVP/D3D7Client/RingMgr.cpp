@@ -54,7 +54,7 @@ void RingManager::SetMeshRes (DWORD res)
 			mesh[res] = CreateRing (irad, orad, 8+res*4);
 		if (!ntex)
 			ntex = LoadTextures();
-		tres = min (rres, ntex-1);
+		tres = std::min (rres, ntex-1);
 	}
 }
 
@@ -77,10 +77,14 @@ bool RingManager::Render (LPDIRECT3DDEVICE7 dev, D3DMATRIX &mWorld)
 		ringmat = &mWorld;
 	} else {           // flip rings
 		int i;
-		for (i = 0; i < 4; i++) imat.m[0][i] =  mWorld.m[0][i];
-		for (i = 0; i < 4; i++) imat.m[1][i] = -mWorld.m[1][i];
-		for (i = 0; i < 4; i++) imat.m[2][i] = -mWorld.m[2][i];
-		for (i = 0; i < 4; i++) imat.m[3][i] =  mWorld.m[3][i];
+//		for (i = 0; i < 4; i++) imat.m[0][i] =  mWorld.m[0][i];
+//		for (i = 0; i < 4; i++) imat.m[1][i] = -mWorld.m[1][i];
+//		for (i = 0; i < 4; i++) imat.m[2][i] = -mWorld.m[2][i];
+//		for (i = 0; i < 4; i++) imat.m[3][i] =  mWorld.m[3][i];
+		for (i = 0; i < 4; i++) imat(0,i) =  mWorld(0,i);
+		for (i = 0; i < 4; i++) imat(1,i) = -mWorld(1,i);
+		for (i = 0; i < 4; i++) imat(2,i) = -mWorld(2,i);
+		for (i = 0; i < 4; i++) imat(3,i) =  mWorld(3,i);
 		ringmat = &imat;
 	}
 
@@ -110,7 +114,6 @@ bool RingManager::Render (LPDIRECT3DDEVICE7 dev, D3DMATRIX &mWorld)
 D3D7Mesh *RingManager::CreateRing (double irad, double orad, int nsect)
 {
 	int i, j;
-
 	D3D7Mesh::GROUPREC *grp = new D3D7Mesh::GROUPREC;
 	grp->nVtx = 2*nsect;
 	grp->nIdx = 6*nsect;

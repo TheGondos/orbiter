@@ -19,7 +19,7 @@ target_include_directories(${ATM_TARGET}
 )
 
 target_link_libraries(${ATM_TARGET}
-	${ORBITER_LIB}
+#	${ORBITER_LIB}
 	${ORBITER_SDK_LIB}
 )
 
@@ -30,6 +30,6 @@ set_target_properties(${ATM_TARGET}
 
 # Installation
 install(TARGETS ${ATM_TARGET}
-	RUNTIME
+#	RUNTIME
 	DESTINATION ${ORBITER_INSTALL_CELBODY_DIR}/${CELBODY}/Atmosphere
 )

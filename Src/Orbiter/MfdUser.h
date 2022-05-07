@@ -8,25 +8,26 @@
 #ifndef __MFD_USER_H
 #define __MFD_USER_H
 
+#ifndef STRICT
 #define STRICT 1
+#endif
 #include "Mfd.h"
 #include "OrbiterAPI.h"
 
 class Instrument_User: public Instrument {
 public:
-	Instrument_User (Pane *_pane, INT_PTR _id, const Spec &spec, Vessel *_vessel,
+	Instrument_User (Pane *_pane, MfdId _id, const Spec &spec, Vessel *_vessel,
 		int _type, const MFDMODE &mode);
-	Instrument_User (Pane *_pane, INT_PTR _id, const Spec &spec, Vessel *_vessel);
+	Instrument_User (Pane *_pane, MfdId _id, const Spec &spec, Vessel *_vessel);
 	virtual ~Instrument_User();
 	int Type() const { return type; }
 	char ModeSelKey () const { return selkey; }
 	inline bool KeyImmediate (char *kstate) { return mfd->ConsumeKeyImmediate (kstate); }
-	inline bool KeyBuffered (DWORD key) { return mfd->ConsumeKeyBuffered (key); }
+	inline bool KeyBuffered (int key) { return mfd->ConsumeKeyBuffered (key); }
 	inline bool ProcessButton (int bt, int event) { return mfd->ConsumeButton (bt, event); }
 	inline const char *BtnLabel (int bt) const { return mfd->ButtonLabel (bt); }
 	inline int BtnMenu (const MFDBUTTONMENU **menu) const { return (mfd ? mfd->ButtonMenu (menu) : 0); }
 	void UpdateDraw (oapi::Sketchpad *skp);
-	void UpdateDraw (HDC hDC);
 
 protected:
 	bool ReadParams (std::ifstream &ifs);
@@ -34,11 +35,11 @@ protected:
 
 private:
 	int type;
-	char *name;
+	const char *name;
 	char selkey;
 	MFD *mfd; // pointer to module interface
 	MFD2 *mfd2; // pointer to version 2 interface (0 if not applicable)
-	OAPI_MSGTYPE (*msgproc)(UINT,UINT,WPARAM,LPARAM);
+	OAPI_MSGTYPE (*msgproc)(MFD_msg, MfdId, MFDMODEOPENSPEC *, VESSEL *);
 };
 
 #endif // !__MFD_USER_H

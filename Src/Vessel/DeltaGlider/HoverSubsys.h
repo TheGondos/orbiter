@@ -35,9 +35,9 @@ public:
 
 	void ActivateHold (bool active);
 
-	void clbkPostStep (double simt, double simdt, double mjd);
-	void clbkReset2D (int panelid, MESHHANDLE hMesh);
-	void clbkResetVC (int vcid, DEVMESHHANDLE hMesh);
+	void clbkPostStep (double simt, double simdt, double mjd) override;
+	void clbkReset2D (int panelid, MESHHANDLE hMesh) override;
+	void clbkResetVC (int vcid, DEVMESHHANDLE hMesh) override;
 
 private:
 	HoverAttitudeComponent *attctrl;      // attitude control submode
@@ -78,11 +78,11 @@ public:
 	bool IncRHover (int dir);     // manually change hover roll command
 	void AutoHoverAtt ();         // set hover pitch/roll commands from user input
 	void TrackHoverAtt ();
-	void clbkSaveState (FILEHANDLE scn);
-	bool clbkParseScenarioLine (const char *line);
-	void clbkPostStep (double simt, double simdt, double mjd);
-	bool clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH);
-	bool clbkLoadVC (int vcid);
+	void clbkSaveState (FILEHANDLE scn) override;
+	bool clbkParseScenarioLine (const char *line) override;
+	void clbkPostStep (double simt, double simdt, double mjd) override;
+	bool clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH) override;
+	bool clbkLoadVC (int vcid) override;
 
 private:
 	int mode;                     // balance mode: 0=off, 1=auto, 2=manual
@@ -110,6 +110,7 @@ class HoverAltBtn;
 class HoverAltSwitch;
 class HoverAltResetBtn;
 class HoverAltModeButtons;
+class HoverHoldAltIndicator;
 
 class HoverHoldComponent: public HoverSubsystemComponent {
 	friend class HoverHoldAltIndicator;
@@ -128,11 +129,11 @@ public:
 	void SetTargetPrm (double prm);
 	void SetHoverMode (HoverMode mode);
 	HoverMode GetHoverMode () const { return hovermode; }
-	void clbkSaveState (FILEHANDLE scn);
-	bool clbkParseScenarioLine (const char *line);
-	void clbkPostStep (double simt, double simdt, double mjd);
-	bool clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH);
-	bool clbkLoadVC (int vcid);
+	void clbkSaveState (FILEHANDLE scn) override;
+	bool clbkParseScenarioLine (const char *line) override;
+	void clbkPostStep (double simt, double simdt, double mjd) override;
+	bool clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH) override;
+	bool clbkLoadVC (int vcid) override;
 
 protected:
 	void HoverHoldVspd (double vspd);
@@ -164,18 +165,19 @@ private:
 // Manual hover control submode
 // ==============================================================
 
+class HoverThrottle;
 class HoverManualComponent: public HoverSubsystemComponent {
 	friend class HoverThrottle;
 
 public:
 	HoverManualComponent (HoverSubsystem *_subsys);
-	bool clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH);
-	bool clbkLoadVC (int vcid);
+	bool clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH) override;
+	bool clbkLoadVC (int vcid) override;
 
 private:
 	HoverThrottle *throttle;
 	int ELID_THROTTLE;          // hover throttle panel ID
-	UINT anim_hoverthrottle;    // VC hover throttle animation ID
+	unsigned int anim_hoverthrottle;    // VC hover throttle animation ID
 };
 
 
@@ -212,7 +214,7 @@ private:
 	int pofs_cur, pofs_cmd;
 	int rofs_cur, rofs_cmd;
 	GROUPREQUESTSPEC vc_grp; ///< Buffered VC vertex data
-	WORD vperm[8];
+	uint16_t vperm[8];
 };
 
 // ==============================================================
@@ -267,8 +269,8 @@ public:
 	HoverAltModeButtons (HoverHoldComponent *hhac);
 	~HoverAltModeButtons();
 	void DefineAnimation2D (int meshgrp, int vofs);
-	void DefineAnimationsVC (const VECTOR3 &axis, DWORD meshgrp, DWORD meshgrp_label,
-		DWORD vofs[2], DWORD vofs_label[2]);
+	void DefineAnimationsVC (const VECTOR3 &axis, int meshgrp, int meshgrp_label,
+		int vofs[2], int vofs_label[2]);
 	bool Redraw2D (SURFHANDLE hSurf);
 	bool RedrawVC (DEVMESHHANDLE hMesh, SURFHANDLE surf);
 	bool ProcessMouse2D (int event, int mx, int my);
@@ -351,7 +353,7 @@ public:
 private:
 	HoverManualComponent *ctrl;
 	float ppos;
-	UINT sliderpos;
+	unsigned int sliderpos;
 };
 
 #endif // !__HOVERSUBSYS_H

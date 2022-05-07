@@ -21,9 +21,9 @@ function(add_test_file test_name)
 	)
 
 	target_link_libraries(${test_name}
-		${ORBITER_LIB}
+#		${ORBITER_LIB}
 		${ORBITER_SDK_LIB}
-		${LUA_LIB}
+		lua::lib
 		${LUAINTERPRETER_LIB}
 		Catch2::Catch2WithMain
 	)
@@ -33,11 +33,7 @@ function(add_test_file test_name)
 		LuaInterpreter
 	)
 
-	if (BUILD_ORBITER_DX7)
-		add_dependencies(${test_name} Orbiter)
-	else()
-		add_dependencies(${test_name} Orbiter_server)
-	endif()
+	add_dependencies(${test_name} Orbiter_server)
 	
 	add_test( 
 		NAME ${test_name} 

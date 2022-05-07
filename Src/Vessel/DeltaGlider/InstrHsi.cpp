@@ -15,6 +15,7 @@
 #include "meshres_vc.h"
 #include "meshres_p0.h"
 #include "dg_vc_anim.h"
+#include <cstring>
 
 // ==============================================================
 
@@ -77,7 +78,7 @@ double InstrHSI::GetCrs () const
 void InstrHSI::Redraw (NTVERTEX *Vtx)
 {
 	int i, j, vofs;
-	DWORD tp;
+	int tp;
 	double yaw = vessel->GetYaw();   if (yaw < 0.0) yaw += PI2;
 	double siny = sin(yaw), cosy = cos(yaw);
 	double dev = 0.0, brg = 0.0, slope, c, sinc, cosc;
@@ -91,7 +92,7 @@ void InstrHSI::Redraw (NTVERTEX *Vtx)
 			nv = NULL;
 	}
 	if (nv != nav) {
-		if (nav = nv) {
+		if ((nav = nv)) {
 			navRef = vessel->GetSurfaceRef();
 			navType = tp;
 			if (navRef) {
@@ -142,7 +143,7 @@ void InstrHSI::Redraw (NTVERTEX *Vtx)
 				// transform glideslope indicator
 				const double tgtslope = 4.0;
 				double dslope = slope - tgtslope;
-				yshift = (float)min(fabs(dslope)*20.0,45.0);
+				yshift = (float)std::min(fabs(dslope)*20.0,45.0);
 				if (dslope > 0.0) yshift = -yshift;
 			}
 		}
@@ -190,7 +191,7 @@ void InstrHSI::Redraw (NTVERTEX *Vtx)
 	static double xc[12] = {-32.2,32.2,-32.2,32.2,-6.2, 6.2, -6.2,  6.2, 0,0,0,0};
 	static double yc[12] = {  4.7, 4.7, -4.7,-4.7,60.5,60.5,-60.5,-60.5, 26.82,26.82,-26.82,-26.82};
 	vofs = 16;
-	double dx = min(8.0,fabs(dev)*DEG)*5.175;
+	double dx = std::min(8.0,fabs(dev)*DEG)*5.175;
 	if (dev < 0.0) dx = -dx;
 	for (i = 0; i < 4; i++) xc[i+8] = xd[i]+dx;
 	for (i = 0; i < 12; i++) {

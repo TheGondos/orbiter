@@ -6,7 +6,7 @@
 #include "Pane.h"
 #include "Camera.h"
 #include "Vessel.h"
-#include "Texture.h"
+//#include "Texture.h"
 #include "Log.h"
 #include "Util.h"
 
@@ -31,10 +31,11 @@ VirtualCockpit::VirtualCockpit (int _id, const Pane *_pane)
 	idx_mfocus = -1;
 	mstate     = 0;
 	hud.surf   = NULL;
+	/*
 	if (g_pOrbiter->IsFullscreen())
 		cwnd = 0;
 	else
-		cwnd = g_pOrbiter->GetRenderWnd();
+		cwnd = g_pOrbiter->GetRenderWnd();*/
 	for (i = 0; i < 4; i++)
 		connect[i] = -1;
 }
@@ -94,8 +95,7 @@ void VirtualCockpit::DefineArea (int aid, const RECT &texrect, int draw_mode, in
 		area[narea]->bksurf = NULL;
 		area[narea]->bltmode = PANEL_MAP_NONE;
 	} else {
-		DWORD attrib = OAPISURFACE_RENDERTARGET;
-		if (draw_mode & PANEL_REDRAW_GDI) attrib |= OAPISURFACE_GDI;
+		int attrib = OAPISURFACE_RENDERTARGET;
 		if (draw_mode & PANEL_REDRAW_SKETCHPAD) attrib |= OAPISURFACE_SKETCHPAD;
 		area[narea]->surf = gc->clbkCreateSurfaceEx (area[narea]->w, area[narea]->h, attrib);
 		switch (bkmode) {
@@ -111,7 +111,7 @@ void VirtualCockpit::DefineArea (int aid, const RECT &texrect, int draw_mode, in
 			break;
 		case PANEL_MAP_BACKGROUND:
 		case PANEL_MAP_BGONREQUEST:
-			if (area[narea]->bksurf = gc->clbkCreateSurfaceEx (area[narea]->w, area[narea]->h, OAPISURFACE_RENDERTARGET)) {
+			if ((area[narea]->bksurf = gc->clbkCreateSurfaceEx (area[narea]->w, area[narea]->h, OAPISURFACE_RENDERTARGET))) {
 				gc->clbkBlt (area[narea]->bksurf, 0, 0, tgt, area[narea]->texrect.left, area[narea]->texrect.top,
 					area[narea]->texrect.right-area[narea]->texrect.left, area[narea]->texrect.bottom-area[narea]->texrect.top);
 			} else {
@@ -222,11 +222,12 @@ void VirtualCockpit::ShiftAreas (const Vector &shift)
 	for (int i = 0; i < narea; i++) {
 		switch (area[i]->cmode) {
 		case Area::CMODE_SPHERICAL:
-			area[i]->cnt += shift;
+			area[i]->spherical.cnt += shift;
 			break;
 		case Area::CMODE_QUAD:
-			SetClickZone_Quadrilateral (i, area[i]->p[0]+shift, area[i]->p[1]+shift, area[i]->p[2]+shift, area[i]->p[3]+shift);
+			SetClickZone_Quadrilateral (i, area[i]->quad.p[0]+shift, area[i]->quad.p[1]+shift, area[i]->quad.p[2]+shift, area[i]->quad.p[3]+shift);
 			break;
+		case Area::CMODE_NONE: break;
 		}
 	}
 }
@@ -274,13 +275,13 @@ void VirtualCockpit::SetHUDCol (COLORREF col, double intens)
 #ifdef UNDEF
 	if (hud.tpal) {
 		if (col) hud.col = col;
-		if (intens) hud.intens = (BYTE)(intens*200.0);
+		if (intens) hud.intens = (uint8_t)(intens*200.0);
 
 		PALETTEENTRY pe[256];
 		memset (pe, 0, 256*sizeof(PALETTEENTRY));
-		pe[1].peRed   /*** = pe[0].peRed ***/  = (BYTE)( hud.col        & 0xff);
-		pe[1].peGreen /*** = pe[0].peGreen ***/ = (BYTE)((hud.col >>  8) & 0xff);
-		pe[1].peBlue  /*** = pe[0].peBlue ***/ = (BYTE)((hud.col >> 16) & 0xff);
+		pe[1].peRed   /*** = pe[0].peRed ***/  = (uint8_t)( hud.col        & 0xff);
+		pe[1].peGreen /*** = pe[0].peGreen ***/ = (uint8_t)((hud.col >>  8) & 0xff);
+		pe[1].peBlue  /*** = pe[0].peBlue ***/ = (uint8_t)((hud.col >> 16) & 0xff);
 		/*** pe[1].peFlags = hud.intens; ***/
 		hud.tpal->SetEntries (0, 0, 256, pe);
 		pe[1].peFlags = pe[0].peRed = pe[0].peGreen = pe[0].peBlue = 0;
@@ -291,8 +292,8 @@ void VirtualCockpit::SetHUDCol (COLORREF col, double intens)
 
 bool VirtualCockpit::SetClickZone_Spherical (int i, const Vector &cnt, double rad)
 {
-	area[i]->cnt.Set (cnt);
-	area[i]->rad = rad;
+	area[i]->spherical.cnt.Set (cnt);
+	area[i]->spherical.rad = rad;
 	area[i]->cmode = Area::CMODE_SPHERICAL;
 	return true;
 }
@@ -304,64 +305,70 @@ bool VirtualCockpit::SetClickZone_Quadrilateral (int i,
 	int j;
 
 	// save corner points
-	area[i]->p[0].Set (p1);
-	area[i]->p[1].Set (p2);
-	area[i]->p[2].Set (p3);
-	area[i]->p[3].Set (p4);
+	area[i]->quad.p[0].Set (p1);
+	area[i]->quad.p[1].Set (p2);
+	area[i]->quad.p[2].Set (p3);
+	area[i]->quad.p[3].Set (p4);
 
 	// global coefficients of equation of the plane: ax+by+cz+d = 0
 	double a, b, c, d;
 	PlaneCoeffs (p1, p2, p3, a, b, c, d);
-	area[i]->a = (float)a;
-	area[i]->b = (float)b;
-	area[i]->c = (float)c;
-	area[i]->d = (float)d;
+	area[i]->quad.a = (float)a;
+	area[i]->quad.b = (float)b;
+	area[i]->quad.c = (float)c;
+	area[i]->quad.d = (float)d;
 
 	double pdst = fabs(PointPlaneDist(p4, a, b, c, d));
 	if (pdst < EPS) { // the 4 points are coplanar, so we need to avoid singularity
 		Vector nml(PlaneNormal(a, b, c, d));
-		area[i]->p[3].Set(p4 + nml * EPS);
+		area[i]->quad.p[3].Set(p4 + nml * EPS);
 	}
 
 	// calculate coefficients for mapping global quadrilateral to local square (0,1)x(0,1)
 	// x' = u0 x + u1 y + u2 z + u3;     y' = v0 x + v1 y + v2 z + v3
 	Matrix4 P1(
-		area[i]->p[0].x, area[i]->p[0].y, area[i]->p[0].z, 1,
-		area[i]->p[1].x, area[i]->p[1].y, area[i]->p[1].z, 1,
-		area[i]->p[2].x, area[i]->p[2].y, area[i]->p[2].z, 1,
-		area[i]->p[3].x, area[i]->p[3].y, area[i]->p[3].z, 1
+		area[i]->quad.p[0].x, area[i]->quad.p[0].y, area[i]->quad.p[0].z, 1,
+		area[i]->quad.p[1].x, area[i]->quad.p[1].y, area[i]->quad.p[1].z, 1,
+		area[i]->quad.p[2].x, area[i]->quad.p[2].y, area[i]->quad.p[2].z, 1,
+		area[i]->quad.p[3].x, area[i]->quad.p[3].y, area[i]->quad.p[3].z, 1
 	);
 	Matrix4 P2(P1);
-	Vector4 cc, dd, r;
-	Vector4 u(0,1,0,1), v(0,0,1,1);
-	qrdcmp (P1, cc, dd);
+	glm::dvec4 cc, dd, r;
+	glm::dvec4 u(0,1,0,1), v(0,0,1,1);
+	qrdcmp (P1, cc, dd, nullptr);
 	qrsolv (P1, cc, dd, u);
-	for (j = 0; j < 4; j++) area[i]->u[j] = (float)u(j);
-	qrdcmp (P2, cc, dd);
+	for (j = 0; j < 4; j++) area[i]->quad.u[j] = (float)u[j];
+	qrdcmp (P2, cc, dd, nullptr);
 	qrsolv (P2, cc, dd, v);
-	for (j = 0; j < 4; j++) area[i]->v[j] = (float)v(j);
+	for (j = 0; j < 4; j++) area[i]->quad.v[j] = (float)v[j];
 
 	area[i]->cmode = Area::CMODE_QUAD;
 	return true;
 }
 
-bool VirtualCockpit::ProcessMouse (UINT event, DWORD state, int x, int y)
+bool VirtualCockpit::ProcessMouse (oapi::MouseEvent event, int state, int x, int y)
 {
 	mstate = 0;
 	switch (event) {
-	case WM_LBUTTONDOWN:
+	case oapi::MOUSE_LBUTTONDOWN:
 		state = PANEL_MOUSE_LBDOWN | PANEL_MOUSE_LBPRESSED;
 		break;
-	case WM_RBUTTONDOWN:
+	case oapi::MOUSE_RBUTTONDOWN:
 		state = PANEL_MOUSE_RBDOWN | PANEL_MOUSE_RBPRESSED;
 		break;
-	case WM_LBUTTONUP:
+	case oapi::MOUSE_LBUTTONUP:
 		state = PANEL_MOUSE_LBUP;
 		break;
-	case WM_RBUTTONUP:
+	case oapi::MOUSE_RBUTTONUP:
 		state = PANEL_MOUSE_RBUP;
 		break;
+	default: break;
 	}
+
+	if (state & oapi::MouseModifier::MOUSE_CTRL)  state |= PANEL_MOUSE_CTRL;
+	if (state & oapi::MouseModifier::MOUSE_SHIFT) state |= PANEL_MOUSE_SHIFT;
+	if (state & oapi::MouseModifier::MOUSE_ALT)   state |= PANEL_MOUSE_ALT;
+
 	if (state & PANEL_MOUSE_DOWN) { // locate mouse event
 		idx_mfocus = -1;
 
@@ -379,23 +386,23 @@ bool VirtualCockpit::ProcessMouse (UINT event, DWORD state, int x, int y)
 
 			switch (area[i]->cmode) {
 			case Area::CMODE_SPHERICAL: {
-				if (dotp(ldir, area[i]->cnt-cpos) > 0.0) { // otherwise target is behind camera
-					double d = PointLineDist (area[i]->cnt, cpos, ldir);
-					if (d < area[i]->rad) {
-						if (d/area[i]->rad < minreldist) {
+				if (dotp(ldir, area[i]->spherical.cnt-cpos) > 0.0) { // otherwise target is behind camera
+					double d = PointLineDist (area[i]->spherical.cnt, cpos, ldir);
+					if (d < area[i]->spherical.rad) {
+						if (d/area[i]->spherical.rad < minreldist) {
 							mouse_r.x = d;
 							mouse_r.y = mouse_r.z = 0.0;
-							imatch = i, minreldist = d/area[i]->rad;
+							imatch = i, minreldist = d/area[i]->spherical.rad;
 						}
 					}
 				}
 				} break;
 			case Area::CMODE_QUAD: {
 				Vector r;
-				if (LinePlaneIntersect (area[i]->a, area[i]->b, area[i]->c, area[i]->d, cpos, ldir, r)) {
+				if (LinePlaneIntersect (area[i]->quad.a, area[i]->quad.b, area[i]->quad.c, area[i]->quad.d, cpos, ldir, r)) {
 					if (dotp(ldir, r-cpos) > 0.0) { // otherwise target is behind camera
-						mx = area[i]->u[0]*r.x + area[i]->u[1]*r.y + area[i]->u[2]*r.z + area[i]->u[3];
-						my = area[i]->v[0]*r.x + area[i]->v[1]*r.y + area[i]->v[2]*r.z + area[i]->v[3];
+						mx = area[i]->quad.u[0]*r.x + area[i]->quad.u[1]*r.y + area[i]->quad.u[2]*r.z + area[i]->quad.u[3];
+						my = area[i]->quad.v[0]*r.x + area[i]->quad.v[1]*r.y + area[i]->quad.v[2]*r.z + area[i]->quad.v[3];
 						if (mx >= 0 && mx <= 1 && my >= 0 && my <= 1) {
 							mouse_r.x = mx;
 							mouse_r.y = my;
@@ -405,6 +412,7 @@ bool VirtualCockpit::ProcessMouse (UINT event, DWORD state, int x, int y)
 					}
 				}
 				} break;
+			case Area::CMODE_NONE: break;
 			}
 
 		}
@@ -427,9 +435,14 @@ void VirtualCockpit::GetMouseState (int &idx, int &state, Vector &xs) const
 {
 	if (mstate & PANEL_MOUSE_PRESSED) {
 		POINT pt;
-		GetCursorPos (&pt);
-		if (cwnd) // need to subtract client window offset
-			ScreenToClient (cwnd, &pt);
+		//GetCursorPos (&pt);
+		double xpos, ypos;
+		glfwGetCursorPos(g_pOrbiter->GetRenderWnd(), &xpos, &ypos);
+		pt.x = floor(xpos);
+		pt.y = floor(ypos);
+
+//		if (cwnd) // need to subtract client window offset
+//			ScreenToClient (cwnd, &pt);
 
 		// calculate ray intersection with current focus area
 		Vector gdir, ldir;
@@ -441,18 +454,19 @@ void VirtualCockpit::GetMouseState (int &idx, int &state, Vector &xs) const
 
 		switch (area[idx_mfocus]->cmode) {
 		case Area::CMODE_SPHERICAL: {
-			double d = PointLineDist (area[idx_mfocus]->cnt, cpos, ldir);
+			double d = PointLineDist (area[idx_mfocus]->spherical.cnt, cpos, ldir);
 			// need to check that cnt is not BEHIND the camera!
 			mouse_r.x = d;
 			mouse_r.y = mouse_r.z = 0.0;
 			} break;
 		case Area::CMODE_QUAD: {
 			Vector r;
-			LinePlaneIntersect (area[idx_mfocus]->a, area[idx_mfocus]->b, area[idx_mfocus]->c, area[idx_mfocus]->d, cpos, ldir, r);
-			mouse_r.x = area[idx_mfocus]->u[0]*r.x + area[idx_mfocus]->u[1]*r.y + area[idx_mfocus]->u[2]*r.z + area[idx_mfocus]->u[3];
-			mouse_r.y = area[idx_mfocus]->v[0]*r.x + area[idx_mfocus]->v[1]*r.y + area[idx_mfocus]->v[2]*r.z + area[idx_mfocus]->v[3];
+			LinePlaneIntersect (area[idx_mfocus]->quad.a, area[idx_mfocus]->quad.b, area[idx_mfocus]->quad.c, area[idx_mfocus]->quad.d, cpos, ldir, r);
+			mouse_r.x = area[idx_mfocus]->quad.u[0]*r.x + area[idx_mfocus]->quad.u[1]*r.y + area[idx_mfocus]->quad.u[2]*r.z + area[idx_mfocus]->quad.u[3];
+			mouse_r.y = area[idx_mfocus]->quad.v[0]*r.x + area[idx_mfocus]->quad.v[1]*r.y + area[idx_mfocus]->quad.v[2]*r.z + area[idx_mfocus]->quad.v[3];
 			mouse_r.z = 0.0;
 			} break;
+		case Area::CMODE_NONE: break;
 		}
 	}
 	idx = idx_mfocus; state = mstate;

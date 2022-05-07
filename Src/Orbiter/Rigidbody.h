@@ -23,12 +23,12 @@ class RigidBody;
 // =======================================================================
 // typdefs
 
-const DWORD MAXGFIELDLIST = 20;
+const int MAXGFIELDLIST = 20;
 
 typedef struct {         // used for dynamic grav updates
-	DWORD gravidx[MAXGFIELDLIST]; // index list for gravity source objects
-	DWORD ngrav;                  // number of gravity sources
-	DWORD testidx;                // index for next object to test
+	int gravidx[MAXGFIELDLIST]; // index list for gravity source objects
+	int ngrav;                  // number of gravity sources
+	int testidx;                // index for next object to test
 	double updt;                  // time of next list update
 } GFieldData;
 
@@ -144,7 +144,7 @@ public:
 	// Trivial angular acceleration calculation: ignores cross-axis
 	// coupling terms and torque, and always returns zero
 
-	static const char *PropagatorStr (DWORD idx, bool verbose = true);
+	static const char *PropagatorStr (int idx, bool verbose = true);
 	// Returns a string describing the dynamic state propagator
 	// given by index idx.
 
@@ -278,12 +278,12 @@ private:
 	int PropSubMax;        // upper limit for number of subsamples
 	int nPropSubsteps;     // current number of subsamples
 
-	friend Vector Call_EulerInv_full (RigidBody *body, const Vector &tau, const Vector &omega)
-	{ return body->EulerInv_full (tau, omega); }
-	friend Vector Call_EulerInv_simple (RigidBody *body, const Vector &tau, const Vector &omega)
-	{ return body->EulerInv_simple (tau, omega); }
-	friend Vector Call_EulerInv_zero (RigidBody *body, const Vector &tau, const Vector &omega)
-	{ return body->EulerInv_zero (tau, omega); }
 };
+inline	Vector Call_EulerInv_full (RigidBody *body, const Vector &tau, const Vector &omega)
+	{ return body->EulerInv_full (tau, omega); }
+inline	Vector Call_EulerInv_simple (RigidBody *body, const Vector &tau, const Vector &omega)
+	{ return body->EulerInv_simple (tau, omega); }
+inline	Vector Call_EulerInv_zero (RigidBody *body, const Vector &tau, const Vector &omega)
+	{ return body->EulerInv_zero (tau, omega); }
 
 #endif // !__RIGIDBODY_H

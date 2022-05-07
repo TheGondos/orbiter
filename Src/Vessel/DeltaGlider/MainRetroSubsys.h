@@ -32,8 +32,8 @@ public:
 	void OpenRetroCover ();
 	void CloseRetroCover ();
 	const AnimState2 &RetroCoverState() const;
-	void clbkReset2D (int panelid, MESHHANDLE hMesh);
-	void clbkResetVC (int vcid, DEVMESHHANDLE hMesh);
+	void clbkReset2D (int panelid, MESHHANDLE hMesh) override;
+	void clbkResetVC (int vcid, DEVMESHHANDLE hMesh) override;
 
 private:
 	MainRetroThrottle *throttle;
@@ -45,19 +45,19 @@ private:
 // ==============================================================
 // Main/retro engine throttle
 // ==============================================================
-
+class MainRetroThrottleLevers;
 class MainRetroThrottle: public DGSubsystem {
 	friend class MainRetroThrottleLevers;
 
 public:
 	MainRetroThrottle (MainRetroSubsystem *_subsys);
-	bool clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH);
-	bool clbkLoadVC (int vcid);
+	bool clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH) override;
+	bool clbkLoadVC (int vcid) override;
 
 private:
 	MainRetroThrottleLevers *levers; 
 	int ELID_LEVERS;
-	UINT anim_lever[2];    // VC main/retro throttle lever animation ID
+	unsigned int anim_lever[2];    // VC main/retro throttle lever animation ID
 };
 
 // ==============================================================
@@ -75,7 +75,7 @@ public:
 private:
 	MainRetroThrottle *component;
 	float ppos[2];
-	UINT sliderpos[2];
+	unsigned int sliderpos[2];
 };
 
 
@@ -106,11 +106,11 @@ public:
 	bool IncMainYGimbal (int which, int mode);                 // manually change gimbal yaw command
 	void AutoMainGimbal ();                                    // apply automatic main engine gimbal setting
 	void TrackMainGimbal ();                                   // follow gimbals to commanded values
-	void clbkSaveState (FILEHANDLE scn);
-	bool clbkParseScenarioLine (const char *line);
-	void clbkPostStep (double simt, double simdt, double mjd);
-	bool clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH);
-	bool clbkLoadVC (int vcid);
+	void clbkSaveState (FILEHANDLE scn) override;
+	bool clbkParseScenarioLine (const char *line) override;
+	void clbkPostStep (double simt, double simdt, double mjd) override;
+	bool clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH) override;
+	bool clbkLoadVC (int vcid) override;
 
 private:
 	int mode;                     // gimbal mode: 0=off, 1=auto, 2=manual
@@ -161,7 +161,7 @@ private:
 	int pofs_cur[2], pofs_cmd[2];
 	int yofs_cur[2], yofs_cmd[2];
 	GROUPREQUESTSPEC vc_grp; ///< Buffered VC vertex data
-	WORD vperm[16];
+	uint16_t vperm[16];
 };
 
 // ==============================================================
@@ -200,7 +200,7 @@ private:
 	int vc_state[2];
 	static const int nvtx_per_switch = 28;
 	NTVERTEX vtx0[nvtx_per_switch*2];
-	WORD vperm[nvtx_per_switch*2];
+	uint16_t vperm[nvtx_per_switch*2];
 };
 
 
@@ -208,6 +208,8 @@ private:
 // Retro cover control
 // ==============================================================
 
+class RetroCoverSwitch;
+class RetroCoverIndicator;
 class RetroCoverControl: public DGSubsystem {
 	friend class RetroCoverSwitch;
 	friend class RetroCoverIndicator;
@@ -217,13 +219,13 @@ public:
 	void OpenRetroCover ();
 	void CloseRetroCover ();
 	inline const AnimState2 &State() const { return rcover_state; }
-	void clbkPostCreation();
-	void clbkSaveState (FILEHANDLE scn);
-	bool clbkParseScenarioLine (const char *line);
-	void clbkPostStep (double simt, double simdt, double mjd);
-	bool clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH);
-	bool clbkLoadVC (int vcid);
-	bool clbkPlaybackEvent (double simt, double event_t, const char *event_type, const char *event);
+	void clbkPostCreation() override;
+	void clbkSaveState (FILEHANDLE scn) override;
+	bool clbkParseScenarioLine (const char *line) override;
+	void clbkPostStep (double simt, double simdt, double mjd) override;
+	bool clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH) override;
+	bool clbkLoadVC (int vcid) override;
+	bool clbkPlaybackEvent (double simt, double event_t, const char *event_type, const char *event) override;
 
 private:
 	AnimState2 rcover_state;
@@ -231,7 +233,7 @@ private:
 	RetroCoverIndicator *indicator;
 	int ELID_SWITCH;
 	int ELID_INDICATOR;
-	UINT anim_rcover;           // handle for retro cover animation
+	unsigned int anim_rcover;           // handle for retro cover animation
 };
 
 // ==============================================================

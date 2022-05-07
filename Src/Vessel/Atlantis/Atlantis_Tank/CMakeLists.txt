@@ -20,7 +20,7 @@ target_include_directories(Atlantis_Tank
 )
 
 target_link_libraries(Atlantis_Tank
-	${ORBITER_LIB}
+#	${ORBITER_LIB}
 	${ORBITER_SDK_LIB}
 	$<TARGET_LINKER_FILE:Atlantis_SRB>
 )
@@ -47,7 +47,7 @@ add_dependencies(Atlantis_Tank
 )
 
 install(TARGETS Atlantis_Tank
-	RUNTIME
+#	RUNTIME
 	DESTINATION ${ORBITER_INSTALL_MODULE_DIR}
 )
 install(DIRECTORY ${CONFIG_SOURCE_DIR}/

@@ -14,145 +14,168 @@
 // ==============================================================
 
 #include "MFDWindow.h"
-#include "resource.h"
-#include <stdio.h> // temporary
+#include <stdio.h>
+#include <cstring>
+#include <imgui.h>
 
 // ==============================================================
 // prototype definitions
 
-INT_PTR CALLBACK DlgProc (HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
+//INT_PTR CALLBACK DlgProc (HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 // ==============================================================
 // class MFDWindow
 
-MFDWindow::MFDWindow (HINSTANCE _hInst, const MFDSPEC &spec): ExternMFD (spec), hInst(_hInst)
+const int button_yoffset = 30;
+
+class DlgExtMFD: public GUIElement {
+public:
+    DlgExtMFD(const std::string &name, MFDWindow *mfd);
+    void Show() override;
+    static const std::string etype;
+	MFDWindow *m_mfd;
+	ImVec2 m_oldSize;
+};
+
+DlgExtMFD::DlgExtMFD(const std::string &name, MFDWindow *mfd) : GUIElement(name, "DlgExtMFD") {
+    show = true;
+	m_mfd = mfd;
+	m_oldSize = ImVec2(0,0);
+}
+
+void DlgExtMFD::Show() {
+    if(!show) return; 
+
+	const int button_row_width = 50;
+	const int button_bottom_height = 50;
+	const ImVec2 button_sz = ImVec2(40,20);
+
+	char cbuf[256] = "MFD [";
+	oapiGetObjectName (m_mfd->GetVessel(), cbuf+5, 250);
+	strcat (cbuf, "]##");
+	strcat (cbuf, name.c_str());
+
+	if(m_mfd->m_poweroff) {
+		m_mfd->ProcessButton (12, PANEL_MOUSE_LBDOWN);
+		m_mfd->m_poweroff = false;
+	}
+
+	ImGui::SetNextWindowSize(ImVec2(400,400), ImGuiCond_FirstUseEver);
+    if(ImGui::Begin(cbuf, &show)) {
+		
+		ImGuiWindowFlags window_flags = ImGuiWindowFlags_HorizontalScrollbar;
+		ImGui::BeginChild("ChildL", ImVec2(button_row_width, ImGui::GetContentRegionAvail().y - button_bottom_height), false, window_flags);
+
+		ImVec2 sz = ImGui::GetContentRegionAvail();
+
+		for(int i=0;i<6;i++) {
+			const char *label = m_mfd->GetButtonLabel (i);
+			if(label) {
+				ImGui::PushID(i);
+				ImGui::SetCursorPosY((i*sz.y-button_yoffset)/6 + button_yoffset);
+				ImGui::Button(label, button_sz);
+				if(ImGui::IsItemHovered()) {
+					if(ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+						m_mfd->ProcessButton (i, PANEL_MOUSE_LBDOWN);
+					} else if(ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+						m_mfd->ProcessButton (i, PANEL_MOUSE_LBUP);
+					}
+				}
+				ImGui::PopID();
+			}
+		}
+
+		ImGui::EndChild();
+		ImGui::SameLine();
+		ImGui::BeginChild("ChildM", ImVec2(ImGui::GetContentRegionAvail().x-button_row_width, ImGui::GetContentRegionAvail().y - button_bottom_height), false, window_flags);
+		sz = ImGui::GetContentRegionAvail();
+
+		if(sz.x != m_oldSize.x || sz.y != m_oldSize.y) {
+			if(sz.x > 80 && sz.y > 80) {
+				MFDSPEC spec = {{0,0,(int)sz.x,(int)sz.y},6,6,button_yoffset,(int)(sz.y/6.0)};
+				m_mfd->Resize (spec);
+				m_oldSize = sz;
+			}
+		}
+		SURFHANDLE surf = m_mfd->GetDisplaySurface();
+		if(surf) {
+			ImVec2 uv_min = ImVec2(0.0f, 0.0f);                 // Top-left
+			ImVec2 uv_max = ImVec2(1.0f, 1.0f);                 // Lower-right
+			ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);   // No tint
+			ImVec4 border_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f); // 50% opaque white
+			oapiIncrTextureRef(surf);
+			ImGui::ImageButton(surf, ImVec2(sz.x, sz.y), uv_min, uv_max, 0, tint_col, border_col);
+		}
+		ImGui::EndChild();
+		ImGui::SameLine();
+
+		ImGui::BeginChild("ChildR", ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y - button_bottom_height), false, window_flags);
+
+		for(int i=6;i<12;i++) {
+			const char *label = m_mfd->GetButtonLabel (i);
+			if(label) {
+				ImGui::PushID(i);
+				ImGui::SetCursorPosY(((i-6)*sz.y-button_yoffset)/6 + button_yoffset);
+				ImGui::Button(label, button_sz);
+				if(ImGui::IsItemHovered()) {
+					if(ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+						m_mfd->ProcessButton (i, PANEL_MOUSE_LBDOWN);
+					} else if(ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+						m_mfd->ProcessButton (i, PANEL_MOUSE_LBUP);
+					}
+				}
+				ImGui::PopID();
+			}
+		}
+
+		ImGui::EndChild();
+		ImGui::BeginChild("ChildB", ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y), false, window_flags);
+
+	    sz = ImGui::GetContentRegionAvail();
+
+		//sz.x - button_sz.x * 4
+		ImGui::SetCursorPosX(60);
+
+		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9,0,0,1));
+		if(ImGui::Button("PWR", button_sz)) {
+			//We cannot call ProcessButton now because we've already submitted the texture to ImGui
+			m_mfd->m_poweroff = true;
+		}
+		ImGui::PopStyleColor();
+		ImGui::SameLine();
+		if(ImGui::Button("SEL", button_sz)) {
+			m_mfd->ProcessButton (13, PANEL_MOUSE_LBDOWN);
+		}
+		ImGui::SameLine();
+		if(ImGui::Button("MNU", button_sz)) {
+			m_mfd->ProcessButton (14, PANEL_MOUSE_LBDOWN);
+		}
+		ImGui::EndChild();
+    }
+    ImGui::End();
+}
+
+
+MFDWindow::MFDWindow (const MFDSPEC &spec): ExternMFD (spec)
 {
-	hBtnFnt = 0;
 	fnth = 0;
 	vstick = false;
-	oapiOpenDialogEx (hInst, IDD_MFD, DlgProc,
-		DLG_ALLOWMULTI, this);
+	char cbuf[128];
+	m_poweroff = false;
+	sprintf(cbuf, "MFDWindow%ld", (uint64_t)Id().emfd);
+	m_window = std::make_unique<DlgExtMFD>(cbuf, this);
+	oapiOpenDialog (m_window.get());
 }
 
 MFDWindow::~MFDWindow ()
 {
-	oapiCloseDialog (hDlg);
-	if (hBtnFnt) DeleteObject (hBtnFnt);
-}
-
-void MFDWindow::Initialise (HWND _hDlg)
-{
-	extern HBITMAP g_hPin;
-
-	hDlg = _hDlg;
-	hDsp = GetDlgItem (hDlg, IDC_DISPLAY);
-	for (int i = 0; i < 15; i++)
-		SetWindowLongPtr (GetDlgItem (hDlg, IDC_BUTTON1+i), GWLP_USERDATA, i);
-	oapiAddTitleButton (IDSTICK, g_hPin, DLG_CB_TWOSTATE);
-	SetTitle ();
-	gap = 3;
-	Resize (false);
+	oapiCloseDialog (m_window.get());
+	oapiUnregisterExternMFD (Id().emfd);
 }
 
 void MFDWindow::SetVessel (OBJHANDLE hV)
 {
 	ExternMFD::SetVessel (hV);
-	SetTitle ();
-}
-
-void MFDWindow::SetTitle ()
-{
-	char cbuf[256] = "MFD [";
-	oapiGetObjectName (hVessel, cbuf+5, 250);
-	strcat (cbuf, "]");
-	SetWindowText (hDlg, cbuf);
-}
-
-void MFDWindow::Resize (bool fixaspect)
-{
-	RECT r;
-	GetClientRect (hDlg, &r);
-	int bw = (r.right*35)/300;
-	BW = max (30, min (60, bw));
-	BH = max (15, min (40, (bw*2)/3));
-	int dspw = r.right-2*(BW+gap), dsph = r.bottom-(BH+2*gap);
-	int ds = min (dspw, dsph);
-	if (fixaspect && dspw != dsph) { // force aspect adjustment
-		RECT wr;
-		ds = max (50, ds);
-		GetWindowRect (hDlg, &wr);
-		SetWindowPos (hDlg, NULL, 0, 0, wr.right-wr.left-r.right+ds+2*(BW+gap), wr.bottom-wr.top-r.bottom+ds+(BH+2*gap), SWP_NOMOVE|SWP_NOOWNERZORDER);
-		return;
-	}
-
-	int fh = BW/3;
-	if (fh != fnth) {
-		if (hBtnFnt) DeleteObject (hBtnFnt);
-		hBtnFnt = CreateFont (fnth = fh, 0, 0, 0, 0, 0, 0, 0, DEFAULT_CHARSET,
-			OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY,
-			DEFAULT_PITCH|FF_DONTCARE, "Arial");
-	}
-
-	r.right = ds + (r.left = (r.right-ds)/2);
-	r.bottom = ds + (r.top = gap);
-	SetWindowPos (hDsp, NULL, r.left, r.top, DW = (r.right-r.left), DH = (r.bottom-r.top), SWP_SHOWWINDOW);
-	
-	int x1 = r.left-BW-gap;
-	int x2 = r.right+gap;
-	int dy = (DH*2)/13, y0 = DH/7, y1 = r.top+y0-BH/2;
-	for (int i = 0; i < 6; i++) {
-		SetWindowPos (GetDlgItem (hDlg, IDC_BUTTON1+i), NULL, x1, y1+i*dy, BW, BH, SWP_SHOWWINDOW);
-		SetWindowPos (GetDlgItem (hDlg, IDC_BUTTON7+i), NULL, x2, y1+i*dy, BW, BH, SWP_SHOWWINDOW);
-	}
-	y1 = r.top+DH+gap;
-	SetWindowPos (GetDlgItem (hDlg, IDC_BUTTON_PWR), NULL, r.left + DW/2 - (BW*7)/4, y1, BW, BH, SWP_SHOWWINDOW);
-	SetWindowPos (GetDlgItem (hDlg, IDC_BUTTON_SEL), NULL, r.left + DW/2 - BW/2, y1, BW, BH, SWP_SHOWWINDOW);
-	SetWindowPos (GetDlgItem (hDlg, IDC_BUTTON_MNU), NULL, r.left + DW/2 + (BW*3)/4, y1, BW, BH, SWP_SHOWWINDOW);
-
-	MFDSPEC spec = {{0,0,DW,DH},6,6,y0,dy};
-	ExternMFD::Resize (spec);
-	InvalidateRect (hDlg, NULL, FALSE);
-}
-
-void MFDWindow::RepaintDisplay (HWND hWnd)
-{
-	PAINTSTRUCT ps;
-	HDC hDCtgt = BeginPaint (hWnd, &ps);
-	SURFHANDLE surf = GetDisplaySurface();
-	if (surf) {
-		HDC hDCsrc = oapiGetDC (surf);
-		BitBlt (hDCtgt, 0, 0, DW, DH, hDCsrc, 0, 0, SRCCOPY);
-		oapiReleaseDC (surf, hDCsrc);
-	} else {
-		SelectObject (hDCtgt, GetStockObject (BLACK_BRUSH));
-		Rectangle (hDCtgt, 0, 0, DW, DH);
-	}
-	EndPaint (hWnd, &ps);
-}
-
-void MFDWindow::RepaintButton (HWND hWnd)
-{
-	int id = GetWindowLongPtr (hWnd, GWLP_USERDATA);
-	PAINTSTRUCT ps;
-	HDC hDC = BeginPaint (hWnd, &ps);
-	SelectObject (hDC, GetStockObject (BLACK_PEN));
-	Rectangle (hDC, 0, 0, BW, BH);
-	SetTextAlign (hDC, TA_CENTER);
-	const char *label;
-	if (id < 12) {
-		label = GetButtonLabel (id);
-	} else {
-		static const char *lbl[3] = {"PWR","SEL","MNU"};
-		label = lbl[id-12];
-		if (id == 12) SetTextColor (hDC, 0x0000FF);
-	}
-	if (label) {
-		SetBkMode (hDC, TRANSPARENT);
-		HFONT pFont = (HFONT)SelectObject (hDC, hBtnFnt);
-		TextOut (hDC, BW/2, (BH-fnth)/2, label, strlen(label));
-		SelectObject (hDC, pFont);
-	}
-	EndPaint (hWnd, &ps);
 }
 
 void MFDWindow::ProcessButton (int bt, int event)
@@ -176,22 +199,10 @@ void MFDWindow::ProcessButton (int bt, int event)
 	}
 }
 
-void MFDWindow::clbkRefreshDisplay (SURFHANDLE)
-{
-	InvalidateRect (hDsp, NULL, FALSE);
-}
-
-void MFDWindow::clbkRefreshButtons ()
-{
-	for (int i = 0; i < 12; i++)
-		InvalidateRect (GetDlgItem (hDlg, IDC_BUTTON1+i), NULL, FALSE);
-}
-
 void MFDWindow::clbkFocusChanged (OBJHANDLE hFocus)
 {
 	if (!vstick) {
 		ExternMFD::clbkFocusChanged (hFocus);
-		//SetTitle ();
 	}
 }
 
@@ -200,69 +211,5 @@ void MFDWindow::StickToVessel (bool stick)
 	vstick = stick;
 	if (!vstick) {
 		SetVessel (oapiGetFocusObject());
-		//SetTitle ();
 	}
-}
-
-// ==============================================================
-// Windows message handler for the dialog box
-
-INT_PTR CALLBACK DlgProc (HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
-{
-	switch (uMsg) {
-	case WM_INITDIALOG:
-		((MFDWindow*)lParam)->Initialise (hDlg);
-		return TRUE;
-	case WM_SIZE:
-		((MFDWindow*)oapiGetDialogContext(hDlg))->Resize (true);
-		return TRUE;
-	case WM_COMMAND:
-		switch (LOWORD (wParam)) {
-		case IDCANCEL:
-			oapiUnregisterExternMFD ((MFDWindow*)oapiGetDialogContext (hDlg));
-			return TRUE;
-		case IDHELP:
-			((MFDWindow*)oapiGetDialogContext(hDlg))->OpenModeHelp ();
-			return TRUE;
-		case IDSTICK:
-			((MFDWindow*)oapiGetDialogContext(hDlg))->StickToVessel (HIWORD(wParam) != 0);
-			return TRUE;
-		}
-		break;
-	}
-	return oapiDefDialogProc (hDlg, uMsg, wParam, lParam);
-}
-
-LRESULT FAR PASCAL MFD_WndProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
-{
-	switch (uMsg) {
-	case WM_PAINT: {
-		MFDWindow *mfdw = (MFDWindow*)oapiGetDialogContext (GetParent (hWnd));
-		mfdw->RepaintDisplay (hWnd);
-		} return 0;
-	}
-
-	return DefWindowProc (hWnd, uMsg, wParam, lParam);
-}
-
-LRESULT FAR PASCAL MFD_BtnProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
-{
-	switch (uMsg) {
-	case WM_PAINT: {
-		MFDWindow *mfdw = (MFDWindow*)oapiGetDialogContext (GetParent (hWnd));
-		mfdw->RepaintButton (hWnd);
-		} return 0;
-	case WM_LBUTTONDOWN: {
-		MFDWindow *mfdw = (MFDWindow*)oapiGetDialogContext (GetParent (hWnd));
-		mfdw->ProcessButton (GetWindowLongPtr (hWnd, GWLP_USERDATA), PANEL_MOUSE_LBDOWN);
-		SetCapture (hWnd);
-		} return 0;
-	case WM_LBUTTONUP: {
-		MFDWindow *mfdw = (MFDWindow*)oapiGetDialogContext (GetParent (hWnd));
-		mfdw->ProcessButton (GetWindowLongPtr (hWnd, GWLP_USERDATA), PANEL_MOUSE_LBUP);
-		ReleaseCapture();
-		} return 0;
-	}
-
-	return DefWindowProc (hWnd, uMsg, wParam, lParam);
 }

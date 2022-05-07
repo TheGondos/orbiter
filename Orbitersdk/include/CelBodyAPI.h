@@ -23,6 +23,9 @@
 #ifndef __CELBODYAPI_H
 #define __CELBODYAPI_H
 
+//#include "DynamicModule.h"
+#include "ModuleAPI.h"
+
 // ===========================================================================
 /// \ingroup defines
 /// \defgroup ephem Ephemeris data format bitflags
@@ -83,12 +86,12 @@ struct Sample {
 	*  #include "OrbiterAPI.h"
 	*  #include "CelbodyAPI.h"
 	*
-	*  DLLCLBK void InitModule (HINSTANCE hModule)
+	*  DLLCLBK void InitModule (DynamicModule *hModule)
 	*  {
 	*     // module initialisation
 	*  }
 	*
-	*  DLLCLBK void ExitModule (HINSTANCE hModule)
+	*  DLLCLBK void ExitModule (DynamicModule *hModule)
 	*  {
 	*     // module cleanup
 	*  }
@@ -225,6 +228,7 @@ struct Sample {
 class OAPIFUNC CELBODY {
 public:
 	CELBODY ();
+	virtual ~CELBODY() {}
 
 	/**
 	* \brief Return version number
@@ -375,7 +379,7 @@ protected:
 * \sa CELBODY, ATMOSPHERE
 */
 // ======================================================================
-
+class ATMOSPHERE;
 class OAPIFUNC CELBODY2: public CELBODY {
 	friend class ATMOSPHERE;
 
@@ -425,7 +429,7 @@ public:
 	 * \note For planets, it returns the handles of the moons.
 	 * \note If idx >= number of children, the function returns NULL.
 	 */
-	OBJHANDLE GetChild (DWORD idx) const;
+	OBJHANDLE GetChild (int idx) const;
 
 	/**
 	 * \brief Returns the siderial period of the celestial body
@@ -522,7 +526,7 @@ protected:
 
 	OBJHANDLE hBody;      ///< handle for the associated celestial body
 	ATMOSPHERE *atm;      ///< pointer to atmosphere object
-	HINSTANCE hAtmModule; ///< library handle for external atmosphere module
+	oapi::DynamicModule hAtmModule; ///< library handle for external atmosphere module
 };
 
 
@@ -541,6 +545,7 @@ public:
 	 * \param body pointer to celestial body
 	 */
 	ATMOSPHERE (CELBODY2 *body);
+	virtual ~ATMOSPHERE() {}
 
 	/**
 	 * \brief A brief name that identifies the atmosphere model.
@@ -573,7 +578,7 @@ public:
 		double f107bar;   ///< average F10.7 flux over recent period
 		double f107;      ///< current F10.7 flux
 		double ap;        ///< magnetic index
-		DWORD  flag;      ///< parameter flags (see \ref PRM_IN_FLAG)
+		int    flag;      ///< parameter flags (see \ref PRM_IN_FLAG)
 	};
 
 	/**

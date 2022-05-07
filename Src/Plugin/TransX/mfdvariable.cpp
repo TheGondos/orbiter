@@ -18,15 +18,13 @@
 ** OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 ** THE SOFTWARE.*/
 
-#define STRICT
-#include <windows.h>
 #include <stdio.h>
 #include <math.h>
-#include "orbitersdk.h"
+#include "Orbitersdk.h"
 #include "mfd.h"
 #include "cmdnugget.h"
 #include "mfdvariable.h"
-
+#include <cstring>
 
 MFDvariable::MFDvariable()
 {
@@ -78,7 +76,7 @@ void MFDvariable::setcmdnugget(cmdnugget *nugget)
 	inugget=nugget;
 }
 
-bool MFDvariable::showgeneric(Sketchpad *sketchpad,int width,int line, char *inbuff)
+bool MFDvariable::showgeneric(Sketchpad *sketchpad,int width,int line, const char *inbuff)
 {
 // This is a helper function that formats output to the MFD screen
 	char buffer[MAX_NAME_LENGTH];
@@ -134,7 +132,7 @@ void MFDvariable::gethelpstrings(char *help1,char *help2) const
 	strcpy(help2,helpstring2);
 }
 
-void MFDvariable::sethelpstrings(char *help1,char *help2)
+void MFDvariable::sethelpstrings(const char *help1,const char *help2)
 {
 	strcpy(helpstring1,help1);
 	strcpy(helpstring2,help2);

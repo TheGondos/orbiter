@@ -13,6 +13,7 @@
 
 #include "SolarSail.h"
 #include "meshres.h"
+#include <cstring>
 
 // ==============================================================
 // Some vessel parameters
@@ -75,12 +76,12 @@ void SolarSail::SetupElasticity (MESHHANDLE hMesh)
 {
 	MESHGROUP *sail = oapiMeshGroup (hMesh, GRP_sail1);
 	// all sail segments have the same mesh structure, so segment 1 represents all 4
-	DWORD nvtx = sail->nVtx/2; // scan front side only
-	DWORD nidx = sail->nIdx/2; // scan front side only
-	DWORD ntri = nidx/3;
-	WORD *idx = sail->Idx;
+	int nvtx = sail->nVtx/2; // scan front side only
+	int nidx = sail->nIdx/2; // scan front side only
+	int ntri = nidx/3;
+	uint16_t *idx = sail->Idx;
 	NTVERTEX *vtx = sail->Vtx;
-	DWORD i, j, k, m, nj, nk;
+	int i, j, k, m, nj, nk;
 
 	// generate node neighbour graph
 	sail_vbuf = new VECTOR3[nvtx];
@@ -91,7 +92,7 @@ void SolarSail::SetupElasticity (MESHHANDLE hMesh)
 	}
 
 	for (i = 0; i < ntri; i++) {
-		WORD *tri = idx+(i*3);
+		uint16_t *tri = idx+(i*3);
 		for (j = 0; j < 3; j++) {
 			nj = tri[j];
 			for (k = 0; k < 3; k++) {
@@ -138,7 +139,7 @@ void SolarSail::DefineAnimations ()
 	int i;
 
 	// Steering paddle animations
-	static UINT PaddleGrp[4] = {GRP_paddle1, GRP_paddle2, GRP_paddle3, GRP_paddle4};
+	static unsigned int PaddleGrp[4] = {GRP_paddle1, GRP_paddle2, GRP_paddle3, GRP_paddle4};
 
 	static MGROUP_ROTATE Paddle0 (0, PaddleGrp+0, 1, _V(0,0,0), _V(0,1,0), (float)(180.0*RAD));
 	static MGROUP_ROTATE Paddle1 (0, PaddleGrp+1, 1, _V(0,0,0), _V(1,0,0), (float)(180.0*RAD));
@@ -163,12 +164,12 @@ void SolarSail::UpdateSail (const VECTOR3 *rpressure)
 
 	const double elast = 1e-1;
 	const double pscale = 1e3;
-	DWORD i, j;
+	int i, j;
 	NBHR *nb;
 	NTVERTEX *vi, *vj;
 	VECTOR3 dv, F, nm;
 	static VECTOR3 *nml = 0;
-	static DWORD *nsd = 0;
+	static int *nsd = 0;
 	double dst;
 
 	sailidx = ++sailidx % 4;
@@ -208,12 +209,12 @@ void SolarSail::UpdateSail (const VECTOR3 *rpressure)
 	// calculate smooth normals - surely this could be done more efficiently!
 	if (!nml) {
 		nml = new VECTOR3[sail_nvtx];
-		nsd = new DWORD[sail_nvtx];
+		nsd = new int[sail_nvtx];
 	}
 	memset (nml, 0, sail_nvtx*sizeof(VECTOR3));
-	memset (nsd, 0, sail_nvtx*sizeof(DWORD));
+	memset (nsd, 0, sail_nvtx*sizeof(int));
 	for (i = 0; i < sail_ntri; i++) {
-		WORD *idx = sail->Idx + i*3;
+		uint16_t *idx = sail->Idx + i*3;
 		nm = Nml(sail->Vtx + *idx, sail->Vtx + *(idx+1), sail->Vtx + *(idx+2));
 		for (j = 0; j < 3; j++) {
 			nml[*(idx+j)] += unit(nm);
@@ -368,8 +369,8 @@ int SolarSail::clbkGeneric (int msgid, int prm, void *context)
 MESHHANDLE SolarSail::hMeshTpl = NULL;
 NBHR *SolarSail::nbhr = NULL;
 VECTOR3 *SolarSail::sail_vbuf = NULL;
-DWORD SolarSail::sail_nvtx = 0;
-DWORD SolarSail::sail_ntri = 0;
+int SolarSail::sail_nvtx = 0;
+int SolarSail::sail_ntri = 0;
 
 // ==============================================================
 // API callback interface
@@ -379,7 +380,7 @@ DWORD SolarSail::sail_ntri = 0;
 // Global initialisation
 // --------------------------------------------------------------
 
-DLLCLBK void InitModule (HINSTANCE hModule)
+DLLCLBK void InitModule (oapi::DynamicModule *hModule)
 {
 	SolarSail::GlobalSetup();
 }

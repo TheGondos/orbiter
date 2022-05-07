@@ -9,9 +9,9 @@
 #ifndef __PANE_H
 #define __PANE_H
 
+#ifndef STRICT
 #define STRICT 1
-#include <windows.h>
-#include <mmsystem.h>
+#endif
 #include "Orbiter.h"
 #include "Body.h"
 #include "Mfd.h"
@@ -42,6 +42,15 @@ struct MFDspec {        // panel MFD specs
 // =======================================================================
 // class Pane
 
+class HUD_Orbit;
+class HUD_Surface;
+class HUD_Docking;
+class Instrument;
+class DefaultPanel;
+class Panel2D;
+class Panel;
+class VirtualCockpit;
+class MenuInfoBar;
 class Pane {
 	friend class HUD;
 	friend class HUD_Orbit;
@@ -55,7 +64,7 @@ class Pane {
 	friend class MenuInfoBar;
 
 public:
-	Pane (oapi::GraphicsClient *gclient, HWND hwnd, int width, int height, int bpp);
+	Pane (oapi::GraphicsClient *gclient, int width, int height, int bpp);
 	// Create a new pane with dimension width x height x bpp
 
 	~Pane ();
@@ -64,9 +73,6 @@ public:
 	int Height() const { return H; }
 	int BitsPerPixel() const { return BPP; }
 	// Return pane dimensions
-
-	void RestoreDeviceObjects (LPDIRECT3D7 d3d, LPDIRECT3DDEVICE7 dev);
-	// Restore all devices (e.g. after render window is re-openend
 
 	void Update (double simt, double syst);
 	// Update GDI pane display for simulation time simt and system time syst
@@ -89,12 +95,12 @@ public:
 	void SetSketchpadDefault (oapi::Sketchpad *skp);
 	// set HUD defaults for drawing objects (font, text colour, pen)
 
-	bool MFDConsumeKeyBuffered (int id, DWORD key);
+	bool MFDConsumeKeyBuffered (MfdId id, int key);
 	// Process a buffered key for MFD id
 
-	bool ProcessMouse_System(UINT event, DWORD state, DWORD x, DWORD y, const char *kstate);
+	bool ProcessMouse_System(oapi::MouseEvent event, int state, int x, int y, const char *kstate);
 
-	bool ProcessMouse_OnRunning (UINT event, DWORD state, DWORD x, DWORD y, const char *kstate);
+	bool ProcessMouse_OnRunning (oapi::MouseEvent event, int state, int x, int y, const char *kstate);
 	// Process a mouse click/release
 
 	void SetFOV (double _fov);
@@ -168,9 +174,9 @@ public:
 	inline void RenderDefaultHUD ();
 	void RenderCustomHUD (MESHHANDLE hMesh, SURFHANDLE *hTex);
 
-	SURFHANDLE GetMFDSurface (int id);
+	SURFHANDLE GetMFDSurface (MfdId id);
 
-	void ToggleMFD_on (int id);
+	void ToggleMFD_on (MfdId id);
 	// switch MFD on or off
 
 	void RefreshMFD (int id);
@@ -179,7 +185,7 @@ public:
 	double SetMFDRefreshIntervalMultiplier (int id, double multiplier);
 	// modify the refresh interval of an MFD
 
-	bool OpenMFD (INT_PTR id, int type, std::ifstream *ifs = 0);
+	bool OpenMFD (MfdId id, int type, std::ifstream *ifs = 0);
 	// open specified instrument as left/right MFD. Returns true if MFD mode has changed
 	// If scenario stream is provided, parameters are read from this stream
 
@@ -201,18 +207,17 @@ public:
 	void RegisterExternMFD (ExternMFD *mfd, const MFDSPEC &spec);
 	bool UnregisterExternMFD (ExternMFD *mfd);
 
-	Instrument *MFD (int which);
+	Instrument *MFD (MfdId mfdid);
 
-	void RepaintMFDButtons (INT_PTR id, Instrument *instr);
+	void RepaintMFDButtons (MfdId id, Instrument *instr);
 	Instrument::Spec GetVCMFDSpec ();
-	const VCMFDSPEC *GetVCMFDParams (int id);
+	const VCMFDSPEC *GetVCMFDParams (MfdId id);
 	const VirtualCockpit *GetVC() const { return vcockpit; }
 	VirtualCockpit *GetVC() { return vcockpit; }
 
 	Panel2D *GetPanel2D() { return panel2d; }
 
-	void RegisterPanelBackground (HBITMAP hBmp, DWORD flag, DWORD ck);
-	void RegisterPanelBackground (SURFHANDLE hSurf, DWORD flag);
+	void RegisterPanelBackground (SURFHANDLE hSurf, int flag);
 	void RegisterPanelArea (int id, const RECT &pos, int draw_mode, int mouse_mode, int bkmode);
 	void SetPanelNeighbours (int left, int right, int top, int bottom);
 	void SetVCNeighbours (int left, int right, int top, int bottom);
@@ -230,7 +235,7 @@ public:
 
 	void SetPanel2DBlink (VECTOR3 v[4]);
 
-	bool GlobalToHomog (const Vector &glob, D3DVECTOR &homog) const;
+	bool GlobalToHomog (const Vector &glob, glm::fvec3 &homog) const;
 	// transform global position glob into homogeneous viewport
 	// coordinates (x=-1: left edge of viewing fustrum etc.)
 	// return value indicates point within fustrum (does not check
@@ -264,7 +269,6 @@ private:
 	oapi::GraphicsClient *gc; // client instance
 	int W, H, BPP;            // pane dimensions
 	int scaleW;
-	HWND hWnd;               // window handle
 	int colidx;              // HUD colour index
 	COLORREF hudCol;         // HUD colour
 	double hudIntens;        // HUD intensity (VC only)
@@ -273,8 +277,6 @@ private:
 	SURFHANDLE mfdTex_blank; // dummy texture for blank MFD surfaces
 	MenuInfoBar *mibar;      // main menu and info displays
 
-	HPEN  hPen[6];           // pen resources
-	HBRUSH hBrush1, hBrush2; // brush resources
 	int panelmode;           // 0=none, 1=MFDs only, 2=2D panels, 3=virtual cockpit
 
 	HUD *hud;                  // head up display
@@ -287,8 +289,7 @@ private:
 	int vcid;                  // currently selected VC position
 
 	MFDspec mfd[MAXMFD];       // panel MFD displays
-	ExternMFD **emfd;          // external MFD displays
-	DWORD nemfd;               // number of external MFDs
+	std::vector<ExternMFD *> m_emfd;
 	bool mfdsize_pow2;         // force power-2 MFD sizes?
 	int mfd_hires_threshold;   // MFD size at which to switch to 512
 	int mfd_vc_size;           // texture size for VC MFD displays (256/512/1024)

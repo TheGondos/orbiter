@@ -7,7 +7,7 @@
 #include "Config.h"
 #include "Celbody.h"
 #include <stdio.h>
-#include <dinput.h>
+#include <cmath>
 
 using namespace std;
 
@@ -18,7 +18,7 @@ struct Instrument_Landing::SavePrm Instrument_Landing::saveprm = {
 	0, 0
 };
 
-Instrument_Landing::Instrument_Landing (Pane *_pane, INT_PTR _id, const Spec &spec, Vessel *_vessel, bool restore)
+Instrument_Landing::Instrument_Landing (Pane *_pane, MfdId _id, const Spec &spec, Vessel *_vessel, bool restore)
 : Instrument (_pane, _id, spec, _vessel)
 {
 	nv = 0;
@@ -51,17 +51,10 @@ Instrument_Landing::~Instrument_Landing ()
 	}
 }
 
-HELPCONTEXT *Instrument_Landing::HelpTopic () const
-{
-	extern HELPCONTEXT DefHelpContext;
-	DefHelpContext.topic = "/mfd_vtol.htm";
-	return &DefHelpContext;
-}
-
-bool Instrument_Landing::KeyBuffered (DWORD key)
+bool Instrument_Landing::KeyBuffered (int key)
 {
 	switch (key) {
-	case DIK_N: // NAV receiver select
+	case OAPI_KEY_N: // NAV receiver select
 		if (vessel->nnav) nv = (nv+1) % vessel->nnav;
 		Refresh();
 		return true;
@@ -71,7 +64,7 @@ bool Instrument_Landing::KeyBuffered (DWORD key)
 
 bool Instrument_Landing::ProcessButton (int bt, int event)
 {
-	static const DWORD btkey[1] = { DIK_N };
+	static const int btkey[1] = { OAPI_KEY_N };
 	if (event & PANEL_MOUSE_LBDOWN) {
 		if (bt < 1) return KeyBuffered (btkey[bt]);
 	}
@@ -159,7 +152,7 @@ void Instrument_Landing::UpdateDraw (oapi::Sketchpad *skp)
 	if      (bdir <  0.0) bdir += Pi2;
 	else if (bdir >= Pi2) bdir -= Pi2;
 	dist = adist * sp->ref->Size();
-	sprintf (cbuf, "DIST%s  DIR %03.0f°", DistStr(dist), DEG*bdir);
+	sprintf (cbuf, "DIST%s  DIR %03.0fï¿½", DistStr(dist), DEG*bdir);
 	skp->Text (x, ch*2, cbuf, strlen(cbuf));
 
 	// horizontal airspeed
@@ -171,7 +164,7 @@ void Instrument_Landing::UpdateDraw (oapi::Sketchpad *skp)
 	}
 	Vector hvel (tmul (sp->ref->GRot(), sp->groundvel_glob));
 	hvel.Set (mul (sp->L2H, hvel));
-	hspd = _hypot (hvel.x, hvel.z);
+	hspd = std::hypot (hvel.x, hvel.z);
 	vdir = atan2 (hvel.x, hvel.z) - sp->dir;
 	if      (vdir <= -Pi) vdir += Pi2;
 	else if (vdir >=  Pi) vdir -= Pi2;
@@ -221,7 +214,7 @@ void Instrument_Landing::UpdateDraw (oapi::Sketchpad *skp)
 	for (i = 0; i <= 4; i++) {
 		dy = (barh*i)/4;
 		skp->Line (dx, bar0-dy, dx+barw+2, bar0-dy);
-		_itoa (i-1, cbuf, 10);
+		sprintf(cbuf, "%d", i-1);
 		skp->Text (dx+barw+3, bar0-dy-ch/2, cbuf, strlen(cbuf));
 	}
 

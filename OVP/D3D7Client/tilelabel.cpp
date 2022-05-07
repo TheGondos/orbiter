@@ -2,9 +2,12 @@
 // Licensed under the MIT License
 
 #include "tilelabel.h"
-#include "camera.h"
+#include "Camera.h"
 #include <limits>
 #include <sstream>
+
+#define stricmp strcasecmp
+#define _isnan isnan
 
 extern Orbiter *g_pOrbiter;
 extern Camera *g_camera;
@@ -63,7 +66,7 @@ bool TileLabel::Read()
 	char typestr[16], altstr[256], name[256];
 
 	if (tile->mgr->Cprm().tileLoadFlags & 0x0001) { // try loading from individual tile file
-		sprintf (path, "%s\\Label\\%02d\\%06d\\%06d.lab", tile->mgr->CbodyName(), lvl+4, ilat, ilng);
+		sprintf (path, "%s/Label/%02d/%06d/%06d.lab", tile->mgr->CbodyName(), lvl+4, ilat, ilng);
 		tile->mgr->GClient()->PlanetTexturePath(path, texpath);
 
 		std::ifstream ifs(texpath);
@@ -225,8 +228,8 @@ void TileLabel::Render(oapi::Sketchpad *skp, oapi::Font **labelfont, int *fontid
 	for (i = 0; i < nrenderlabel; i++) {
 		VECTOR3 camlabelpos = campos-renderlabel[i]->pos;
 		if (dotp (renderlabel[i]->pos, camlabelpos) >= 0.0) {
-			double fontscale = 1e4/length(camlabelpos)*(13-min(tile->lvl,12)*1);
-			int idx = max(0, min(3, (int)fontscale));
+			double fontscale = 1e4/length(camlabelpos)*(13-std::min(tile->lvl,12)*1);
+			int idx = std::max(0, std::min(3, (int)fontscale));
 			if (idx != *fontidx) {
 				skp->SetFont(labelfont[idx]);
 				*fontidx = idx;

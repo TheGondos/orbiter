@@ -6,8 +6,11 @@
 #include <stdio.h>
 #include <time.h>
 #include "Mesh.h"
+#include <cstring>
+#include <unistd.h>
 
 using namespace std;
+#define _strnicmp strncasecmp
 
 struct Param {
 	char meshname[1024];
@@ -67,7 +70,6 @@ void ParseArgs(int argc, char *argv[], Param *param)
 }
 
 
-
 int main (int argc, char *argv[])
 {
 	struct tm *now;
@@ -105,7 +107,8 @@ int main (int argc, char *argv[])
 	if (!strcmp(param.outname, "-")) strcpy(param.outname, "meshres.h");
 
 	char pwd[1024];
-	_fullpath(pwd, ".\\", 1024);
+//	_fullpath(pwd, ".\\", 1024);
+	getcwd(pwd,1024);
 	cout << "Current directory is " << pwd << endl;
 
 	cout << "Reading mesh from " << param.meshname << endl;
@@ -114,7 +117,7 @@ int main (int argc, char *argv[])
 	ifs.close();
 	if (!ifs.good()) {
 		cout << "Error reading mesh file." << endl;
-		exit(1);
+		//exit(1);
 	}
 	if (!mesh.nGroup()) {
 		cout << "Warning: mesh contains no groups." << endl;

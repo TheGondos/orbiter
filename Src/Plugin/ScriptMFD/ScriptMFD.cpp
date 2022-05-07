@@ -12,13 +12,13 @@
 
 #define STRICT
 #define ORBITER_MODULE
-#include "windows.h"
-#include "orbitersdk.h"
+#include "Orbitersdk.h"
 #include "ScriptMFD.h"
 
 #undef DLLEXPORT
 #define DLLEXPORT  // hack - this could be solved a bit more elegantly
 #include "Interpreter.h"
+#include <cstring>
 
 using namespace std;
 
@@ -38,7 +38,7 @@ struct VINTERP { // list of vessel-based interpreters
 } **vinterp;
 int nvinterp = 0;
 
-static char *cfgfile = "Config\\MFD\\ScriptMFD.cfg";
+static const char *cfgfile = "Config/MFD/ScriptMFD.cfg";
 
 // clears the global list of vessel-based interpreters
 static void ClearVinterpList()
@@ -57,7 +57,7 @@ static void ClearVinterpList()
 // ==============================================================
 // API interface
 
-DLLCLBK void InitModule (HINSTANCE hDLL)
+DLLCLBK void InitModule (oapi::DynamicModule *hDLL)
 {
 	int i;
 	char cbuf[256], name[256], script[256], key[256], persist[256];
@@ -86,7 +86,7 @@ DLLCLBK void InitModule (HINSTANCE hDLL)
 					sscanf (key, "%d", &modespec[nmode].key);
 				modespec[nmode].persist = 0;
 				if (oapiReadItem_string (hFile, "Persist", persist))
-					if (!_stricmp(persist, "vessel"))
+					if (!strcasecmp(persist, "vessel"))
 						modespec[nmode].persist = 1;
 				nmode++;
 		}
@@ -105,7 +105,7 @@ DLLCLBK void InitModule (HINSTANCE hDLL)
 	nvinterp = 0;
 }
 
-DLLCLBK void ExitModule (HINSTANCE hDLL)
+DLLCLBK void ExitModule (oapi::DynamicModule *hDLL)
 {
 	int i;
 
@@ -154,7 +154,7 @@ DLLCLBK void opcPostStep (double simt, double simdt, double mjd)
 // MFD class implementation
 
 // Constructor
-ScriptMFD::ScriptMFD (DWORD w, DWORD h, VESSEL *vessel, const SCRIPTMFDMODESPEC *spec)
+ScriptMFD::ScriptMFD (int w, int h, VESSEL *vessel, const SCRIPTMFDMODESPEC *spec)
 : MFD2 (w, h, vessel)
 {
 	int i;
@@ -254,7 +254,7 @@ bool ScriptMFD::ConsumeButton (int bt, int event)
 }
 
 // React to a buffered key
-bool ScriptMFD::ConsumeKeyBuffered (DWORD key)
+bool ScriptMFD::ConsumeKeyBuffered (int key)
 {
 	if (bclbk[CONSUMEKEYBUFFERED]) {
 		lua_getfield (L, LUA_GLOBALSINDEX, CLBKNAME[CONSUMEKEYBUFFERED]);
@@ -281,7 +281,7 @@ bool ScriptMFD::ConsumeKeyImmediate (char *kstate)
 }
 
 // Return button labels
-char *ScriptMFD::ButtonLabel (int bt)
+const char *ScriptMFD::ButtonLabel (int bt)
 {
 	char *label = 0;
 
@@ -419,12 +419,11 @@ void ScriptMFD::ReadStatus (FILEHANDLE scn)
 }
 
 // MFD message parser
-OAPI_MSGTYPE ScriptMFD::MsgProc (UINT msg, UINT mfd, WPARAM wparam, LPARAM lparam)
+OAPI_MSGTYPE ScriptMFD::MsgProc (MFD_msg msg, MfdId mfd, MFDMODEOPENSPEC *param, VESSEL *vessel)
 {
 	switch (msg) {
 	case OAPI_MSG_MFD_OPENEDEX: {
-		MFDMODEOPENSPEC* ospec = (MFDMODEOPENSPEC*)wparam;
-		return (OAPI_MSGTYPE)new ScriptMFD(ospec->w, ospec->h, (VESSEL*)lparam, (const SCRIPTMFDMODESPEC*)ospec->spec->context);
+		return (OAPI_MSGTYPE)new ScriptMFD(param->w, param->h, vessel, (const SCRIPTMFDMODESPEC*)param->spec->context);
 		}
 	}
 	return 0;

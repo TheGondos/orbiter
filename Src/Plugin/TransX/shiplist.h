@@ -25,7 +25,9 @@
 #include "transx.h"
 
 #define SHIPNAME_LENGTH	50
-#define	MFDLIST_LENGTH	20
+//#define	MFDLIST_LENGTH	20
+
+#include <unordered_map>
 
 class transxstate;
 
@@ -37,8 +39,9 @@ class shipptrs
 	shipptrs *previous,*next;
 	static shipptrs *current;//Used in background task
 	void subcreate();
-	class viewstate *mfdlist[MFDLIST_LENGTH];
-	class transxstate *state;
+//	class viewstate *mfdlist[MFDLIST_LENGTH];
+	std::unordered_map<MfdId, viewstate *> mfdmap;
+	transxstate *state;
 	char shipname[SHIPNAME_LENGTH];//ship name - needs to be long enough to have good chance of being complete
 	static bool saved;//whether a save has been performed since last timestep
 public:
@@ -47,15 +50,15 @@ public:
 	static void restoreallships(FILEHANDLE scn);//restores all ships from scenario file
 	static void destroyshipptrs();//Clears the entire linked list
 	static void backgroundaction();//Background task to check whether craft needs focus changed
-	static class shipptrs *findship(OBJHANDLE hcraft);//Finds a ship from a pointer, if available
-	static class shipptrs *findship(char *tname);//Finds a ship from a name, if available
+	static shipptrs *findship(OBJHANDLE hcraft);//Finds a ship from a pointer, if available
+	static shipptrs *findship(char *tname);//Finds a ship from a name, if available
 	void savecurrent(FILEHANDLE scn);//saves current ship
 	void restorecurrent(FILEHANDLE scn);//restores current ship
 	void downshift();//Called when all viewstates on a vessel are asked to change their pointed position
 	void resetshift();//Called to set all viewstates to position 1
-	static class shipptrs *getshipptrs();//Gets ship pointer set for current focus vessel, creating new if reqd
-	class transxstate *gettransxstate(){return state;};//returns transxstate for ship
-	class viewstate *getviewstate(int mfdpos,TransxMFD *mfdptr);//returns viewstate for ship
+	static shipptrs *getshipptrs();//Gets ship pointer set for current focus vessel, creating new if reqd
+	transxstate *gettransxstate(){return state;};//returns transxstate for ship
+	viewstate *getviewstate(MfdId mfdpos,TransxMFD *mfdptr);//returns viewstate for ship
 	char *getname(){return shipname;};//hands over pointer to internal name buffer
 	~shipptrs();
 	friend class shipptr_itr;

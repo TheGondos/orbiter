@@ -422,7 +422,7 @@ void TileManager::Render (LPDIRECT3DDEVICE7 dev, D3DMATRIX &wmat, double scale, 
 	VECTOR3 gpos;
 	D3DMATRIX imat;
 
-	level = min (level, maxlvl);
+	level = std::min (level, maxlvl);
 
 	RenderParam.dev = dev;
 	D3DMAT_Copy (&RenderParam.wmat, &wmat);
@@ -439,7 +439,7 @@ void TileManager::Render (LPDIRECT3DDEVICE7 dev, D3DMATRIX &wmat, double scale, 
 
 	RenderParam.objsize = oapiGetSize (obj);
 	RenderParam.cdist = vp->CamDist() / vp->rad; // camera distance in units of planet radius
-	RenderParam.viewap = (viewap ? viewap : acos (1.0/max (1.0, RenderParam.cdist)));
+	RenderParam.viewap = (viewap ? viewap : acos (1.0/std::max (1.0, RenderParam.cdist)));
 	RenderParam.sdir = tmul (RenderParam.grot, -gpos);
 	normalise (RenderParam.sdir); // sun direction in planet frame
 
@@ -449,11 +449,11 @@ void TileManager::Render (LPDIRECT3DDEVICE7 dev, D3DMATRIX &wmat, double scale, 
 	static double limitstep0 = 5.12 * pow(2.0, -(double)SURF_MAX_PATCHLEVEL);
 	for (limitstep = limitstep0; cstep > limitstep && maxlevel > 5; limitstep *= 2.0)
 		maxlevel--;
-	level = min (level, maxlevel);
+	level = std::min (level, maxlevel);
 
 	RenderParam.tgtlvl = level;
 
-	int startlvl = min (level, 8);
+	int startlvl = std::min (level, 8);
 	int hemisp, ilat, ilng, idx;
 	int  nlat = NLAT[startlvl];
 	int *nlng = NLNG[startlvl];
@@ -540,7 +540,7 @@ void TileManager::ProcessTile (int lvl, int hemisp, int ilat, int nlat, int ilng
 		if      (clat < lat1) adist_lat = lat1-clat;
 		else if (clat > lat2) adist_lat = clat-lat2;
 		else                  adist_lat = 0.0;
-		adist2 = max (adist_lng, adist_lat);
+		adist2 = std::max (adist_lng, adist_lat);
 
 		// reduce resolution further for tiles that are visible
 		// under a very oblique angle
@@ -715,7 +715,7 @@ void TileManager::SetWorldMatrix (int ilng, int nlng, int ilat, int nlat)
 {
 	// set up world transformation matrix
 	D3DMATRIX rtile, wtrans;
-	double lng = PI*2.0 * (double)ilng/(double)nlng + PI; // add pi so texture wraps at +-180°
+	double lng = PI*2.0 * (double)ilng/(double)nlng + PI; // add pi so texture wraps at +-180ï¿½
 	D3DMAT_RotY (&rtile, lng);
 
 	if (nlat > 8) {
@@ -751,9 +751,9 @@ bool TileManager::SpecularColour (D3DCOLORVALUE *col)
 		double cosa = dotp (RenderParam.cdir, RenderParam.sdir);
 		double alpha = 0.5*acos(cosa); // sun reflection angle
 		double scale = sin(alpha)*fac;
-		col->r = (float)max(0.0, spec_base - scale*atmc->color0.x);
-		col->g = (float)max(0.0, spec_base - scale*atmc->color0.y);
-		col->b = (float)max(0.0, spec_base - scale*atmc->color0.z);
+		col->r = (float)std::max(0.0, spec_base - scale*atmc->color0.x);
+		col->g = (float)std::max(0.0, spec_base - scale*atmc->color0.y);
+		col->b = (float)std::max(0.0, spec_base - scale*atmc->color0.z);
 		return true;
 	}
 }

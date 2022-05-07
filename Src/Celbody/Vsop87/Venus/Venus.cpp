@@ -40,10 +40,11 @@ int Venus::clbkFastEphemeris (double simt, int req, double *ret)
 // API interface
 // ======================================================================
 
-DLLCLBK void InitModule (HINSTANCE hModule)
-{}
+DLLCLBK void InitModule (oapi::DynamicModule *hModule)
+{
+}
 
-DLLCLBK void ExitModule (HINSTANCE hModule)
+DLLCLBK void ExitModule (oapi::DynamicModule *hModule)
 {}
 
 DLLCLBK CELBODY *InitInstance (OBJHANDLE hBody)

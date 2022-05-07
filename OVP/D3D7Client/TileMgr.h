@@ -58,6 +58,8 @@ typedef struct {
 
 class D3D7Config;
 class vPlanet;
+class TileBuffer;
+class CSphereManager;
 
 class TileManager {
 	friend class TileBuffer;
@@ -195,7 +197,7 @@ protected:
 
 	friend void ApplyPatchTextureCoordinates (VBMESH &mesh, LPDIRECT3DVERTEXBUFFER7 vtx, const TEXCRDRANGE &range);
 };
-
+void ApplyPatchTextureCoordinates (VBMESH &mesh, LPDIRECT3DVERTEXBUFFER7 vtx, const TEXCRDRANGE &range);
 
 // =======================================================================
 // Class TileBuffer: Global resource; holds a collection of

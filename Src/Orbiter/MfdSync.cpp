@@ -7,17 +7,16 @@
 #include "Psys.h"
 #include "Select.h"
 #include <stdio.h>
-#include <dinput.h>
 
 using namespace std;
 
+extern Orbiter *g_pOrbiter;
 extern PlanetarySystem *g_psys;
-extern InputBox *g_input;
 
 // =======================================================================
 // class Instrument_OSync
 
-static char *modestr[7] = {
+static const char *modestr[7] = {
 	"Intersect 1",
 	"Intersect 2",
 	"Sh periapsis",
@@ -29,7 +28,7 @@ static char *modestr[7] = {
 
 struct Instrument_OSync::SavePrm Instrument_OSync::saveprm = {0, 0, Instrument_OSync::MODE_INTERSECT1, 0.0, 5};
 
-Instrument_OSync::Instrument_OSync (Pane *_pane, INT_PTR _id, const Spec &spec, Vessel *_vessel, bool restore)
+Instrument_OSync::Instrument_OSync (Pane *_pane, MfdId _id, const Spec &spec, Vessel *_vessel, bool restore)
 : Instrument (_pane, _id, spec, _vessel)
 {
 	mode = MODE_INTERSECT1;
@@ -54,13 +53,6 @@ Instrument_OSync::~Instrument_OSync ()
 	saveprm.mode     = mode;
 	saveprm.man_rlng = man_rlng;
 	saveprm.norbit   = norbit;
-}
-
-HELPCONTEXT *Instrument_OSync::HelpTopic () const
-{
-	extern HELPCONTEXT DefHelpContext;
-	DefHelpContext.topic = "/mfd_sync.htm";
-	return &DefHelpContext;
 }
 
 void Instrument_OSync::UpdateDraw (oapi::Sketchpad *skp)
@@ -167,7 +159,7 @@ void Instrument_OSync::UpdateDraw (oapi::Sketchpad *skp)
 	skp->Line (ICNTX, ICNTY, ICNTX+(int)(v.x*pixrad), ICNTY-(int)(v.z*pixrad));
 
 	// relative anomaly
-	sprintf (cbuf, "RAnm%7.2fº", Deg(rlng));
+	sprintf (cbuf, "RAnm%7.2fï¿½", Deg(rlng));
 	skp->Text (x, y, cbuf, strlen(cbuf)); y += (3*ch)/2;
 
 	// ship in planet coords
@@ -205,7 +197,7 @@ void Instrument_OSync::UpdateDraw (oapi::Sketchpad *skp)
 
 	// longitude difference
 	double dlng = normangle(tgta+domega-myta);
-	sprintf (cbuf, "DLng%7.2fº", Deg(dlng));
+	sprintf (cbuf, "DLng%7.2fï¿½", Deg(dlng));
 	skp->Text (x, y, cbuf, strlen(cbuf)); y += ch;
 	// target distance
 	Vector rp = tgt->GPos()-vessel->GPos();
@@ -230,7 +222,7 @@ void Instrument_OSync::UpdateDraw (oapi::Sketchpad *skp)
 	sprintf (cbuf, "DTmin%s", DistStr (mindt));
 	skp->Text (x, y, cbuf, strlen(cbuf)); y += ch;
 
-	sprintf (cbuf, "RInc%7.2fº", Deg(reli));
+	sprintf (cbuf, "RInc%7.2fï¿½", Deg(reli));
 	if (reli > RAD*1.0) skp->SetTextColor (draw[3][0].col);
 	skp->Text (x, IH-(3*ch)/2, cbuf, strlen(cbuf));
 	skp->SetTextColor (draw[0][0].col);
@@ -251,16 +243,16 @@ void Instrument_OSync::UpdateDraw (oapi::Sketchpad *skp)
 
 bool Instrument_OSync::KeyImmediate (char *kstate)
 {
-	if (KEYDOWN (kstate, DIK_COMMA)) { // rotate ref axis
-		if (BufKey (DIK_COMMA, 0.1) && mode == MODE_MANUAL) {
+	if (KEYDOWN (kstate, OAPI_KEY_COMMA)) { // rotate ref axis
+		if (BufKey (OAPI_KEY_COMMA, 0.1) && mode == MODE_MANUAL) {
 			man_rlng = posangle (man_rlng-RAD);
 			man_sinr = sin(man_rlng), man_cosr = cos(man_rlng);
 			Refresh();
 		}
 		return true;
 	}
-	if (KEYDOWN (kstate, DIK_PERIOD)) { // rotate ref axis
-		if (BufKey (DIK_PERIOD, 0.1) && mode == MODE_MANUAL) {
+	if (KEYDOWN (kstate, OAPI_KEY_PERIOD)) { // rotate ref axis
+		if (BufKey (OAPI_KEY_PERIOD, 0.1) && mode == MODE_MANUAL) {
 			man_rlng = posangle (man_rlng+RAD);
 			man_sinr = sin(man_rlng), man_cosr = cos(man_rlng);
 			Refresh();
@@ -270,17 +262,20 @@ bool Instrument_OSync::KeyImmediate (char *kstate)
 	return false;
 }
 
-bool Instrument_OSync::KeyBuffered (DWORD key)
+bool Instrument_OSync::KeyBuffered (int key)
 {
 	switch (key) {
-	case DIK_M:  // switch mode
+	case OAPI_KEY_M:  // switch mode
 		mode = (Mode)(((int)mode+1)%7);
 		Refresh();
 		return true;
-	case DIK_N:  // number of transit times
-		g_input->Open ("Transit list length:", 0, 20, Instrument_OSync::CallbackNorbit, (void*)this);
+	case OAPI_KEY_N:  // number of transit times
+	{
+		InputBox *input = (InputBox *)g_pOrbiter->m_pGUIManager->GetCtrl<InputBox>();
+		input->Open ("Transit list length:", 0, 20, Instrument_OSync::CallbackNorbit, (void*)this);
 		return true;
-	case DIK_T:  // select target
+	}
+	case OAPI_KEY_T:  // select target
 		OpenSelect_Tgt ("Sync MFD: Target", ClbkEnter_Tgt, vessel->ElRef(), 2);
 		return true;
 	}
@@ -289,7 +284,7 @@ bool Instrument_OSync::KeyBuffered (DWORD key)
 
 bool Instrument_OSync::ProcessButton (int bt, int event)
 {
-	static const DWORD btkey[5] = { DIK_T, DIK_M, DIK_N, DIK_COMMA, DIK_PERIOD };
+	static const int btkey[5] = { OAPI_KEY_T, OAPI_KEY_M, OAPI_KEY_N, OAPI_KEY_COMMA, OAPI_KEY_PERIOD };
 	if (event & PANEL_MOUSE_LBDOWN) {
 		if (bt < 3) return KeyBuffered (btkey[bt]);
 	} else if (event & PANEL_MOUSE_LBPRESSED) {
@@ -324,7 +319,7 @@ void Instrument_OSync::SetTarget (const RigidBody *target)
 	}
 }
 
-bool Instrument_OSync::ClbkEnter_Tgt (Select *menu, int item, char *str, void *data)
+bool Instrument_OSync::ClbkEnter_Tgt (Select *menu, int item, const char *str, void *data)
 {
 	Body *obj = g_psys->GetObj (str, true);
 	if (obj) {
@@ -335,7 +330,7 @@ bool Instrument_OSync::ClbkEnter_Tgt (Select *menu, int item, char *str, void *d
 	return (obj != 0);
 }
 
-bool Instrument_OSync::CallbackNorbit (InputBox*, char *str, void *data)
+bool Instrument_OSync::CallbackNorbit (InputBox*, const char *str, void *data)
 {
 	int no;
 	if (sscanf (str, "%d", &no)) {

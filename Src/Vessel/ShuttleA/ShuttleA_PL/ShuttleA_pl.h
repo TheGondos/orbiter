@@ -12,7 +12,7 @@
 #ifndef __SHUTTLEA_PL_H
 #define __SHUTTLEA_PL_H
 
-#include "orbitersdk.h"
+#include "Orbitersdk.h"
 
 // ==========================================================
 // Some vessel class caps
@@ -36,10 +36,10 @@ public:
     double timer;		//there is a timer so the chute won't eject too soon after jett
 	
 	// Overloaded callback functions
-	void clbkLoadStateEx (FILEHANDLE scn, void *vs);
-	void clbkSaveState (FILEHANDLE scn);
-	void clbkSetClassCaps (FILEHANDLE cfg);
-	void clbkPostStep (double simt, double simdt, double mjd);
+	void clbkLoadStateEx (FILEHANDLE scn, void *vs) override;
+	void clbkSaveState (FILEHANDLE scn) override;
+	void clbkSetClassCaps (FILEHANDLE cfg) override;
+	void clbkPostStep (double simt, double simdt, double mjd) override;
 private:
 	
 	void SetNormalConfig();

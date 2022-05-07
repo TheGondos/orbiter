@@ -15,10 +15,6 @@
 #include "Log.h"
 #include <assert.h>
 
-#ifdef INLINEGRAPHICS
-#include "OGraphics.h"
-#endif // INLINEGRAPHICS
-
 using namespace std;
 
 extern Orbiter *g_pOrbiter;
@@ -27,12 +23,12 @@ extern Camera *g_camera;
 extern Vessel *g_focusobj;
 extern char DBG_MSG[256];
 
-static COLORREF normalColor = RGB (  0, 255, 0);
-static COLORREF infoColor   = RGB (224, 192, 0);
-static COLORREF brightColor = RGB (255, 224, 128);
+static COLORREF normalColor = 0x0000ff00;
+static COLORREF infoColor   = 0x00e0C000;
+static COLORREF brightColor = 0x00ffe080;
 
 			   
-Pane::Pane (oapi::GraphicsClient *gclient, HWND hwnd, int width, int height, int bpp)
+Pane::Pane (oapi::GraphicsClient *gclient, int width, int height, int bpp)
 {
 	// Note: gclient is assumed to be a valid pointer. Nongraphics orbiter
 	// instances should not create a Pane.
@@ -43,7 +39,6 @@ Pane::Pane (oapi::GraphicsClient *gclient, HWND hwnd, int width, int height, int
 	W         = width;
 	H         = height;
 	BPP       = bpp;
-	hWnd      = hwnd;
 	hud       = 0;
 	hudmode   = HUD_NONE;
 
@@ -54,7 +49,6 @@ Pane::Pane (oapi::GraphicsClient *gclient, HWND hwnd, int width, int height, int
 		mfd[i].active    = false;
 		mfd[i].upDTscale = 1.0;
 	}
-	nemfd = 0;
 
 	panelmode = 0;
 	defpanel  = 0;
@@ -68,7 +62,7 @@ Pane::Pane (oapi::GraphicsClient *gclient, HWND hwnd, int width, int height, int
 	
 	i = g_pOrbiter->Cfg()->CfgInstrumentPrm.bMfdPow2;
 	if (i == 2) {
-		DWORD val;
+		int val;
 		gc->clbkGetRenderParam (RP_REQUIRETEXPOW2, &val);
 		mfdsize_pow2 = (val > 0);
 	} else mfdsize_pow2 = (i > 0);
@@ -83,22 +77,22 @@ Pane::Pane (oapi::GraphicsClient *gclient, HWND hwnd, int width, int height, int
 	mfdTex_blank = NULL;
 	if (gc) {
 		mfdTex_blank = gc->clbkCreateTexture (2,2);
-		static DDBLTFX bltfx = {sizeof(DDBLTFX), 0};
-		bltfx.dwFillColor = 0;
+		//static DDBLTFX bltfx = {sizeof(DDBLTFX), 0};
+		//bltfx.dwFillColor = 0;
 		gc->clbkFillSurface (mfdTex_blank, 0);
 	}
 }
 
 Pane::~Pane ()
 {
-	DWORD i;
+	int i;
 	for (i = 0; i < MAXMFD; i++)
 		if (mfd[i].instr) delete mfd[i].instr;
-	if (nemfd) {
-		for (i = 0; i < nemfd; i++)
-			delete emfd[i];
-		delete []emfd;
+
+	for(auto &emfd: m_emfd) {
+		delete emfd;
 	}
+
 	FreeResources ();
 	if (mibar)    delete mibar;
 	if (defpanel) delete defpanel;
@@ -110,13 +104,6 @@ Pane::~Pane ()
 	if (mfdTex_blank) gc->clbkReleaseSurface (mfdTex_blank);
 }
 
-void Pane::RestoreDeviceObjects (LPDIRECT3D7 d3d, LPDIRECT3DDEVICE7 dev)
-{
-	if (defpanel) defpanel->RestoreDeviceObjects (d3d, dev);
-	for (int i = 0; i < MAXMFD; i++)
-		if (mfd[i].instr) mfd[i].instr->RestoreDeviceObjects (d3d, dev);
-}
-
 void Pane::FocusChanged (const Vessel *focus)
 {
 	// Turn off MFDs to avoid problems
@@ -124,44 +111,44 @@ void Pane::FocusChanged (const Vessel *focus)
 	//OpenMFD (1, MFD_NONE);
 	if (panelmode) SetPanelMode (panelmode, true);
 	Instrument::ClearDisabledModes();
-	for (DWORD i = 0; i < nemfd; i++)
-		emfd[i]->clbkFocusChanged ((OBJHANDLE)focus);
+	for (auto &emfd: m_emfd)
+		emfd->clbkFocusChanged ((OBJHANDLE)focus);
 }
 
 void Pane::DelVessel (const Vessel *vessel)
 {
-	for (DWORD i = 0; i < nemfd; i++)
-		if ((Vessel*)emfd[i]->GetVessel() == vessel)
-			emfd[i]->SetVessel ((OBJHANDLE)g_focusobj);
+	for (auto &emfd: m_emfd)
+		if ((Vessel*)emfd->GetVessel() == vessel)
+			emfd->SetVessel ((OBJHANDLE)g_focusobj);
 	BroadcastMFDMessage (MSG_KILLVESSEL, (void*)vessel);
 	if (hud) hud->ProcessMessage (MSG_KILLVESSEL, (void*)vessel);
 }
 
-bool Pane::MFDConsumeKeyBuffered (int id, DWORD key)
+bool Pane::MFDConsumeKeyBuffered (MfdId mfdid, int key)
 {
-	if (key == DIK_ESCAPE) {
-		ToggleMFD_on (id);
+	if (key == OAPI_KEY_ESCAPE) {
+		ToggleMFD_on (mfdid);
 		return true;
-	} else if (mfd[id].instr) {
-		return mfd[id].instr->ConsumeKeyBuffered (key);
+	} else if (mfdid.internal && mfd[mfdid.id].instr) {
+		return mfd[mfdid.id].instr->ConsumeKeyBuffered (key);
 	}
 	return false;
 }
 
-bool Pane::ProcessMouse_System(UINT event, DWORD state, DWORD x, DWORD y, const char *kstate)
+bool Pane::ProcessMouse_System(oapi::MouseEvent event, int state, int x, int y, const char *kstate)
 {
 	if (g_camera->IsExternal()) return false;
 	// respond to mouse events only in cockpit mode
 
 	bool consumed = false;
-	if (defpanel)      /*consumed = defpanel->ProcessMouse(event, state, x, y)*/;
-	else if (panel2d)  consumed = panel2d->ProcessMouse_System(event, state, x, y, kstate);
-	else if (panel)    /*consumed = panel->ProcessMouse(event, state, x, y)*/;
-	else if (vcockpit) /*consumed = vcockpit->ProcessMouse(event, state, x, y)*/;
+	if (defpanel)      { /*consumed = defpanel->ProcessMouse(event, state, x, y)*/; }
+	else if (panel2d)  { consumed = panel2d->ProcessMouse_System(event, state, x, y, kstate); }
+	else if (panel)    { /*consumed = panel->ProcessMouse(event, state, x, y)*/; }
+	else if (vcockpit) { /*consumed = vcockpit->ProcessMouse(event, state, x, y)*/; }
 	return consumed;
 }
 
-bool Pane::ProcessMouse_OnRunning (UINT event, DWORD state, DWORD x, DWORD y, const char *kstate)
+bool Pane::ProcessMouse_OnRunning (oapi::MouseEvent event, int state, int x, int y, const char *kstate)
 {
 	if (g_camera->IsExternal()) return false;
 	// respond to mouse events only in cockpit mode
@@ -215,7 +202,7 @@ bool Pane::SetPanelMode (int pmode, bool force)
 			break;
 		case 2:
 			panel2d = new Panel2D (0, this, g_pOrbiter->Cfg()->CfgLogicPrm.PanelScale); TRACENEW
-			if (ok = g_focusobj->LoadPanel2D (0, panel2d)) {
+			if ((ok = g_focusobj->LoadPanel2D (0, panel2d))) {
 				//panel2d->RedrawAllAreas (PANEL_REDRAW_INIT);
 				panel2d->Setup();
 				panel_dx = panel_dy = 0.0;
@@ -225,7 +212,7 @@ bool Pane::SetPanelMode (int pmode, bool force)
 				panel2d = 0;
 			}
 			panel = new Panel (0, this, g_pOrbiter->Cfg()->CfgLogicPrm.PanelScale); TRACENEW
-			if (ok = g_focusobj->LoadPanel (0)) {
+			if ((ok = g_focusobj->LoadPanel (0))) {
 				//panel->RedrawAllAreas (PANEL_REDRAW_INIT);
 				panel->Setup ();
 				panel_dx = panel_dy = 0.0;
@@ -236,7 +223,7 @@ bool Pane::SetPanelMode (int pmode, bool force)
 			break;
 		case 3:
 			vcockpit = new VirtualCockpit (0, this); TRACENEW
-			if (ok = g_focusobj->LoadVC (0)) {
+			if ((ok = g_focusobj->LoadVC (0))) {
 				vcid = 0;
 				//vcockpit->RedrawAllAreas (PANEL_REDRAW_INIT);
 			} else {
@@ -437,8 +424,8 @@ bool Pane::SetHUDMode (int _hudmode, const HUDPARAM *prm)
 				}
 				} break;
 			case HUD_DOCKING: {
-				DWORD curNav = ((HUD_Docking*)hud)->GetNav();
-				DWORD newNav = prm->HUDdocking.NavIdx;
+				int curNav = ((HUD_Docking*)hud)->GetNav();
+				int newNav = prm->HUDdocking.NavIdx;
 				if (curNav != newNav) {
 					((HUD_Docking*)hud)->SetNav (newNav);
 					changed = true;
@@ -478,9 +465,9 @@ void Pane::SetHUDColour (int idx, double intens, bool force)
 	if (change_col)    colidx = idx;
 	if (change_intens) hudIntens = intens;
 	COLORREF hue = col[colidx];
-	hudCol = ((DWORD)((hue & 0xff) * hudIntens)) +
-			 ((DWORD)(((hue >> 8) & 0xff) * hudIntens) << 8) +
-             ((DWORD)((hue >> 16) * hudIntens) << 16);
+	hudCol = ((int)((hue & 0xff) * hudIntens)) +
+			 ((int)(((hue >> 8) & 0xff) * hudIntens) << 8) +
+             ((int)((hue >> 16) * hudIntens) << 16);
 	if (hudpen) gc->clbkReleasePen (hudpen);
 	hudpen = gc->clbkCreatePen (1, 0, hudCol);
 	if (change_col) {
@@ -511,7 +498,7 @@ void Pane::IncHUDIntens ()
 
 void Pane::DecHUDIntens ()
 {
-	SetHUDColour (-1, max (0, hudIntens - td.SysDT*0.3));
+	SetHUDColour (-1, std::max (0.0, hudIntens - td.SysDT*0.3));
 }
 
 void Pane::RenderCustomHUD (MESHHANDLE hMesh, SURFHANDLE *hTex)
@@ -532,14 +519,14 @@ void Pane::SetWarp (double _warp)
 // Update GDI elements of 2D pane
 void Pane::Update (double simt, double syst)
 {
-	DWORD j;
+	int j;
 
 	// update menu bar
 	if (mibar) mibar->Update (simt);
 
 	// update external MFDs
-	for (j = 0; j < nemfd; j++)
-		emfd[j]->clbkUpdate();
+	for (auto &emfd: m_emfd)
+		emfd->clbkUpdate();
 
 	bool global_hud = true;
 	int i, trimy = (13*f1H)/2;
@@ -659,12 +646,10 @@ void Pane::Render ()
 
 void Pane::Timejump ()
 {
-	int i;
-	DWORD j;
-	for (i = 0; i < MAXMFD; i++)
+	for (int i = 0; i < MAXMFD; i++)
 		if (mfd[i].instr) mfd[i].instr->Timejump();
-	for (j = 0; j < nemfd; j++)
-		if (emfd[j]->instr) emfd[j]->instr->Timejump();
+	for (auto &emfd: m_emfd)
+		if (emfd->instr) emfd->instr->Timejump();
 }
 
 void Pane::TriggerRedrawArea (int pid, int vcid, int area_id)
@@ -699,7 +684,7 @@ void Pane::SetPanel2DBlink (VECTOR3 v[4])
 			{(float)v[2].x,(float)v[2].y,0,  0,0,0,  1,0},
 			{(float)v[3].x,(float)v[3].y,0,  0,0,0,  1,1}
 		};
-		WORD idx[6] = {
+		uint16_t idx[6] = {
 			0,1,2,  3,2,1
 		};
 		MESHGROUP grp = {vtx, idx, 4, 6, 0, 0, 0, 0, 0};
@@ -733,39 +718,25 @@ void Pane::InitResources ()
 	oapi::Sketchpad *skp = gc->clbkGetSketchpad(NULL);
 	int h = H/50;
 	f2H = max(12, min(20, H/50));
-
 	hudfont[0] = gc->clbkCreateFont (-h, false, "Fixed");
 	hudfont[1] = gc->clbkCreateFont (f2H, true, "Sans");
-	hudpen  = gc->clbkCreatePen (1, 0, RGB(0,255,0));
+	hudpen  = gc->clbkCreatePen (1, 0, 0x0000ff00);
 
-	DWORD charsize;
+	int charsize;
 	if (skp) {
 		skp->SetFont (hudfont[0]);
 		charsize = skp->GetCharSize ();
-		f1W = HIWORD(charsize);
-		f1H = LOWORD(charsize);
+		f1W = (charsize>>16)&0xffff;
+		f1H = charsize&0xffff;
 		scaleW = f1W * 10;
 		skp->SetFont (hudfont[1]);
 		charsize = skp->GetCharSize ();
-		f2W = HIWORD(charsize);
-		f2H = LOWORD(charsize);
+		f2W = (charsize>>16)&0xffff;
+		f2H = charsize&0xffff;
 		gc->clbkReleaseSketchpad (skp);
 	} else {
 		f1W = f1H = 0;
 	}
-
-	// OBSOLETE
-	hPen[0] = CreatePen (PS_SOLID, 0, RGB(0,255,0));
-	hPen[1] = CreatePen (PS_SOLID, 0, RGB(0,255,0));
-	hPen[2] = CreatePen (PS_SOLID, 0, RGB(0,128,0));
-	hPen[3] = CreatePen (PS_SOLID, 0, RGB(128,128,0));
-	hPen[4] = CreatePen (PS_SOLID, 0, RGB(64,64,0));
-	hPen[5] = CreatePen (PS_SOLID, 0, RGB(128,128,128));
-	static LOGBRUSH lbrush1 = {BS_SOLID, RGB(0,128,0), 0};
-	static LOGBRUSH lbrush2 = {BS_SOLID, RGB(96,96,0), 0};
-	hBrush1 = CreateBrushIndirect (&lbrush1);
-	hBrush2 = CreateBrushIndirect (&lbrush2);
-	// END OBSOLETE
 
 	blinkmesh.tex = (gc ? gc->clbkLoadTexture ("transp.dds", 0x4) : NULL);
 
@@ -788,7 +759,7 @@ void Pane::InitResources ()
 		{ofsx+boxw,ofsy,0, 0,0,0, 16*lineh/texw,(texh-8*lineh-2)/texh},
 		{ofsx+boxw,ofsy+boxh,0, 0,0,0, 16*lineh/texw,(texh-4*lineh-2)/texh}
 	};
-	WORD idx[nidx] = {0,2,1, 2,3,1, 4,6,5, 6,7,5};
+	uint16_t idx[nidx] = {0,2,1, 2,3,1, 4,6,5, 6,7,5};
 	infoMesh.AddGroup (vtx, nvtx, idx, nidx, 0, 0, 0, 0, true);
 #endif
 }
@@ -799,22 +770,19 @@ void Pane::FreeResources ()
 
 	for (i = 0; i < 2; i++) gc->clbkReleaseFont (hudfont[i]);
 	gc->clbkReleasePen (hudpen);
-	for (i = 0; i < 6; i++) DeleteObject (hPen[i]);
-	DeleteObject (hBrush1);
-	DeleteObject (hBrush2);
 	if (blinkmesh.tex) gc->clbkReleaseSurface (blinkmesh.tex);
 }
 
 void Pane::SetSketchpadDefault (oapi::Sketchpad *skp)
 {
-	skp->SetTextColor (RGB(0,255,0));
+	skp->SetTextColor (0x0000ff00);
 	skp->SetPen (hudpen);
 	skp->SetFont (hudfont[0]);
 }
 
 bool Pane::GlobalToScreen (const Vector &glob, int &x, int &y) const
 {
-	D3DVECTOR homog;
+	glm::fvec3 homog;
 	bool vis = GlobalToHomog (glob, homog);
 	if (vis) {
 		x = (int)(W*0.5*(1.0f+homog.x));
@@ -825,7 +793,7 @@ bool Pane::GlobalToScreen (const Vector &glob, int &x, int &y) const
 
 bool Pane::GlobalToScreen (const Vector &glob, double &x, double &y) const
 {
-	D3DVECTOR homog;
+	glm::fvec3 homog;
 	bool vis = GlobalToHomog (glob, homog);
 	if (vis) {
 		x = W*0.5*(1.0f+homog.x);
@@ -834,11 +802,11 @@ bool Pane::GlobalToScreen (const Vector &glob, double &x, double &y) const
 	return vis;
 }
 
-bool Pane::GlobalToHomog (const Vector &glob, D3DVECTOR &homog) const
+bool Pane::GlobalToHomog (const Vector &glob, glm::fvec3 &homog) const
 {
-	//D3DVECTOR gpos = {-(D3DVALUE)glob.x, -(D3DVALUE)glob.y, -(D3DVALUE)glob.z};
-	D3DVECTOR gpos = {(D3DVALUE)glob.x, (D3DVALUE)glob.y, (D3DVALUE)glob.z};
-	return (D3DMath_VectorMatrixMultiply (homog, gpos, *g_camera->D3D_ProjViewMatrix()) == S_OK &&
+	//glm::fvec3 gpos = {-(float)glob.x, -(float)glob.y, -(float)glob.z};
+	glm::fvec3 gpos = {(float)glob.x, (float)glob.y, (float)glob.z};
+	return (D3DMath_VectorMatrixMultiply (homog, gpos, *g_camera->ProjViewMatrix()) &&
 		homog.x >= -1.0f && homog.x <= 1.0f &&
 		homog.y >= -1.0f && homog.y <= 1.0f &&
 		/* homog.z >=  0.0 && */ homog.z <= g_camera->HomogZlimit());
@@ -846,21 +814,25 @@ bool Pane::GlobalToHomog (const Vector &glob, D3DVECTOR &homog) const
 
 void Pane::ScreenToGlobal (int x, int y, Vector &glob) const
 {
-	D3DVECTOR homog, gpos;
+	glm::fvec3 homog, gpos;
 	homog.x = (float)(x*2.0/W-1.0);
 	homog.y = (float)(1.0-y*2.0/H);
 	homog.z = 0.0f;
-	D3DMATRIX IP;
-	D3DMath_MatrixInvert (IP, *g_camera->D3D_ProjViewMatrix());
+	glm::fmat4 IP;
+	D3DMath_MatrixInvert (IP, *g_camera->ProjViewMatrix());
 	D3DMath_VectorMatrixMultiply (gpos, homog, IP);
-	//D3DMath_VectorTMatrixMultiply (gpos, homog, *g_camera->D3D_ProjViewMatrix());
+	//D3DMath_VectorTMatrixMultiply (gpos, homog, *g_camera->ProjViewMatrix());
 	glob.Set (-gpos.x, -gpos.y, -gpos.z);
 	glob.unify();
 }
 
-bool Pane::OpenMFD (INT_PTR id, int type, ifstream *ifs)
+bool Pane::OpenMFD (MfdId mfd_id, int type, ifstream *ifs)
 {
-	if (id >= MAXMFD || id < 0) return ((ExternMFD*)id)->SetMode (type);
+	if(!mfd_id.internal) {
+		return mfd_id.emfd->SetMode (type);
+	}		
+	int id = mfd_id.id;
+
 	if (panelmode == 1 && id >= 2) return false;
 	if (panelmode == 2 && !mfd[id].exist) return false;
 
@@ -905,8 +877,8 @@ bool Pane::OpenMFD (INT_PTR id, int type, ifstream *ifs)
 	Instrument *newinstr = 0;
 	if (ifs || type != MFD_NONE) {
 		newinstr = (ifs ? 
-			Instrument::Create (*ifs, this, id, spec, g_focusobj) :
-			Instrument::Create (type, this, id, spec, g_focusobj) );
+			Instrument::Create (*ifs, this, mfd_id, spec, g_focusobj) :
+			Instrument::Create (type, this, mfd_id, spec, g_focusobj) );
 		if (!newinstr) return false; // no mode found
 	}
 
@@ -921,12 +893,15 @@ bool Pane::OpenMFD (INT_PTR id, int type, ifstream *ifs)
 	return true;
 }
 
-void Pane::ToggleMFD_on (int id)
+void Pane::ToggleMFD_on (MfdId mfdid)
 {
-	if (mfd[id].instr) CloseMFD (id);
-	else {
-		if (!OpenMFD (id, mfd[id].lastmode ? mfd[id].lastmode : MFD_ORBIT))
-			OpenMFD(id, MFD_ORBIT);
+	if(mfdid.internal) {
+		int id = mfdid.id;
+		if (mfd[id].instr) CloseMFD (id);
+		else {
+			if (!OpenMFD (mfdid, mfd[id].lastmode ? mfd[id].lastmode : MFD_ORBIT))
+				OpenMFD(mfdid, MFD_ORBIT);
+		}
 	}
 }
 
@@ -971,9 +946,9 @@ int Pane::BroadcastMFDMessage (int mfdmode, int msg, void *data)
 	for (int i = 0; i < MAXMFD; i++)
 		if (mfd[i].instr && mfd[i].instr->Type() == mfdmode)
 			if (mfd[i].instr->ProcessMessage (msg, data)) nproc++;
-	for (DWORD j = 0; j < nemfd; j++)
-		if (emfd[j]->Active() && emfd[j]->instr->Type() == mfdmode)
-			if (emfd[j]->instr->ProcessMessage (msg, data)) nproc++;
+	for (auto &emfd: m_emfd)
+		if (emfd->Active() && emfd->instr->Type() == mfdmode)
+			if (emfd->instr->ProcessMessage (msg, data)) nproc++;
 	return nproc;
 }
 
@@ -983,9 +958,9 @@ int Pane::BroadcastMFDMessage (int msg, void *data)
 	for (int i = 0; i < MAXMFD; i++)
 		if (mfd[i].instr)
 			if (mfd[i].instr->ProcessMessage (msg, data)) nproc++;
-	for (DWORD j = 0; j < nemfd; j++)
-		if (emfd[j]->Active())
-			if (emfd[j]->instr->ProcessMessage (msg, data)) nproc++;
+	for (auto &emfd: m_emfd)
+		if (emfd->Active())
+			if (emfd->instr->ProcessMessage (msg, data)) nproc++;
 	return nproc;
 }
 
@@ -1021,69 +996,38 @@ void Pane::UnregisterMFD (int id)
 
 void Pane::RegisterExternMFD (ExternMFD *mfd, const MFDSPEC &spec)
 {
-	ExternMFD **tmp = new ExternMFD*[nemfd+1]; TRACENEW
-	if (nemfd) {
-		memcpy (tmp, emfd, nemfd*sizeof(ExternMFD*));
-		delete []emfd;
-	}
-	emfd = tmp;
-	emfd[nemfd] = mfd;
-
-//	// find a unique identifier
-//	DWORD i;
-//	emfd[nemfd]->id = maxMFD;
-//	for (i = 0; i < nemfd; i++)
-//		if (emfd[i]->id >= emfd[nemfd]->id)
-//			emfd[nemfd]->id = emfd[i]->id+1;
-
+	m_emfd.push_back(mfd);
 	mfd->SetMode (MFD_ORBIT); // temporary!!!
-	nemfd++;
 }
 
 bool Pane::UnregisterExternMFD (ExternMFD *mfd)
 {
-	DWORD i, j, k;
-	for (i = 0; i < nemfd; i++) {
-		if (emfd[i] == mfd) {
-			delete emfd[i];
-			ExternMFD **tmp;
-			if (nemfd > 1) {
-				tmp = new ExternMFD*[nemfd-1]; TRACENEW
-				for (j = k = 0; j < nemfd; j++)
-					if (j != i) tmp[k++] = emfd[j];
-			} else {
-				tmp = 0;
-			}
-			delete []emfd;
-			emfd = tmp;
-			nemfd--;
-			return true;
-		}
-	}
-	return false;
+	m_emfd.erase(std::remove(m_emfd.begin(), m_emfd.end(), mfd), m_emfd.end());
+	return true;
 }
 
-Instrument *Pane::MFD (int which)
+Instrument *Pane::MFD (MfdId mfdid)
 {
-	if (which >= 0 && which < MAXMFD)
-		return mfd[which].instr;
-	for (DWORD i = 0; i < nemfd; i++) {
-		assert(false); // This code section doesn't seem to run. If it does that's trouble
-		if (which == (INT_PTR)emfd[i]->Id())
-			return emfd[i]->instr;
+	if(mfdid.internal) {
+		if(mfdid.id < MAXMFD)
+			return mfd[mfdid.id].instr;
+		else
+			return nullptr;
 	}
-	return NULL;
+	return mfdid.emfd->instr;
 }
 
-SURFHANDLE Pane::GetMFDSurface (int id)
+SURFHANDLE Pane::GetMFDSurface (MfdId mfdid)
 {
-	Instrument *instr = MFD(id);
-	if (instr)
-		return instr->Texture();
-	else if (id < MAXMFD && mfd[id].prm.flag & MFD_TRANSPARENT_WHEN_OFF)
+	Instrument *instr = MFD(mfdid);
+	if (instr) {
+		return instr->Surface();
+	}
+	else if (mfdid.internal && mfd[mfdid.id].prm.flag & MFD_TRANSPARENT_WHEN_OFF) {
 		return 0;
-	else
+	} else {
 		return mfdTex_blank;
+	}
 }
 
 void Pane::RegisterVCMFD (int id, const VCMFDSPEC *spec)
@@ -1115,14 +1059,18 @@ void Pane::ShiftVC (const Vector &shift)
 	}
 }
 
-const VCMFDSPEC *Pane::GetVCMFDParams (int id)
+const VCMFDSPEC *Pane::GetVCMFDParams (MfdId mfdid)
 {
-	if (mfd[id].exist) {
-		static VCMFDSPEC spec[MAXMFD];
-		spec[id].nmesh = mfd[id].prm.nmesh;
-		spec[id].ngroup = mfd[id].prm.ngroup;
-		return spec+id;
-	} else return 0;
+	if(mfdid.internal) {
+		int id = mfdid.id;
+		if (mfd[id].exist) {
+			static VCMFDSPEC spec[MAXMFD];
+			spec[id].nmesh = mfd[id].prm.nmesh;
+			spec[id].ngroup = mfd[id].prm.ngroup;
+			return spec+id;
+		}
+	}
+	return nullptr;
 	//return (mfd[id].exist ? mfd[id].vcs : 0);
 }
 
@@ -1157,31 +1105,26 @@ Instrument::Spec Pane::GetVCMFDSpec ()
 	return spec;
 }
 
-void Pane::RepaintMFDButtons (INT_PTR id, Instrument *instr)
+void Pane::RepaintMFDButtons (MfdId mfdid, Instrument *instr)
 {
-	if (id < MAXMFD && id >= 0 && instr == mfd[id].instr) {
+	if (mfdid.internal && instr == mfd[mfdid.id].instr) {
+		int id = mfdid.id;
 		if (panelmode >= 1) g_focusobj->MFDchanged (id, mfd[id].instr->Type());
 		if (defpanel) defpanel->RepaintMFDButtons (id);
 	} else {
 		// check if external MFDs actually need to be repainted here
-		for (DWORD i = 0; i < nemfd; i++) {
-			if (emfd[i]->instr == instr) {
-				emfd[i]->clbkRefreshButtons();
+		for (auto &emfd: m_emfd) {
+			if (emfd->instr == instr) {
+				emfd->clbkRefreshButtons();
 				break;
 			}
 		}
 	}
 }
 
-void Pane::RegisterPanelBackground (HBITMAP hBmp, DWORD flag, DWORD ck)
+void Pane::RegisterPanelBackground (SURFHANDLE hSurf, int flag)
 {
-	if (panel) panel->DefineBackground (hBmp, flag, ck);
-	DeleteObject ((HGDIOBJ)hBmp);
-}
-
-void Pane::RegisterPanelBackground (SURFHANDLE hSurf, DWORD flag)
-{
-	// todo
+	if (panel) panel->DefineBackground (hSurf, flag);
 }
 
 void Pane::RegisterPanelArea (int aid, const RECT &pos, int draw_mode, int mouse_mode, int bkmode)
@@ -1209,7 +1152,7 @@ void Pane::InitState (const char *scn)
 
 bool Pane::Read (ifstream &ifs)
 {
-	if (hud = HUD::Create (ifs, this, gc)) {
+	if ((hud = HUD::Create (ifs, this, gc))) {
 		hudmode = hud->Mode();
 		if (g_focusobj) g_focusobj->HUDchanged (hudmode);
 	}

@@ -16,6 +16,7 @@
 
 #include "Atlantis.h"
 #include "math.h"
+#include <cstring>
 
 static const int ntdvtx = 15;
 static const TOUCHDOWNVTX tdvtx[ntdvtx] = {
@@ -121,7 +122,7 @@ void Atlantis_Tank::clbkPreStep (double simt, double simdt, double mjd)
 	VESSEL *pV;
 
 	pAtlantis = NULL;
-	if (hV = GetDockStatus (GetDockHandle (0))) {
+	if ((hV = GetDockStatus (GetDockHandle (0)))) {
 		pV = oapiGetVesselInterface (hV);
 		if (!strcmp (pV->GetClassName (), "Atlantis"))
 			pAtlantis = (Atlantis*)pV;

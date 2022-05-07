@@ -51,7 +51,7 @@ LONG_PTR FAR PASCAL Graph_WndProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM l
 // ==============================================================
 // API interface
 
-DLLCLBK void InitModule (HINSTANCE hDLL)
+DLLCLBK void InitModule (DynamicModule *hDLL)
 {
 	g_hInst = hDLL;
 	g_hDlg = 0;

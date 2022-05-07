@@ -9,7 +9,7 @@
 #ifndef __CELBODY_H
 #define __CELBODY_H
 
-#include "RigidBody.h"
+#include "Rigidbody.h"
 #include "OrbiterAPI.h"
 
 // Module interface methods - OBSOLETE
@@ -47,8 +47,8 @@ public:
 
 	inline const CelestialBody *Primary() const { return cbody; }
 
-	inline DWORD nSecondary() const { return nsecondary; }
-	inline const CelestialBody *Secondary (DWORD i) const { return secondary[i]; }
+	inline int nSecondary() const { return nsecondary; }
+	inline const CelestialBody *Secondary (int i) const { return secondary[i]; }
 
 	inline double RotT() const { return rot_T; }
 	// rotation period
@@ -114,8 +114,8 @@ public:
 	const Vector &Barycentre () const { return bpos; }
 	// Returns position of barycentre (planet + secondaries)
 
-	inline DWORD nJcoeff() const { return njcoeff; }
-	inline double Jcoeff (DWORD i) const { return jcoeff[i]; }
+	inline int nJcoeff() const { return njcoeff; }
+	inline double Jcoeff (int i) const { return jcoeff[i]; }
 	// returns number of coefficients and individual coefficients for planet
 	// shape description for nonspherical gravity calculation. Note that the
 	// first coefficient Jcoeff(0) is J2
@@ -126,7 +126,7 @@ protected:
 	double rotation;      // current rotation angle
 	double rotation_off;  // rotation offset due to precession
 
-	DWORD nsecondary;
+	int nsecondary;
 	CelestialBody **secondary;
 	// List of secondary bodies (i.e. planets for a central star, or moons for a planet)
 
@@ -179,15 +179,8 @@ protected:
 	// Set this to true if the object's elements never change
 	// (i.e. using a 2-body approximation)
 
-	struct {  // module interface - OBSOLETE
-		OPLANET_SetPrecision oplanetSetPrecision;
-		OPLANET_Ephemeris oplanetEphemeris;
-		OPLANET_FastEphemeris oplanetFastEphemeris;
-		OPLANET_AtmPrm oplanetAtmPrm;
-	} modIntf;
-
 private:
-	HINSTANCE hMod;          // module handle, if available
+	oapi::DynamicModule hMod;      // module handle, if available
 	
 	double eps_ref;          // precession reference axis: obliquity against ecliptic normal
 	double lan_ref;          // precession reference axis: longitude of ascending node in ecliptic
@@ -209,7 +202,7 @@ private:
 	Vector R_axis;           // rotation axis direction (north pole) in global coords
 
 	double *jcoeff;          // coefficients Jn of the harmonic expansion of planet ellipsoid shape, starting with J2 (jcoeff[0]=J2, jcoeff[1]=J3, etc.)
-	DWORD njcoeff;           // number of coefficients in the jcoeff list
+	int    njcoeff;           // number of coefficients in the jcoeff list
 
 	Vector bpos, bvel;       // object's barycentre state (the barycentre of the set of bodies including *this and its children) with respect to the true position of the parent of *this
 	Vector bposofs, bvelofs; // body barycentre state - true state

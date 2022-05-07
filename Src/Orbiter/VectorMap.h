@@ -90,7 +90,7 @@ struct CustomMkrSet {
 	void Clear();
 	void Connect (oapi::GraphicsClient::LABELLIST *ll, int nlist);
 	CustomMkrSpec *set;
-	DWORD nset;
+	int nset;
 };
 
 struct Groundtrack {
@@ -132,16 +132,15 @@ public:
 	void SetZoom (double zoom);
 	void SetCenterMode (int center) { centermode = center; }
 	int GetCenterMode () const { return centermode; }
-	void SetDisplayFlags (DWORD flag);
-	void ToggleDisplayFlags (DWORD flag);
-	DWORD GetDisplayFlags () const { return dispflag; }
-	void SetFindFlags (DWORD flag) { findflag = flag; }
-	DWORD GetFindFlags () const { return findflag; }
+	void SetDisplayFlags (int flag);
+	void ToggleDisplayFlags (int flag);
+	int GetDisplayFlags () const { return dispflag; }
+	void SetFindFlags (int flag) { findflag = flag; }
+	int GetFindFlags () const { return findflag; }
 
-	// Returns the drawing bitmap and HDC.
+	// Returns the drawing bitmap SURFHANDLE.
 	// Note: waits for the drawing thread to finish
-	HBITMAP GetMap ();
-	HDC GetDeviceContext();
+	SURFHANDLE GetMap ();
 
 	void DrawMap ();    // redraw directly
 
@@ -200,28 +199,28 @@ protected:
 
 	// drawing logical object sets
 	void DrawMap_engine ();// redraw map
-	void DrawGridlines ();
-	void DrawPolySet (const PolyLineSet *pls);
-	void DrawPolyline (int type, VPoint *vp, int n, bool close = true);
-	void DrawNavaids ();
-	void DrawVessels ();
-	void DrawMoons ();
-	void DrawVesselOrbit (Vessel *v);
-	void DrawBases ();
-	void DrawCustomMarkerSet (int idx);
-	void DrawTerminatorLine (double sunlng, double sunlat);
-	void DrawSunnySide (double sunlng, double sunlat, bool terminator);
-	void DrawOrbitPlane (const Elements *el, int which);
-	void DrawGroundtrack (Groundtrack &gt, int which);
-	void DrawGroundtrack_past (Groundtrack &gt, int which);
-	void DrawGroundtrack_future (Groundtrack &gt, int which);
-	void DrawHorizon (double lng, double lat, double rad, bool focus);
-	void DrawGroundtrackLine (int type, VPointGT *vp, int n, int n0, int n1);
+	void DrawGridlines (oapi::Sketchpad *skp);
+	void DrawPolySet (oapi::Sketchpad *skp, const PolyLineSet *pls);
+	void DrawPolyline (oapi::Sketchpad *skp, int type, VPoint *vp, int n, bool close = true);
+	void DrawNavaids (oapi::Sketchpad *skp);
+	void DrawVessels (oapi::Sketchpad *skp);
+	void DrawMoons (oapi::Sketchpad *skp);
+	void DrawVesselOrbit (oapi::Sketchpad *skp, Vessel *v);
+	void DrawBases (oapi::Sketchpad *skp);
+	void DrawCustomMarkerSet (oapi::Sketchpad *skp, int idx);
+	void DrawTerminatorLine (oapi::Sketchpad *skp, double sunlng, double sunlat);
+	void DrawSunnySide (oapi::Sketchpad *skp, double sunlng, double sunlat, bool terminator);
+	void DrawOrbitPlane (oapi::Sketchpad *skp, const Elements *el, int which);
+	void DrawGroundtrack (oapi::Sketchpad *skp, Groundtrack &gt, int which);
+	void DrawGroundtrack_past (oapi::Sketchpad *skp, Groundtrack &gt, int which);
+	void DrawGroundtrack_future (oapi::Sketchpad *skp, Groundtrack &gt, int which);
+	void DrawHorizon (oapi::Sketchpad *skp, double lng, double lat, double rad, bool focus);
+	void DrawGroundtrackLine (oapi::Sketchpad *skp, int type, VPointGT *vp, int n, int n0, int n1);
 
 	// drawing primitives
-	void DrawMarker (double lng, double lat, const char *name, int which); // which: 0=focusobj, 1=orbittarget, 2=basetarget
+	void DrawMarker (oapi::Sketchpad *skp, double lng, double lat, const char *name, int which); // which: 0=focusobj, 1=orbittarget, 2=basetarget
 
-	void DrawSelectionMarker (const OBJTYPE obj);
+	void DrawSelectionMarker (oapi::Sketchpad *skp, const OBJTYPE obj);
 
 	// calculate the vertex points of a great circle on the sphere
 	// The circle describes the intersection of the sphere with an
@@ -260,8 +259,8 @@ protected:
 	double mapx_ofs, mapx_scale; // parameters for longitude mapping
 	double mapy_ofs, mapy_scale; // parameters for latitude mapping
 	int centermode;     // 0=none, 1=keep focusobject centered, 2=keep selection centered
-	DWORD dispflag;     // bitflags for display elements
-	DWORD findflag;     // bitflags for search elements
+	int dispflag;     // bitflags for display elements
+	int findflag;     // bitflags for search elements
 	OBJTYPE selection;  // selected object
 
 private:
@@ -272,25 +271,24 @@ private:
 	// ------------------------------------------------------------------
 	// Drawing resources
 
-	HDC       hDCmem;   // memory device context
-	HBITMAP   hBmpDraw; // bitmap for background drawing
-	HPEN      penGridline;
-	HPEN      penCoast;
-	HPEN      penContour;
-	HPEN      penTerminator;
-	HPEN      penOrbitFuture[3]; // 0=focus, 1=vessel, 2=moon
-	HPEN      penOrbitPast[3]; // 0=focus, 1=vessel, 2=moon
-	HPEN      penFocusHorizon;
-	HPEN      penTargetHorizon;
-	HPEN      penNavmkr;
-	HPEN      penBase;
-	HPEN      penSelection;
-	HPEN      penMarker[3];
-	HPEN     *penCustomMkr;
-	HBRUSH    brushDay;
-	HFONT     fontLabel;
+	SURFHANDLE  hMap; // bitmap for background drawing
+	oapi::Pen *penGridline;
+	oapi::Pen *penCoast;
+	oapi::Pen *penContour;
+	oapi::Pen *penTerminator;
+	oapi::Pen *penOrbitFuture[3]; // 0=focus, 1=vessel, 2=moon
+	oapi::Pen *penOrbitPast[3]; // 0=focus, 1=vessel, 2=moon
+	oapi::Pen *penFocusHorizon;
+	oapi::Pen *penTargetHorizon;
+	oapi::Pen *penNavmkr;
+	oapi::Pen *penBase;
+	oapi::Pen *penSelection;
+	oapi::Pen *penMarker[3];
+	oapi::Pen **penCustomMkr;
+	oapi::Brush *brushDay;
+	oapi::Font *fontLabel;
 	COLORREF *colCustomMkr;
-	DWORD     nCustomMkr;
+	int     nCustomMkr;
 
 private:
 	void InitGDIResources();
@@ -330,7 +328,7 @@ protected:
 	void thEngine ();  // redraw thread loop
 
 private:
-	static DWORD WINAPI Redraw_ThreadProc (void*); // thread entry point
+	static int WINAPI Redraw_ThreadProc (void*); // thread entry point
 	// ------------------------------------------------------------------
 #endif // ASYNC_DRAWMAP
 };

@@ -23,9 +23,9 @@
 
 
 // Needed due to the implementation of the selection functions in Orbiter
-bool SelectVariableBody(void *id, char *str, void *usrdata);
-DLLCLBK void opcDLLInit (HINSTANCE hDLL);
-DLLCLBK void opcDLLExit (HINSTANCE hDLL);
+bool SelectVariableBody(void *id, const char *str, void *usrdata);
+DLLCLBK void opcDLLInit (oapi::DynamicModule *hDLL);
+DLLCLBK void opcDLLExit (oapi::DynamicModule *hDLL);
 VECTOR3 unitise(const VECTOR3 &vector);
 double cosangle(const VECTOR3 &veca,const VECTOR3 &vecb);
 void getinvrotmatrix(VECTOR3 arot, MATRIX3 *invrotmatrix);

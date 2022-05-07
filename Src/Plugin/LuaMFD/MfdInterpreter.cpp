@@ -2,7 +2,7 @@
 // Licensed under the MIT License
 
 #include "MfdInterpreter.h"
-#include <process.h>
+#include <string.h>
 
 // ==============================================================
 // MFD interpreter class implementation
@@ -101,7 +101,7 @@ int MFDInterpreter::termSetVerbosity (lua_State *L)
 	return 0;
 }
 
-void MFDInterpreter::AddLine (const char *line, COLORREF col)
+void MFDInterpreter::AddLine (const char *line, uint32_t col)
 {
 	LineSpec *ls = new LineSpec;
 	strncpy (ls->buf, line, NCHAR);
@@ -133,41 +133,39 @@ InterpreterList::Environment::Environment (OBJHANDLE hV)
 InterpreterList::Environment::~Environment()
 {
 	if (interp) {
-		if (hThread) {
-			TerminateThread (hThread, 0);
-			CloseHandle (hThread);
-		}
+		interp->Terminate();
+		interp->StepInterpreter();
+		hThread.join();
 		delete interp;
 	}
 }
 
 MFDInterpreter *InterpreterList::Environment::CreateInterpreter (OBJHANDLE hV)
 {
-	unsigned int id;
 	interp = new MFDInterpreter ();
 	interp->Initialise();
 	interp->SetSelf (hV);
-	hThread = (HANDLE)_beginthreadex (NULL, 4096, &InterpreterThreadProc, this, 0, &id);
+	hThread = std::thread(InterpreterThreadProc, this);
+
 	return interp;
 }
 
 // Interpreter thread function
-unsigned int WINAPI InterpreterList::Environment::InterpreterThreadProc (LPVOID context)
+unsigned int InterpreterList::Environment::InterpreterThreadProc (void *context)
 {
 	InterpreterList::Environment *env = (InterpreterList::Environment*)context;
 	MFDInterpreter *interp = (MFDInterpreter*)env->interp;
 
 	// interpreter loop
 	for (;;) {
-		interp->WaitExec(); // wait for execution permission
+		interp->WaitForStep(); // wait for execution permission
 		if (interp->Status() == 1) break; // close thread requested
 		interp->RunChunk (env->cmd, strlen (env->cmd)); // run command from buffer
 		if (interp->Status() == 1) break;
 		env->cmd[0] = '\0'; // free buffer
-		interp->EndExec();  // return control
+		interp->StepDone();  // return control
 	}
-	interp->EndExec();  // release mutex (is this necessary?)
-	_endthreadex(0);
+	interp->StepDone();  // release mutex (is this necessary?)
 	return 0;
 }
 
@@ -186,13 +184,12 @@ InterpreterList::~InterpreterList ()
 
 void InterpreterList::Update (double simt, double simdt, double mjd)
 {
-	DWORD i, j;
+	int i, j;
 	for (i = 0; i < nlist; i++) {
 		for (j = 0; j < list[i].nenv; j++) {
 			Environment *env = list[i].env[j];
 			if (env->interp->IsBusy() || env->cmd[0] || env->interp->nJobs()) { // let the interpreter do some work
-				env->interp->EndExec();
-				env->interp->WaitExec();
+				env->interp->StepInterpreter();
 			}
 			env->interp->PostStep (simt, simdt, mjd);
 		}
@@ -232,7 +229,7 @@ InterpreterList::Environment *InterpreterList::AddInterpreter (OBJHANDLE hV)
 	return env;
 }
 
-bool InterpreterList::DeleteInterpreter (OBJHANDLE hV, DWORD idx)
+bool InterpreterList::DeleteInterpreter (OBJHANDLE hV, int idx)
 {
 	VesselInterp *vi = FindVesselInterp (hV);
 	if (!vi || idx >= vi->nenv) return false;
@@ -243,7 +240,7 @@ bool InterpreterList::DeleteInterpreter (OBJHANDLE hV, DWORD idx)
 
 	Environment **tmp = NULL;
 	if (vi->nenv > 1) {
-		DWORD i, j;
+		int i, j;
 		tmp = new Environment*[vi->nenv-1];
 		for (i = j = 0; i < vi->nenv; i++)
 			if (i != idx) tmp[j++] = vi->env[i];
@@ -259,7 +256,7 @@ bool InterpreterList::DeleteInterpreters (OBJHANDLE hV)
 	VesselInterp *vi = FindVesselInterp (hV);
 	if (!vi) return false;
 
-	DWORD i;
+	int i;
 	for (i = 0; i < vi->nenv; i++) {
 		Environment *env = vi->env[i];
 		delete env;
@@ -274,7 +271,7 @@ bool InterpreterList::DeleteInterpreters (OBJHANDLE hV)
 
 void InterpreterList::DeleteList ()
 {
-	DWORD i, j;
+	int i, j;
 	for (j = 0; j < nlist; j++) {
 		VesselInterp *vi = list+j;
 		for (i = 0; i < vi->nenv; i++) {
@@ -289,20 +286,20 @@ void InterpreterList::DeleteList ()
 
 InterpreterList::VesselInterp *InterpreterList::FindVesselInterp (OBJHANDLE hV)
 {
-	DWORD i;
+	int i;
 	for (i = 0; i < nlist; i++)
 		if (list[i].hVessel == hV) return list+i;
 	return NULL;
 }
 
-InterpreterList::Environment *InterpreterList::FindInterpreter (OBJHANDLE hV, DWORD idx)
+InterpreterList::Environment *InterpreterList::FindInterpreter (OBJHANDLE hV, int idx)
 {
 	VesselInterp *vi = FindVesselInterp (hV);
 	if (!vi) return NULL;
 	return (vi->nenv > idx ? vi->env[idx] : NULL);
 }
 
-DWORD InterpreterList::InterpreterCount (OBJHANDLE hV)
+int InterpreterList::InterpreterCount (OBJHANDLE hV)
 {
 	VesselInterp *vi = FindVesselInterp (hV);
 	return (vi ? vi->nenv : 0);

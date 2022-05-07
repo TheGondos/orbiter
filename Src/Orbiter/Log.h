@@ -12,7 +12,7 @@
 typedef void (*LogOutFunc)(const char* msg);
 
 // The following routines are for message output into a log file
-void InitLog (char *logfile, bool append);   // Set log file name and clear if exists
+void InitLog (const char *logfile, bool append);   // Set log file name and clear if exists
 void SetLogVerbosity (bool verbose);
 void SetLogOutFunc(LogOutFunc func); // clone log output to a function
 void LogOut (const char *msg, ...);   // Write a message to the log file
@@ -22,10 +22,7 @@ void LogOut ();                       // Write current message to log file
 void LogOut_Error (const char *func, const char *file, int line, const char *msg, ...);  // Write error message to log file
 void LogOut_ErrorVA(const char *func, const char *file, int line, const char *msg, va_list ap);
 void LogOut_LastError (const char *func, const char *file, int line);             // Write formatted string from GetLastError
-void LogOut_DDErr (HRESULT hr, const char *func, const char *file, int line);     // Write DirectDraw error to log file
-void LogOut_DIErr (HRESULT hr, const char *func, const char *file, int line);     // Write DirectInput error to log file
-void LogOut_DPErr (HRESULT hr, const char *func, const char *file, int line);     // Write DirectPlay error to log file
-void LogOut_Obsolete (char *func, char *msg = 0);      // Write obsolete-function warning to log file
+void LogOut_Obsolete (const char *func, const char *msg = 0);      // Write obsolete-function warning to log file
 void LogOut_Warning (const char *func, const char *file, int line, const char *msg, ...);            // Write general warning to log file
 
 void LogOut_Error_Start();
@@ -43,14 +40,10 @@ void LogOut_Location(const char* func, const char* file, int line);
 #define LOGOUT_ERR_FILENOTFOUND_MSG(file,msg,...) { \
 	LogOut_Error_Start(); \
 	LogOut("File not found: %s", file); \
-	LogOut(msg, __VA_ARGS__); \
+	LogOut(msg, ##__VA_ARGS__); \
 	LogOut_Location(__FUNCTION__,__FILE__,__LINE__); \
 	LogOut_Error_End(); \
 }
-#define LOGOUT_DDERR(hr) LogOut_DDErr(hr,__FUNCTION__,__FILE__,__LINE__)
-#define LOGOUT_DIERR(hr) LogOut_DIErr(hr,__FUNCTION__,__FILE__,__LINE__)
-#define LOGOUT_DPERR(hr) LogOut_DPErr(hr,__FUNCTION__,__FILE__,__LINE__)
-#define LOGOUT_DDERR_ONCE(hr) {static bool bout=true; if(bout) {LogOut_DDErr(hr,__FUNCTION__,__FILE__,__LINE__);bout=false;}}
 #define LOGOUT_OBSOLETE {static bool bout=true; if(bout) {LogOut_Obsolete(__FUNCTION__);bout=false;}}
 #else
 #define INITLOG(x,app)
@@ -60,9 +53,6 @@ void LogOut_Location(const char* func, const char* file, int line);
 #define LOGOUT_LASTERR()
 #define LOGOUT_WARN(msg,...)
 #define LOGOUT_ERR_FILENOTFOUND(file)
-#define LOGOUT_DDERR(hr)
-#define LOGOUT_DIERR(hr)
-#define LOGOUT_DPERR(hr)
 #define LOGOUT_OBSOLETE
 #endif
 
@@ -75,7 +65,7 @@ void LogOut_Location(const char* func, const char* file, int line);
 		LogOut_Location(__FUNCTION__, __FILE__, __LINE__); \
 		LogOut_Error_End(); \
 		if(fatal) { \
-			LogOut(">>> TERMINATING <<<"); \
+			printf(">>> TERMINATING <<<\n"); \
 			DebugBreak(); \
 			exit(1); \
 		} \
@@ -91,11 +81,11 @@ void LogOut_Location(const char* func, const char* file, int line);
 	ASSERT(!FAILED(test), true, msg, ##__VA_ARGS__); \
 }
 #else
-#define dASSERT(test,msg,...) (test)
-#define dVERIFY(test,msg,...) (test)
+#define dASSERT(test,msg,...) ((void)(test))
+#define dVERIFY(test,msg,...) ((void)(test))
 #endif
 
-#define CHECKCWD(cwd,name) { char c[512]; _getcwd(c,512); if(strcmp(c,cwd)) { _chdir(cwd); sprintf (c,"CWD modified by module %s - Fixing.",name); LOGOUT_WARN(c); } }
+#define _chdir chdir
 
 #ifndef __LOG_CPP
 extern char logs[256];
@@ -116,7 +106,7 @@ void tracenew(char *fname, int line);
 void StartProf ();
 // put this at the beginning of the section you want to profile
 
-double EndProf (DWORD *count = 0);
+double EndProf (int *count = 0);
 // put this at the end of the section to be profiled.
 // Return value is the runtime (in microseconds) of the profiled section,
 // averaged over all occurrences. If count is initialised, it receives the

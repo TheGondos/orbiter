@@ -22,12 +22,11 @@
 #include "DockingSubsys.h"
 #include "AvionicsSubsys.h"
 #include "MfdSubsys.h"
-#include "ScnEditorAPI.h"
+//#include "ScnEditorAPI.h"
 #include "PressureSubsys.h"
 #include "ThermalSubsys.h"
 #include "LightSubsys.h"
 #include "FailureSubsys.h"
-#include "DlgCtrl.h"
 #include "resource.h"
 #include "meshres.h"
 #include "meshres_vc.h"
@@ -35,22 +34,134 @@
 #include <stdio.h>
 #include <math.h>
 #include <time.h>
+#include <algorithm>
+#include <imgui/imgui.h>
 
 // ==============================================================
 // Global parameters
 // ==============================================================
 
+const std::string DlgDGControls::etype = "DlgDGControls";
+
+DlgDGControls::DlgDGControls(const std::string &name, DeltaGlider *dg) : GUIElement(name, "DlgDGControls") {
+    show = false;
+	m_dg = dg;
+}
+
+static void DrawState(const AnimState2 &state, const char *closed, const char *closing, const char *opening, const char *opened) {
+	const char *desc = "Half-extended";
+	if(state.IsOpen())    desc = opened;
+	if(state.IsClosed())  desc = closed;
+	if(state.IsOpening()) desc = opening;
+	if(state.IsClosing()) desc = closing;
+	ImGui::SetNextItemWidth(80.0f);
+	float progress = state.State();
+	ImGui::BeginDisabled(true);
+	ImGui::SameLine();
+	ImGui::SliderFloat("##slider", &progress, 0.0f, 1.0f, desc);
+	ImGui::SameLine();
+	ImGui::EndDisabled();
+
+}
+
+static void DrawNewLine(const char *txt) {
+	ImGui::TableNextRow();
+	ImGui::TableSetColumnIndex(0);
+	ImGui::TextUnformatted(txt);
+	ImGui::TableSetColumnIndex(1);
+}
+
+void DlgDGControls::Show() {
+	if(show) {
+		ImGui::Begin(name.c_str(), &show);
+		const ImVec2 button_sz(ImVec2(60, 20));
+		if (ImGui::BeginTable("table DlgDGControls", 2, ImGuiTableFlags_SizingFixedFit)) {
+			DrawNewLine("Landing Gear");
+			if(ImGui::Button("Up###lgearup", button_sz)) { m_dg->SubsysGear()->RaiseGear(); }
+			DrawState(m_dg->SubsysGear()->GearState(), "Raised", "Raising", "Lowering", "Lowered");
+			if(ImGui::Button("Down###lgeardown", button_sz)) { m_dg->SubsysGear()->LowerGear(); }
+
+			DrawNewLine("Retro Doors");
+			if(ImGui::Button("Close###rdoorsc", button_sz)) { m_dg->SubsysMainRetro()->CloseRetroCover(); }
+			DrawState(m_dg->SubsysMainRetro()->RetroCoverState(), "Closed", "Closing", "Opening", "Opened");
+			if(ImGui::Button("Open###rdoorso", button_sz)) { m_dg->SubsysMainRetro()->OpenRetroCover(); }
+
+			DrawNewLine("Airbrake");
+			if(ImGui::Button("Retract###airbraker", button_sz)) { m_dg->SubsysAerodyn()->RetractAirbrake(); }
+			DrawState(m_dg->SubsysAerodyn()->AirbrakeSubsys()->State(), "Retracted", "Retracting", "Extending", "Extended");
+			if(ImGui::Button("Extend###airbrakee", button_sz)) { m_dg->SubsysAerodyn()->ExtendAirbrake(); }
+
+			DrawNewLine("Top Hatch");
+			if(ImGui::Button("Close###tophatchc", button_sz)) { m_dg->SubsysPressure()->CloseHatch(); }
+			DrawState(m_dg->SubsysPressure()->HatchState(), "Closed", "Closing", "Opening", "Opened");
+			if(ImGui::Button("Open###tophatcho", button_sz)) { m_dg->SubsysPressure()->OpenHatch(); }
+
+			DrawNewLine("Inner Airlock");
+			if(ImGui::Button("Close###ilockc", button_sz)) { m_dg->SubsysPressure()->CloseInnerAirlock(); }
+			DrawState(m_dg->SubsysPressure()->ILockState(), "Closed", "Closing", "Opening", "Opened");
+			if(ImGui::Button("Open###ilocko", button_sz)) { m_dg->SubsysPressure()->OpenInnerAirlock(); }
+
+			DrawNewLine("Outer Airlock");
+			if(ImGui::Button("Close###olockc", button_sz)) { m_dg->SubsysPressure()->CloseOuterAirlock(); }
+			DrawState(m_dg->SubsysPressure()->OLockState(), "Closed", "Closing", "Opening", "Opened");
+			if(ImGui::Button("Open###olocko", button_sz)) { m_dg->SubsysPressure()->OpenOuterAirlock(); }
+
+			DrawNewLine("Nose Cone");
+			if(ImGui::Button("Close###nconec", button_sz)) { m_dg->SubsysDocking()->CloseNcone(); }
+			DrawState(m_dg->SubsysDocking()->NconeState(), "Closed", "Closing", "Opening", "Opened");
+			if(ImGui::Button("Open###nconeo", button_sz)) { m_dg->SubsysDocking()->OpenNcone(); }
+
+			DrawNewLine("Escape Ladder");
+			if(ImGui::Button("Stow###eladders", button_sz)) { m_dg->SubsysDocking()->RetractLadder(); }
+			DrawState(m_dg->SubsysDocking()->LadderState(), "Stowed", "Stowing", "Extending", "Extended");
+			if(ImGui::Button("Extend###eladdere", button_sz)) { m_dg->SubsysDocking()->ExtendLadder(); }
+
+			DrawNewLine("Radiator");
+			if(ImGui::Button("Stow###radiators", button_sz)) { m_dg->SubsysThermal()->CloseRadiator(); }
+			DrawState(m_dg->SubsysThermal()->RadiatorState(), "Stowed", "Stowing", "Extending", "Extended");
+			if(ImGui::Button("Extend###radiatore", button_sz)) { m_dg->SubsysThermal()->OpenRadiator(); }
+
+			ImGui::EndTable();
+		}
+		ImGui::Separator();
+		ImGui::TextUnformatted("Lights");
+		bool instrument_light = m_dg->SubsysLights()->InstrumentlightSubsys()->GetLight();
+		if(ImGui::Checkbox("Instruments", &instrument_light)) {
+			m_dg->SubsysLights()->InstrumentlightSubsys()->SetLight(instrument_light);
+		}
+		bool strobe_light = m_dg->SubsysLights()->StrobelightSubsys()->GetLight();
+		if(ImGui::Checkbox("Strobe", &strobe_light)) {
+			m_dg->SubsysLights()->StrobelightSubsys()->SetLight(strobe_light);
+		}
+		bool navigation_light = m_dg->SubsysLights()->NavlightSubsys()->GetLight();
+		if(ImGui::Checkbox("Navigation", &navigation_light)) {
+			m_dg->SubsysLights()->NavlightSubsys()->SetLight(navigation_light);
+		}
+
+		ImGui::Separator();
+		ImGui::TextUnformatted("Landing / Docking");
+        int ld_light = m_dg->SubsysLights()->LandDocklightSubsys()->GetLight();
+        ImGui::RadioButton("Off###ldlightoff", &ld_light, 0); ImGui::SameLine();
+        ImGui::RadioButton("Docking", &ld_light, 1); ImGui::SameLine();
+        ImGui::RadioButton("Landing", &ld_light, 2);
+		m_dg->SubsysLights()->LandDocklightSubsys()->SetLight(ld_light);
+
+		ImGui::Separator();
+		ImGui::TextUnformatted("Flood Light");
+        int flood_light = m_dg->SubsysLights()->CockpitlightSubsys()->GetLight();
+        ImGui::RadioButton("Off###floodlightoff", &flood_light, 0); ImGui::SameLine();
+        ImGui::RadioButton("White", &flood_light, 1); ImGui::SameLine();
+        ImGui::RadioButton("Red", &flood_light, 2);
+		m_dg->SubsysLights()->CockpitlightSubsys()->SetLight(flood_light);
+
+		ImGui::End();
+	}
+}
+
 GDIParams g_Param;
 
-static HELPCONTEXT g_hc = {
-	"html/vessels/deltaglider.chm",
-	0,
-	"html/vessels/deltaglider.chm::/deltaglider.hhc",
-	"html/vessels/deltaglider.chm::/deltaglider.hhk"
-};
-
-static const DWORD ntdvtx_geardown = 13;
-static TOUCHDOWNVTX tdvtx_geardown[ntdvtx_geardown] = {
+static const int ntdvtx_geardown = 13;
+static const TOUCHDOWNVTX tdvtx_geardown[ntdvtx_geardown] = {
 	{_V( 0   ,-2.57,10   ), 1e6, 1e5, 1.6, 0.1},
 	{_V(-3.5 ,-2.57,-1   ), 1e6, 1e5, 3.0, 0.2},
 	{_V( 3.5 ,-2.57,-1   ), 1e6, 1e5, 3.0, 0.2},
@@ -66,8 +177,8 @@ static TOUCHDOWNVTX tdvtx_geardown[ntdvtx_geardown] = {
 	{_V( 0   ,-0.6 ,10.65), 1e7, 1e5, 3.0}
 };
 
-static const DWORD ntdvtx_gearup = 13;
-static TOUCHDOWNVTX tdvtx_gearup[ntdvtx_gearup] = {
+static const int ntdvtx_gearup = 13;
+static const TOUCHDOWNVTX tdvtx_gearup[ntdvtx_gearup] = {
 	{_V( 0   ,-1.5 ,9),     1e7, 1e5, 3.0, 3.0},
 	{_V(-6   ,-0.8 ,-5),    1e7, 1e5, 3.0, 3.0},
 	{_V( 3   ,-1.2 ,-5),    1e7, 1e5, 3.0, 3.0},
@@ -85,9 +196,6 @@ static TOUCHDOWNVTX tdvtx_gearup[ntdvtx_gearup] = {
 
 // ==============================================================
 // Local prototypes
-
-INT_PTR CALLBACK Ctrl_DlgProc (HWND, UINT, WPARAM, LPARAM);
-void UpdateCtrlDialog (DeltaGlider *dg, HWND hWnd = 0);
 
 //INT_PTR CALLBACK Damage_DlgProc (HWND, UINT, WPARAM, LPARAM);
 //void UpdateDamageDialog (DeltaGlider *dg, HWND hWnd = 0);
@@ -154,6 +262,8 @@ DeltaGlider::DeltaGlider (OBJHANDLE hObj, int fmodel)
 {
 	int i;
 
+	m_DlgDGControls = std::make_unique<DlgDGControls>("DG Controls", this);
+
 	modelidx = (fmodel ? 1 : 0);
 
 	// Subsystem definitions
@@ -169,8 +279,8 @@ DeltaGlider::DeltaGlider (OBJHANDLE hObj, int fmodel)
 	AddSubsystem (ssys_light        = new LightCtrlSubsystem (this));
 	AddSubsystem (ssys_avionics     = new AvionicsSubsystem (this));
 	AddSubsystem (ssys_failure      = new FailureSubsystem (this));
-	for (i = 0; i < 2; i++)
-		AddSubsystem (ssys_mfd[i] = new MfdSubsystem (this, MFD_LEFT+i));
+	for(i = 0; i < 2; i++)
+		AddSubsystem (ssys_mfd[i] = new MfdSubsystem (this, MFD_LEFT + i));
 	ssys_scram = 0; // creation deferred to clbkSetClassCaps
 
 	visual            = NULL;
@@ -209,12 +319,12 @@ DeltaGlider::DeltaGlider (OBJHANDLE hObj, int fmodel)
 // --------------------------------------------------------------
 DeltaGlider::~DeltaGlider ()
 {
-	DWORD i;
-
 	if (insignia_tex) oapiDestroySurface(insignia_tex);
 
-	for (i = 0; i < 3; i++)
+	for (int i = 0; i < 3; i++)
 		if (skin[i]) oapiReleaseTexture (skin[i]);
+
+	oapiCloseDialog(m_DlgDGControls.get());
 }
 
 // --------------------------------------------------------------
@@ -236,10 +346,10 @@ void DeltaGlider::SetEmptyMass () const
 void DeltaGlider::DefineAnimations ()
 {
 	// ***** Rudder animation *****
-	static UINT RRudderGrp[2] = {GRP_RRudder1,GRP_RRudder2};
+	static unsigned int RRudderGrp[2] = {GRP_RRudder1,GRP_RRudder2};
 	static MGROUP_ROTATE RRudder (0, RRudderGrp, 2,
 		_V( 8.668,0.958,-6.204), _V( 0.143,0.975,-0.172), (float)(-60*RAD));
-	static UINT LRudderGrp[2] = {GRP_LRudder1,GRP_LRudder2};
+	static unsigned int LRudderGrp[2] = {GRP_LRudder1,GRP_LRudder2};
 	static MGROUP_ROTATE LRudder (0, LRudderGrp, 2,
 		_V(-8.668,0.958,-6.204), _V(-0.143,0.975,-0.172), (float)(-60*RAD));
 	anim_rudder = CreateAnimation (0.5);
@@ -247,7 +357,7 @@ void DeltaGlider::DefineAnimations ()
 	AddAnimationComponent (anim_rudder, 0, 1, &LRudder);
 
 	// ***** Elevator animation *****
-	static UINT ElevatorGrp[8] = {GRP_LUAileron1,GRP_LUAileron2,GRP_LLAileron1,GRP_LLAileron2,GRP_RUAileron1,GRP_RUAileron2,GRP_RLAileron1,GRP_RLAileron2};
+	static unsigned int ElevatorGrp[8] = {GRP_LUAileron1,GRP_LUAileron2,GRP_LLAileron1,GRP_LLAileron2,GRP_RUAileron1,GRP_RUAileron2,GRP_RLAileron1,GRP_RLAileron2};
 	static MGROUP_ROTATE Elevator (0, ElevatorGrp, 8,
 		_V(0,-0.4,-6.0), _V(1,0,0), (float)(40*RAD));
 	anim_elevator = CreateAnimation (0.5);
@@ -260,13 +370,13 @@ void DeltaGlider::DefineAnimations ()
 	AddAnimationComponent (anim_elevatortrim, 0, 1, &ElevatorTrim);
 
 	// ***** Aileron animation *****
-	static UINT LAileronGrp[4] = {GRP_LUAileron1,GRP_LUAileron2,GRP_LLAileron1,GRP_LLAileron2};
+	static unsigned int LAileronGrp[4] = {GRP_LUAileron1,GRP_LUAileron2,GRP_LLAileron1,GRP_LLAileron2};
 	static MGROUP_ROTATE LAileron (0, LAileronGrp, 4,
 		_V(0,-0.4,-6.0), _V(1,0,0), (float)(-20*RAD));
 	anim_laileron = CreateAnimation (0.5);
 	AddAnimationComponent (anim_laileron, 0, 1, &LAileron);
 
-	static UINT RAileronGrp[4] = {GRP_RUAileron1,GRP_RUAileron2,GRP_RLAileron1,GRP_RLAileron2};
+	static unsigned int RAileronGrp[4] = {GRP_RUAileron1,GRP_RUAileron2,GRP_RLAileron1,GRP_RLAileron2};
 	static MGROUP_ROTATE RAileron (0, RAileronGrp, 4,
 		_V(0,-0.4,-6.0), _V(1,0,0), (float)(20*RAD));
 	anim_raileron = CreateAnimation (0.5);
@@ -295,7 +405,7 @@ void DeltaGlider::ApplySkin ()
 
 	time_t lt; time(&lt); struct tm *st = localtime(&lt);
 	if (vcmesh && st->tm_mon==3 && st->tm_mday==1) {
-		SURFHANDLE t = oapiLoadTexture ("generic\\noisep.dds");
+		SURFHANDLE t = oapiLoadTexture ("generic/noisep.dds");
 		if (t) oapiSetTexture (vcmesh, 17, t);
 	}
 }
@@ -313,7 +423,7 @@ void DeltaGlider::PaintMarkings (SURFHANDLE tex)
 		skp->SetTextAlign (oapi::Sketchpad::CENTER);
 		char cbuf[32];
 		strncpy (cbuf, GetName(), 10);
-		int len = min(strlen(GetName()), 10);
+		int len = std::min(strlen(GetName()), (size_t)10);
 		skp->Text (193, 10, cbuf, len);
 		skp->Text (193, 74, cbuf, len);
 		oapiReleaseFont(font1);
@@ -338,7 +448,7 @@ void DeltaGlider::InitPanel (int panel)
 
 	switch (panel) {
 	case 0: // main panel
-		for (DWORD i = 0; i < 2; i++)
+		for (int i = 0; i < 2; i++)
 			mainflowidx[i] = retroflowidx[i] = scTSFCidx[i] = scflowidx[i] = -1;
 		hoverflowidx = mainTSFCidx = -1;
 		break;
@@ -401,7 +511,7 @@ bool DeltaGlider::clbkDrawHUD (int mode, const HUDPAINTSPEC *hps, oapi::Sketchpa
 				skp->Line (cx-d,cy-d,cx+d,cy+d);
 				skp->Line (cx-d,cy+d,cx+d,cy-d);
 			}
-			char *str = "NOSECONE";
+			const char *str = "NOSECONE";
 			int w = skp->GetTextWidth (str);
 			skp->Text (cx-w/2, cy-d, str, 8);
 		}
@@ -415,19 +525,19 @@ void DeltaGlider::clbkRenderHUD (int mode, const HUDPAINTSPEC *hps, SURFHANDLE h
 
 	static float texw = 512.0f, texh = 256.0f;
 	float cx = (float)hps->CX, cy = (float)hps->CY;
-	DWORD i, nvtx = 0, nidx = 0;
+	int i, nvtx = 0, nidx = 0;
 	static NTVERTEX vtx[12+16+4];
-	static WORD idx[18+36+6];
+	static uint16_t idx[18+36+6];
 	static float scl = 0;
 	static NTVERTEX vgear[12];
 	static NTVERTEX vnose[16];
 	static NTVERTEX vbrk[4];
-	static WORD igear[18] = {
+	static uint16_t igear[18] = {
 		0,3,1, 3,0,2,
 		4,7,5, 7,4,6,
 		8,11,9, 11,8,10
 	};
-	static WORD inose[36] = {
+	static uint16_t inose[36] = {
 		0,1,2, 2,3,0,
 		0,6,1, 6,7,1,
 		1,8,2, 8,9,2,
@@ -435,7 +545,7 @@ void DeltaGlider::clbkRenderHUD (int mode, const HUDPAINTSPEC *hps, SURFHANDLE h
 		3,4,0, 0,4,5,
 		12,15,13, 12,14,15
 	};
-	static WORD ibrk[6] = {
+	static uint16_t ibrk[6] = {
 		0,3,1, 0,2,3
 	};
 
@@ -565,7 +675,7 @@ void DeltaGlider::TestDamage ()
 	double load = GetLift() / 190.0; // L/S
 	double dynp = GetDynPressure();  // dynamic pressure
 	if (load > WINGLOAD_MAX || load < WINGLOAD_MIN || dynp > DYNP_MAX) {
-		double alpha = max ((dynp-DYNP_MAX) * 1e-5,
+		double alpha = std::max ((dynp-DYNP_MAX) * 1e-5,
 			(load > 0 ? load-WINGLOAD_MAX : WINGLOAD_MIN-load) * 5e-5);
 		double p = 1.0 - exp (-alpha*dt); // probability of failure
 		if (oapiRand() < p) {
@@ -637,7 +747,7 @@ bool DeltaGlider::RedrawPanel_ScramFlow (SURFHANDLE surf)
 {
 	bool redraw = false;
 	for (int i = 0; i < 2; i++) {
-		int p = min (66, (int)(ssys_scram->DMF(i)/3.0*67.0));
+		int p = std::min (66, (int)(ssys_scram->DMF(i)/3.0*67.0));
 		if (p != scflowidx[i])
 			scflowidx[i] = p, redraw = true;
 	}
@@ -655,20 +765,22 @@ bool DeltaGlider::RedrawPanel_ScramTempDisp (SURFHANDLE surf)
 	int i, j, x0, y0, dx, dy;
 	bool isVC = (oapiCockpitMode() == COCKPIT_VIRTUAL);
 
-	HDC hDC = oapiGetDC (surf);
-	SelectObject (hDC, g_Param.pen[0]);
+	oapi::Sketchpad *skp = oapiGetSketchpad (surf);
+	if(skp == NULL)
+		return false;
+	oapi::Pen *oldpen = skp->SetPen(g_Param.pen[0]);
 	for (j = 0; j < 3; j++) {
 		for (i = 0; i < 2; i++) {
 			T = ssys_scram->Temp (i, j);
-			phi = PI * min (T,3900.0)/2000.0;
+			phi = PI * std::min (T,3900.0)/2000.0;
 			dx = (int)(rad*sin(phi)), dy = (int)(rad*cos(phi));
 			x0 = (isVC ? 20 : 22-j) + i*43;
 			y0 = 19+j*46;
-			MoveToEx (hDC, x0, y0, NULL); LineTo (hDC, x0+dx, y0-dy);
+			skp->MoveTo (x0, y0); skp->LineTo (x0+dx, y0-dy);
 		}
 	}
-	SelectObject (hDC, GetStockObject (BLACK_PEN));
-	oapiReleaseDC (surf, hDC);
+	skp->SetPen(oldpen);
+	oapiReleaseSketchpad(skp);
 	return true;
 }
 
@@ -679,7 +791,7 @@ bool DeltaGlider::RedrawPanel_MainFlow (SURFHANDLE surf)
 	bool redraw = false;
 	for (int i = 0; i < 2; i++) {
 		double flowRate = GetThrusterFlowRate(th_main[i]);
-        int p = (int)min(flowRate*gaugeSize/5.1, gaugeSize);  // gauge maxes out at 5.1
+        int p = (int)std::min(flowRate*gaugeSize/5.1, gaugeSize);  // gauge maxes out at 5.1
 		if (p != mainflowidx[i])
 			mainflowidx[i] = p, redraw = true;
 	}
@@ -696,7 +808,7 @@ bool DeltaGlider::RedrawPanel_RetroFlow (SURFHANDLE surf)
 	bool redraw = false;
 	for (int i = 0; i < 2; i++) {
 		double flowRate = GetThrusterFlowRate(th_retro[i]); 
-		int p = (int)min(flowRate*gaugeSize/0.9,gaugeSize); // gauge maxes out at 0.9
+		int p = (int)std::min(flowRate*gaugeSize/0.9,gaugeSize); // gauge maxes out at 0.9
 		if (p != retroflowidx[i])
 			retroflowidx[i] = p, redraw = true;
 	}
@@ -712,7 +824,7 @@ bool DeltaGlider::RedrawPanel_HoverFlow (SURFHANDLE surf)
     double gaugeSize = 66.99;  // pointer can move 66 pixels; also round up to next pixel
     // since hover flow rates are always locked we can assume the second hover thruster has the same flow as the first
     double flowRate = GetThrusterFlowRate(th_hover[0]); 
-	int p = (int)min(flowRate*gaugeSize/3.6,gaugeSize); // gauge maxes out at 3.6
+	int p = (int)std::min(flowRate*gaugeSize/3.6,gaugeSize); // gauge maxes out at 3.6
 	if (p != hoverflowidx) {
 		hoverflowidx = p;
 		oapiBltPanelAreaBackground (AID_MAINDISP3, surf);
@@ -741,7 +853,7 @@ void DeltaGlider::UpdateStatusIndicators ()
 	double d;
 
 	static NTVERTEX vtx[16];
-	static WORD vidx[16] = {0,1,4,5,20,21,8,9,24,25,16,17,12,13,28,29};
+	static uint16_t vidx[16] = {0,1,4,5,20,21,8,9,24,25,16,17,12,13,28,29};
 	GROUPEDITSPEC ges;
 	ges.flags = GRPEDIT_VTXTEXU;
 	ges.nVtx = 16;
@@ -793,7 +905,7 @@ void DeltaGlider::SetPassengerVisuals ()
 	static int vcpsngridx[4] = {GRP_PASSENGER1_VC, GRP_PASSENGER2_VC, GRP_PASSENGER3_VC, GRP_PASSENGER4_VC};
 	static int vcvisoridx[4] = {GRP_PASSENGER1_VISOR_VC, GRP_PASSENGER2_VISOR_VC, GRP_PASSENGER3_VISOR_VC, GRP_PASSENGER4_VISOR_VC};
 
-	for (DWORD i = 0; i < 4; i++) {
+	for (int i = 0; i < 4; i++) {
 		if (psngr[i]) {
 			ges.flags = GRPEDIT_SETUSERFLAG;
 			ges.UsrFlag = 1;
@@ -808,7 +920,7 @@ void DeltaGlider::SetPassengerVisuals ()
 	}
 }
 
-static UINT AileronGrp[8] = {GRP_RUAileron1,GRP_LUAileron1,GRP_LUAileron2,GRP_RUAileron2,GRP_LLAileron1,GRP_RLAileron1,GRP_LLAileron2,GRP_RLAileron2};
+static unsigned int AileronGrp[8] = {GRP_RUAileron1,GRP_LUAileron1,GRP_LUAileron2,GRP_RUAileron2,GRP_LLAileron1,GRP_RLAileron1,GRP_LLAileron2,GRP_RLAileron2};
 
 void DeltaGlider::SetDamageVisuals ()
 {
@@ -830,21 +942,6 @@ void DeltaGlider::SetDamageVisuals ()
 				oapiEditMeshGroup (exmesh, AileronGrp[i*2+j], &ges);
 			}
 	}
-}
-
-void DeltaGlider::DrawNeedle (HDC hDC, int x, int y, double rad, double angle, double *pangle, double vdial)
-{
-	if (pangle) { // needle response delay
-		double dt = oapiGetSimStep();
-		if (fabs (angle - *pangle)/dt >= vdial)
-			angle = (angle > *pangle ? *pangle+vdial*dt : *pangle-vdial*dt);
-		*pangle = angle;
-	}
-	double dx = rad * cos(angle), dy = rad * sin(angle);
-	SelectObject (hDC, g_Param.pen[1]);
-	MoveToEx (hDC, x, y, 0); LineTo (hDC, x + (int)(0.85*dx+0.5), y - (int)(0.85*dy+0.5));
-	SelectObject (hDC, g_Param.pen[0]);
-	MoveToEx (hDC, x, y, 0); LineTo (hDC, x + (int)(dx+0.5), y - (int)(dy+0.5));
 }
 
 void DeltaGlider::InitVCMesh()
@@ -871,7 +968,6 @@ void DeltaGlider::InitVCMesh()
 void DeltaGlider::clbkSetClassCaps (FILEHANDLE cfg)
 {
 	// *************** physical parameters **********************
-
 	bool b;
 	int i;
 	if (oapiReadItem_bool (cfg, "SCRAMJET", b) && b) // set up scramjet configuration
@@ -891,6 +987,7 @@ void DeltaGlider::clbkSetClassCaps (FILEHANDLE cfg)
 	SetPMI (_V(15.5,22.1,7.7));
 
 	SetDockParams (_V(0,-0.49,10.076), _V(0,0,1), _V(0,1,0));
+
 	SetTouchdownPoints (tdvtx_geardown, ntdvtx_geardown);
 	SetNosewheelSteering (true);
 	bGearIsDown = true;
@@ -954,7 +1051,7 @@ void DeltaGlider::clbkSetClassCaps (FILEHANDLE cfg)
 	AddExhaustStream (th_main[1], _V( 1,0,-15), &contrail);
 	AddExhaustStream (th_main[0], _V(-1,0,-10), &exhaust_main);
 	AddExhaustStream (th_main[1], _V( 1,0,-10), &exhaust_main);
-	//DWORD i = GetGroupThrusterCount (THGROUP_MAIN);
+	//int i = GetGroupThrusterCount (THGROUP_MAIN);
 
 	// retro thrusters
 	// note that we have to tilt retros slightly downwards to avoid inducing
@@ -1086,12 +1183,12 @@ void DeltaGlider::clbkSetClassCaps (FILEHANDLE cfg)
 	}
 	if (ssys_scram) beacon[4].pos = &beaconpos_scram;
 
-	SetMeshVisibilityMode (AddMesh (exmesh_tpl = oapiLoadMeshGlobal (ScramVersion() ? "DG\\deltaglider" : "DG\\deltaglider_ns")), MESHVIS_EXTERNAL);
-	//SetMeshVisibilityMode (AddMesh (vcmesh_tpl = oapiLoadMeshGlobal ("DG\\deltaglider_vc")), MESHVIS_VC);
-	panelmesh0 = oapiLoadMeshGlobal ("DG\\dg_2dpanel0");
-	panelmesh1 = oapiLoadMeshGlobal ("DG\\dg_2dpanel1");
+	SetMeshVisibilityMode (AddMesh (exmesh_tpl = oapiLoadMeshGlobal (ScramVersion() ? "DG/deltaglider" : "DG/deltaglider_ns")), MESHVIS_EXTERNAL);
+	//SetMeshVisibilityMode (AddMesh (vcmesh_tpl = oapiLoadMeshGlobal ("DG/deltaglider_vc")), MESHVIS_VC);
+	panelmesh0 = oapiLoadMeshGlobal ("DG/dg_2dpanel0");
+	panelmesh1 = oapiLoadMeshGlobal ("DG/dg_2dpanel1");
 
-	vcmesh_tpl = oapiLoadMeshGlobal ("DG\\deltaglider_vc");
+	vcmesh_tpl = oapiLoadMeshGlobal ("DG/deltaglider_vc");
 	SetMeshVisibilityMode (AddMesh (vcmesh_tpl), MESHVIS_VC);
 
 	// **************** vessel-specific insignia ****************
@@ -1109,19 +1206,19 @@ void DeltaGlider::clbkLoadStateEx (FILEHANDLE scn, void *vs)
     char *line;
 
 	while (oapiReadScenario_nextline (scn, line)) {
-		if (!_strnicmp (line, "TANKCONFIG", 10)) {
+		if (!strncasecmp (line, "TANKCONFIG", 10)) {
 			if (ssys_scram) sscanf (line+10, "%d", &tankconfig);
-		} else if (!_strnicmp (line, "PSNGR", 5)) {
-			DWORD i, res, pi[4];
+		} else if (!strncasecmp (line, "PSNGR", 5)) {
+			int i, res, pi[4];
 			res = sscanf (line+5, "%d%d%d%d", pi+0, pi+1, pi+2, pi+3);
 			for (i = 0; i < res; i++)
 				if (pi[i]-1 < 4) psngr[pi[i]-1] = true;
-		} else if (!_strnicmp (line, "SKIN", 4)) {
+		} else if (!strncasecmp (line, "SKIN", 4)) {
 			sscanf (line+4, "%s", skinpath);
 			char fname[256];
-			strcpy (fname, "DG\\Skins\\");
+			strcpy (fname, "DG/Skins/");
 			strcat (fname, skinpath);
-			int n = strlen(fname); fname[n++] = '\\';
+			int n = strlen(fname); fname[n++] = '/';
 			strcpy (fname+n, "dgmk4_1.dds");  skin[0] = oapiLoadTexture (fname);
 			strcpy (fname+n, ssys_scram ? "dgmk4_2.dds" : "dgmk4_2_ns.dds");  skin[1] = oapiLoadTexture (fname);
 			strcpy (fname+n, "idpanel1.dds"); skin[2] = oapiLoadTexture (fname);
@@ -1130,7 +1227,7 @@ void DeltaGlider::clbkLoadStateEx (FILEHANDLE scn, void *vs)
 				oapiReleaseTexture (skin[2]);
 				skin[2] = NULL;
 			}
-		} else if (!_strnicmp (line, "PANELCOL", 8)) {
+		} else if (!strncasecmp (line, "PANELCOL", 8)) {
 			sscanf (line+8, "%d", &panelcol);
         } else {
 			// offer the line to all subsystems
@@ -1230,7 +1327,7 @@ void DeltaGlider::clbkVisualCreated (VISHANDLE vis, int refcount)
 			GRP_SCRAM_TEMP_VC,GRP_SCRAM_GIMBAL_INDICATOR_VC,
 			GRP_THROTTLE_SCRAM_L1_VC,GRP_THROTTLE_SCRAM_R1_VC,
 			GRP_THROTTLE_SCRAM_L2_VC,GRP_THROTTLE_SCRAM_R2_VC};
-		for (DWORD i = 0; i < 11; i++)
+		for (int i = 0; i < 11; i++)
 			oapiEditMeshGroup (vcmesh, vcscramidx[i], &ges);
 	}
 
@@ -1275,7 +1372,7 @@ void DeltaGlider::clbkRCSMode (int mode)
 // --------------------------------------------------------------
 // Respond to control surface mode change
 // --------------------------------------------------------------
-void DeltaGlider::clbkADCtrlMode (DWORD mode)
+void DeltaGlider::clbkADCtrlMode (int mode)
 {
 	ssys_aerodyn->SetMode (mode);
 }
@@ -1346,7 +1443,7 @@ bool DeltaGlider::clbkLoadGenericCockpit ()
 // Load 2-D instrument panel mode
 // --------------------------------------------------------------
 
-bool DeltaGlider::clbkLoadPanel2D (int id, PANELHANDLE hPanel, DWORD viewW, DWORD viewH)
+bool DeltaGlider::clbkLoadPanel2D (int id, PANELHANDLE hPanel, int viewW, int viewH)
 {
 	// set up subsystem panel elements
 	ComponentVessel::clbkLoadPanel2D (id, hPanel, viewW, viewH);
@@ -1371,10 +1468,10 @@ bool DeltaGlider::clbkLoadPanel2D (int id, PANELHANDLE hPanel, DWORD viewW, DWOR
 	}
 }
 
-void DeltaGlider::SetPanelScale (PANELHANDLE hPanel, DWORD viewW, DWORD viewH)
+void DeltaGlider::SetPanelScale (PANELHANDLE hPanel, int viewW, int viewH)
 {
 	double defscale = (double)viewW/PANEL2D_WIDTH;
-	double extscale = max (defscale, 1.0);
+	double extscale = std::max (defscale, 1.0);
 	SetPanelScaling (hPanel, defscale, extscale);
 }
 
@@ -1383,7 +1480,7 @@ void DeltaGlider::DefinePanelMain (PANELHANDLE hPanel)
 	hPanelMesh = panelmesh0;
 	SURFHANDLE panel2dtex = oapiGetTextureHandle(hPanelMesh,1);
 
-	const DWORD panelw = PANEL2D_WIDTH, panelh = 572;
+	const int panelw = PANEL2D_WIDTH, panelh = 572;
 
 	SetPanelBackground (hPanel, 0, 0, hPanelMesh, panelw, panelh, 190,
 		PANEL_ATTACH_BOTTOM | PANEL_MOVEOUT_BOTTOM);
@@ -1402,7 +1499,7 @@ void DeltaGlider::DefinePanelMain (PANELHANDLE hPanel)
 void DeltaGlider::DefinePanelOverhead (PANELHANDLE hPanel)
 {
 	hPanelMesh = panelmesh1;
-	const DWORD panelw = PANEL2D_WIDTH, panelh = 283;
+	const int panelw = PANEL2D_WIDTH, panelh = 283;
 
 	SetPanelBackground (hPanel, 0, 0, hPanelMesh, panelw, panelh, 0,
 		PANEL_ATTACH_TOP | PANEL_MOVEOUT_TOP);
@@ -1559,13 +1656,13 @@ bool DeltaGlider::clbkVCRedrawEvent (int id, int event, SURFHANDLE surf)
 // --------------------------------------------------------------
 // Process buffered key events
 // --------------------------------------------------------------
-int DeltaGlider::clbkConsumeBufferedKey (DWORD key, bool down, char *kstate)
+int DeltaGlider::clbkConsumeBufferedKey (int key, bool down, char *kstate)
 {
 	if (!down) return 0; // only process keydown events
 	if (Playback()) return 0; // don't allow manual user input during a playback
 
 	if (!KEYMOD_ALT (kstate) && !KEYMOD_SHIFT (kstate) && KEYMOD_CONTROL (kstate) && key == OAPI_KEY_SPACE) {
-		oapiOpenDialogEx (g_Param.hDLL, IDD_CTRL, Ctrl_DlgProc, DLG_CAPTIONCLOSE, this);
+		oapiOpenDialog(m_DlgDGControls.get());
 		return 1;
 	}
 	return ComponentVessel::clbkConsumeBufferedKey (key, down, kstate);
@@ -1593,28 +1690,25 @@ int DeltaGlider::clbkGeneric (int msgid, int prm, void *context)
 // --------------------------------------------------------------
 // Module initialisation
 // --------------------------------------------------------------
-DLLCLBK void InitModule (HINSTANCE hModule)
+DLLCLBK void InitModule (oapi::DynamicModule *hModule)
 {
 	g_Param.hDLL = hModule;
-	oapiRegisterCustomControls (hModule);
 
-	// allocate GDI resources
-	g_Param.pen[0] = CreatePen (PS_SOLID, 1, RGB(224,224,224));
-	g_Param.pen[1] = CreatePen (PS_SOLID, 3, RGB(164,164,164));
-	g_Param.surf = oapiLoadTexture ("DG\\blitsrc1.dds", true);
+	// allocate resources
+	g_Param.pen[0] = oapiCreatePen (1, 1, 0x00e0e0e0);
+	g_Param.pen[1] = oapiCreatePen (1, 3, 0x00a4a4a4);
+	g_Param.surf = oapiLoadTexture ("DG/blitsrc1.dds", true);
 }
 
 // --------------------------------------------------------------
 // Module cleanup
 // --------------------------------------------------------------
-DLLCLBK void ExitModule (HINSTANCE hModule)
+DLLCLBK void ExitModule (oapi::DynamicModule *hModule)
 {
-	oapiUnregisterCustomControls (hModule);
-
 	int i;
 
-	// deallocate GDI resources
-	for (i = 0; i < 2; i++) DeleteObject (g_Param.pen[i]);
+	// deallocate resources
+	for (i = 0; i < 2; i++) oapiReleasePen (g_Param.pen[i]);
 	oapiReleaseTexture (g_Param.surf);
 }
 
@@ -1642,7 +1736,7 @@ DLLCLBK void ovcExit (VESSEL *vessel)
 // ==============================================================
 // Scenario editor interface
 // ==============================================================
-
+/*
 DeltaGlider *GetDG (HWND hDlg)
 {
 	// retrieve DG interface from scenario editor
@@ -1650,7 +1744,8 @@ DeltaGlider *GetDG (HWND hDlg)
 	SendMessage (hDlg, WM_SCNEDITOR, SE_GETVESSEL, (LPARAM)&hVessel);
 	return (DeltaGlider*)oapiGetVesselInterface (hVessel);
 }
-
+*/
+/*
 void UpdateDamage (HWND hTab, DeltaGlider *dg)
 {
 	int i;
@@ -1665,19 +1760,16 @@ void UpdateDamage (HWND hTab, DeltaGlider *dg)
 	SetWindowText (GetDlgItem (hTab, IDC_RIGHTWING_STATUS), cbuf);
 	oapiSetGaugePos (GetDlgItem (hTab, IDC_RIGHTWING_SLIDER), i);
 }
-
+*/
 // --------------------------------------------------------------
 // Message procedure for editor page 1 (animation settings)
 // --------------------------------------------------------------
+/*
 INT_PTR CALLBACK EdPg1Proc (HWND hTab, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	switch (uMsg) {
 	case WM_COMMAND:
 		switch (LOWORD (wParam)) {
-		case IDHELP:
-			g_hc.topic = "/SE_Anim.htm";
-			oapiOpenHelp (&g_hc);
-			return TRUE;
 		case IDC_GEAR_UP:
 			GetDG(hTab)->SubsysGear()->RaiseGear();
 			return TRUE;
@@ -1780,9 +1872,9 @@ INT_PTR CALLBACK EdPg3Proc (HWND hTab, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	switch (uMsg) {
 	case WM_INITDIALOG: {
 		dg = (DeltaGlider*)oapiGetVesselInterface ((OBJHANDLE)lParam);
-		GAUGEPARAM gp = { 0, 100, GAUGEPARAM::LEFT, GAUGEPARAM::BLACK };
-		oapiSetGaugeParams (GetDlgItem (hTab, IDC_LEFTWING_SLIDER), &gp);
-		oapiSetGaugeParams (GetDlgItem (hTab, IDC_RIGHTWING_SLIDER), &gp);
+		//GAUGEPARAM gp = { 0, 100, GAUGEPARAM::LEFT, GAUGEPARAM::BLACK };
+		//oapiSetGaugeParams (GetDlgItem (hTab, IDC_LEFTWING_SLIDER), &gp);
+		//oapiSetGaugeParams (GetDlgItem (hTab, IDC_RIGHTWING_SLIDER), &gp);
 		UpdateDamage (hTab, dg);
 		} break;
 	case WM_COMMAND:
@@ -1835,189 +1927,7 @@ DLLCLBK void secInit (HWND hEditor, OBJHANDLE hVessel)
 		SendMessage (hEditor, WM_SCNEDITOR, SE_ADDPAGEBUTTON, (LPARAM)&eps3);
 	}
 }
-
-// ==============================================================
-// Message callback function for control dialog box
-// ==============================================================
-
-INT_PTR CALLBACK Ctrl_DlgProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
-{
-	DeltaGlider *dg = (uMsg == WM_INITDIALOG ? (DeltaGlider*)lParam : (DeltaGlider*)oapiGetDialogContext (hWnd));
-	// pointer to vessel instance was passed as dialog context
-
-	switch (uMsg) {
-	case WM_INITDIALOG:
-		UpdateCtrlDialog (dg, hWnd);
-		return FALSE;
-	case WM_COMMAND:
-		switch (LOWORD(wParam)) {
-		case IDCANCEL:
-			oapiCloseDialog (hWnd);
-			return TRUE;
-		case IDC_GEAR_UP:
-			dg->SubsysGear()->RaiseGear();
-			return 0;
-		case IDC_GEAR_DOWN:
-			dg->SubsysGear()->LowerGear();
-			return 0;
-		case IDC_RETRO_CLOSE:
-			dg->SubsysMainRetro()->CloseRetroCover();
-			return 0;
-		case IDC_RETRO_OPEN:
-			dg->SubsysMainRetro()->OpenRetroCover();
-			return 0;
-		case IDC_AIRBRAKE_RETRACT:
-			if (SendDlgItemMessage (hWnd, IDC_AIRBRAKE_RETRACT, BM_GETCHECK, 0, 0) == BST_CHECKED)
-				dg->SubsysAerodyn()->RetractAirbrake();
-			return 0;
-		case IDC_AIRBRAKE_EXTEND:
-			if (SendDlgItemMessage (hWnd, IDC_AIRBRAKE_EXTEND, BM_GETCHECK, 0, 0) == BST_CHECKED)
-				dg->SubsysAerodyn()->ExtendAirbrake();
-			return 0;
-		case IDC_NCONE_CLOSE:
-			dg->SubsysDocking()->CloseNcone();
-			return 0;
-		case IDC_NCONE_OPEN:
-			dg->SubsysDocking()->OpenNcone();
-			return 0;
-		case IDC_OLOCK_CLOSE:
-			dg->SubsysPressure()->CloseOuterAirlock();
-			return 0;
-		case IDC_OLOCK_OPEN:
-			dg->SubsysPressure()->OpenOuterAirlock();
-			return 0;
-		case IDC_ILOCK_CLOSE:
-			dg->SubsysPressure()->CloseInnerAirlock();
-			return 0;
-		case IDC_ILOCK_OPEN:
-			dg->SubsysPressure()->OpenInnerAirlock();
-			return 0;
-		case IDC_LADDER_RETRACT:
-			dg->SubsysDocking()->RetractLadder();
-			return 0;
-		case IDC_LADDER_EXTEND:
-			dg->SubsysDocking()->ExtendLadder();
-			return 0;
-		case IDC_HATCH_CLOSE:
-			dg->SubsysPressure()->CloseHatch();
-			return 0;
-		case IDC_HATCH_OPEN:
-			dg->SubsysPressure()->OpenHatch();
-			return 0;
-		case IDC_RADIATOR_RETRACT:
-			dg->SubsysThermal()->CloseRadiator();
-			return 0;
-		case IDC_RADIATOR_EXTEND:
-			dg->SubsysThermal()->OpenRadiator();
-			return 0;
-		case IDC_INSTRUMENTLIGHT:
-			dg->SubsysLights()->InstrumentlightSubsys()->SetLight(SendDlgItemMessage (hWnd, IDC_INSTRUMENTLIGHT, BM_GETCHECK, 0, 0) == BST_CHECKED);
-			return 0;
-		case IDC_FLOODWLIGHT:
-			dg->SubsysLights()->CockpitlightSubsys()->SetLight(SendDlgItemMessage (hWnd, IDC_FLOODWLIGHT, BM_GETCHECK, 0, 0) == BST_CHECKED ? 1 : 0);
-			break;
-		case IDC_FLOODRLIGHT:
-			dg->SubsysLights()->CockpitlightSubsys()->SetLight(SendDlgItemMessage (hWnd, IDC_FLOODRLIGHT, BM_GETCHECK, 0, 0) == BST_CHECKED ? 2 : 0);
-			break;
-		case IDC_DOCKINGLIGHT:
-			dg->SubsysLights()->LandDocklightSubsys()->SetLight(SendDlgItemMessage (hWnd, IDC_DOCKINGLIGHT, BM_GETCHECK, 0, 0) == BST_CHECKED ? 1 : 0);
-			return 0;
-		case IDC_LANDINGLIGHT:
-			dg->SubsysLights()->LandDocklightSubsys()->SetLight(SendDlgItemMessage (hWnd, IDC_LANDINGLIGHT, BM_GETCHECK, 0, 0) == BST_CHECKED ? 2 : 0);
-			return 0;
-		case IDC_STROBELIGHT:
-			dg->SubsysLights()->StrobelightSubsys()->SetLight(SendDlgItemMessage (hWnd, IDC_STROBELIGHT, BM_GETCHECK, 0, 0) == BST_CHECKED);
-			return 0;
-		case IDC_NAVLIGHT:
-			dg->SubsysLights()->NavlightSubsys()->SetLight(SendDlgItemMessage (hWnd, IDC_NAVLIGHT, BM_GETCHECK, 0, 0) == BST_CHECKED);
-			return 0;
-		//case IDC_DAMAGE:
-		//	oapiOpenDialog (g_Param.hDLL, IDD_DAMAGE, Damage_DlgProc, dg);
-
-		}
-		break;
-	}
-	return oapiDefDialogProc (hWnd, uMsg, wParam, lParam);
-}
-
-void UpdateCtrlDialog (DeltaGlider *dg, HWND hWnd)
-{
-	static int bstatus[2] = {BST_UNCHECKED, BST_CHECKED};
-
-	if (!hWnd) hWnd = oapiFindDialog (g_Param.hDLL, IDD_CTRL);
-	if (!hWnd) return;
-
-	int op;
-
-	op = (dg->SubsysGear()->GearState().IsOpening() ? 1 :
-		  dg->SubsysGear()->GearState().IsClosing() ? 0 :
-		  dg->SubsysGear()->GearState().State() > 0.5 ? 1 : 0);
-	SendDlgItemMessage (hWnd, IDC_GEAR_DOWN, BM_SETCHECK, bstatus[op], 0);
-	SendDlgItemMessage (hWnd, IDC_GEAR_UP, BM_SETCHECK, bstatus[1-op], 0);
-
-	op = (dg->SubsysMainRetro()->RetroCoverState().IsOpening() ? 1 :
-		  dg->SubsysMainRetro()->RetroCoverState().IsClosing() ? 0 :
-		  dg->SubsysMainRetro()->RetroCoverState().State() > 0.5 ? 1 : 0);
-	SendDlgItemMessage (hWnd, IDC_RETRO_OPEN, BM_SETCHECK, bstatus[op], 0);
-	SendDlgItemMessage (hWnd, IDC_RETRO_CLOSE, BM_SETCHECK, bstatus[1-op], 0);
-
-	op = dg->SubsysAerodyn()->AirbrakeSubsys()->TargetState();
-	SendDlgItemMessage (hWnd, IDC_AIRBRAKE_RETRACT, BM_SETCHECK, op == 0 ? BST_CHECKED : BST_UNCHECKED, 0);
-	SendDlgItemMessage (hWnd, IDC_AIRBRAKE_EXTEND, BM_SETCHECK, op == 2 ? BST_CHECKED : BST_UNCHECKED, 0);
-
-	op = (dg->SubsysDocking()->NconeState().IsOpening() ? 1 :
-		  dg->SubsysDocking()->NconeState().IsClosing() ? 0 :
-		  dg->SubsysDocking()->NconeState().State() > 0.5 ? 1 : 0);
-	SendDlgItemMessage (hWnd, IDC_NCONE_OPEN, BM_SETCHECK, bstatus[op], 0);
-	SendDlgItemMessage (hWnd, IDC_NCONE_CLOSE, BM_SETCHECK, bstatus[1-op], 0);
-
-	op = (dg->SubsysPressure()->OLockState().IsOpening() ? 1 :
-		  dg->SubsysPressure()->OLockState().IsClosing() ? 0 :
-		  dg->SubsysPressure()->OLockState().State() > 0.5 ? 1 : 0);
-	SendDlgItemMessage (hWnd, IDC_OLOCK_OPEN, BM_SETCHECK, bstatus[op], 0);
-	SendDlgItemMessage (hWnd, IDC_OLOCK_CLOSE, BM_SETCHECK, bstatus[1-op], 0);
-
-	op = (dg->SubsysPressure()->ILockState().IsOpening() ? 1 :
-		  dg->SubsysPressure()->ILockState().IsClosing() ? 0 :
-		  dg->SubsysPressure()->ILockState().State() > 0.5 ? 1 : 0);
-	SendDlgItemMessage (hWnd, IDC_ILOCK_OPEN, BM_SETCHECK, bstatus[op], 0);
-	SendDlgItemMessage (hWnd, IDC_ILOCK_CLOSE, BM_SETCHECK, bstatus[1-op], 0);
-
-	op = (dg->SubsysDocking()->LadderState().IsOpening() ? 1 :
-		  dg->SubsysDocking()->LadderState().IsClosing() ? 0 :
-		  dg->SubsysDocking()->LadderState().State() > 0.5 ? 1 : 0);
-	SendDlgItemMessage (hWnd, IDC_LADDER_EXTEND, BM_SETCHECK, bstatus[op], 0);
-	SendDlgItemMessage (hWnd, IDC_LADDER_RETRACT, BM_SETCHECK, bstatus[1-op], 0);
-
-	op = (dg->SubsysPressure()->HatchState().IsOpening() ? 1 :
-		  dg->SubsysPressure()->HatchState().IsClosing() ? 0 :
-		  dg->SubsysPressure()->HatchState().State() > 0.5 ? 1 : 0);
-	SendDlgItemMessage (hWnd, IDC_HATCH_OPEN, BM_SETCHECK, bstatus[op], 0);
-	SendDlgItemMessage (hWnd, IDC_HATCH_CLOSE, BM_SETCHECK, bstatus[1-op], 0);
-
-	op = (dg->SubsysThermal()->RadiatorState().IsOpening() ? 1 :
-		  dg->SubsysThermal()->RadiatorState().IsClosing() ? 0 :
-		  dg->SubsysThermal()->RadiatorState().State() > 0.5 ? 1 : 0);
-	SendDlgItemMessage (hWnd, IDC_RADIATOR_EXTEND, BM_SETCHECK, bstatus[op], 0);
-	SendDlgItemMessage (hWnd, IDC_RADIATOR_RETRACT, BM_SETCHECK, bstatus[1-op], 0);
-
-	op = dg->SubsysLights()->InstrumentlightSubsys()->GetLight();
-	SendDlgItemMessage (hWnd, IDC_INSTRUMENTLIGHT, BM_SETCHECK, bstatus[op], 0);
-
-	op = dg->SubsysLights()->CockpitlightSubsys()->GetLight();
-	SendDlgItemMessage (hWnd, IDC_FLOODWLIGHT, BM_SETCHECK, op == 1 ? BST_CHECKED : BST_UNCHECKED, 0);
-	SendDlgItemMessage (hWnd, IDC_FLOODRLIGHT, BM_SETCHECK, op == 2 ? BST_CHECKED : BST_UNCHECKED, 0);
-
-	op = dg->SubsysLights()->LandDocklightSubsys()->GetLight();
-	SendDlgItemMessage (hWnd, IDC_DOCKINGLIGHT, BM_SETCHECK, op == 1 ? BST_CHECKED : BST_UNCHECKED, 0);
-	SendDlgItemMessage (hWnd, IDC_LANDINGLIGHT, BM_SETCHECK, op == 2 ? BST_CHECKED : BST_UNCHECKED, 0);
-
-	op = dg->beacon[0].active ? 1:0;
-	SendDlgItemMessage (hWnd, IDC_NAVLIGHT, BM_SETCHECK, bstatus[op], 0);
-	op = dg->beacon[5].active ? 1:0;
-	SendDlgItemMessage (hWnd, IDC_STROBELIGHT, BM_SETCHECK, bstatus[op], 0);
-}
-
+*/
 // ==============================================================
 // Message callback function for damage dialog box
 // ==============================================================

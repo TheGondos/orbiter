@@ -30,8 +30,8 @@ class AAPSubsystem;
 class AvionicsSubsystem: public DGSubsystem {
 public:
 	AvionicsSubsystem (DeltaGlider *v);
-	bool clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH);
-	bool clbkLoadVC (int vcid);
+	bool clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH) override;
+	bool clbkLoadVC (int vcid) override;
 
 private:
 	InstrAtt *instratt;

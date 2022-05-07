@@ -12,14 +12,14 @@
 #ifndef __HUDBUTTON_H
 #define __HUDBUTTON_H
 
-#include "..\Common\Instrument.h"
+#include "../Common/Instrument.h"
 
 // ==============================================================
 
 class HUDButton: public PanelElement {
 public:
 	HUDButton (VESSEL3 *v);
-	void AddMeshData2D (MESHHANDLE hMesh, DWORD grpidx);
+	void AddMeshData2D (MESHHANDLE hMesh, int grpidx);
 	bool Redraw2D (SURFHANDLE surf);
 	bool ProcessMouse2D (int event, int mx, int my);
 };

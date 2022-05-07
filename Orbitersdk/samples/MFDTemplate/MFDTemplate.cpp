@@ -27,7 +27,7 @@ int g_MFDmode; // identifier for new MFD mode
 // ==============================================================
 // API interface
 
-DLLCLBK void InitModule (HINSTANCE hDLL)
+DLLCLBK void InitModule (DynamicModule *hDLL)
 {
 	static char *name = "MFD Template";   // MFD mode name
 	MFDMODESPECEX spec;

@@ -14,10 +14,10 @@ target_include_directories(LuaInline
 )
 
 target_link_libraries(LuaInline
-	${ORBITER_LIB}
+#	${ORBITER_LIB}
 	${ORBITER_SDK_LIB}
 	LuaInterpreter
-	${LUA_LIB}
+	lua::lib
 )
 
 add_dependencies(LuaInline
@@ -33,6 +33,6 @@ set_target_properties(LuaInline
 
 # Installation
 install(TARGETS LuaInline
-	RUNTIME
-	DESTINATION ${ORBITER_INSTALL_ROOT_DIR}
+#	RUNTIME
+	DESTINATION ${ORBITER_INSTALL_MODULE_DIR}
 )

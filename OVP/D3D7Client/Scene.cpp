@@ -59,7 +59,7 @@ Scene::Scene (D3D7Client *_gc, DWORD w, DWORD h)
 	surfLabelsActive = false;
 	if (!gc->clbkGetRenderParam (RP_MAXLIGHTS, &maxlight)) maxlight = 8;
 	DWORD maxlight_request = *(DWORD*)gc->GetConfigParam (CFGPRM_MAXLIGHT);
-	if (maxlight_request) maxlight = min (maxlight, maxlight_request);
+	if (maxlight_request) maxlight = std::min (maxlight, maxlight_request);
 	locallight = *(bool*)gc->GetConfigParam (CFGPRM_LOCALLIGHT);
 	if (locallight)
 		lightlist = new LIGHTLIST[maxlight];
@@ -288,9 +288,9 @@ VECTOR3 Scene::SkyColour ()
 			oapiGetPlanetAtmParams (hProxy, cdist, &prm);
 			normalise (rp);
 			double coss = dotp (pc, rp) / -cdist;
-			double intens = min (1.0,(1.0839*coss+0.4581)) * sqrt (prm.rho/atmp->rho0);
-			// => intensity=0 at sun zenith distance 115°
-			//    intensity=1 at sun zenith distance 60°
+			double intens = std::min (1.0,(1.0839*coss+0.4581)) * sqrt (prm.rho/atmp->rho0);
+			// => intensity=0 at sun zenith distance 115ï¿½
+			//    intensity=1 at sun zenith distance 60ï¿½
 			if (intens > 0.0)
 				col += _V(atmp->color0.x*intens, atmp->color0.y*intens, atmp->color0.z*intens);
 		}
@@ -314,7 +314,7 @@ void Scene::Render ()
 	int bglvl = 0;
 	if (bg_rgba) { // suppress stars darker than the background
 		bglvl = (bg_rgba & 0xff) + ((bg_rgba >> 8) & 0xff) + ((bg_rgba >> 16) & 0xff);
-		bglvl = min (bglvl/2, 255);
+		bglvl = std::min (bglvl/2, 255);
 	}
 
 	// Clear the viewport
@@ -395,10 +395,14 @@ void Scene::Render ()
 		double linebrt = 1.0-skybrt;
 
 		// render ecliptic grid
-		if (plnmode & PLN_EGRID)
-			csphere->RenderGrid (dev, _V(0,0,0.4)*linebrt, !(plnmode & PLN_ECL));
-		if (plnmode & PLN_ECL)
-			csphere->RenderGreatCircle (dev, _V(0,0,0.8)*linebrt);
+		if (plnmode & PLN_EGRID) {
+			auto tmp = _V(0,0,0.4)*linebrt;
+			csphere->RenderGrid (dev, tmp, !(plnmode & PLN_ECL));
+		}
+		if (plnmode & PLN_ECL) {
+			auto tmp = _V(0,0,0.8)*linebrt;
+			csphere->RenderGreatCircle (dev, tmp);
+		}
 
 		// render celestial grid
 		if (plnmode & (PLN_CGRID|PLN_EQU)) {
@@ -406,16 +410,22 @@ void Scene::Render ()
 			static double coso = cos(obliquity), sino = sin(obliquity);
 			static D3DMATRIX rot = {1.0f,0.0f,0.0f,0.0f,  0.0f,(float)coso,(float)sino,0.0f,  0.0f,-(float)sino,(float)coso,0.0f,  0.0f,0.0f,0.0f,1.0f};
 			dev->SetTransform (D3DTRANSFORMSTATE_WORLD, &rot);
-			if (plnmode & PLN_CGRID)
-				csphere->RenderGrid (dev, _V(0.35,0,0.35)*linebrt, !(plnmode & PLN_EQU));
-			if (plnmode & PLN_EQU)
-				csphere->RenderGreatCircle (dev, _V(0.7,0,0.7)*linebrt);
+			if (plnmode & PLN_CGRID) {
+				auto tmp = _V(0.35,0,0.35)*linebrt;
+				csphere->RenderGrid (dev, tmp, !(plnmode & PLN_EQU));
+			}
+			if (plnmode & PLN_EQU) {
+				auto tmp = _V(0.7,0,0.7)*linebrt;
+				csphere->RenderGreatCircle (dev, tmp);
+			}
 			dev->SetTransform (D3DTRANSFORMSTATE_WORLD, &ident);
 		}
 
 		// render constellation lines
-		if (plnmode & PLN_CONST)
-			csphere->RenderConstellations (dev, _V(0.4,0.3,0.2)*linebrt);
+		if (plnmode & PLN_CONST) {
+			auto tmp = _V(0.4,0.3,0.2)*linebrt;
+			csphere->RenderConstellations (dev, tmp);
+		}
 
 		dev->SetRenderState (D3DRENDERSTATE_DESTBLEND, dstblend);
 		dev->SetRenderState (D3DRENDERSTATE_ALPHABLENDENABLE, FALSE);
@@ -808,7 +818,7 @@ void Scene::InitGDIResources ()
 {
 	for (int i = 0; i < 6; i++)
 		hLabelPen[i] = CreatePen (PS_SOLID, 0, labelCol[i]);
-	labelSize[0] = max (viewH/60, 14);
+	labelSize[0] = std::max (viewH/60, (DWORD)14);
 	hLabelFont[0] = CreateFont (labelSize[0], 0, 0, 0, 400, TRUE, 0, 0, 0, 3, 2, 1, 49, "Arial");
 
 	const int fsize[4] = {12, 16, 20, 26};

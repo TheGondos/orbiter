@@ -18,6 +18,10 @@
 #include "meshres_p1.h"
 #include "meshres_vc.h"
 #include "dg_vc_anim.h"
+#include <strings.h>
+
+#define _strnicmp strncasecmp
+#define _stricmp strcasecmp
 
 static const double sigma = 5.670e-8;   // Boltzmann constant
 
@@ -348,7 +352,7 @@ void ThermalSubsystem::AddRadiatorIrradiance (double rPower, const VECTOR3 &dir,
 	VECTOR3 paneldir;
 
 	// panel 1
-	pprog = min(1.0, rstate/0.33);
+	pprog = std::min(1.0, rstate/0.33);
 	alpha = (pprog*175.0-100.0)*RAD;
 	paneldir = _V(0, sin(alpha), -cos(alpha));
 	cosa = dotp(dir, paneldir); // irradiance cosine
@@ -360,7 +364,7 @@ void ThermalSubsystem::AddRadiatorIrradiance (double rPower, const VECTOR3 &dir,
 	}
 
 	// panel 2
-	pprog = max (0.0, min(1.0, (rstate-0.5)*4.0));
+	pprog = std::max (0.0, std::min(1.0, (rstate-0.5)*4.0));
 	alpha = pprog*145.0*RAD;
 	paneldir = _V(-sin(alpha), -cos(alpha), 0);
 	cosa = dotp(dir, paneldir);
@@ -372,7 +376,7 @@ void ThermalSubsystem::AddRadiatorIrradiance (double rPower, const VECTOR3 &dir,
 	}
 
 	// panel 3
-	pprog = max (0.0, min(1.0, (rstate-0.75)*4.0));
+	pprog = std::max (0.0, std::min(1.0, (rstate-0.75)*4.0));
 	alpha = pprog*145.0*RAD;
 	paneldir = _V(sin(alpha), -cos(alpha), 0);
 	cosa = dotp(dir, paneldir);
@@ -511,14 +515,14 @@ CoolantLoop::CoolantLoop (ThermalSubsystem *_subsys)
 	ELID_DISPLAY = AddElement (disp = new CoolantLoopDisplay (this, g_Param.surf));
 
 	// pump dial animation
-	static UINT PumpDialGrp = GRP_COOLING_PUMP_DIAL_VC;
+	static unsigned int PumpDialGrp = GRP_COOLING_PUMP_DIAL_VC;
 	static MGROUP_ROTATE PumpDialTransform (1, &PumpDialGrp, 1,
 		VC_COOLING_PUMP_DIAL_ref, VC_COOLING_PUMP_DIAL_axis, (float)(-280*RAD));
 	anim_vc_pumpdial = DG()->CreateAnimation (0.5);
 	DG()->AddAnimationComponent (anim_vc_pumpdial, 0, 1, &PumpDialTransform);
 
 	// reference temperature dial animation
-	static UINT ReftempDialGrp = GRP_COOLING_REFTEMP_DIAL_VC;
+	static unsigned int ReftempDialGrp = GRP_COOLING_REFTEMP_DIAL_VC;
 	static MGROUP_ROTATE ReftempDialTransform (1, &ReftempDialGrp, 1,
 		VC_COOLING_REFTEMP_DIAL_ref, VC_COOLING_REFTEMP_DIAL_axis, (float)(-280*RAD));
 	anim_vc_reftempdial = DG()->CreateAnimation (0.5);
@@ -624,8 +628,8 @@ void CoolantLoop::SetPumprate (double rate)
 void CoolantLoop::IncPumprate (bool increase)
 {
 	double rate, dT = oapiGetSimStep()*0.2;
-	if (increase) rate = min(1.0, pumprate+dT);
-	else          rate = max(0.0, pumprate-dT);
+	if (increase) rate = std::min(1.0, pumprate+dT);
+	else          rate = std::max(0.0, pumprate-dT);
 	SetPumprate (rate);
 }
 
@@ -643,8 +647,8 @@ void CoolantLoop::SetReftemp (double temp)
 void CoolantLoop::IncReftemp (bool increase)
 {
 	double temp, dT = oapiGetSimStep()*2.0;
-	if (increase) temp = min(292.0, Tref_tgt+dT);
-	else          temp = max(282.0, Tref_tgt-dT);
+	if (increase) temp = std::min(292.0, Tref_tgt+dT);
+	else          temp = std::max(282.0, Tref_tgt-dT);
 	SetReftemp (temp);
 }
 
@@ -657,12 +661,12 @@ void CoolantLoop::clbkPreStep (double simt, double simdt, double mjd)
 	// set the wing tank bypass rate
 	double Ta = node[MERGER_WINGBYPASS].upstream[0]->T1;
 	double Tb = node[MERGER_WINGBYPASS].upstream[1]->T1;
-	node[SPLITTER_WINGBYPASS].split = ((Ta != Tb) ? min (1.0, max (0.0, (Tref_tgt-Tb)/(Ta-Tb))) : 1.0);
+	node[SPLITTER_WINGBYPASS].split = ((Ta != Tb) ? std::min (1.0, std::max (0.0, (Tref_tgt-Tb)/(Ta-Tb))) : 1.0);
 
 	// set the heatsink bypass rate
 	Ta = node[MERGER_HEATSINKBYPASS].upstream[0]->T1;
 	Tb = node[MERGER_HEATSINKBYPASS].upstream[1]->T1;
-	node[SPLITTER_HEATSINKBYPASS].split = ((Ta != Tb) ? min(1.0, max(0.0, (Tref_tgt-Tb)/(Ta-Tb))) : 1.0);
+	node[SPLITTER_HEATSINKBYPASS].split = ((Ta != Tb) ? std::min(1.0, std::max(0.0, (Tref_tgt-Tb)/(Ta-Tb))) : 1.0);
 
 	for (int i = 0; i < nnode; i++)
 		node[i].Update (simdt);
@@ -670,7 +674,7 @@ void CoolantLoop::clbkPreStep (double simt, double simdt, double mjd)
 
 // --------------------------------------------------------------
 
-bool CoolantLoop::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH)
+bool CoolantLoop::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH)
 {
 	bool res = DGSubsystem::clbkLoadPanel2D (panelid, hPanel, viewW, viewH);
 
@@ -843,7 +847,7 @@ bool CoolantLoopDisplay::Redraw ()
 	if (t < upt && t > upt-1.0) return false;
 	upt = t + 0.5;
 
-	char cbuf[16];
+	char cbuf[256];
 	sprintf (cbuf, "%5.2lf", component->node[CoolantLoop::PUMP].pumprate);
 	BlitReadout (0, 67, 78, cbuf);
 
@@ -1004,34 +1008,34 @@ RadiatorControl::RadiatorControl (ThermalSubsystem *_subsys)
 	ELID_SWITCH = AddElement (sw = new RadiatorSwitch (this));
 
 	// Radiator animation
-	static UINT RaddoorGrp[3] = {GRP_Raddoor1,GRP_Raddoor2,GRP_Radiator4};
+	static unsigned int RaddoorGrp[3] = {GRP_Raddoor1,GRP_Raddoor2,GRP_Radiator4};
 	static MGROUP_ROTATE Raddoor (0, RaddoorGrp, 3,
 		_V(0,1.481,-3.986), _V(1,0,0), (float)(175*RAD));
-	static UINT FRadiatorGrp[1] = {GRP_Radiator4};
+	static unsigned int FRadiatorGrp[1] = {GRP_Radiator4};
 	static MGROUP_ROTATE FRadiator (0, FRadiatorGrp, 1,
 		_V(0,1.91,-2.965), _V(1,0,0), (float)(185*RAD));
-	static UINT RadiatorGrp[7] = {GRP_Radiator1,GRP_Radiator1a,GRP_Radiator1b,
+	static unsigned int RadiatorGrp[7] = {GRP_Radiator1,GRP_Radiator1a,GRP_Radiator1b,
 		GRP_Radiator2,GRP_Radiator2a,GRP_Radiator2b,GRP_Radiator3};
 	static MGROUP_TRANSLATE Radiator (0, RadiatorGrp, 7,
 		_V(0,0.584,-0.157));
-	static UINT LRadiatorGrp[3] = {GRP_Radiator1,GRP_Radiator1a,GRP_Radiator1b};
+	static unsigned int LRadiatorGrp[3] = {GRP_Radiator1,GRP_Radiator1a,GRP_Radiator1b};
 	static MGROUP_ROTATE LRadiator (0, LRadiatorGrp, 3,
 		_V(-0.88,1.94,-4.211), _V(0,0.260,0.966), (float)(145*RAD));
-	static UINT RRadiatorGrp[3] = {GRP_Radiator2,GRP_Radiator2a,GRP_Radiator2b};
+	static unsigned int RRadiatorGrp[3] = {GRP_Radiator2,GRP_Radiator2a,GRP_Radiator2b};
 	static MGROUP_ROTATE RRadiator (0, RRadiatorGrp, 3,
 		_V(0.93,1.91,-4.211), _V(0,0.260,0.966), (float)(-145*RAD));
 	static VECTOR3 axis1 = {cos(145*RAD),sin(145*RAD)*cos(0.26292),sin(145*RAD)*sin(-0.26292)};
-	static UINT LaRadiatorGrp[1] = {GRP_Radiator1a};
+	static unsigned int LaRadiatorGrp[1] = {GRP_Radiator1a};
 	static MGROUP_ROTATE LaRadiator (0, LaRadiatorGrp, 1,
 		_V(-0.91, 1.86, -5.055), axis1, (float)(180*RAD));
-	static UINT LbRadiatorGrp[1] = {GRP_Radiator1b};
+	static unsigned int LbRadiatorGrp[1] = {GRP_Radiator1b};
 	static MGROUP_ROTATE LbRadiator (0, LbRadiatorGrp, 1,
 		_V(-0.91, 2.075, -4.315), axis1, (float)(-180*RAD));
 	static VECTOR3 axis2 = {cos(-145*RAD),sin(-145*RAD)*cos(0.26292),sin(-145*RAD)*sin(-0.26292)};
-	static UINT RaRadiatorGrp[1] = {GRP_Radiator2a};
+	static unsigned int RaRadiatorGrp[1] = {GRP_Radiator2a};
 	static MGROUP_ROTATE RaRadiator (0, RaRadiatorGrp, 1,
 		_V(0.91, 1.675, -5.01), axis2, (float)(180*RAD));
-	static UINT RbRadiatorGrp[1] = {GRP_Radiator2b};
+	static unsigned int RbRadiatorGrp[1] = {GRP_Radiator2b};
 	static MGROUP_ROTATE RbRadiator (0, RbRadiatorGrp, 1,
 		_V(0.91, 1.89, -4.27), axis2, (float)(-180*RAD));
 	anim_radiator = DG()->CreateAnimation (0);
@@ -1050,8 +1054,6 @@ RadiatorControl::RadiatorControl (ThermalSubsystem *_subsys)
 
 void RadiatorControl::OpenRadiator ()
 {
-	void UpdateCtrlDialog (DeltaGlider *dg, HWND hWnd = 0);
-
 	radiator_extend = true;
 	radiator_state.Open();
 	if (sw->GetState() != DGSwitch1::UP) {
@@ -1059,7 +1061,6 @@ void RadiatorControl::OpenRadiator ()
 		DG()->TriggerRedrawArea(1, 0, ELID_SWITCH);
 	}
 	DG()->UpdateStatusIndicators();
-	UpdateCtrlDialog (DG());
 	DG()->RecordEvent ("RADIATOR", "OPEN");
 }
 
@@ -1067,8 +1068,6 @@ void RadiatorControl::OpenRadiator ()
 
 void RadiatorControl::CloseRadiator ()
 {
-	void UpdateCtrlDialog (DeltaGlider *dg, HWND hWnd = 0);
-
 	radiator_extend = false;
 	radiator_state.Close();
 	if (sw->GetState() != DGSwitch1::DOWN) {
@@ -1076,7 +1075,6 @@ void RadiatorControl::CloseRadiator ()
 		DG()->TriggerRedrawArea(1, 0, ELID_SWITCH);
 	}
 	DG()->UpdateStatusIndicators();
-	UpdateCtrlDialog (DG());
 	DG()->RecordEvent ("RADIATOR", "CLOSE");
 }
 
@@ -1125,7 +1123,7 @@ void RadiatorControl::clbkPostStep (double simt, double simdt, double mjd)
 
 // --------------------------------------------------------------
 
-bool RadiatorControl::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH)
+bool RadiatorControl::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH)
 {
 	bool res = DGSubsystem::clbkLoadPanel2D (panelid, hPanel, viewW, viewH);
 
@@ -1176,7 +1174,7 @@ bool RadiatorControl::clbkPlaybackEvent (double simt, double event_t, const char
 
 // --------------------------------------------------------------
 
-int RadiatorControl::clbkConsumeBufferedKey (DWORD key, bool down, char *kstate)
+int RadiatorControl::clbkConsumeBufferedKey (int key, bool down, char *kstate)
 {
 	if (KEYMOD_ALT(kstate) || KEYMOD_CONTROL(kstate) || KEYMOD_SHIFT(kstate))
 		return 0;

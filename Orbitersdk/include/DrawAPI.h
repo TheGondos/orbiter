@@ -19,7 +19,14 @@
 #ifndef __DRAWAPI_H
 #define __DRAWAPI_H
 
+#undef min
+#undef max
 #include "OrbiterAPI.h"
+
+typedef struct {
+	int x;
+	int y;
+} POINT;
 
 namespace oapi {
 
@@ -105,13 +112,6 @@ public:
 	 * \brief Font destructor.
 	 */
 	virtual ~Font () {}
-
-	/**
-	 * \brief Return the GDI handle for the font, if available.
-	 * \return GDI font handle
-	 * \note Non-GDI clients should not overload this method.
-	 */
-	virtual HFONT GetGDIFont () const { return 0; }
 };
 
 
@@ -130,7 +130,7 @@ protected:
 	 * \param width line width [pixel]
 	 * \param col line colour (format: 0xBBGGRR)
 	 */
-	Pen (int style, int width, DWORD col) {}
+	Pen (int style, int width, uint32_t col) {}
 
 public:
 	/**
@@ -153,7 +153,7 @@ protected:
 	 * \brief Brush constructor.
 	 * \param col brush colour (format: 0xBBGGRR)
 	 */
-	Brush (DWORD col) {};
+	Brush (uint32_t col) {};
 
 public:
 	/**
@@ -251,7 +251,7 @@ public:
 	 * \return Previous colour setting.
 	 * \default None, returns 0.
 	 */
-	virtual DWORD SetTextColor (DWORD col) { return 0; }
+	virtual uint32_t SetTextColor (uint32_t col) { return 0; }
 
 	/**
 	 * \brief Set the background colour for text output.
@@ -262,7 +262,7 @@ public:
 	 *   is set to BK_OPAQUE.
 	 * \sa SetBackgroundMode
 	 */
-	virtual DWORD SetBackgroundColor (DWORD col) { return 0; }
+	virtual uint32_t SetBackgroundColor (uint32_t col) { return 0; }
 
 	/**
 	 * \brief Background modes for text output.
@@ -300,7 +300,7 @@ public:
 	 * \note For proportional fonts, the width value should be an approximate average
 	 *   character width.
 	 */
-	virtual DWORD GetCharSize () { return 0; }
+	virtual int GetCharSize () { return 0; }
 
 	/**
 	 * \brief Return the width of a text string in the currently selected font.
@@ -310,7 +310,7 @@ public:
 	 * \default None, returns 0.
 	 * \sa SetFont
 	 */
-	virtual DWORD GetTextWidth (const char *str, int len = 0) { return 0; }
+	virtual int GetTextWidth (const char *str, int len = 0) { return 0; }
 
 	/**
 	 * \brief Set the position in the surface bitmap which is mapped to the
@@ -352,7 +352,7 @@ public:
 	 */
 	virtual bool Text (int x, int y, const char *str, int len) { return false; }
 
-	virtual bool TextW (int x, int y, const LPWSTR str, int len) { return false; }
+	virtual bool TextW (int x, int y, const wchar_t *str, int len) { return false; }
 
 	/**
 	 * \brief Draw a text string into a rectangle.
@@ -378,7 +378,7 @@ public:
 	 * \param y y-coordinate of point [pixel]
 	 * \param col pixel colour (format: 0xBBGGRR)
 	 */
-	virtual void Pixel (int x, int y, DWORD col) {}
+	virtual void Pixel (int x, int y, uint32_t col) {}
 
 	/**
 	 * \brief Move the drawing reference to a new point.
@@ -509,22 +509,6 @@ public:
 	 * \return Surface handle
 	 */
 	inline SURFHANDLE GetSurface() const { return surf; }
-
-	/**
-	 * \brief Return the Windows device context handle, if applicable.
-	 * \return device context handle
-	 * \default None, returns NULL.
-	 * \note Sketchpad implementations based on the Windows GDI system
-	 *   should overload this function to return the device context handle
-	 *   here. All other implementations should not overload this function.
-	 * \note The device context returned by this function should not be
-	 *   released (e.g. with ReleaseDC). The device context is released
-	 *   automatically when the Sketchpad instance is destroyed.
-	 * \note This method should be regarded as temporary. Ultimately, the
-	 *   device-dependent drawing mechanism should be hidden outside the
-	 *   sketchpad implementation.
-	 */
-	virtual HDC GetDC() { return NULL; }
 
 private:
 	SURFHANDLE surf;

@@ -47,12 +47,12 @@ public:
 	void setviewscale(const class OrbitElements &orbit);//Set scale of picture using orbit size
 	void setviewscale(double temp);//Set scale using a number
 	void setviewscalesize(double temp);//Set scale using a distance size
-	void setviewwindow(DWORD xstart, DWORD ystart, DWORD xend, DWORD yend);//Set a window within MFD
-	void getviewwindow(DWORD *xstart, DWORD *ystart, DWORD *xend, DWORD *yend);//Get back above info
+	void setviewwindow(int xstart, int ystart, int xend, int yend);//Set a window within MFD
+	void getviewwindow(int *xstart, int *ystart, int *xend, int *yend);//Get back above info
 	double getviewscale();//Get viewscale number
 private:
 	void drawcircle(Sketchpad *sketchpad, double size); //Draw circle representing planet
 	VECTOR3 xaxis, yaxis, zaxis; // projection vectors
-	DWORD ixstart, iystart, ixend, iyend, windowsize;//window parameters
+	int ixstart, iystart, ixend, iyend, windowsize;//window parameters
 	double scale;//scaling factor for diagram
 };

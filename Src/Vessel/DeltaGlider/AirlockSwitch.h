@@ -19,7 +19,7 @@
 class AirlockSwitch: public PanelElement {
 public:
 	AirlockSwitch (VESSEL3 *v);
-	void AddMeshData2D (MESHHANDLE hMesh, DWORD grpidx);
+	void AddMeshData2D (MESHHANDLE hMesh, int grpidx);
 	void Reset2D ();
 	bool Redraw2D (SURFHANDLE surf);
 	bool ProcessMouse2D (int event, int mx, int my);

@@ -10,13 +10,12 @@
 #ifndef __CONFIG_H
 #define __CONFIG_H
 
-//#include <d3d.h>
-#include <windows.h>
 #include "Vecmat.h"
 #include <iostream>
 #include <fstream>
 #include <list>
 #include "GraphicsAPI.h"
+#include <algorithm>
 
 // body force modes
 #define BF_ENABLE   0x0001
@@ -126,9 +125,9 @@ struct CFG_VISUALPRM {
 	bool   bReentryFlames;		// render reentry flames?
 	bool   bParticleStreams;	// render particle streams? (exhaust, contrails, etc.)
 	bool   bLocalLight;			// enable local light sources?
-	DWORD  MaxLight;			// max number of light sources
-	DWORD  AmbientLevel;		// ambient light level (0-255)
-	DWORD  PlanetMaxLevel;		// max. planet patch resolution level
+	int  MaxLight;			// max number of light sources
+	int  AmbientLevel;		// ambient light level (0-255)
+	int  PlanetMaxLevel;		// max. planet patch resolution level
 	double PlanetPatchRes;		// resolution scaling for planet patches
 	double LightBrightness;		// brightness of planetary night lights
 	StarRenderPrm StarPrm;		// render parameters for background stars
@@ -156,17 +155,17 @@ struct CFG_INSTRUMENTPRM {
 };
 
 struct CFG_VISHELPPRM {
-	DWORD  flagPlanetarium;		// bitflags for items to be displayed in planetarium mode
+	int  flagPlanetarium;		// bitflags for items to be displayed in planetarium mode
 		// bit 0: enable planetarium mode
 		// bit 1: celestial grid                  bit  6: celestial body markers
 		// bit 2: ecliptic grid                   bit  7: vessel markers
 		// bit 3: ecliptic                        bit  8: surface base markers
 		// bit 4: equator of current target       bit  9: surface transmitter markers
 		// bit 5: constellation lines             bit 10: custom surface labels
-	DWORD  flagBodyforce;		// body force vector display
+	int  flagBodyforce;		// body force vector display
 	float  scaleBodyforce;		// force vector scaling factor
 	float  opacBodyforce;		// force vector opacity factor
-	DWORD  flagCrdAxes;			// coordinate axes vector display
+	int  flagCrdAxes;			// coordinate axes vector display
 	float  scaleCrdAxes;		// coordinate axes scaling factor
 	float  opacCrdAxes;			// coordinate axes opacity factor
 };
@@ -175,8 +174,6 @@ struct CFG_DEBUGPRM {
 	int    ShutdownMode;		// 0=standard (redisplay launchpad), 1=respawn, 2=terminate
 	double FixedStep;			// fixed time step length [s] (0=variable)
 	int    TimerMode;			// timer mode (0=auto, 1=hires hardware, 2=lores software
-	bool   bDisableSmoothFont;  // disable font smoothing for better performance
-	bool   bForceReenableSmoothFont; // enable font smoothing on exit, even if it wasn't on originally (recover from losing settings after a previous crash)
 	int    bHtmlScnDesc;        // 0=use simple text box, 1=use inline html viewer, 2=auto-detect (disable inline html under linux/wine)
 	bool   bSaveExitScreen;     // save screenshot on scenario exit
 	bool   bWireframeMode;      // set renderer to wireframe mode?
@@ -194,11 +191,11 @@ struct CFG_PLANETRENDERPRM {
 	int    PatchRes;            // power n of surface patch mesh resolution 2<<n [n=4,5]
 	int    LoadFrequency;       // tile load frequency
 	int    AnisoMode;
-	DWORD  TileLoadFlags;       // flags for planetary tile load mechanism
+	int  TileLoadFlags;       // flags for planetary tile load mechanism
 };
 
 struct CFG_MAPPRM {
-	DWORD DispFlag;
+	int DispFlag;
 };
 
 struct CFG_RECPLAYPRM {
@@ -215,37 +212,37 @@ struct CFG_RECPLAYPRM {
 
 struct CFG_DEVPRM {
 	int    Device_idx;			// index of default device
-	DWORD  Device_mode;			// index of default fullscreen mode
+	int  Device_mode;			// index of default fullscreen mode
 	bool   bForceEnum;			// force enumeration, bypass device.dat
 	bool   bFullscreen;			// use window mode
 	bool   bStereo;				// use stereo mode
 	bool   bNoVsync;			// no vertical sync (fullscreen only)
 	bool   bTryStencil;			// try stencil buffers when available
 	bool   bPageflip;			// allow page flipping in fullscreen mode (disabling can fix flicker problem)
-	DWORD  WinW;				// window width (pixel) for windowed mode
-	DWORD  WinH;				// window height (pixel) for windowed mode
+	int  WinW;				// window width (pixel) for windowed mode
+	int  WinH;				// window height (pixel) for windowed mode
 };
 
 struct CFG_JOYSTICKPRM {
-	DWORD  Joy_idx;				// joystick device index (0=disabled)
-	DWORD  Deadzone;			// central deadzone range for all axes (0-10000)
-	DWORD  ThrottleAxis;		// joystick throttle axis (0=none, 1=z-axis, 2=slider 0, 3=slider 1)
-	DWORD  ThrottleSaturation;	// saturation level for joystick throttle control (0-10000)
+	int  Joy_idx;				// joystick device index (0=disabled)
+	int  Deadzone;			// central deadzone range for all axes (0-10000)
+	int  ThrottleAxis;		// joystick throttle axis (0=none, 1=z-axis, 2=slider 0, 3=slider 1)
+	int  ThrottleSaturation;	// saturation level for joystick throttle control (0-10000)
 	bool   bThrottleIgnore;		// ignore joystick throttle setting on start
 };
 
 struct CFG_UIPRM {              // user interface options
 	bool   bFocusFollowsMouse;	// focus mode for dialog boxes (mouse move or mouse click)
-	DWORD  MenuMode;            // 0=show, 1=hide, 2=auto-hide
+	int  MenuMode;            // 0=show, 1=hide, 2=auto-hide
 	bool   bMenuLabelOnly;      // display only menu labels?
 	bool   bWarpAlways;         // always display time acceleration != 1
 	bool   bWarpScientific;     // display time acceleration in scientific notation?
-	DWORD  InfoMode;            // 0=show, 1=hide, 2=auto-hide
-	DWORD  InfoAuxIdx[2];       // index for auxiliary info bars left/right (0=none)
-	DWORD  MenuOpacity;         // menubar opacity (0-10)
-	DWORD  InfoOpacity;         // infobar opacity (0-20)
-	DWORD  MenuScrollspeed;     // menubar scroll speed (1-20)
-	DWORD  PauseIndMode;        // 0=flash on pause/resume, 1=show on pause, 2=don't show
+	int  InfoMode;            // 0=show, 1=hide, 2=auto-hide
+	int  InfoAuxIdx[2];       // index for auxiliary info bars left/right (0=none)
+	int  MenuOpacity;         // menubar opacity (0-10)
+	int  InfoOpacity;         // infobar opacity (0-20)
+	int  MenuScrollspeed;     // menubar scroll speed (1-20)
+	int  PauseIndMode;        // 0=flash on pause/resume, 1=show on pause, 2=don't show
 	int    SelVesselTab;        // tab to open in vessel selection dialog
  	int    SelVesselRange;      // "nearby" range for vessel selection dialog
 	bool   bSelVesselFlat;      // flat assemblies for vessel selection dialog
@@ -253,7 +250,6 @@ struct CFG_UIPRM {              // user interface options
 
 struct CFG_DEMOPRM {
 	bool   bDemo;				// run in demo mode?
-	bool   bBkImage;			// show background image?
 	bool   bBlockExit;			// prevent from terminating orbiter?
 	double MaxDemoTime;			// maximum demo run time [s]
 	double LPIdleTime;			// maximum launchpad idle time [s]
@@ -316,7 +312,7 @@ bool GetItemBool   (std::istream &is, const char *label, bool &val);
 bool GetItemVector (std::istream &is, const char *label, Vector &val);
 bool GetItemVECTOR (std::istream &is, const char *label, VECTOR3 &val);
 
-bool FindLine      (std::istream &is, char *line);
+bool FindLine      (std::istream &is, const char *line);
 // scans stream 'is' from beginning for a line beginning with 'line' 
 // and leaves file pointer on the beginning of the next line
 // return value is false if line is not found
@@ -324,6 +320,10 @@ bool FindLine      (std::istream &is, char *line);
 int ListIndex      (int listlen, char **list, char *label);
 // returns index of entry 'label' in 'list' of length 'listlen',
 // or -1 if entry does not exist. Comparison is case-insensitive
+
+
+#define _stricmp strcasecmp
+#define _strnicmp strncasecmp
 
 inline int StrComp (const char *str1, const char *str2, bool ignorecase)
 {
@@ -357,7 +357,7 @@ public:
 
 	bool Load(const char* fname);
 
-	BOOL Write (const char *fname = 0) const;
+	bool Write (const char *fname = 0) const;
 	// write config parameters to file "fname"
 	// returns FALSE if write fails
 
@@ -390,7 +390,7 @@ public:
 	char *Root;             // master config file
 
 	// visual parameters
-	DWORD AmbientColour;         // RGBA value of ambient component
+	uint32_t AmbientColour;         // RGBA value of ambient component
 
 	CFG_DIRPRM CfgDirPrm;				// subdirectory list
 	CFG_PHYSICSPRM CfgPhysicsPrm;		// physics engine parameters
@@ -420,10 +420,13 @@ public:
 	void TogglePlanetarium ();
 
 	// module parameters
-	int nactmod;                 // number of active modules
-	char **actmod;               // list of active modules
-	void AddModule (char *cbuf); // add a module to the list
-	void DelModule (char *cbuf); // delete module from the list
+	std::vector<std::string> m_actmod;
+	void AddModule (const char *cbuf); // add a module to the list
+	void DelModule (const char *cbuf); // delete module from the list
+	bool HasModule (const char *cbuf) {
+		auto pos = std::find(m_actmod.begin(), m_actmod.end(), cbuf);
+		return pos != m_actmod.end();
+	}
 
 	void SetBodyforceItem (int item, bool activate);
 	// set body force display options
@@ -431,27 +434,27 @@ public:
 	void SetCoordinateAxesItem (int item, bool activate);
 	// set coordinate axes display options
 
-	inline void SetAmbientLevel (DWORD lvl)
-	{ AmbientColour = (CfgVisualPrm.AmbientLevel = min (lvl, 0xff)) * 0x01010101; }
+	inline void SetAmbientLevel (int lvl)
+	{ AmbientColour = (CfgVisualPrm.AmbientLevel = std::min ((int)lvl, 0xff)) * 0x01010101; }
 
-	const void *GetParam (DWORD paramtype) const;
+	const void *GetParam (int paramtype) const;
 	// return a specific parameter setting (paramtype defined in GraphicsAPI.h)
 
 	// Read items from master config
-	bool GetString (char *category, char *val);
-	bool GetReal (char *category, double &val);
-	bool GetInt (char *category, int &val);
-	bool GetSize (char* category, size_t& val);
-	bool GetBool (char *category, bool &val);
-	bool GetVector (char *category, Vector &val);
+	bool GetString (const char *category, char *val);
+	bool GetReal (const char *category, double &val);
+	bool GetInt (const char *category, int &val);
+	bool GetSize (const char* category, size_t& val);
+	bool GetBool (const char *category, bool &val);
+	bool GetVector (const char *category, Vector &val);
 
 private:
-	bool GetString (std::istream &is, char *category, char *val);
-	bool GetReal (std::istream &is, char *category, double &val);
-	bool GetInt (std::istream &is, char *category, int &val);
-	bool GetSize (std::istream& is, char* category, size_t& val);
-	bool GetBool (std::istream &is, char *category, bool &val);
-	bool GetVector (std::istream &is, char *category, Vector &val);
+	bool GetString (std::istream &is, const char *category, char *val);
+	bool GetReal (std::istream &is, const char *category, double &val);
+	bool GetInt (std::istream &is, const char *category, int &val);
+	bool GetSize (std::istream& is, const char* category, size_t& val);
+	bool GetBool (std::istream &is, const char *category, bool &val);
+	bool GetVector (std::istream &is, const char *category, Vector &val);
 
 	mutable char cfgpath[256];  // buffer for creating full path names
 	char mshpath[256];
@@ -462,29 +465,5 @@ private:
 	int cfglen, mshlen, texlen, htxlen, ptxlen, scnlen; // string length
 	bool found_config_file;
 };
-
-// =============================================================
-
-class GDIResources {
-public:
-	GDIResources (HWND hWnd, DWORD winW, DWORD winH, const Config &config);
-	~GDIResources ();
-
-	// ingame dialog fonts
-	HFONT dlgF1r, dlgF1i; // standard dialog font (roman and italic) - can be variable pitch
-	int dlgF1H, dlgF1W;   // line height, average character width
-
-	HFONT dlgF2;          // fixed pitch dialog font
-	int dlgF2H, dlgF2W;   // line height, character width
-};
-
-// =============================================================
-
-// OBSOLETE!
-#ifdef __CONFIG_CPP
-GDIResources *g_gdires = 0;
-#else
-extern GDIResources *g_gdires;
-#endif
 
 #endif // !__CONFIG_H

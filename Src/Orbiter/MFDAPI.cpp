@@ -32,9 +32,9 @@ ExternMFD::~ExternMFD ()
 	if (instr) delete instr;
 }
 
-UINT_PTR ExternMFD::Id () const
+MfdId ExternMFD::Id ()
 {
-	return (UINT_PTR)this;
+	return MfdId(this);
 }
 
 bool ExternMFD::Active () const
@@ -74,7 +74,7 @@ bool ExternMFD::ProcessButton (int bt, int event)
 	return (instr ? instr->ConsumeButton (bt, event) : false);
 }
 
-bool ExternMFD::SendKey (DWORD key)
+bool ExternMFD::SendKey (int key)
 {
 	if (key == OAPI_KEY_ESCAPE) { // needs thought
 		SetMode (instr ? MFD_NONE : pmode);
@@ -119,7 +119,7 @@ bool ExternMFD::SetMode (int mode)
 	spec.bt_dy = btdy;
 	Instrument *newinstr = 0;
 	if (mode != MFD_NONE) {
-		newinstr = Instrument::Create (mode, g_pane, (INT_PTR)Id(), spec, (Vessel*)hVessel);
+		newinstr = Instrument::Create (mode, g_pane, Id(), spec, (Vessel*)hVessel);
 		if (!newinstr) return false;
 	}
 	if (instr) {
@@ -129,14 +129,6 @@ bool ExternMFD::SetMode (int mode)
 	instr = newinstr;
 	clbkRefreshButtons();
 	return true;
-}
-
-bool ExternMFD::OpenModeHelp () const
-{
-	if (!instr) return false;
-	HELPCONTEXT *hc = instr->HelpTopic();
-	if (hc) return oapiOpenHelp (hc);
-	else return false;
 }
 
 void ExternMFD::clbkUpdate ()

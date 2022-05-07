@@ -39,7 +39,6 @@ CelestialBody::CelestialBody (char *fname)
 : RigidBody (fname)
 {
 	char cbuf[256];
-
 	DefaultParam ();
 	ClearModule ();
 
@@ -85,10 +84,6 @@ CelestialBody::CelestialBody (char *fname)
 		el = new Elements (fname); TRACENEW
 	}
 
-	double prec;
-	if (modIntf.oplanetSetPrecision && GetItemReal (ifs, "ErrorLimit", prec))
-		modIntf.oplanetSetPrecision (prec); // old-style initialisation - OBSOLETE
-
 	GetItemBool (ifs, "EllipticOrbit", bFixedElements);
 	bDynamicPosVel = !bFixedElements;
 
@@ -98,10 +93,6 @@ CelestialBody::CelestialBody (char *fname)
 			bDynamicPosVel = false;
 			bFixedElements = false;
 		}
-	}
-	if (modIntf.oplanetEphemeris) { // old module interface
-		bDynamicPosVel = false;
-		bFixedElements = false;
 	}
 
 	if (!el) { el = new Elements; TRACENEW }
@@ -135,7 +126,6 @@ void CelestialBody::DefaultParam ()
 	el                = 0;     // elements undefined
 	elframe           = ELFRAME_ECLIPTIC; // reference frame for elements
 	bInitFromElements = false;
-	hMod              = 0;
 	module            = 0;
 	bFixedElements = false;
 }
@@ -170,7 +160,7 @@ void CelestialBody::Attach (CelestialBody *_parent)
 	// because it would imply the child to be located
 	// in the *rotating* parent system
 
-	if (cbody = _parent) {
+	if ((cbody = _parent)) {
 		_parent->AddSecondary (this);
 		// we add ourselves to the parent's list of secondaries
 		el->Setup (mass, cbody->Mass(), td.MJD_ref);
@@ -230,7 +220,7 @@ Vector CelestialBody::Barycentre2Pos (const Vector &bary) const
 	else {
 		Vector b2;
 		double m, mtot = mass;
-		for (DWORD i = 0; i < nsecondary; i++) {
+		for (int i = 0; i < nsecondary; i++) {
 			mtot += (m = secondary[i]->Mass());
 			b2 += secondary[i]->GPos() * m;
 		}
@@ -242,7 +232,7 @@ Vector CelestialBody::Pos2Barycentre (const Vector &pos) const
 {
 	double m, mtot = mass;
 	Vector b(pos*mass);
-	for (DWORD i = 0; i < nsecondary; i++) {
+	for (int i = 0; i < nsecondary; i++) {
 		mtot += (m = secondary[i]->Mass());
 		b += secondary[i]->GPos() * m;
 	}
@@ -257,7 +247,7 @@ int CelestialBody::RelTrueAndBaryState()
 	// Return value: 0 if state is calculated with respect to parent true state,
 	// or EPHEM_PARENTBARY if calculated with respect to parent barycentre
 
-	DWORD i;
+	int i;
 	int flg = EPHEM_TRUEPOS | EPHEM_TRUEVEL;
 	bool havevel;
 	bool havetrue = false, havebary = false;
@@ -269,7 +259,7 @@ int CelestialBody::RelTrueAndBaryState()
 		secondary[i]->RelTrueAndBaryState();
 
 	if (!bDynamicPosVel) { // analytic state update
-		if (flg = ExternState (state)) { // state updated by module
+		if ((flg = ExternState (state))) { // state updated by module
 			if (flg & EPHEM_BARYISTRUE) {
 				if (flg & EPHEM_TRUEPOS) {
 					s = state;
@@ -502,11 +492,6 @@ int CelestialBody::ExternEphemeris (double mjd, int req, double *res) const
 {
 	if (module)
 		return module->clbkEphemeris (mjd, req, res); // new interface
-	if (modIntf.oplanetEphemeris) {                   // OBSOLETE!
-		int format;
-		modIntf.oplanetEphemeris (mjd, res, format);
-		return EPHEM_TRUEPOS | EPHEM_TRUEVEL | EPHEM_POLAR;
-	}
 	return 0;
 }
 
@@ -516,11 +501,6 @@ int CelestialBody::ExternFastEphemeris (double simt, int req, double *res) const
 		return module->clbkFastEphemeris (simt, req, res); // new interface
 	}
 
-	if (modIntf.oplanetFastEphemeris) {
-		int format;
-		modIntf.oplanetFastEphemeris (simt, res, format);
-		return EPHEM_TRUEPOS | EPHEM_TRUEVEL | EPHEM_POLAR;
-	}
 	return 0;
 }
 
@@ -666,58 +646,32 @@ void CelestialBody::RegisterModule (char *dllname)
 {
 	char cbuf[256];
 	module = 0;                              // reset new interface
-	memset (&modIntf, 0, sizeof (modIntf));  // reset old interface
-	sprintf (cbuf, "Modules\\Celbody\\%s.dll", dllname); // try new module location
-	hMod = LoadLibrary (cbuf);
-	if (!hMod) {
-		sprintf (cbuf, "Modules\\%s.dll", dllname);  // try legacy module location
-		hMod = LoadLibrary (cbuf);
+	sprintf (cbuf, "Modules/Celbody/lib%s.so", dllname); // try new module location
+	if(!hMod.Load(cbuf)) {
+		fprintf(stderr, "CelestialBody::RegisterModule %s failed\n", dllname);
+		exit(0);
+		return;
 	}
-	if (!hMod) return;
 
 	// Check if the module provides instance initialisation
 	typedef CELBODY* (*INITPROC)(OBJHANDLE);
-	INITPROC init_proc = (INITPROC)GetProcAddress (hMod, "InitInstance");
-	if (init_proc) { // load interface class
-
-		module = init_proc ((OBJHANDLE)this);
-
-	} else {         // check for old-style interface
-		
-		char funcname[256], *funcp;
-		strcpy (funcname, name); funcp = funcname + strlen(name);
-
-		strcpy (funcp, "_SetPrecision");
-		modIntf.oplanetSetPrecision = (OPLANET_SetPrecision)GetProcAddress (hMod, funcname);
-
-		strcpy (funcp, "_Ephemeris");
-		modIntf.oplanetEphemeris = (OPLANET_Ephemeris)GetProcAddress (hMod, funcname);
-
-		strcpy (funcp, "_FastEphemeris");
-		modIntf.oplanetFastEphemeris = (OPLANET_FastEphemeris)GetProcAddress (hMod, funcname);
-
-		strcpy (funcp, "_AtmPrm");
-		modIntf.oplanetAtmPrm = (OPLANET_AtmPrm)GetProcAddress (hMod, funcname);
-	}
+	INITPROC init_proc = (INITPROC)hMod["InitInstance"];
+	module = init_proc ((OBJHANDLE)this);
 }
 
 void CelestialBody::ClearModule ()
 {
-	if (hMod) {
-		if (module) { // new interface
-			typedef void (*EXITPROC)(CELBODY*);
-			EXITPROC exit_proc = (EXITPROC)GetProcAddress (hMod, "ExitInstance");
-			if (exit_proc) { // allow module to clean up
-				exit_proc (module);
-			} else {         // no cleanup - we delete the interface class here
-				delete module;
-			}
-			module = 0;
+	if (module) { // new interface
+		typedef void (*EXITPROC)(CELBODY*);
+		EXITPROC exit_proc = (EXITPROC)hMod["ExitInstance"];
+		if (exit_proc) { // allow module to clean up
+			exit_proc (module);
+		} else {         // no cleanup - we delete the interface class here
+			delete module;
 		}
-		FreeLibrary (hMod);
-		hMod = 0;
+		module = 0;
+		hMod.Unload();
 	}
-	memset (&modIntf, 0, sizeof (modIntf)); // old interface
 }
 
 // =======================================================================
@@ -810,7 +764,9 @@ int CELBODY::clbkEphemeris (double mjd, int req, double *ret)
 { return 0; }
 
 int CELBODY::clbkFastEphemeris (double simt, int req, double *ret)
-{ return 0; }
+{ 
+	return 0;
+}
 
 bool CELBODY::clbkAtmParam (double alt, ATMPARAM *prm)
 { return false; }
@@ -829,7 +785,7 @@ CELBODY2::CELBODY2 (OBJHANDLE hCBody): CELBODY ()
 	version++;
 	hBody = hCBody;
 	atm = NULL;
-	hAtmModule = NULL;
+//	hAtmModule = NULL;
 }
 
 CELBODY2::~CELBODY2 ()
@@ -842,11 +798,11 @@ void CELBODY2::clbkInit (FILEHANDLE cfg)
 	CELBODY::clbkInit (cfg);
 
 	// Load external atmosphere modules
-	if (!hAtmModule) {
+	if (!hAtmModule.Loaded()) {
 		// 1: try Config\<Name>\Atmosphere.cfg for interactive setting
 		char fname[256], name[256];
 		oapiGetObjectName (hBody, name, 256);
-		strcat (name, "\\Atmosphere.cfg");
+		strcat (name, "/Atmosphere.cfg");
 		FILEHANDLE hFile = oapiOpenFile (name, FILE_IN, CONFIG);
 		if (oapiReadItem_string (hFile, "MODULE_ATM", fname) || oapiReadItem_string (cfg, "MODULE_ATM", fname)) {
 			if (_stricmp (fname, "[None]"))
@@ -861,7 +817,7 @@ OBJHANDLE CELBODY2::GetParent () const
 	return (OBJHANDLE)((CelestialBody*)hBody)->cbody;
 }
 
-OBJHANDLE CELBODY2::GetChild (DWORD idx) const
+OBJHANDLE CELBODY2::GetChild (int idx) const
 {
 	CelestialBody *cbody = (CelestialBody*)hBody;
 	if (idx < cbody->nsecondary) return (OBJHANDLE)cbody->secondary[idx];
@@ -886,14 +842,14 @@ bool CELBODY2::FreeAtmosphere ()
 
 bool CELBODY2::LoadAtmosphereModule (const char *fname)
 {
-	char path[256], name[256];
+	char path[380], name[256];
 	oapiGetObjectName (hBody, name, 256);
-	sprintf (path, "Modules\\Celbody\\%s\\Atmosphere", name);
-	if (!(hAtmModule = g_pOrbiter->LoadModule (path, fname))) return false;
-	ATMOSPHERE *(*func)(CELBODY2*) = (ATMOSPHERE*(*)(CELBODY2*))GetProcAddress (hAtmModule, "CreateAtmosphere");
+	sprintf (path, "Modules/Celbody/%s/Atmosphere/lib%s.so", name, fname);
+	//if (!(hAtmModule = g_pOrbiter->LoadModule (path, fname))) return false;
+	if (!hAtmModule.Load(path)) return false;
+	ATMOSPHERE *(*func)(CELBODY2*) = (ATMOSPHERE*(*)(CELBODY2*))hAtmModule["CreateAtmosphere"];
 	if (!func) {
-		g_pOrbiter->UnloadModule (fname);
-		hAtmModule = NULL;
+		hAtmModule.Unload();
 		return false;
 	}
 	atm = func(this);
@@ -902,9 +858,9 @@ bool CELBODY2::LoadAtmosphereModule (const char *fname)
 
 bool CELBODY2::FreeAtmosphereModule ()
 {
-	if (!hAtmModule) return false;
+	if (!hAtmModule.Loaded()) return false;
 	if (atm) {
-		void (*func)(ATMOSPHERE*) = (void(*)(ATMOSPHERE*))GetProcAddress(hAtmModule, "DeleteAtmosphere");
+		void (*func)(ATMOSPHERE*) = (void(*)(ATMOSPHERE*))hAtmModule["DeleteAtmosphere"];
 		if (func) {
 			func (atm);
 		} else {
@@ -913,8 +869,7 @@ bool CELBODY2::FreeAtmosphereModule ()
 		}
 		atm = 0;
 	}
-	g_pOrbiter->UnloadModule (hAtmModule);
-	hAtmModule = NULL;
+	hAtmModule.Unload();
 	return true;
 }
 

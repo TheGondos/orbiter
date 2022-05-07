@@ -4,9 +4,12 @@
 #ifndef __VECMAT_H
 #define __VECMAT_H
 
+#undef min
+#undef max
 #include <math.h>
 #include <memory.h>
 #include <ostream>
+#include <glm/glm.hpp>
 
 // =======================================================================
 // Some useful constants
@@ -71,13 +74,12 @@ inline double acosh (double x)
 // =======================================================================
 // class Vector
 
-class Vector {
+class Vector final {
 public:
-	inline Vector ()
+	Vector () 
 	{ x = y = z = 0.0; }
 
-	inline Vector (double _x, double _y, double _z)
-	{ x = _x, y = _y, z = _z; }
+	Vector (double _x, double _y, double _z): x(_x),y(_y),z(_z) {}
 
 	inline Vector (const Vector &vec)
 	{ x = vec.x, y = vec.y, z = vec.z; }
@@ -215,14 +217,14 @@ public:
 
 	void orthogonalise (int axis);
 
-	friend Matrix IMatrix();		 // returns identity matrix
+	/*friend*/ Matrix IMatrix();		 // returns identity matrix
 
 	friend Vector mul (const Matrix &A, const Vector &b);  // returns A * b
 	friend Vector tmul (const Matrix &A, const Vector &b); // returns A^T * b
 	friend Matrix inv (const Matrix &A);  // inverse of A
 	friend Matrix transp (const Matrix &A); // transpose of A
 
-	friend void qrdcmp (Matrix &a, Vector &c, Vector &d, int *sing = 0);
+	friend void qrdcmp (Matrix &a, Vector &c, Vector &d, int *sing);
 	friend void qrsolv (const Matrix &a, const Vector &c, const Vector &d, Vector &b);
 
 	union {
@@ -230,38 +232,7 @@ public:
 		struct { double m11, m12, m13, m21, m22, m23, m31, m32, m33; };
 	};
 };
-
-// =======================================================================
-// class Vector4:  4-element vector
-
-class Vector4 {
-public:
-	inline Vector4 ()
-	{ x = y = z = w = 0.0; }
-
-	inline Vector4 (double _x, double _y, double _z, double _w)
-	{ x = _x, y = _y, z = _z, w = _w; }
-
-	inline Vector4 (const Vector4 &vec)
-	{ memcpy (data, vec.data, 4*sizeof(double)); }
-
-	inline void Set (double _x, double _y, double _z, double _w)
-	{ x = _x, y = _y, z = _z, w = _w; }
-
-	inline void Set (const Vector4 &vec)
-	{ memcpy (data, vec.data, 4*sizeof(double)); }
-
-	inline double &operator() (int i)
-	{ return data[i]; }
-
-	inline double operator() (int i) const
-	{ return data[i]; }
-
-	union {
-		double data[4];
-		struct { double x, y, z, w; };
-	};
-};
+Matrix IMatrix();
 
 // =======================================================================
 // class Matrix4:  4x4 dense matrix
@@ -298,12 +269,12 @@ public:
 	inline double operator() (int i, int j) const
 	{ return data[i*4+j]; }
 
-	friend void qrdcmp (Matrix4 &a, Vector4 &c, Vector4 &d, int *sing = 0);
-	friend void qrsolv (const Matrix4 &a, const Vector4 &c, const Vector4 &d, Vector4 &b);
-	friend void QRFactorize (Matrix4 &A, Vector4 &c, Vector4 &d);
-	friend void RSolve (const Matrix4 &A, const Vector4 &d, Vector4 &b);
-	friend void QRSolve (const Matrix4 &A, const Vector4 &c,
-		const Vector4 &d, const Vector4 &b, Vector4 &x);
+	friend void qrdcmp (Matrix4 &a, glm::dvec4 &c, glm::dvec4 &d, int *sing);
+	friend void qrsolv (const Matrix4 &a, const glm::dvec4 &c, const glm::dvec4 &d, glm::dvec4 &b);
+	friend void QRFactorize (Matrix4 &A, glm::dvec4 &c, glm::dvec4 &d);
+	friend void RSolve (const Matrix4 &A, const glm::dvec4 &d, glm::dvec4 &b);
+	friend void QRSolve (const Matrix4 &A, const glm::dvec4 &c,
+		const glm::dvec4 &d, const glm::dvec4 &b, glm::dvec4 &x);
 
 	union {
 		double data[16];
@@ -314,7 +285,7 @@ public:
 // =======================================================================
 // class Quaternion
 
-class Quaternion {
+class Quaternion final {
 public:
 	inline Quaternion () { qvx = qvy = qvz = 0.0, qs = 1.0; }
 	// Create an identity quaternion

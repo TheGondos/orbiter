@@ -14,6 +14,9 @@
 #include "meshres_p0.h"
 #include "meshres_vc.h"
 #include "dg_vc_anim.h"
+#include <strings.h>
+
+#define _stricmp strcasecmp
 
 // ==============================================================
 // Docking control subsystem
@@ -92,25 +95,25 @@ NoseconeCtrl::NoseconeCtrl (DockingCtrlSubsystem *_subsys)
 	ELID_INDICATOR = AddElement (indicator = new NoseconeIndicator (this));
 
 	// Nosecone animation
-	static UINT NConeTLGrp[2] = {GRP_NConeTL1,GRP_NConeTL2};
+	static unsigned int NConeTLGrp[2] = {GRP_NConeTL1,GRP_NConeTL2};
 	static MGROUP_ROTATE NConeTL (0, NConeTLGrp, 2,
 		_V(-0.424,-0.066,9.838), _V(-0.707,-0.707,0), (float)(150*RAD));
-	static UINT NConeTRGrp[2] = {GRP_NConeTR1,GRP_NConeTR2};
+	static unsigned int NConeTRGrp[2] = {GRP_NConeTR1,GRP_NConeTR2};
 	static MGROUP_ROTATE NConeTR (0, NConeTRGrp, 2,
 		_V( 0.424,-0.066,9.838), _V(-0.707, 0.707,0), (float)(150*RAD));
-	static UINT NConeBLGrp[2] = {GRP_NConeBL1,GRP_NConeBL2};
+	static unsigned int NConeBLGrp[2] = {GRP_NConeBL1,GRP_NConeBL2};
 	static MGROUP_ROTATE NConeBL (0, NConeBLGrp, 2,
 		_V(-0.424,-0.914,9.838), _V( 0.707,-0.707,0), (float)(150*RAD));
-	static UINT NConeBRGrp[2] = {GRP_NConeBR1,GRP_NConeBR2};
+	static unsigned int NConeBRGrp[2] = {GRP_NConeBR1,GRP_NConeBR2};
 	static MGROUP_ROTATE NConeBR (0, NConeBRGrp, 2,
 		_V( 0.424,-0.914,9.838), _V( 0.707, 0.707,0), (float)(150*RAD));
-	static UINT NConeDockGrp[1] = {GRP_NConeDock};
+	static unsigned int NConeDockGrp[1] = {GRP_NConeDock};
 	static MGROUP_TRANSLATE NConeDock (0, NConeDockGrp, 1, _V(0,0,0.06));
 	// virtual cockpit mesh animation (nose cone visible from cockpit)
-	static UINT VCNConeTLGrp[1] = {GRP_NOSECONE_L_VC};
+	static unsigned int VCNConeTLGrp[1] = {GRP_NOSECONE_L_VC};
 	static MGROUP_ROTATE VCNConeTL (1, VCNConeTLGrp, 1,
 		_V(-0.424,-0.066,9.838), _V(-0.707,-0.707,0), (float)(150*RAD));
-	static UINT VCNConeTRGrp[1] = {GRP_NOSECONE_R_VC};
+	static unsigned int VCNConeTRGrp[1] = {GRP_NOSECONE_R_VC};
 	static MGROUP_ROTATE VCNConeTR (1, VCNConeTRGrp, 1,
 		_V( 0.424,-0.066,9.838), _V(-0.707, 0.707,0), (float)(150*RAD));
 	anim_nose = DG()->CreateAnimation (0);
@@ -123,7 +126,7 @@ NoseconeCtrl::NoseconeCtrl (DockingCtrlSubsystem *_subsys)
 	DG()->AddAnimationComponent (anim_nose, 0.8, 1, &NConeDock);
 
 	// Nosecone lever VC animatuion
-	static UINT NoseconeLeverGrp = GRP_NOSECONE_LEVER_VC;
+	static unsigned int NoseconeLeverGrp = GRP_NOSECONE_LEVER_VC;
 	static MGROUP_ROTATE NoseconeLeverTransform (1, &NoseconeLeverGrp, 1,
 		VC_NCONELEVER_ref, VC_NCONELEVER_axis, (float)(-70*RAD));
 	anim_noselever = DG()->CreateAnimation (0.5);
@@ -135,14 +138,11 @@ NoseconeCtrl::NoseconeCtrl (DockingCtrlSubsystem *_subsys)
 
 void NoseconeCtrl::OpenNcone ()
 {
-	extern void UpdateCtrlDialog (DeltaGlider *dg, HWND hWnd=0);
-
 	ncone_state.Open();
 	nlever_state.Open();
 	DG()->UpdateStatusIndicators();
 	DG()->TriggerPanelRedrawArea (0, ELID_LEVER);
 	DG()->TriggerRedrawArea (0, 0, ELID_INDICATOR);
-	UpdateCtrlDialog (DG());
 	DG()->RecordEvent ("NOSECONE", "OPEN");
 }
 
@@ -150,8 +150,6 @@ void NoseconeCtrl::OpenNcone ()
 
 void NoseconeCtrl::CloseNcone ()
 {
-	extern void UpdateCtrlDialog (DeltaGlider *dg, HWND hWnd=0);
-
 	ncone_state.Close();
 	nlever_state.Close();
 	DG()->UpdateStatusIndicators();
@@ -161,7 +159,6 @@ void NoseconeCtrl::CloseNcone ()
 	if (!((DockingCtrlSubsystem*)Parent())->LadderState().IsClosed())
 		((DockingCtrlSubsystem*)Parent())->RetractLadder(); // retract ladder before closing the nose cone
 
-	UpdateCtrlDialog (DG());
 	DG()->RecordEvent ("NOSECONE", "CLOSE");
 }
 
@@ -200,7 +197,7 @@ void NoseconeCtrl::clbkPostStep (double simt, double simdt, double mjd)
 
 // --------------------------------------------------------------
 
-bool NoseconeCtrl::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH)
+bool NoseconeCtrl::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH)
 {
 	if (panelid != 0) return false;
 
@@ -271,7 +268,7 @@ bool NoseconeCtrl::clbkPlaybackEvent (double simt, double event_t, const char *e
 
 // --------------------------------------------------------------
 
-int NoseconeCtrl::clbkConsumeBufferedKey (DWORD key, bool down, char *kstate)
+int NoseconeCtrl::clbkConsumeBufferedKey (int key, bool down, char *kstate)
 {
 	if (KEYMOD_ALT(kstate) || KEYMOD_CONTROL(kstate) || KEYMOD_SHIFT(kstate))
 		return 0;
@@ -391,12 +388,12 @@ bool NoseconeIndicator::RedrawVC (DEVMESHHANDLE hMesh, SURFHANDLE surf)
                        (modf (oapiGetSimTime()+tofs, &d) < 0.5));
 	if (showlights != light) {
 		GROUPEDITSPEC ges;
-		static WORD vtxofs = VC_NCONE_INDICATOR_vofs;
-		static const DWORD nvtx = 2;
-		static WORD vidx[nvtx] = {vtxofs,vtxofs+1};
+		static uint16_t vtxofs = VC_NCONE_INDICATOR_vofs;
+		static const int nvtx = 2;
+		static uint16_t vidx[nvtx] = {vtxofs,(uint16_t)(vtxofs+1)};
 		static float v[2] = {0.2427f,0.3003f};
 		NTVERTEX vtx[nvtx];
-		for (DWORD i = 0; i < nvtx; i++)
+		for (int i = 0; i < nvtx; i++)
 			vtx[i].tv = v[showlights ? 1:0];
 		ges.flags = GRPEDIT_VTXTEXV;
 		ges.Vtx = vtx;
@@ -420,7 +417,7 @@ UndockCtrl::UndockCtrl (DockingCtrlSubsystem *_subsys)
 	ELID_LEVER = AddElement (lever = new UndockLever (this));
 
 	// Undock lever animation
-	static UINT UndockLeverGrp = GRP_UNDOCK_LEVER_VC;
+	static unsigned int UndockLeverGrp = GRP_UNDOCK_LEVER_VC;
 	static MGROUP_ROTATE UndockLeverTransform (1, &UndockLeverGrp, 1,
 		VC_UNDOCKLEVER_ref, VC_UNDOCKLEVER_axis, (float)(-90*RAD));
 	anim_undocklever = DG()->CreateAnimation (0);
@@ -453,7 +450,7 @@ void UndockCtrl::clbkPostStep (double simt, double simdt, double mjd)
 
 // --------------------------------------------------------------
 
-bool UndockCtrl::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH)
+bool UndockCtrl::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH)
 {
 	if (panelid != 0) return false;
 
@@ -514,7 +511,7 @@ bool UndockLever::Redraw2D (SURFHANDLE surf)
 bool UndockLever::ProcessMouse2D (int event, int mx, int my)
 {
 	if (event & PANEL_MOUSE_LBDOWN) vessel->Undock (0);
-	btndown = (event == PANEL_MOUSE_LBDOWN);
+	btndown = (event & PANEL_MOUSE_MOD_MASK) == PANEL_MOUSE_LBDOWN;
 	return true;
 }
 
@@ -540,7 +537,7 @@ EscapeLadderCtrl::EscapeLadderCtrl (DockingCtrlSubsystem *_subsys)
 	ELID_INDICATOR = AddElement (indicator = new LadderIndicator (this));
 
 	// Escape ladder animation
-	static UINT LadderGrp[2] = {GRP_Ladder1,GRP_Ladder2};
+	static unsigned int LadderGrp[2] = {GRP_Ladder1,GRP_Ladder2};
 	static MGROUP_TRANSLATE Ladder1 (0, LadderGrp, 2, _V(0,0,1.1));
 	static MGROUP_ROTATE Ladder2 (0, LadderGrp, 2,
 		_V(0,-1.05,9.85), _V(1,0,0), (float)(80*RAD));
@@ -553,8 +550,6 @@ EscapeLadderCtrl::EscapeLadderCtrl (DockingCtrlSubsystem *_subsys)
 
 void EscapeLadderCtrl::ExtendLadder ()
 {
-	extern void UpdateCtrlDialog (DeltaGlider *dg, HWND hWnd=0);
-
 	if (!((DockingCtrlSubsystem*)Parent())->NconeState().IsOpen()) return;
 	// don't extend ladder if nosecone is closed
 
@@ -562,7 +557,6 @@ void EscapeLadderCtrl::ExtendLadder ()
 	// don't extend ladder if dock is engaged
 
 	ladder_state.Open();
-	UpdateCtrlDialog(DG());
 	DG()->RecordEvent ("LADDER", "OPEN");
 }
 
@@ -570,10 +564,7 @@ void EscapeLadderCtrl::ExtendLadder ()
 
 void EscapeLadderCtrl::RetractLadder ()
 {
-	extern void UpdateCtrlDialog (DeltaGlider *dg, HWND hWnd=0);
-
 	ladder_state.Close();
-	UpdateCtrlDialog(DG());
 	DG()->RecordEvent ("LADDER", "CLOSE");
 }
 
@@ -623,7 +614,7 @@ bool EscapeLadderCtrl::clbkPlaybackEvent (double simt, double event_t, const cha
 
 // --------------------------------------------------------------
 
-bool EscapeLadderCtrl::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH)
+bool EscapeLadderCtrl::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH)
 {
 	if (panelid != 0) return false;
 
@@ -738,12 +729,12 @@ bool LadderIndicator::RedrawVC (DEVMESHHANDLE hMesh, SURFHANDLE surf)
 	bool showlights = (state.State() == 1.0 || (state.Speed() && modf(oapiGetSimTime()*1.7, &d) < 0.5));
 	if (showlights != vlight_VC) {
 		GROUPEDITSPEC ges;
-		static const WORD vtxofs = VC_ELADDER_INDICATOR_vofs;
-		static const DWORD nvtx = 4;
-		static WORD vidx[nvtx] = {vtxofs,vtxofs+1,vtxofs+2,vtxofs+3};
+		static const uint16_t vtxofs = VC_ELADDER_INDICATOR_vofs;
+		static const int nvtx = 4;
+		static uint16_t vidx[nvtx] = {vtxofs,vtxofs+1,vtxofs+2,vtxofs+3};
 		static const float u[2] = {0.0586f,0.0713f};
 		NTVERTEX vtx[nvtx];
-		for (DWORD i = 0; i < nvtx; i++)
+		for (int i = 0; i < nvtx; i++)
 			vtx[i].tu = u[showlights ? 1:0];
 		ges.flags = GRPEDIT_VTXTEXU;
 		ges.Vtx = vtx;
@@ -764,6 +755,7 @@ DocksealCtrl::DocksealCtrl (DockingCtrlSubsystem *_subsys)
 {
 	isDocked = false;
 	dockTime = -1e10;
+	isSealing = false;
 
 	ELID_INDICATOR = AddElement (indicator = new DocksealIndicator (this));
 }
@@ -805,7 +797,7 @@ void DocksealCtrl::clbkPostCreation ()
 
 // --------------------------------------------------------------
 
-bool DocksealCtrl::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH)
+bool DocksealCtrl::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH)
 {
 	if (panelid != 0) return false;
 
@@ -887,12 +879,12 @@ bool DocksealIndicator::RedrawVC (DEVMESHHANDLE hMesh, SURFHANDLE surf)
 	}
 	if (showlights != vlight_VC) {
 		GROUPEDITSPEC ges;
-		static const WORD vtxofs = VC_SEAL_INDICATOR_vofs;
-		static const DWORD nvtx = 4;
-		static WORD vidx[nvtx] = {vtxofs,vtxofs+1,vtxofs+2,vtxofs+3};
+		static const uint16_t vtxofs = VC_SEAL_INDICATOR_vofs;
+		static const int nvtx = 4;
+		static uint16_t vidx[nvtx] = {vtxofs,vtxofs+1,vtxofs+2,vtxofs+3};
 		static const float u[2] = {0.0586f,0.0713f};
 		NTVERTEX vtx[nvtx];
-		for (DWORD i = 0; i < nvtx; i++)
+		for (int i = 0; i < nvtx; i++)
 			vtx[i].tu = u[showlights ? 1:0];
 		ges.flags = GRPEDIT_VTXTEXU;
 		ges.Vtx = vtx;

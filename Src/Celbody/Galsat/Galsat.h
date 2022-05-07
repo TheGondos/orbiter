@@ -5,7 +5,7 @@
 #define __GALSAT_H
 
 #include "OrbiterAPI.h"
-#include "CelbodyAPI.h"
+#include "CelBodyAPI.h"
 
 #define GAL_BARYCENTRE 0
 #define GAL_IO         1
@@ -23,9 +23,9 @@ class DLLEXPORT GALOBJ: public CELBODY2 {
 public:
 	GALOBJ (OBJHANDLE hObj);
 	bool bEphemeris() const;
-	int  clbkEphemeris (double mjd, int req, double *ret);
-	int  clbkFastEphemeris (double simt, int req, double *ret);
-	void clbkInit (FILEHANDLE cfg);
+	int  clbkEphemeris (double mjd, int req, double *ret) override;
+	int  clbkFastEphemeris (double simt, int req, double *ret) override;
+	void clbkInit (FILEHANDLE cfg) override;
 
 protected:
 	int ksat;        // object id
@@ -44,7 +44,7 @@ DLLEXPORT void JupiterBaryFastEphemeris (double simt, double *ret, Sample *sp);
 // Lieske driver functions
 // ===========================================================
 
-int cd2com (char *fname);   // read data from file
+int cd2com (const char *fname);   // read data from file
 void chkgal (void);         // set up data
 void galsat (double *r, double *rorb, double tjd, int ksat, int kflag);
 							// calculate ephemerides

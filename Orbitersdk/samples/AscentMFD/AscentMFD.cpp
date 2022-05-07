@@ -40,7 +40,7 @@ static struct {  // global data storage
 // ==============================================================
 // API interface
 
-DLLCLBK void InitModule (HINSTANCE hDLL)
+DLLCLBK void InitModule (DynamicModule *hDLL)
 {
 	static char *name = "Ascent profile";
 	MFDMODESPECEX spec;
@@ -60,7 +60,7 @@ DLLCLBK void InitModule (HINSTANCE hDLL)
 	g_AscentMFD.mode = oapiRegisterMFDMode (spec);
 }
 
-DLLCLBK void ExitModule (HINSTANCE hDLL)
+DLLCLBK void ExitModule (DynamicModule *hDLL)
 {
 	oapiUnregisterMFDMode (g_AscentMFD.mode);
 	delete []g_Data.time;

@@ -8,7 +8,7 @@
 #include <fstream>
 #include <stdio.h>
 #include <string.h>
-#include <io.h>
+//#include <io.h>
 #include "Orbiter.h"
 #include "Config.h"
 #include "State.h"
@@ -20,16 +20,6 @@
 #include "Camera.h"
 #include "Log.h"
 #include "Util.h"
-
-#ifdef INLINEGRAPHICS
-#include "Texture.h"
-#include "Vplanet.h"
-#include "Spherepatch.h"
-#include "TileMgr.h"
-#include "surfmgr2.h"
-#include "cloudmgr2.h"
-extern TextureManager2 *g_texmanager2;
-#endif // INLINEGRAPHICS
 
 #define UPDMODE_ANALYTIC 0
 #define UPDMODE_DYNAMIC  1
@@ -49,9 +39,9 @@ void InterpretEphemeris (double *data, int format, Vector *pos, Vector *vel);
 
 
 const double OAPI_RAND_MAX = 65536.0;
-static DWORD g_seed = 0;
+static int32_t g_seed = 0;
 
-static const DWORD g_rseed[100] = {
+static const uint32_t g_rseed[100] = {
 	84351070,
   2926063127,
   1629858562,
@@ -154,50 +144,11 @@ static const DWORD g_rseed[100] = {
   2934889985
   };
 
-inline void oapi_srand (DWORD seed) { g_seed = seed; }
-inline DWORD oapi_rand()
+inline void oapi_srand (int32_t seed) { g_seed = seed; }
+inline int32_t oapi_rand()
 { g_seed = 1103515245*g_seed + 12345; return g_seed >> 16; }
 
 bool Planet::bEnableWind = true;
-
-Planet::Planet (double _mass, double _mean_radius)
-: CelestialBody (_mass, _mean_radius)
-{
-	psys         = 0;
-	ncloudtex    = 0;
-	cloudtex     = 0;
-	nringtex     = 0;
-	ringtex      = 0;
-	tmgr         = NULL;
-	smgr2        = NULL;
-	cmgr2        = NULL;
-	emgr         = NULL;
-	elev_res     = 1.0;
-	fog.dens_0 = fog.dens_ref = fog.alt_ref = 0.0;
-	nbase        = 0;
-	nnav         = 0;
-	nobserver    = 0;
-	labellist    = 0;
-	nlabellist   = 0;
-	labelpath    = 0;
-	vislimit     = spotlimit = 2e-5;
-	horizon_excess = 0.002;
-	bb_excess    = 0.0;
-	max_patch_level = 1;
-	min_cloud_level = 100;
-	max_cloud_level = 0;
-	minelev      = 0.0;
-	AtmInterface = 0;
-	atm_attenuationalt = 0.0;
-	bHasCloudlayer = false;
-	bBrightClouds  = false;
-	bCloudMicrotex = false;
-	bWaterMicrotex = false;
-	bHasRings = false;
-	labelLegend = NULL;
-	nLabelLegend = 0;
-	Setup ();
-}
 
 Planet::Planet (char *fname)
 : CelestialBody (fname)
@@ -207,10 +158,6 @@ Planet::Planet (char *fname)
 	char cbuf[256], *pc;
 
 	psys         = 0;
-	ncloudtex    = 0;
-	cloudtex     = 0;
-	nringtex     = 0;
-	ringtex      = 0;
 	nbase        = 0;
 	tmgr         = NULL;
 	smgr2        = NULL;
@@ -242,11 +189,6 @@ Planet::Planet (char *fname)
 			atm.p0   = prm.p;
 			atm.rho0 = prm.rho;
 			AtmInterface = 3;
-		} else if (modIntf.oplanetAtmPrm) {
-			modIntf.oplanetAtmPrm (0, &prm);
-			atm.p0   = prm.p;
-			atm.rho0 = prm.rho;
-			AtmInterface = 2;
 		}
 	}
 	if (!AtmInterface) {
@@ -256,6 +198,7 @@ Planet::Planet (char *fname)
 
 	// Override parameters from configuration file
 	if (AtmInterface) {
+		atm_attenuationalt = 0.0;
 		if (!GetItemReal (ifs, "AtmAltLimit", atm.altlimit) && !atm.altlimit) {
 			atm.altlimit = 200e3;
 		} else {
@@ -269,7 +212,7 @@ Planet::Planet (char *fname)
 		if (!GetItemReal (ifs, "AtmGamma", atm.gamma) && !atm.gamma)
 			atm.gamma = 1.4;  // default to air
 		if (!GetItemReal (ifs, "AtmHazeExtent", hazerange)) hazerange = 0.1;
-		hazerange = max (0, min (0.9, hazerange));
+		hazerange = max (0.0, min (0.9, hazerange));
 		if (!GetItemReal (ifs, "AtmHazeShift", hazeshift)) hazeshift = 0.0;
 		if (!GetItemReal (ifs, "AtmHazeDensity", hazedens)) hazedens = 1.0;
 		Vector col0;
@@ -311,17 +254,19 @@ Planet::Planet (char *fname)
 		label_version = 1;
 
 	if (GetItemInt (ifs, "MaxPatchResolution", i))
-		max_patch_level = (DWORD)i;
+		max_patch_level = i;
 	else
 		max_patch_level = 8;
-	max_patch_level = min (max_patch_level, SURF_MAX_PATCHLEVEL2);
-	max_patch_level = min (max_patch_level, g_pOrbiter->Cfg()->CfgVisualPrm.PlanetMaxLevel);
+	max_patch_level = std::min ((int)max_patch_level, SURF_MAX_PATCHLEVEL2);
+	max_patch_level = std::min (max_patch_level, g_pOrbiter->Cfg()->CfgVisualPrm.PlanetMaxLevel);
 
 	bHasCloudlayer = g_pOrbiter->Cfg()->CfgVisualPrm.bClouds &&
 		GetItemInt (ifs, "MinCloudResolution", min_cloud_level) && min_cloud_level >= 1;
+	
+	bCloudMicrotex = false;
 	if (bHasCloudlayer) {
 		if (!GetItemInt (ifs, "MaxCloudResolution", max_cloud_level))
-			max_cloud_level = min (8, max_patch_level);
+			max_cloud_level = std::min (8, (int)max_patch_level);
 		if (!GetItemBool (ifs, "BrightenClouds", bBrightClouds))
 			bBrightClouds = false;
 		if (GetItemString (ifs, "CloudMicrotextureAlt", cbuf) &&
@@ -371,14 +316,14 @@ Planet::Planet (char *fname)
 			}
 		}
 	} else { // by default, scan folder 'Config/<pname>/Base'
-		sprintf (cbuf, "%s\\Base", name);
+		sprintf (cbuf, "%s/Base", name);
 		ScanBases (cbuf);
 	}
 
 	// old style surface basis list
 	if (GetItemInt (ifs, "NumBases", n)) { // link bases as children of the planet
 		for (i = 0; i < n; i++) {
-			char bstr[10], cbuf[256], nm[128];
+			char bstr[16], cbuf[256], nm[128];
 			double lng, lat;
 			sprintf (bstr, "Base%d", i+1);
 			if (GetItemString (ifs, bstr, cbuf) &&
@@ -411,7 +356,7 @@ Planet::Planet (char *fname)
 	nlabellist = 0;
 	labelpath = 0;
 	if (GetItemString (ifs, "MarkerPath", cbuf)) {
-		if (cbuf[strlen(cbuf)-1] != '\\') strcat (cbuf, "\\");
+		if (cbuf[strlen(cbuf)-1] != '/') strcat (cbuf, "/");
 		labelpath = new char[strlen(cbuf)+1]; TRACENEW
 		strcpy (labelpath, cbuf);
 	}
@@ -427,7 +372,7 @@ Planet::Planet (char *fname)
 Planet::~Planet ()
 {
 	int i, j, k;
-	DWORD d;
+	int d;
 
 	if (nbase) {
 		for (d = 0; d < nbase; d++)
@@ -465,13 +410,17 @@ Planet::~Planet ()
 
 intptr_t Planet::FindFirst (int type, _finddata_t *fdata, char *path, char *fname)
 {
+	fprintf(stderr, "Planet::FindFirst\n");
+	exit(-1);
+	return 0;
+	/*
 	intptr_t fh;
 	char cbuf[256];
 
 	switch (type) {
 	case FILETYPE_MARKER:
 		if (labelpath) strcpy (path, labelpath);
-		else           sprintf (path, "%s%s\\Marker\\", g_pOrbiter->Cfg()->CfgDirPrm.ConfigDir, name);
+		else           sprintf (path, "%s%s/Marker/", g_pOrbiter->Cfg()->CfgDirPrm.ConfigDir, name);
 		break;
 	}
 	sprintf (cbuf, "%s*.mkr", path);
@@ -480,22 +429,27 @@ intptr_t Planet::FindFirst (int type, _finddata_t *fdata, char *path, char *fnam
 		fname[strlen(fdata->name)-4] = '\0';
 	}
 	return fh;
+	*/
 }
 
 intptr_t Planet::FindNext (intptr_t fh, _finddata_t *fdata, char *fname)
 {
+	fprintf(stderr, "Planet::FindNext\n");
+	exit(-1);
+	return 0;
+	/*
 	intptr_t fn = _findnext (fh, fdata);
 	if (!fn) {
 		strncpy (fname, fdata->name, strlen(fdata->name)-4);
 		fname[strlen(fdata->name)-4] = '\0';
 	}
 	return fn;
+	*/
 }
-
+#include <dirent.h>
 void Planet::ScanBases (char *path)
 {
-	char cbuf[256], spath[256], *pc, *cut = 0;
-
+	char cbuf[256], spath[512], *pc, *cut = 0;
 	// check for period limiter
 	if ((pc = strstr (path, "PERIOD")) != NULL) {
 		if (sscanf (pc+6, "%s%s", cbuf, cbuf+128) == 2) {
@@ -519,25 +473,29 @@ void Planet::ScanBases (char *path)
 		trim_string (path);
 	}
 
-	intptr_t fh;
-	_finddata_t fdata;
-	sprintf (spath, "%s\\*", path);
+	sprintf (spath, "%s/", path);
 	strcpy (cbuf, g_pOrbiter->ConfigPath(spath));
-	if ((fh = _findfirst (cbuf, &fdata)) != -1) {
-		do {
-			sprintf (spath, "%s\\%s", path, fdata.name);
-			spath[strlen(spath)-4] = '\0'; // strip 'cfg' extension
-			ifstream ifs (g_pOrbiter->ConfigPath (spath));
-			if (!ifs) continue;
-			do {
-				if (!ifs.getline (cbuf, 256)) break;
-				pc = trim_string (cbuf);
-			} while (!pc[0]);
-			if (_strnicmp (pc, "BASE-V2.0", 9)) continue;
-			Base *base = new Base (spath, this); TRACENEW
-			if (!AddBase (base))
-				delete base;
-		} while (!_findnext (fh, &fdata));
+	cbuf[strlen(cbuf)-4] = '\0'; // strip 'cfg' extension
+	DIR *dir = opendir(cbuf);
+	if (dir != NULL) {
+		struct dirent * dp = NULL;
+		while ((dp = readdir(dir)) != NULL) {
+			if(dp->d_type != DT_DIR) {
+				sprintf (spath, "%s/%s", path, dp->d_name);
+				spath[strlen(spath)-4] = '\0'; // strip 'cfg' extension
+				ifstream ifs (g_pOrbiter->ConfigPath (spath));
+				if (!ifs) continue;
+				do {
+					if (!ifs.getline (cbuf, 256)) break;
+					pc = trim_string (cbuf);
+				} while (!pc[0]);
+				if (_strnicmp (pc, "BASE-V2.0", 9)) continue;
+				Base *base = new Base (spath, this); TRACENEW
+				if (!AddBase (base))
+					delete base;
+			}
+		}
+		closedir(dir);
 	}
 }
 
@@ -550,7 +508,7 @@ bool Planet::AddBase (Base *base)
 
 	Base **tmp = new Base*[nbase+1];
 	if (nbase) {
-		for (DWORD i = 0; i < nbase; i++)
+		for (int i = 0; i < nbase; i++)
 			tmp[i] = baselist[i];
 		delete []baselist;
 	}
@@ -562,121 +520,152 @@ bool Planet::AddBase (Base *base)
 void Planet::ScanLabelLists (ifstream &cfg)
 {
 	int i;
-	char cbuf[256], fname[256], lbpath[256];
+	char cbuf[600], fname[256], lbpath[300];
 	int nlabellistbuf = 0;
 	nlabellist = 0;
 
-	_finddata_t fdata;
-	intptr_t fh = FindFirst (FILETYPE_MARKER, &fdata, lbpath, fname);
-	if (fh >= 0) {
+/*
+	intptr_t fh;
+	char cbuf[256];
 
-		oapi::GraphicsClient::LABELLIST *ll;
-		bool scanheader = (labellist == 0); // only need to parse the headers for the initial scan
-		
-		do {
-			// open marker file
-			sprintf (cbuf, "%s%s.mkr", lbpath, fname);
-			ifstream ulf (cbuf);
-
-			// read label header
-			if (scanheader) {
-				if (nlabellist == nlabellistbuf) { // increase buffer
-					oapi::GraphicsClient::LABELLIST *tmp = new oapi::GraphicsClient::LABELLIST[nlabellistbuf += 8];
-					memcpy (tmp, labellist, nlabellist*sizeof(oapi::GraphicsClient::LABELLIST));
-					if (nlabellist) delete []labellist;
-					labellist = tmp;
-				}
-				ll = labellist+nlabellist;
-				strncpy (ll->name, fname, 64);
-				ll->list    = NULL;
-				ll->length  = 0;
-				ll->colour  = 1;
-				ll->shape   = 0;
-				ll->size    = 1.0f;
-				ll->distfac = 1.0f;
-				ll->active  = false;
-				ll->flag    = 0;
-				if (FindLine (ulf, "BEGIN_HEADER")) {
-					char item[256], value[256];
-					for (;;) {
-						if (!ulf.getline (cbuf, 256) || !_strnicmp (cbuf, "END_HEADER", 10)) break;
-						sscanf (cbuf, "%s %s", item, value);
-						if (!_stricmp (item, "InitialState")) {
-							if (!_stricmp (value, "on")) ll->active = true;
-						} else if (!_stricmp (item, "ColourIdx")) {
-							int col;
-							sscanf (value, "%d", &col);
-							ll->colour = max (0, min (5, col));
-						} else if (!_stricmp (item, "ShapeIdx")) {
-							int shape;
-							sscanf (value, "%d", &shape);
-							ll->shape = max (0, min (6, shape));
-						} else if (!_stricmp (item, "Size")) {
-							float size;
-							sscanf (value, "%f", &size);
-							ll->size = max (0.1f, min (2.0f, size));
-						} else if (!_stricmp (item, "DistanceFactor")) {
-							float distfac;
-							sscanf (value, "%f", &distfac);
-							ll->distfac = max (1e-5f, min (1e3f, distfac));
-						}
-					}
-				}
-			} else {
-				ll = labellist+nlabellist;
-			}
-
-			// read label list for active labels, if not already present
-			if (ll->active && !ll->list) {
-				ll->length = 0;
-				int nlistbuf = 0;
-				double lng, lat;
-				int nl;
-				char *pc, *pc2;
-				Vector pos;
-				FindLine (ulf, "BEGIN_DATA");
-				for (nl = 0;; nl++) {
-					if (!ulf.getline (cbuf, 256)) break;
-					pc = strtok (cbuf, ":");
-					if (!pc || sscanf (pc, "%lf%lf", &lng, &lat) != 2) continue;
-					if (ll->length == nlistbuf) {
-						oapi::GraphicsClient::LABELSPEC *tmp = new oapi::GraphicsClient::LABELSPEC[nlistbuf += 64];
-						if (ll->length) {
-							memcpy (tmp, ll->list, ll->length*sizeof(oapi::GraphicsClient::LABELSPEC));
-							delete []ll->list;
-						}
-						ll->list = tmp;
-					}
-					EquatorialToLocal (RAD*lng, RAD*lat, size, pos);
-					ll->list[ll->length].pos = _V(pos.x, pos.y, pos.z);
-					//ll->list[ll->length].pos.x = Rad (lng);
-					//ll->list[ll->length].pos.y = Rad (lat);
-					for (i = 0; i < 2; i++) {
-						ll->list[ll->length].label[i] = 0;
-						if (pc = strtok (NULL, ":")) {
-							pc2 = trim_string (pc);
-							int len = strlen(pc2);
-							if (len) {
-								ll->list[ll->length].label[i] = new char[len+1]; TRACENEW
-								strcpy (ll->list[ll->length].label[i], pc2);
-							}
-						}
-					}
-					ll->length++;
-				}
-			}
-			nlabellist++;
-
-		} while (!FindNext (fh, &fdata, fname));
-		_findclose (fh);
+		if (labelpath) strcpy (path, labelpath);
+		else           sprintf (path, "%s%s/Marker/", g_pOrbiter->Cfg()->CfgDirPrm.ConfigDir, name);
+	sprintf (cbuf, "%s*.mkr", path);
+	if ((fh = _findfirst (cbuf, fdata)) != -1) {
+		strncpy (fname, fdata->name, strlen(fdata->name)-4);
+		fname[strlen(fdata->name)-4] = '\0';
 	}
+	return fh;*/
+
+	if (labelpath) strcpy (lbpath, labelpath);
+	else           sprintf (lbpath, "%s%s/Marker/", g_pOrbiter->Cfg()->CfgDirPrm.ConfigDir, name);
+
+	DIR *dir = opendir(lbpath);
+	if(dir == NULL) {
+		return;
+	}
+	struct dirent * dp = NULL;
+	oapi::GraphicsClient::LABELLIST *ll;
+	bool scanheader = (labellist == 0); // only need to parse the headers for the initial scan
+
+	while ((dp = readdir(dir)) != NULL) {
+		if(!strcmp(dp->d_name,".") || !strcmp(dp->d_name,".."))
+			continue;
+		auto len = strlen(dp->d_name);
+		strcpy (fname, dp->d_name);
+		fname[len-4]='\0';
+		// open marker file
+		sprintf (cbuf, "%s%s.mkr", lbpath, fname);
+		ifstream ulf (cbuf);
+
+
+		// read label header
+		if (scanheader) {
+			if (nlabellist == nlabellistbuf) { // increase buffer
+				oapi::GraphicsClient::LABELLIST *tmp = new oapi::GraphicsClient::LABELLIST[nlabellistbuf += 8];
+				
+				if (nlabellist) {
+					memcpy (tmp, labellist, nlabellist*sizeof(oapi::GraphicsClient::LABELLIST));
+					delete []labellist;
+				}
+				labellist = tmp;
+			}
+			ll = labellist+nlabellist;
+			strncpy (ll->name, fname, 64);
+			ll->name[63] = '\0';
+			ll->list    = NULL;
+			ll->length  = 0;
+			ll->colour  = 1;
+			ll->shape   = 0;
+			ll->size    = 1.0f;
+			ll->distfac = 1.0f;
+			ll->active  = false;
+			ll->flag    = 0;
+			if (FindLine (ulf, "BEGIN_HEADER")) {
+				char item[256], value[256];
+				for (;;) {
+					if (!ulf.getline (cbuf, 256) || !_strnicmp (cbuf, "END_HEADER", 10)) break;
+					sscanf (cbuf, "%s %s", item, value);
+					if (!_stricmp (item, "InitialState")) {
+						if (!_stricmp (value, "on")) ll->active = true;
+					} else if (!_stricmp (item, "ColourIdx")) {
+						int col;
+						sscanf (value, "%d", &col);
+						ll->colour = max (0, min (5, col));
+					} else if (!_stricmp (item, "ShapeIdx")) {
+						int shape;
+						sscanf (value, "%d", &shape);
+						ll->shape = max (0, min (6, shape));
+					} else if (!_stricmp (item, "Size")) {
+						float size;
+						sscanf (value, "%f", &size);
+						ll->size = max (0.1f, min (2.0f, size));
+					} else if (!_stricmp (item, "DistanceFactor")) {
+						float distfac;
+						sscanf (value, "%f", &distfac);
+						ll->distfac = max (1e-5f, min (1e3f, distfac));
+					}
+				}
+			}
+		} else {
+			ll = labellist+nlabellist;
+		}
+
+		// read label list for active labels, if not already present
+		if (ll->active && !ll->list) {
+			ll->length = 0;
+			int nlistbuf = 0;
+			double lng, lat;
+			int nl;
+			char *pc, *pc2;
+			Vector pos;
+			FindLine (ulf, "BEGIN_DATA");
+			for (nl = 0;; nl++) {
+				if (!ulf.getline (cbuf, 256)) break;
+				if(cbuf[0] == '\0') continue;
+				if(cbuf[strlen(cbuf)-1]=='\r') cbuf[strlen(cbuf)-1]='\0';
+
+				pc = strtok (cbuf, ":");
+				if (!pc || sscanf (pc, "%lf%lf", &lng, &lat) != 2) continue;
+				if (ll->length == nlistbuf) {
+					oapi::GraphicsClient::LABELSPEC *tmp = new oapi::GraphicsClient::LABELSPEC[nlistbuf += 64];
+					if (ll->length) {
+						memcpy (tmp, ll->list, ll->length*sizeof(oapi::GraphicsClient::LABELSPEC));
+						delete []ll->list;
+					}
+					ll->list = tmp;
+				}
+				EquatorialToLocal (RAD*lng, RAD*lat, size, pos);
+				ll->list[ll->length].pos = _V(pos.x, pos.y, pos.z);
+				//ll->list[ll->length].pos.x = Rad (lng);
+				//ll->list[ll->length].pos.y = Rad (lat);
+				for (i = 0; i < 2; i++) {
+					//printf("Planet::ScanLabelLists3\n");
+					ll->list[ll->length].label[i] = 0;
+					if ((pc = strtok (NULL, ":"))) {
+						pc2 = trim_string (pc);
+						int len = strlen(pc2);
+						if (len) {
+							ll->list[ll->length].label[i] = new char[len+1]; TRACENEW
+							strcpy (ll->list[ll->length].label[i], pc2);
+						}
+					}
+				}
+				ll->length++;
+			}
+		}
+		nlabellist++;
+
+	};
+
+	closedir(dir);
 }
 
 void Planet::ScanLabelLegend()
 {
-	char path[256];
+	char path[300];
 	if (labelpath) strncpy (path, labelpath, 256);
-	else           sprintf (path, "%s%s\\", g_pOrbiter->Cfg()->CfgDirPrm.ConfigDir, name);
+	else           sprintf (path, "%s%s/", g_pOrbiter->Cfg()->CfgDirPrm.ConfigDir, name);
 	strcat (path, "Label.cfg");
 	std::ifstream ifs(path);
 	while (ifs.good()) {
@@ -691,9 +680,10 @@ void Planet::ScanLabelLegend()
 				memcpy(tmp, labelLegend, nLabelLegend*sizeof(oapi::GraphicsClient::LABELTYPE));
 				delete []labelLegend;
 			}
+
 			labelLegend = tmp;
 			labelLegend[nLabelLegend].active = (toupper(activestr[0]) == 'X');
-			labelLegend[nLabelLegend].col = RGB(r,g,b);
+			labelLegend[nLabelLegend].col = (uint32_t)r | ((uint32_t)g<<8) | ((uint32_t)b<<16);
 			labelLegend[nLabelLegend].labelId = typestr[0];
 			labelLegend[nLabelLegend].markerId = markerstr[0];
 			labelLegend[nLabelLegend].name = new char[strlen(name)+1];
@@ -705,12 +695,6 @@ void Planet::ScanLabelLegend()
 
 void Planet::ActivateLabels(bool activate)
 {
-#ifdef INLINEGRAPHICS
-	if (smgr2 && label_version == 2) {
-		if (activate) smgr2->CreateLabels();
-		else smgr2->DeleteLabels();
-	}
-#endif
 }
 
 void Planet::Setup ()
@@ -725,28 +709,15 @@ void Planet::Setup ()
 	bEnableWind = g_pOrbiter->Cfg()->CfgPhysicsPrm.bAtmWind;
 	// should be done only once rather than for every planet
 
-#ifdef INLINEGRAPHICS
-	// load all textures for the visual
-	InitDeviceObjects ();
-
 	if (tmgr_version == 2) {
-		int patchlvl = 2 << g_pOrbiter->Cfg()->CfgPRenderPrm.PatchRes;
-		smgr2 = new TileManager2<SurfTile> (this, max_patch_level, patchlvl);
-	} else {
-		tmgr = new TileManager (this); TRACENEW
-	}
-	if (cmgr_version == 2)
-		cmgr2 = new TileManager2<CloudTile> (this, max_cloud_level, 32);
-	// otherwise the cloud manager is handled by the VPlanet object
-#endif // INLINEGRAPHICS
-	if (tmgr_version == 2)
 		emgr = new ElevationManager (this);
+	}
 
-	for (DWORD i = 0; i < nbase; i++)
+	for (int i = 0; i < nbase; i++)
 		baselist[i]->Setup();
 }
 
-const void *Planet::GetParam (DWORD paramtype) const
+const void *Planet::GetParam (int paramtype) const
 {
 	switch (paramtype) {
 	case OBJPRM_PLANET_SURFACEMAXLEVEL:
@@ -813,74 +784,11 @@ const void *Planet::GetParam (DWORD paramtype) const
 
 void Planet::InitDeviceObjects ()
 {
-	//char cbuf[256];
-	//strcpy (cbuf, name); strcat (cbuf, ": Textures");
-	//g_pOrbiter->OutputLoadStatus (cbuf, 0);
-
-#ifdef INLINEGRAPHICS
-	FILE *file = 0;
-
-	if (bHasCloudlayer && cmgr_version == 1) { // create cloud texture array for old cloud implementation
-		ncloudtex = patchidx[max_cloud_level] - patchidx[min_cloud_level-1];
-		cloudtex = new LPDIRECTDRAWSURFACE7[ncloudtex]; TRACENEW
-		if (ncloudtex = g_texmanager2->OpenTextures (name, "_cloud.tex", cloudtex, ncloudtex)) {
-			while (ncloudtex < patchidx[max_cloud_level] - patchidx[min_cloud_level-1]) max_cloud_level--;
-			while (ncloudtex > patchidx[max_cloud_level] - patchidx[min_cloud_level-1]) cloudtex[--ncloudtex]->Release();
-		}
-		if (!ncloudtex) {
-			delete []cloudtex;
-			cloudtex = 0;
-			bHasCloudlayer = false;
-		}
-	} else {
-		ncloudtex = 0;
-		cloudtex = 0;
-	}
-
-	if (bHasRings) { // load ring textures
-		char cbuf[256];
-		strcpy (cbuf, name); strcat (cbuf, "_ring");
-		if (file = fopen (g_pOrbiter->TexPath (cbuf, ".tex"), "rb")) {
-			ringtex = new LPDIRECTDRAWSURFACE7[3]; TRACENEW
-			nringtex = g_texmanager2->ReadTextures (file, ringtex, 3);
-			fclose (file);
-			if (!nringtex) delete []ringtex;
-		}
-	}
-#endif
 }
 
 void Planet::DestroyDeviceObjects ()
 {
-#ifdef INLINEGRAPHICS
-	int i;
-
-	if (ncloudtex) {
-		for (i = 0; i < ncloudtex; i++) cloudtex[i]->Release();
-		delete []cloudtex;
-		cloudtex  = 0;
-		ncloudtex = 0;
-	}
-	if (nringtex) {
-		for (i = 0; i < nringtex; i++) ringtex[i]->Release();
-		delete []ringtex;
-		ringtex = 0;
-		nringtex = 0;
-	}
-	if (tmgr) {
-		delete tmgr;
-		tmgr = 0;
-	}
-	if (smgr2) {
-		delete smgr2;
-		smgr2 = 0;
-	}
-	if (cmgr2) {
-		delete cmgr2;
-		cmgr2 = 0;
-	}
-#endif
-	for (DWORD i = 0; i < nbase; i++)
+	for (int i = 0; i < nbase; i++)
 		baselist[i]->DestroyDeviceObjects ();
 	CelestialBody::DestroyDeviceObjects ();
 }
@@ -898,14 +806,14 @@ void Planet::ElToEcliptic (const Elements *el_equ, Elements *el_ecl) const
 void Planet::BeginStateUpdate ()
 {
 	CelestialBody::BeginStateUpdate();
-	for (DWORD i = 0; i < nbase; i++)
+	for (int i = 0; i < nbase; i++)
 		baselist[i]->BeginStateUpdate();
 }
 
 void Planet::EndStateUpdate ()
 {
 	CelestialBody::EndStateUpdate();
-	for (DWORD i = 0; i < nbase; i++)
+	for (int i = 0; i < nbase; i++)
 		baselist[i]->EndStateUpdate();
 }
 
@@ -919,7 +827,7 @@ void Planet::Update (bool force)
 	CelestialBody::Update (force);
 
 	// Update bases
-	for (DWORD i = 0; i < nbase; i++)
+	for (int i = 0; i < nbase; i++)
 		baselist[i]->Update (force);
 
 }
@@ -955,7 +863,7 @@ const GROUNDOBSERVERSPEC *Planet::GetGroundObserver (char *site, char *addr) con
 
 Base *Planet::GetBase (const char *_name, bool ignorecase)
 {
-	for (DWORD i = 0; i < nbase; i++)
+	for (int i = 0; i < nbase; i++)
 		if (!StrComp (baselist[i]->Name(), _name, ignorecase))
 			return baselist[i];
 	return 0;
@@ -963,7 +871,7 @@ Base *Planet::GetBase (const char *_name, bool ignorecase)
 
 const Base *Planet::GetBase (const char *_name, bool ignorecase) const
 {
-	for (DWORD i = 0; i < nbase; i++)
+	for (int i = 0; i < nbase; i++)
 		if (!StrComp (baselist[i]->Name(), _name, ignorecase))
 			return baselist[i];
 	return 0;
@@ -980,9 +888,6 @@ bool Planet::GetAtmParam (double alt, double lng, double lat, ATMPARAM *prm) con
 			prm->T = 288.16;
 			prm->p = atm.p0 * exp (-atm.C * alt);
 			prm->rho = prm->p * atm.rho0/atm.p0;
-			return true;
-		case 2:
-			modIntf.oplanetAtmPrm (alt, prm);
 			return true;
 		case 3:
 			module->clbkAtmParam (alt, prm);
@@ -1042,7 +947,7 @@ Vector Planet::WindVelocity (double lng, double lat, double alt, int frame, Wind
 	if (bEnableWind && HasAtmosphere()) {
 		
 		int k, dim;
-		DWORD r, rnd;
+		int r, rnd;
 		Vector wv0[4];
 
 		// cubic interpolation
@@ -1055,13 +960,13 @@ Vector Planet::WindVelocity (double lng, double lat, double alt, int frame, Wind
 		h10 = t3 - 2.0*t2 + t;
 		h01 = -2.0*t3 + 3.0*t2;
 		h11 = t3-t2;
-		r = (DWORD)alt0;
+		r = (int)alt0;
 		for (k = 0; k < 4; k++) {
 			oapi_srand(g_rseed[(r+k)%100]);
 			for (dim = 0; dim < 3; dim+=2) {
 				rnd = oapi_rand();
 				wv0[k].data[dim] = ((double)rnd/OAPI_RAND_MAX-0.5)*50;
-				//pert = ((double)(g_rseed[((DWORD)(t*100)+dim+k+r)%100]>>16)/OAPI_RAND_MAX-0.5)*20;
+				//pert = ((double)(g_rseed[((int)(t*100)+dim+k+r)%100]>>16)/OAPI_RAND_MAX-0.5)*20;
 				//wv0[k].data[dim] += pert;
 			}
 		}
@@ -1094,7 +999,7 @@ Vector Planet::WindVelocity (double lng, double lat, double alt, int frame, Wind
 		
 
 
-		rnd0 = (DWORD)alt0+12345;
+		rnd0 = (int)alt0+12345;
 		rnd1 = rnd0+1;
 		rnd0 = oapi_rand(rnd0); rnd1 = oapi_rand(rnd1);
 		for (i = 0; i < 2; i++) {
@@ -1145,35 +1050,3 @@ Vector Planet::WindVelocity (double lng, double lat, double alt, int frame, Wind
 	return v[ns-1];
 #endif
 }
-
-#ifdef UNDEF
-void Planet::RegisterModule (char *dllname)
-{
-	char cbuf[256], funcname[256], *funcp;
-	sprintf (cbuf, "Modules\\%s.dll", dllname);
-	hMod = LoadLibrary (cbuf);
-	if (!hMod) return;
-	strcpy (funcname, name); funcp = funcname + strlen(name);
-
-	strcpy (funcp, "_SetPrecision");
-	modIntf.oplanetSetPrecision = (OPLANET_SetPrecision)GetProcAddress (hMod, funcname);
-
-	strcpy (funcp, "_Ephemeris");
-	modIntf.oplanetEphemeris = (OPLANET_Ephemeris)GetProcAddress (hMod, funcname);
-
-	strcpy (funcp, "_FastEphemeris");
-	modIntf.oplanetFastEphemeris = (OPLANET_FastEphemeris)GetProcAddress (hMod, funcname);
-
-	strcpy (funcp, "_AtmPrm");
-	modIntf.oplanetAtmPrm = (OPLANET_AtmPrm)GetProcAddress (hMod, funcname);
-}
-
-void Planet::ClearModule ()
-{
-	if (hMod) {
-		FreeLibrary (hMod);
-		hMod = 0;
-	}
-	memset (&modIntf, 0, sizeof (modIntf));
-}
-#endif

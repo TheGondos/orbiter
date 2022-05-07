@@ -12,9 +12,9 @@
 #ifndef __QUADCOPTER_H
 #define __QUADCOPTER_H
 
-#include "orbitersdk.h"
+#include "Orbitersdk.h"
 #include "QuadcopterLua.h"
-#include "..\Common\Instrument.h"
+#include "../Common/Instrument.h"
 
 class PropulsionSubsystem;
 
@@ -25,8 +25,8 @@ public:
 
 	PropulsionSubsystem *ssysPropulsion() { return ssys_propulsion; }
 
-	void clbkSetClassCaps(FILEHANDLE cfg);
-	int clbkGeneric(int msgid, int prm, void *context);
+	void clbkSetClassCaps(FILEHANDLE cfg) override;
+	int clbkGeneric(int msgid, int prm, void *context) override;
 
 private:
 	// Vessel subsystems

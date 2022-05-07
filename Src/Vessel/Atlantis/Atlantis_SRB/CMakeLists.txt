@@ -22,7 +22,7 @@ target_include_directories(Atlantis_SRB
 )
 
 target_link_libraries(Atlantis_SRB
-	${ORBITER_LIB}
+#	${ORBITER_LIB}
 	${ORBITER_SDK_LIB}
 )
 
@@ -66,7 +66,7 @@ set_target_properties(Atlantis_SRB_Prerequisites
 
 # Installation
 install(TARGETS Atlantis_SRB
-	RUNTIME
+#	RUNTIME
 	DESTINATION ${ORBITER_INSTALL_MODULE_DIR}
 )
 install(DIRECTORY ${CONFIG_SOURCE_DIR}/

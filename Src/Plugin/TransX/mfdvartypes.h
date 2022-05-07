@@ -51,7 +51,7 @@ public:
 	virtual void chm_adjmode(){};
 	virtual void inc_variable();
 	virtual void dec_variable();
-	void init(MFDvarhandler *vars,int viewmode1, int viewmode2, char *vname);
+	void init(MFDvarhandler *vars,int viewmode1, int viewmode2, const char *vname);
 	MFDvarshiplist();
 	virtual ~MFDvarshiplist();
 
@@ -87,11 +87,11 @@ public:
 	virtual int getvalue() const;
 	virtual OBJHANDLE gethandle() const;
 	virtual bool loadvalue(char *buffer);
-	virtual bool SetVariableBody(char *str);
+	virtual bool SetVariableBody(const char *str);
 	virtual void getsaveline(char *buffer) const;
 	void updatecentralbody(OBJHANDLE tcentral){centralbody=tcentral;};
 	operator int(){return value;}
-	void init(MFDvarhandler *vars,int viewmode1,int viewmode2,char *vname,OBJHANDLE tcentralbody);
+	void init(MFDvarhandler *vars,int viewmode1,int viewmode2,const char *vname,OBJHANDLE tcentralbody);
 protected:
 	virtual void InheritValues(MFDvariable *var) {value = ((MFDvarmoon*)var)->value;};
 };
@@ -128,7 +128,7 @@ public:
 	void setvalue(double tvalue);
 	virtual void getsaveline(char *buffer) const;
 	virtual bool loadvalue(char *buffer);
-	void init(MFDvarhandler *vars,int viewmode1,int viewmode2,char *vname, double vvalue, double vmin, double vmax, double vincrement, double vlogborder);
+	void init(MFDvarhandler *vars,int viewmode1,int viewmode2,const char *vname, double vvalue, double vmin, double vmax, double vincrement, double vlogborder);
 	MFDvarfloat();
 	~MFDvarfloat();
 protected:
@@ -157,7 +157,7 @@ public:
 	bool show(Sketchpad *sketchpad, int width, int line);
 	virtual void getsaveline(char *buffer) const;
 	virtual bool loadvalue(char *buffer);
-	void init(MFDvarhandler *vars,int viewmode1,int viewmode2,char *vname, int vvalue, int vlimit, char *st1, char *st2, char *st3, char *st4, char *st5);
+	void init(MFDvarhandler *vars,int viewmode1,int viewmode2,const char *vname, int vvalue, int vlimit, const char *st1, const char *st2, const char *st3, const char *st4, const char *st5);
 protected:
 	virtual void InheritValues(MFDvariable *var) {value = ((MFDvardiscrete*)var)->value;};
 };
@@ -171,7 +171,7 @@ public:
 	double operator = (double tvalue){value=int(2.0*tvalue);return value;};
 	virtual void getsaveline(char *buffer) const;
 	virtual bool loadvalue(char *buffer);
-	void init(MFDvarhandler *vars,int viewmode1,int viewmode2,char *vname,int tvalue);
+	void init(MFDvarhandler *vars,int viewmode1,int viewmode2,const char *vname,int tvalue);
 	virtual bool show(Sketchpad *sketchpad, int width, int line);
 	MFDsemiintdiscrete(){value=0;};
 protected:
@@ -188,7 +188,7 @@ public:
 	bool show(Sketchpad *sketchpad, int width, int line);
 	double getsin() const;
 	double getcos() const;
-	void init(MFDvarhandler *vars,char *vname, bool vloop);
+	void init(MFDvarhandler *vars,const char *vname, bool vloop);
 };
 
 #endif

@@ -14,6 +14,10 @@
 #include "meshres_p0.h"
 #include "meshres_vc.h"
 #include "dg_vc_anim.h"
+#include <strings.h>
+#include <cstring>
+
+#define _strnicmp strncasecmp
 
 // constants for texture coordinates
 static const float texw = (float)PANEL2D_TEXW; // texture width
@@ -39,7 +43,7 @@ HoverSubsystem::HoverSubsystem (DeltaGlider *dg)
 void HoverSubsystem::IncGroupLevel (double dlvl)
 {
 	for (int i = 0; i < 3; i++)
-		hoverlevel[i] = max (0.0, min (1.0, hoverlevel[i]+dlvl));
+		hoverlevel[i] = std::max (0.0, std::min (1.0, hoverlevel[i]+dlvl));
 }
 
 // --------------------------------------------------------------
@@ -118,7 +122,7 @@ bool HoverAttitudeComponent::IncPHover (int dir)
 	if (dir && mode == 2) {
 		const double cmd_speed = 0.5;
 		double dcmd = oapiGetSimStep() * cmd_speed * PHOVER_RANGE * (dir == 1 ? -1.0:1.0);
-		phover_cmd = min (PHOVER_RANGE, max (-PHOVER_RANGE, phover_cmd+dcmd));
+		phover_cmd = std::min (PHOVER_RANGE, std::max (-PHOVER_RANGE, phover_cmd+dcmd));
 	}
 	return true;
 }
@@ -130,7 +134,7 @@ bool HoverAttitudeComponent::IncRHover (int dir)
 	if (dir && mode == 2) {
 		const double cmd_speed = 0.5;
 		double dcmd = oapiGetSimStep() * cmd_speed * RHOVER_RANGE * (dir == 1 ? -1.0:1.0);
-		rhover_cmd = min (RHOVER_RANGE, max (-RHOVER_RANGE, rhover_cmd+dcmd));
+		rhover_cmd = std::min (RHOVER_RANGE, std::max (-RHOVER_RANGE, rhover_cmd+dcmd));
 	}
 	return true;
 }
@@ -189,8 +193,8 @@ void HoverAttitudeComponent::TrackHoverAtt ()
 				Lf_cmd -= D;
 				Lb_cmd -= D;
 
-				double Lmin = min (Lf_cmd, Lb_cmd);
-				double Lmax = max (Lf_cmd, Lb_cmd);
+				double Lmin = std::min (Lf_cmd, Lb_cmd);
+				double Lmax = std::max (Lf_cmd, Lb_cmd);
 				if (Lmin < 0.0) {
 					if (Lf_cmd < 0.0) Lf_cmd = 0.0, Lb_cmd += Lmin/fb_scale;
 					else              Lb_cmd = 0.0, Lf_cmd += Lmin*fb_scale;
@@ -202,8 +206,8 @@ void HoverAttitudeComponent::TrackHoverAtt ()
 				// left/right balance
 				double Ll_cmd = Lb_cmd-balance_lr;
 				double Lr_cmd = Lb_cmd+balance_lr;
-				Lmin = min (Ll_cmd, Lr_cmd);
-				Lmax = max (Ll_cmd, Lr_cmd);
+				Lmin = std::min (Ll_cmd, Lr_cmd);
+				Lmax = std::max (Ll_cmd, Lr_cmd);
 				if (Lmin < 0.0) {
 					if (Ll_cmd < 0.0) Ll_cmd = 0.0, Lr_cmd += Lmin;
 					else              Lr_cmd = 0.0, Ll_cmd += Lmin;
@@ -266,7 +270,7 @@ void HoverAttitudeComponent::clbkPostStep (double simt, double simdt, double mjd
 
 // --------------------------------------------------------------
 
-bool HoverAttitudeComponent::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH)
+bool HoverAttitudeComponent::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH)
 {
 	if (panelid != 0) return false;
 
@@ -483,7 +487,7 @@ void HoverHoldComponent::clbkPostStep (double simt, double simdt, double mjd)
 
 // --------------------------------------------------------------
 
-bool HoverHoldComponent::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH)
+bool HoverHoldComponent::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH)
 {
 	if (panelid != 0) return false;
 
@@ -538,8 +542,8 @@ bool HoverHoldComponent::clbkLoadVC (int vcid)
 		oapiVCRegisterArea (ELID_MODEBUTTONS, PANEL_REDRAW_USER | PANEL_REDRAW_MOUSE, PANEL_MOUSE_LBDOWN | PANEL_MOUSE_LBUP);
 		oapiVCSetAreaClickmode_Quadrilateral (ELID_MODEBUTTONS, VC_HOVERMODE_BUTTONS_mousearea[0], VC_HOVERMODE_BUTTONS_mousearea[1], VC_HOVERMODE_BUTTONS_mousearea[2], VC_HOVERMODE_BUTTONS_mousearea[3]);
 		{
-			static DWORD hoverbtn_vofs[2] = {VC_BTN_HOVERMODE_1_vofs,VC_BTN_HOVERMODE_2_vofs};
-			static DWORD hoverbtn_label_vofs[2] = {VC_BTN_HOVERMODE_1_LABEL_vofs, VC_BTN_HOVERMODE_2_LABEL_vofs};
+			static int hoverbtn_vofs[2] = {VC_BTN_HOVERMODE_1_vofs,VC_BTN_HOVERMODE_2_vofs};
+			static int hoverbtn_label_vofs[2] = {VC_BTN_HOVERMODE_1_LABEL_vofs, VC_BTN_HOVERMODE_2_LABEL_vofs};
 			modebuttons->DefineAnimationsVC (VC_BTN_HOVERMODE_1_axis, GRP_BUTTON3_VC, GRP_LIT_SURF_VC, hoverbtn_vofs, hoverbtn_label_vofs);
 		}
 
@@ -559,7 +563,7 @@ HoverManualComponent::HoverManualComponent (HoverSubsystem *_subsys)
 	ELID_THROTTLE = AddElement (throttle = new HoverThrottle (this));
 
 	// Hover throttle VC animation
-	static UINT HoverThrottleGrp[2] = {GRP_THROTTLE_HOVER_1_VC,GRP_THROTTLE_HOVER_2_VC};
+	static unsigned int HoverThrottleGrp[2] = {GRP_THROTTLE_HOVER_1_VC,GRP_THROTTLE_HOVER_2_VC};
 	static MGROUP_ROTATE HoverThrottle (1, HoverThrottleGrp, 2,
 		_V(-0.41,0.85,6.9226), _V(1,0,0), (float)(50*RAD));
 	anim_hoverthrottle = DG()->CreateAnimation (0);
@@ -569,7 +573,7 @@ HoverManualComponent::HoverManualComponent (HoverSubsystem *_subsys)
 
 // --------------------------------------------------------------
 
-bool HoverManualComponent::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH)
+bool HoverManualComponent::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH)
 {
 	if (panelid != 0) return false;
 
@@ -679,7 +683,7 @@ HoverDisp::HoverDisp (HoverAttitudeComponent *_ctrl)
 	pofs_cmd = rofs_cmd = 0;
 	memset (&vc_grp, 0, sizeof(GROUPREQUESTSPEC));
 	for (int i = 0; i < 8; i++)
-		vperm[i] = (WORD)(i+VC_HOVER_INDICATOR_vofs);
+		vperm[i] = (uint16_t)(i+VC_HOVER_INDICATOR_vofs);
 }
 
 // --------------------------------------------------------------
@@ -721,14 +725,14 @@ bool HoverDisp::Redraw2D (SURFHANDLE surf)
 	const float dx =  10.0f;
 	const float dy =  10.0f;
 
-	g = max (-PHOVER_RANGE, min(PHOVER_RANGE, ctrl->PHover()));
+	g = std::max (-PHOVER_RANGE, std::min(PHOVER_RANGE, ctrl->PHover()));
 	ofs = (int)floor((g/PHOVER_RANGE)*18+0.5);
 	if (ofs != pofs_cur) {
 		for (j = 0; j < 4; j++)
 			grp->Vtx[vtxofs+j].y = y0 + dy*(j/2) + ofs;
 		pofs_cur = ofs;
 	}
-	g = max (-RHOVER_RANGE, min(RHOVER_RANGE, ctrl->RHover()));
+	g = std::max (-RHOVER_RANGE, std::min(RHOVER_RANGE, ctrl->RHover()));
 	ofs = (int)floor((g/RHOVER_RANGE)*18+0.5);
 	if (ofs != rofs_cur) {
 		for (j = 0; j < 4; j++)
@@ -736,14 +740,14 @@ bool HoverDisp::Redraw2D (SURFHANDLE surf)
 		rofs_cur = ofs;
 	}
 
-	g = max (-PHOVER_RANGE, min(PHOVER_RANGE, ctrl->PHover(false)));
+	g = std::max (-PHOVER_RANGE, std::min(PHOVER_RANGE, ctrl->PHover(false)));
 	ofs = (int)floor((g/PHOVER_RANGE)*18+0.5);
 	if (ofs != pofs_cmd) {
 		for (j = 0; j < 4; j++)
 			grp->Vtx[vtxofs+4+j].y = y0 + dy*(j/2) + ofs;
 		pofs_cmd = ofs;
 	}
-	g = max (-RHOVER_RANGE, min(RHOVER_RANGE, ctrl->RHover(false)));
+	g = std::max (-RHOVER_RANGE, std::min(RHOVER_RANGE, ctrl->RHover(false)));
 	ofs = (int)floor((g/RHOVER_RANGE)*18+0.5);
 	if (ofs != rofs_cmd) {
 		for (j = 0; j < 4; j++)
@@ -771,8 +775,8 @@ bool HoverDisp::RedrawVC (DEVMESHHANDLE hMesh, SURFHANDLE surf)
 		int i, j;
 		double dx, dy;
 		float y, z;
-		dx = -max (-RHOVER_RANGE, min(RHOVER_RANGE, ctrl->RHover()))*xrange;
-		dy = -max (-PHOVER_RANGE, min(PHOVER_RANGE, ctrl->PHover()))*yrange;
+		dx = -std::max (-RHOVER_RANGE, std::min(RHOVER_RANGE, ctrl->RHover()))*xrange;
+		dy = -std::max (-PHOVER_RANGE, std::min(PHOVER_RANGE, ctrl->PHover()))*yrange;
 		for (j = 0; j < 4; j++) {
 			Vtx[4+j].x = cnt.x + dx + indsize*(j%2 ? 1:-1);
 			Vtx[4+j].y = dy + indsize*(j/2 ? 1:-1);
@@ -937,8 +941,8 @@ void HoverAltModeButtons::Reset2D (int panelid, MESHHANDLE hMesh)
 
 // --------------------------------------------------------------
 
-void HoverAltModeButtons::DefineAnimationsVC (const VECTOR3 &axis, DWORD meshgrp, DWORD meshgrp_label,
-	DWORD vofs[2], DWORD vofs_label[2])
+void HoverAltModeButtons::DefineAnimationsVC (const VECTOR3 &axis, int meshgrp, int meshgrp_label,
+	int vofs[2], int vofs_label[2])
 {
 	for (int i = 0; i < 2; i++) 
 		btn[i]->DefineAnimationVC (axis, meshgrp, meshgrp_label, vofs[i], vofs_label[i]);
@@ -1026,7 +1030,7 @@ void HoverAltSwitch::Set (int state, double refT)
 		double t = oapiGetSysTime();
 		double dt = oapiGetSysStep();
 		double downt = t-refT;
-		double dprm = dt * max(fabs(prm),1.0);
+		double dprm = dt * std::max(fabs(prm),1.0);
 		if (downt < 10.0) dprm *= 1e-6 + downt*(1.0-1e-6)/10.0;
 		if (state == 1) dprm = -dprm;
 		ctrl->SetTargetPrm (prm + dprm);
@@ -1227,7 +1231,7 @@ void HoverThrottle::Reset2D (int panelid, MESHHANDLE hMesh)
 
 void HoverThrottle::ResetVC (DEVMESHHANDLE hMesh)
 {
-	sliderpos = (UINT)-1;
+	sliderpos = (unsigned int)-1;
 }
 
 // --------------------------------------------------------------
@@ -1257,7 +1261,7 @@ bool HoverThrottle::Redraw2D (SURFHANDLE surf)
 bool HoverThrottle::ProcessMouse2D (int event, int mx, int my)
 {
 	DeltaGlider *dg = ctrl->DG();
-	my = max (0, min (116, my-9));
+	my = std::max (0, std::min (116, my-9));
 	dg->SetThrusterGroupLevel (dg->thg_hover, 1.0-my/116.0);
 	return true;
 }
@@ -1272,7 +1276,7 @@ bool HoverThrottle::ProcessMouseVC (int event, VECTOR3 &p)
 		py = p.y;
 	} else {
 		DeltaGlider *dg = ctrl->DG();
-		double lvl = max (0.0, min (1.0, dg->GetHoverThrusterLevel (0) + (p.y-py)));
+		double lvl = std::max (0.0, std::min (1.0, dg->GetHoverThrusterLevel (0) + (p.y-py)));
 		if (lvl < 0.01) lvl = 0.0;
 		for (int i = 0; i < 3; i++) dg->SetHoverThrusterLevel (i, lvl);
 		py = p.y;
@@ -1286,7 +1290,7 @@ bool HoverThrottle::RedrawVC (DEVMESHHANDLE hMesh, SURFHANDLE surf)
 {
 	DeltaGlider *dg = ctrl->DG();
 	double level = dg->GetHoverThrusterLevel (0);
-	UINT pos = (UINT)(level*500.0);
+	unsigned int pos = (unsigned int)(level*500.0);
 	if (pos != sliderpos) {
 		dg->SetAnimation (ctrl->anim_hoverthrottle, level);
 		sliderpos = pos;

@@ -20,7 +20,7 @@
 
 #define STRICT
 
-#include "orbitersdk.h"
+#include "Orbitersdk.h"
 #include "basefunction.h"
 #include "transxstate.h"
 #include "TransXFunction.h"
@@ -943,12 +943,12 @@ void basefunction::doupdate(Sketchpad *sketchpad,int tw, int th,int viewmode)
 					TextShow(sketchpad,"Focus ApD:", wpos,hpos, craft.getapodistance());
 				}
 				hpos+=linespacing;
-				char buffer[20];
+				char buffer[64];
 				int length=sprintf(buffer,"Pe MJD:   %.4f",(craft.getpedeltatime()+craft.gettimestamp())/SECONDS_PER_DAY+simstartMJD);
 				sketchpad->Text(wpos,hpos,buffer, length);
 				hpos+=linespacing;
 				VECTOR3 south = {0, -1, 0};
-				length = sprintf(buffer, "Inc:      %.4g°", 180/PI*acos(cosangle(south, craft.getplanevector())));
+				length = sprintf(buffer, "Inc:      %.4gï¿½", 180/PI*acos(cosangle(south, craft.getplanevector())));
 				sketchpad->Text(wpos,hpos,buffer, length);
 				hpos+=linespacing;
 			}

@@ -13,7 +13,7 @@
 #ifndef __ATLANTIS_H
 #define __ATLANTIS_H
 
-#include "orbitersdk.h"
+#include "Orbitersdk.h"
 #include <math.h>
 
 #ifdef ATLANTIS_TANK_MODULE
@@ -218,13 +218,15 @@ const VECTOR3 ORBITER_DOCKPOS      = { 0.0, 2.40, 10.15};
 #define AID_R13L_MAX     120
 
 typedef struct {
-	HINSTANCE hDLL;
+	oapi::DynamicModule *hDLL;
 	SURFHANDLE tkbk_label;
-	HFONT font[1];
+	oapi::Font *font[1];
 } GDIParams;
 
 class Atlantis_Tank;
 class AscentAPDlg;
+class AscentAP;
+class PayloadBayOp;
 
 // ==========================================================
 // Interface for derived vessel class: Atlantis
@@ -233,7 +235,7 @@ class AscentAPDlg;
 class Atlantis: public VESSEL4 {
 	friend class AscentAP;
 	friend class PayloadBayOp;
-	friend INT_PTR CALLBACK RMS_DlgProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+	//friend INT_PTR CALLBACK RMS_DlgProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 public:
 	AnimState::Action gear_status, spdb_status;
 	Atlantis (OBJHANDLE hObj, int fmodel);
@@ -274,7 +276,7 @@ public:
 	void RevertLandingGear ();
 	void OperateSpeedbrake (AnimState::Action action);
 	void RevertSpeedbrake ();
-	void SetAnimationArm (UINT anim, double state);
+	void SetAnimationArm (unsigned int anim, double state);
 
 	double GetSRBThrustLevel (int which);
 	// returns the thrust level from left (which=0) or right (which=1)
@@ -292,7 +294,7 @@ public:
 	            // 3=Tank separated (orbiter only)
 
 	double t0;          // reference time: designated liftoff time
-	WORD srb_id1, srb_id2;
+	uint16_t srb_id1, srb_id2;
 
 	double gear_proc; // landing gear deployment state (0=retracted, 1=deployed)
 	//double kubd_proc; // Ku-band antenna deployment state (0=retracted, 1=deployed)
@@ -313,24 +315,24 @@ public:
 	VECTOR3 arm_tip[3];
 
 	// Overloaded callback functions
-	void clbkSetClassCaps (FILEHANDLE cfg);
-	void clbkSetStateEx (const void *status);
-	void clbkLoadStateEx (FILEHANDLE scn, void *vs);
-	void clbkSaveState (FILEHANDLE scn);
-	void clbkPostCreation ();
-	void clbkFocusChanged (bool getfocus, OBJHANDLE hNewVessel, OBJHANDLE hOldVessel);
-	void clbkPreStep (double simt, double simdt, double mjd);
-	bool clbkPlaybackEvent (double simt, double event_t, const char *event_type, const char *event);
-	int  clbkConsumeBufferedKey (DWORD key, bool down, char *kstate);
-	void clbkVisualCreated (VISHANDLE vis, int refcount);
-	void clbkVisualDestroyed (VISHANDLE vis, int refcount);
-	void clbkAnimate (double simt);
-	void clbkMFDMode (int mfd, int mode);
-	bool clbkLoadGenericCockpit ();
-	bool clbkLoadVC (int id);
-	bool clbkVCMouseEvent (int id, int event, VECTOR3 &p);
-	bool clbkVCRedrawEvent (int id, int event, SURFHANDLE surf);
-	bool clbkDrawHUD (int mode, const HUDPAINTSPEC *hps, oapi::Sketchpad *skp);
+	void clbkSetClassCaps (FILEHANDLE cfg) override;
+	void clbkSetStateEx (const void *status) override;
+	void clbkLoadStateEx (FILEHANDLE scn, void *vs) override;
+	void clbkSaveState (FILEHANDLE scn) override;
+	void clbkPostCreation () override;
+	void clbkFocusChanged (bool getfocus, OBJHANDLE hNewVessel, OBJHANDLE hOldVessel) override;
+	void clbkPreStep (double simt, double simdt, double mjd) override;
+	bool clbkPlaybackEvent (double simt, double event_t, const char *event_type, const char *event) override;
+	int  clbkConsumeBufferedKey (int key, bool down, char *kstate) override;
+	void clbkVisualCreated (VISHANDLE vis, int refcount) override;
+	void clbkVisualDestroyed (VISHANDLE vis, int refcount) override;
+	void clbkAnimate (double simt) override;
+	void clbkMFDMode (int mfd, int mode) override;
+	bool clbkLoadGenericCockpit () override;
+	bool clbkLoadVC (int id) override;
+	bool clbkVCMouseEvent (int id, int event, VECTOR3 &p) override;
+	bool clbkVCRedrawEvent (int id, int event, SURFHANDLE surf) override;
+	bool clbkDrawHUD (int mode, const HUDPAINTSPEC *hps, oapi::Sketchpad *skp) override;
 
 	PayloadBayOp *plop; // control and status of payload bay operations
 
@@ -388,21 +390,21 @@ private:
 
 	VECTOR3 gimbal_pos;                        // gimbal settings for pitch,yaw,roll
 
-	UINT anim_door;                            // handle for cargo door animation
-	UINT anim_rad;                             // handle for radiator animation
-	UINT anim_gear;                            // handle for landing gear animation
-	UINT anim_kubd;                            // handle for Ku-band antenna animation
-	UINT anim_elev;                            // handle for elevator animation
-	UINT anim_laileron;						   // handle for left aileron animation
-	UINT anim_raileron;						   // handle for right aileron animation
-	UINT anim_rudder;						   // handle for rudder animation
-	UINT anim_spdb;                            // handle for speed brake animation
-	UINT anim_ssme;                            // handle for SSME pitch gimbal animation
-	UINT mesh_orbiter;                         // index for orbiter mesh
-	UINT mesh_cockpit;                         // index for cockpit mesh for external view
-	UINT mesh_vc;                              // index for virtual cockpit mesh
-	UINT mesh_cargo;                           // index for static cargo mesh
-	UINT mesh_platform;                        // index for payload platform mesh
+	unsigned int anim_door;                            // handle for cargo door animation
+	unsigned int anim_rad;                             // handle for radiator animation
+	unsigned int anim_gear;                            // handle for landing gear animation
+	unsigned int anim_kubd;                            // handle for Ku-band antenna animation
+	unsigned int anim_elev;                            // handle for elevator animation
+	unsigned int anim_laileron;						   // handle for left aileron animation
+	unsigned int anim_raileron;						   // handle for right aileron animation
+	unsigned int anim_rudder;						   // handle for rudder animation
+	unsigned int anim_spdb;                            // handle for speed brake animation
+	unsigned int anim_ssme;                            // handle for SSME pitch gimbal animation
+	unsigned int mesh_orbiter;                         // index for orbiter mesh
+	unsigned int mesh_cockpit;                         // index for cockpit mesh for external view
+	unsigned int mesh_vc;                              // index for virtual cockpit mesh
+	unsigned int mesh_cargo;                           // index for static cargo mesh
+	unsigned int mesh_platform;                        // index for payload platform mesh
 	PROPELLANT_HANDLE ph_oms;                  // handles for propellant resources
 	THRUSTER_HANDLE th_main[3];                // handles for orbiter main engines
 	THRUSTER_HANDLE th_oms[2];                 // handles for orbiter oms engines
@@ -412,7 +414,7 @@ private:
 	ANIMATIONCOMPONENT_HANDLE hAC_arm, hAC_sat, hAC_satref;
 	MGROUP_TRANSFORM *rms_anim[6];
 	MGROUP_TRANSFORM *ssme_anim[3];
-	UINT anim_arm_sy, anim_arm_sp, anim_arm_ep, anim_arm_wp, anim_arm_wy, anim_arm_wr;
+	unsigned int anim_arm_sy, anim_arm_sp, anim_arm_ep, anim_arm_wp, anim_arm_wy, anim_arm_wr;
 	double arm_sy, arm_sp, arm_ep, arm_wp, arm_wy, arm_wr;
 	double launchelev;                         // elevation of launch stack on the ground [m]
 
@@ -427,7 +429,7 @@ private:
 	LightEmitter *engine_light;
 	double engine_light_level;
 
-	AscentAPDlg *ascentApDlg;
+	//AscentAPDlg *ascentApDlg;
 };
 
 // ==========================================================
@@ -450,11 +452,11 @@ public:
 	VECTOR3 GetThrustGimbal ();
 
 	// Overloaded callback functions
-	void clbkSetClassCaps (FILEHANDLE cfg);
-	void clbkPostStep (double simt, double simdt, double mjd);
-	void clbkPostCreation ();
-	void clbkLoadStateEx (FILEHANDLE scn, void *vs);
-	void clbkSaveState (FILEHANDLE scn);
+	void clbkSetClassCaps (FILEHANDLE cfg) override;
+	void clbkPostStep (double simt, double simdt, double mjd) override;
+	void clbkPostCreation () override;
+	void clbkLoadStateEx (FILEHANDLE scn, void *vs) override;
+	void clbkSaveState (FILEHANDLE scn) override;
 
 private:
 	double launchelev;          // elevation above ground at launch [m]
@@ -474,7 +476,7 @@ private:
 // ==========================================================
 // Interface for derived vessel class: Atlantis_Tank
 // ==========================================================
-
+class Atlantis;
 class TANKFUNC Atlantis_Tank: public VESSEL2 {
 	friend class Atlantis;
 
@@ -495,9 +497,9 @@ public:
 	void SeparateSRBs ();
 
 	// Overloaded callback functions
-	void clbkSetClassCaps (FILEHANDLE cfg);
-	void clbkPreStep (double simt, double simdt, double mjd);
-	void clbkPostStep (double simt, double simdt, double mjd);
+	void clbkSetClassCaps (FILEHANDLE cfg) override;
+	void clbkPreStep (double simt, double simdt, double mjd) override;
+	void clbkPostStep (double simt, double simdt, double mjd) override;
 
 protected:
 	Atlantis_SRB *GetSRB (int which) const;

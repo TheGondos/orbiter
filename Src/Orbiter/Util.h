@@ -4,25 +4,24 @@
 #ifndef __UTIL_H
 #define __UTIL_H
 
-#include <windows.h>
 #include "Vecmat.h"
 #include "OrbiterAPI.h"
 #include "Orbiter.h"
 
 extern Orbiter *g_pOrbiter;
 
-LONGLONG NameToId (const char *name);
+uint64_t NameToId (const char *name);
 // converts a file name into an identifier. Note that this is not guaranteed to be unique.
 
 // should go into the graphics client
-inline DWORD GetSurfColour (DWORD r, DWORD g, DWORD b)
+inline uint32_t GetSurfColour (uint8_t r, uint8_t g, uint8_t b)
 {
-	DWORD bpp = g_pOrbiter->ViewBPP();
+	int bpp = g_pOrbiter->ViewBPP();
 	if (bpp >= 24) return (r << 16) + (g << 8) + b;
 	else           return (((r*319)/2559) << 11) + (((g*639)/2559) << 5) + ((b*319)/2559);
 }
 
-DWORDLONG Str2Crc (const char *str);
+uint64_t Str2Crc (const char *str);
 // converts str into an integer identifier (not guaranteed unique!)
 
 // simple string de-scrambling routine
@@ -64,12 +63,5 @@ inline void EulerAngles (const Matrix &R, VECTOR3 &e)
 
 double rand1();
 // uniformly distributed random number, range [0,1]
-
-// Timing functions
-void tic();   // start clock
-double toc(); // stop clock and return value
-
-RECT GetClientPos (HWND hWnd, HWND hChild);
-void SetClientPos (HWND hWnd, HWND hChild, RECT &r);
 
 #endif //!__UTIL_H

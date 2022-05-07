@@ -16,7 +16,6 @@ void SurfParam::Set (const StateVectors &s, const StateVectors &s_ref, const Cel
 					 std::vector<ElevationTile> *etilecache, WindPrm *windprm)
 {
 	// Calculate surface parameters for arbitrary state of object and reference planet
-
 	static const double eps = 1e-4;
 	static const double alt_max = 1e5; // for now
 
@@ -35,7 +34,7 @@ void SurfParam::Set (const StateVectors &s, const StateVectors &s_ref, const Cel
 		if (ref->Type() == OBJTP_PLANET) {
 			ElevationManager *emgr = ((Planet*)ref)->ElevMgr();
 			if (emgr) {
-				int reslvl = (int)(32.0-log(max(alt0,100))*LOG2);
+				int reslvl = (int)(32.0-log(std::max(alt0,100.0))*LOG2);
 				elev = emgr->Elevation (lat, lng, reslvl, etilecache, &surfnml, &elev_lvl);
 				alt -= elev;
 			}
@@ -85,7 +84,7 @@ void SurfParam::Set (const StateVectors &s, const StateVectors &s_ref, const Cel
 	if (dir < 0.0) dir += Pi2;
 
 	// atmospheric parameters
-	if (is_in_atm = (planet && planet->HasAtmosphere() && rad < planet->AtmRadLimit())) {
+	if ((is_in_atm = (planet && planet->HasAtmosphere() && rad < planet->AtmRadLimit()))) {
 		ATMPARAM prm;
 		planet->GetAtmParam (alt0, lng, lat, &prm);
 		atmT   = prm.T;
@@ -113,7 +112,7 @@ double SurfParam::ComputeAltitude(const StateVectors &s, const StateVectors &s_r
 	if (etilecache && _alt < alt_max && _ref->Type() == OBJTP_PLANET) {
 		ElevationManager *emgr = ((Planet*)_ref)->ElevMgr();
 		if (emgr) {
-			int reslvl = (int)(32.0-log(max(_alt,100))*LOG2);
+			int reslvl = (int)(32.0-log(std::max(_alt,100.0))*LOG2);
 			double elev = emgr->Elevation (_lat, _lng, reslvl, etilecache);
 			_alt -= elev;
 		}
@@ -153,7 +152,7 @@ void SurfParam::SetLanded (double _lng, double _lat, double _alt, double _dir, c
 	groundvel_ship.Set (0,0,0);
 	airspd = groundspd = 0.0;
 
-	if (is_in_atm = (planet && planet->HasAtmosphere() && rad < planet->AtmRadLimit())) {
+	if ((is_in_atm = (planet && planet->HasAtmosphere() && rad < planet->AtmRadLimit()))) {
 		ATMPARAM prm;
 		planet->GetAtmParam (alt, lng, lat, &prm);
 		atmT   = prm.T;
@@ -322,7 +321,7 @@ void VesselBase::GetIntermediateMoments (Vector &acc, Vector &tau,
 
 void VesselBase::UpdateProxies ()
 {
-	DWORD i, ng = g_psys->nGrav();
+	int i, ng = g_psys->nGrav();
 	double dist2, proxydist2, proxypdist2;
 	CelestialBody *grav;
 	Planet *pl = 0;

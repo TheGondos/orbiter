@@ -191,10 +191,12 @@ int ELP82_read (double prec)
 	pre[1] = prec*rad;
 	pre[2] = prec*ath;
 
-	const char *datf = "Config\\Moon\\Data\\ELP82.dat";
+	const char *datf = "Config/Moon/Data/ELP82.dat";
 	ifstream ifs (datf);  // term data stream
 	if (!ifs) {
+		fprintf(stderr, "ELP82: cannot find %s\n", datf);
 		oapiWriteLogError("ELP82: Data file not found: %s", datf);
+		exit(-1);
 		return -1;
 	}
 

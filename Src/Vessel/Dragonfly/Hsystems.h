@@ -16,8 +16,8 @@
 #define N2_MMASS				28
 #define CO2_MMASS			44
 
-#include "thermal.h"
-#include "orbitersdk.h"
+#include "Thermal.h"
+#include "Orbitersdk.h"
 //base class for hydraulical objects
 class h_object:public therm_obj
 { public:

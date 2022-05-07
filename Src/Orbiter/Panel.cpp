@@ -5,12 +5,8 @@
 #include "Panel.h"
 #include "Pane.h"
 #include "Vessel.h"
-#include "Texture.h"
+//#include "Texture.h"
 #include "Log.h"
-
-#ifdef INLINEGRAPHICS
-#include "OGraphics.h"
-#endif // INLINEGRAPHICS
 
 using namespace std;
 
@@ -34,10 +30,11 @@ Panel::Panel (int _id, const Pane *_pane, double _scale)
 	surf    = NULL;
 	visible = false;
 	has_ck  = false;
+	/*
 	if (g_pOrbiter->IsFullscreen())
 		cwnd = 0;
 	else
-		cwnd = g_pOrbiter->GetRenderWnd();
+		cwnd = g_pOrbiter->GetRenderWnd();*/
 	narea   = nareabuf = 0;
 	idx_mfocus = aid_mfocus = mstate = 0;
 
@@ -71,10 +68,10 @@ void Panel::Display (SURFHANDLE pdds)
 {
 	if (visible && gc) {
 		// panel background
-		if (has_ck) gc->clbkSetSurfaceColourKey (surf, ck);
-		if (scaled) gc->clbkScaleBlt (pdds, tgtRect.left, tgtRect.top, tgtRect.right-tgtRect.left, tgtRect.bottom-tgtRect.top, surf, srcRect.left, srcRect.top, srcRect.right-srcRect.left, srcRect.bottom-srcRect.top, bltflag);
-		else        gc->clbkBlt (pdds, tgtRect.left, tgtRect.top, surf, srcRect.left, srcRect.top, srcRect.right-srcRect.left, srcRect.bottom-srcRect.top, bltflag);
-		if (has_ck) /*gc->clbkUnsetSurfaceColourKey (surf)*/; // surf->SetColorKey (DDCKEY_SRCBLT, 0);
+		if (has_ck) { gc->clbkSetSurfaceColourKey (surf, ck); }
+		if (scaled) { gc->clbkScaleBlt (pdds, tgtRect.left, tgtRect.top, tgtRect.right-tgtRect.left, tgtRect.bottom-tgtRect.top, surf, srcRect.left, srcRect.top, srcRect.right-srcRect.left, srcRect.bottom-srcRect.top, bltflag); }
+		else        { gc->clbkBlt (pdds, tgtRect.left, tgtRect.top, surf, srcRect.left, srcRect.top, srcRect.right-srcRect.left, srcRect.bottom-srcRect.top, bltflag); }
+		if (has_ck) { /*gc->clbkUnsetSurfaceColourKey (surf)*/; } // surf->SetColorKey (DDCKEY_SRCBLT, 0);
 
 		// MFDs
 		for (int i = 0; i < MAXMFD; i++)
@@ -84,7 +81,7 @@ void Panel::Display (SURFHANDLE pdds)
 	}
 }
 
-void Panel::Move (LONG dx, LONG dy)
+void Panel::Move (int dx, int dy)
 {
 	// we only allow horizontal shifts if panel is wider than screen
 	if (dx && tgtW > pane->W) {
@@ -141,19 +138,20 @@ void Panel::MFDMoved ()
 	}
 }
 
-void Panel::DefineBackground (HBITMAP hBmp, DWORD flag, DWORD _ck)
+void Panel::DefineBackground (SURFHANDLE bgSurf, int flag)
 {
 	if (!gc) return;
 
 	//HRESULT res;
-	BITMAP bm;
+	//BITMAP bm;
 
 	if (surf) gc->clbkReleaseSurface (surf);
 
 	// bitmap size
-    GetObject (hBmp, sizeof(bm), &bm);
-    srcW = bm.bmWidth;
-	srcH = bm.bmHeight;
+    //GetObject (hBmp, sizeof(bm), &bm);
+	
+	gc->clbkGetSurfaceSize (bgSurf, &srcW, &srcH);
+
 	tgtW = (int)(scale*srcW);
 	tgtH = (int)(scale*srcH);
 
@@ -175,21 +173,23 @@ void Panel::DefineBackground (HBITMAP hBmp, DWORD flag, DWORD _ck)
 		}
 	}
 
+	surf = bgSurf;
+	/*
 	if (!(surf = gc->clbkCreateSurface (srcW, srcH))) return;
 	if (!gc->clbkCopyBitmap (surf, hBmp, 0, 0, 0, 0)) {
 		gc->clbkReleaseSurface (surf);
 		surf = NULL;
 		return;
-	}
+	}*/
 
-	X0 = ((LONG)pane->W - tgtW)/2;
+	X0 = ((int)pane->W - tgtW)/2;
 
 	if ((shiftflag & 0x0003) == PANEL_ATTACH_BOTTOM) // panel attached to screen bottom
-		Y0 = (LONG)pane->H - tgtH;
+		Y0 = (int)pane->H - tgtH;
 	else if ((shiftflag & 0x0003) == PANEL_ATTACH_TOP) // panel attached to screen top
 		Y0 = 0;
 	else // pane either attached to top and bottom or not attached
-		Y0 = ((LONG)pane->H - tgtH)/2;
+		Y0 = ((int)pane->H - tgtH)/2;
 
 	tgtRect.left   = (X0 >= 0 ? X0 : 0);
 	tgtRect.top    = (Y0 >= 0 ? Y0 : 0);
@@ -208,13 +208,7 @@ void Panel::DefineBackground (HBITMAP hBmp, DWORD flag, DWORD _ck)
 		srcRect.bottom = min((int)(srcRect.bottom* iscale), srcH);
 	}
 
-	// define color key for blitting
 	bltflag = 0;
-	if (has_ck = (_ck != (DWORD)-1)) {
-		ck = _ck;
-		//ck.dwColorSpaceLowValue = ck.dwColorSpaceHighValue = _ck;
-		bltflag |= BLT_SRCCOLORKEY;
-	}
 
 	visible = true;
 }
@@ -360,11 +354,11 @@ void Panel::RegisterMFD (int id, const MFDSPEC &spec)
 	mfd[id].exist = true;
 }
 
-void Panel::Point2Screen (long srcX, long srcY, long &tgtX, long &tgtY) const
+void Panel::Point2Screen (int srcX, int srcY, int &tgtX, int &tgtY) const
 {
 	if (scaled) {
-		srcX = (long)(srcX*scale);
-		srcY = (long)(srcY*scale);
+		srcX = (int)(srcX*scale);
+		srcY = (int)(srcY*scale);
 	}
 	tgtX = srcX+X0;
 	tgtY = srcY+Y0;
@@ -376,23 +370,33 @@ void Panel::Area2Screen (const RECT &srcR, RECT &tgtR) const
 	Point2Screen (srcR.right, srcR.bottom, tgtR.right, tgtR.bottom);
 }
 
-bool Panel::ProcessMouse (UINT event, DWORD state, int x, int y)
+bool Panel::ProcessMouse (oapi::MouseEvent event, int state, int x, int y)
 {
-	mstate = 0;
+	mstate = 0; //FIXME: state is overwritten
 	switch (event) {
-	case WM_LBUTTONDOWN:
+	case oapi::MOUSE_LBUTTONDOWN:
 		state = PANEL_MOUSE_LBDOWN | PANEL_MOUSE_LBPRESSED;
 		break;
-	case WM_RBUTTONDOWN:
+	case oapi::MOUSE_RBUTTONDOWN:
 		state = PANEL_MOUSE_RBDOWN | PANEL_MOUSE_RBPRESSED;
 		break;
-	case WM_LBUTTONUP:
+	case oapi::MOUSE_LBUTTONUP:
 		state = PANEL_MOUSE_LBUP;
 		break;
-	case WM_RBUTTONUP:
+	case oapi::MOUSE_RBUTTONUP:
 		state = PANEL_MOUSE_RBUP;
 		break;
+	case oapi::MOUSE_MBUTTONDOWN:
+	case oapi::MOUSE_MBUTTONUP:
+	case oapi::MOUSE_MOVE:
+	case oapi::MOUSE_WHEEL:
+		break;
 	}
+
+	if (state & oapi::MouseModifier::MOUSE_CTRL)  state |= PANEL_MOUSE_CTRL;
+	if (state & oapi::MouseModifier::MOUSE_SHIFT) state |= PANEL_MOUSE_SHIFT;
+	if (state & oapi::MouseModifier::MOUSE_ALT)   state |= PANEL_MOUSE_ALT;
+
 	if (state & PANEL_MOUSE_DOWN) { // locate mouse event
 		int i;
 		x -= X0, y -= Y0;
@@ -424,9 +428,15 @@ void Panel::GetMouseState (int &idx, int &state, int &mx, int &my) const
 {
 	if (mstate & PANEL_MOUSE_PRESSED) {
 		POINT pt;
-		GetCursorPos (&pt);
-		if (cwnd) // need to subtract client window offset
-			ScreenToClient (cwnd, &pt);
+	//	GetCursorPos (&pt);
+//		if (cwnd) // need to subtract client window offset
+//			ScreenToClient (cwnd, &pt);
+		double xpos, ypos;
+		glfwGetCursorPos(g_pOrbiter->GetRenderWnd(), &xpos, &ypos);
+		pt.x = floor(xpos);
+		pt.y = floor(ypos);
+
+
 		pt.x -= X0, pt.y -= Y0;
 		if (scaled) pt.x = (int)(pt.x*iscale), pt.y = (int)(pt.y*iscale);
 		mousex = pt.x - area[idx_mfocus]->pos.left;

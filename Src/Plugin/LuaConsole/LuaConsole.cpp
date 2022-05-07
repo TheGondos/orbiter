@@ -136,6 +136,7 @@ void LuaConsole::clbkSimulationEnd ()
 
 void LuaConsole::clbkPreStep (double simt, double simdt, double mjd)
 {
+	printf("LuaConsole::clbkPreStep\n");
 	if (interp) {
 		if (interp->IsBusy() || cConsoleCmd[0] || interp->nJobs()) { // let the interpreter do some work
 			interp->EndExec();        // orbiter hands over control
@@ -606,7 +607,7 @@ void LuaConsole::OpenDlgClbk (void *context)
 // ==============================================================
 // DLL entry and exit points
 
-DLLCLBK void InitModule (HINSTANCE hDLL)
+DLLCLBK void InitModule (DynamicModule *hDLL)
 {
 	// Create the configurator
 	g_Config = new ConsoleConfig (hDLL);

@@ -9,8 +9,6 @@
 #ifndef __PANEL_H
 #define __PANEL_H
 
-#define STRICT 1
-#include <windows.h>
 #include <fstream>
 
 // =======================================================================
@@ -43,16 +41,16 @@ public:
 	void Display (SURFHANDLE pdds);
 	// map panel to screen
 
-	void Move (LONG dx, LONG dy);
+	void Move (int dx, int dy);
 	// scrolls panel by the specified amount in x and y
 
-	void Point2Screen (long srcX, long srcY, long &tgtX, long &tgtY) const;
+	void Point2Screen (int srcX, int srcY, int &tgtX, int &tgtY) const;
 	// converts point from unscaled panel space to viewport space
 
 	void Area2Screen (const RECT &srcR, RECT &tgtR) const;
 	// converts rectangle from unscaled panel space to viewport space
 
-	void DefineBackground (HBITMAP hBmp, DWORD flag, DWORD ck = (DWORD)-1);
+	void DefineBackground (SURFHANDLE bgSurf, int flag);
 
 	void DefineArea (int aid, const RECT &pos, int draw_mode, int mouse_mode, int bkmode);
 	void ReleaseAreas ();
@@ -79,7 +77,7 @@ public:
 	inline void MFDSize (int id, int &w, int &h) const
 	{ w = mfd[id].w, h = mfd[id].h; }
 
-	bool ProcessMouse (UINT event, DWORD state, int x, int y);
+	bool ProcessMouse (oapi::MouseEvent event, int state, int x, int y);
 
 	void GetMouseState (int &idx, int &state, int &mx, int &my) const;
 	//{ idx = idx_mfocus; state = mstate; mx = mousex, my = mousey; }
@@ -104,19 +102,19 @@ private:
 	oapi::GraphicsClient *gc;
 	int id;                     // panel id
 	SURFHANDLE surf;            // drawing surface
-	LONG tgtW, tgtH;            // panel target width, height
-	LONG srcW, srcH;            // panel source width, height
-	LONG X0, Y0;                // coordinates of upper left corner of scaled source rectangle in target space
-	HWND cwnd;                  // window handle for mouse position offset calculations
+	int tgtW, tgtH;            // panel target width, height
+	int srcW, srcH;            // panel source width, height
+	int X0, Y0;                // coordinates of upper left corner of scaled source rectangle in target space
+	//HWND cwnd;                  // window handle for mouse position offset calculations
 	double scale, iscale;       // panel scaling factor src->tgt and tgt->src
 	RECT tgtRect;               // corners of visible part of target rectangle
 	RECT srcRect;				// visible panel area in source rectangle
 	bool visible;				// panel is visible?
 	bool scaled;                // true if scale != 1
 	bool has_ck;                // flag if color key is used for blitting
-	DWORD ck;                   // color key for blitting
-	DWORD bltflag;              // blitting flag
-	DWORD shiftflag;            // bitflags for shifting modes
+	uint32_t ck;                   // color key for blitting
+	int bltflag;              // blitting flag
+	int shiftflag;            // bitflags for shifting modes
 	int connect[4];             // connected panels (left,right,up,down) -1=none
 
 	struct Area {

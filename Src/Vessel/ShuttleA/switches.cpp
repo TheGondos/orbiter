@@ -42,17 +42,17 @@ PanelSwitch1::PanelSwitch1 (ShuttleA *v, float tgt_x0, float tgt_y0, bool threes
 
 // --------------------------------------------------------------
 
-void PanelSwitch1::AddMeshData2D (MESHHANDLE hMesh, DWORD grpidx)
+void PanelSwitch1::AddMeshData2D (MESHHANDLE hMesh, int grpidx)
 {
-	static const DWORD nvtx = 4;
-	static const DWORD nidx = 6;
+	static const int nvtx = 4;
+	static const int nidx = 6;
 	const NTVERTEX vtx[nvtx] = {
 		{x0,      y0,      0,  0,0,0,  tx_x0/texw,        tx_y0/texh        },
 		{x0+tx_dx,y0,      0,  0,0,0,  (tx_x0+tx_dx)/texw,tx_y0/texh        },
 		{x0,      y0+tx_dy,0,  0,0,0,  tx_x0/texw,        (tx_y0+tx_dy)/texh},
 		{x0+tx_dx,y0+tx_dy,0,  0,0,0,  (tx_x0+tx_dx)/texw,(tx_y0+tx_dy)/texh}
 	};
-	static const WORD idx[nidx] = {
+	static const uint16_t idx[nidx] = {
 		0,1,2,  3,2,1
 	};
 	AddGeometry (hMesh, grpidx, vtx, nvtx, idx, nidx);
@@ -125,17 +125,17 @@ PanelIndicator1::PanelIndicator1 (ShuttleA *v, float tgt_x0, float tgt_y0)
 
 // --------------------------------------------------------------
 
-void PanelIndicator1::AddMeshData2D (MESHHANDLE hMesh, DWORD grpidx)
+void PanelIndicator1::AddMeshData2D (MESHHANDLE hMesh, int grpidx)
 {
-	static const DWORD nvtx = 4;
-	static const DWORD nidx = 6;
+	static const int nvtx = 4;
+	static const int nidx = 6;
 	const NTVERTEX vtx[nvtx] = {
 		{x0,      y0,      0,  0,0,0,  tx_x0/texw,        tx_y0/texh        },
 		{x0+tx_dx,y0,      0,  0,0,0,  (tx_x0+tx_dx)/texw,tx_y0/texh        },
 		{x0,      y0+tx_dy,0,  0,0,0,  tx_x0/texw,        (tx_y0+tx_dy)/texh},
 		{x0+tx_dx,y0+tx_dy,0,  0,0,0,  (tx_x0+tx_dx)/texw,(tx_y0+tx_dy)/texh}
 	};
-	static const WORD idx[nidx] = {
+	static const uint16_t idx[nidx] = {
 		0,1,2,  3,2,1
 	};
 	AddGeometry (hMesh, grpidx, vtx, nvtx, idx, nidx);

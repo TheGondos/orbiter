@@ -13,12 +13,7 @@
 #include "Util.h"
 #include "GraphicsAPI.h"
 #include <fstream>
-
-#ifdef INLINEGRAPHICS
-#include "Texture.h"
-#include "VBase.h"
-extern TextureManager2 *g_texmanager2;
-#endif // INLINEGRAPHICS
+#include <glm/glm.hpp>
 
 using namespace std;
 
@@ -37,7 +32,7 @@ int         Base::ngenericmesh = 0;
 SURFHANDLE *Base::generic_dtex = 0;
 SURFHANDLE *Base::generic_ntex = 0;
 char      **Base::generic_tex_name = 0;
-LONGLONG   *Base::generic_tex_id = 0;
+uint64_t   *Base::generic_tex_id = 0;
 int         Base::ngenerictex = 0;
 
 // ==========================================================
@@ -101,7 +96,7 @@ Base::Base (char *fname, Planet *_planet, double _lng, double _lat)
 
 	if (FindLine (ifs, "BEGIN_OBJECTLIST")) {
 		BaseObject *bo;
-		while (bo = BaseObject::Create (this, ifs)) {
+		while ((bo = BaseObject::Create (this, ifs))) {
 			BaseObject **tmp = new BaseObject*[nobj+1]; TRACENEW
 			memcpy (tmp, obj, nobj*sizeof(BaseObject*));
 			if (nobj) delete []obj;
@@ -202,34 +197,7 @@ void Base::CreateStaticDeviceObjects ()
 	ifstream ifs (g_pOrbiter->ConfigPath ("Base"));
 	if (ifs) {
 		char cbuf[256], **tmp_list;
-		LONGLONG *tmp_id;
-		// load list of generic mesh names
-#ifndef NOGRAPHICS
-		if (FindLine (ifs, "begin_meshes")) {
-			g_pOrbiter->OutputLoadStatus ("Generic base textures", 0);
-			char str[256];
-			for (;;) {
-				if (!ifs.getline (cbuf, 256) || !_strnicmp (cbuf, "end_meshes", 10)) break;
-				if (sscanf (cbuf, "%s", str)) {
-					tmp_list = new char*[ngenericmesh+1]; TRACENEW
-					if (ngenericmesh) {
-						memcpy (tmp_list, generic_mesh_name, ngenericmesh*sizeof(char*));
-						delete []generic_mesh_name;
-					}
-					generic_mesh_name = tmp_list;
-					generic_mesh_name[ngenericmesh] = new char[strlen(str)+1]; TRACENEW
-					strcpy (generic_mesh_name[ngenericmesh++], str);
-				}
-			}
-		}
-		// load generic meshes
-		if (ngenericmesh) {
-			generic_obj_mesh = new Mesh[ngenericmesh]; TRACENEW
-			for (int i = 0; i < ngenericmesh; i++)
-				LoadMesh (generic_mesh_name[i], generic_obj_mesh[i]);
-		}
-#endif // !NOGRAPHICS
-
+		uint64_t *tmp_id;
 		// load list of generic texture names
 		if (FindLine (ifs, "begin_textures")) {
 			for (;;) {
@@ -237,11 +205,11 @@ void Base::CreateStaticDeviceObjects ()
 				char *str = trim_string (cbuf);
 				if (*str) {
 					tmp_list = new char*[ngenerictex+1]; TRACENEW
-					tmp_id   = new LONGLONG[ngenerictex+1]; TRACENEW
+					tmp_id   = new uint64_t[ngenerictex+1]; TRACENEW
 					if (ngenerictex) {
 						memcpy (tmp_list, generic_tex_name, ngenerictex*sizeof(char*));
 						delete []generic_tex_name;
-						memcpy (tmp_id, generic_tex_id, ngenerictex*sizeof(LONGLONG));
+						memcpy (tmp_id, generic_tex_id, ngenerictex*sizeof(uint64_t));
 						delete []generic_tex_id;
 					}
 					generic_tex_name = tmp_list;
@@ -283,17 +251,6 @@ void Base::DestroyStaticDeviceObjects ()
 	// destroy common static resources
 	oapi::GraphicsClient *gclient = g_pOrbiter->GetGraphicsClient();
 
-#ifndef NOGRAPHICS
-	// destroy meshes
-	if (ngenericmesh) {
-		int i;
-		for (i = 0; i < ngenericmesh; i++)
-			delete []generic_mesh_name[i];
-		delete []generic_mesh_name;
-		delete []generic_obj_mesh;
-		ngenericmesh = 0;
-	}
-#endif // !NOGRAPHICS
 	// destroy textures
 	if (gclient && ngenerictex) {
 		for (int i = 0; i < ngenerictex; i++) {
@@ -326,7 +283,7 @@ void Base::Setup ()
 		cbody->EquatorialToLocal (lng, lat, rad, rpos);
 	}
 
-	for (DWORD i = 0; i < nobj; i++)
+	for (int i = 0; i < nobj; i++)
 		obj[i]->Setup();
 }
 
@@ -334,13 +291,13 @@ bool Base::InitSurfaceTiles () const
 {
 	if (!ntile) return false;
 
-	static DWORD nlat[10] = {128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536};
-	DWORD i;
+	static int nlat[10] = {128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536};
+	int i;
 	float r = (float)rad;
 	float cphi = (float)cos (lng), sphi = (float)sin (lng);
 	float ctht = (float)cos (lat), stht = (float)sin (lat);
 
-	D3DMATRIX R = {(float)rrot.m11, (float)rrot.m12, (float)rrot.m13, 0,
+	glm::fmat4 R = {(float)rrot.m11, (float)rrot.m12, (float)rrot.m13, 0,
 		           (float)rrot.m21, (float)rrot.m22, (float)rrot.m23, 0,
 				   (float)rrot.m31, (float)rrot.m32, (float)rrot.m33, 0,
 				   0,               0,               0,               1};
@@ -379,7 +336,7 @@ bool Base::InitSurfaceTiles () const
 void Base::DestroySurfaceTiles ()
 {
 	if (ntilebuf) {
-		for (DWORD i = 0; i < ntile; i++) {
+		for (int i = 0; i < ntile; i++) {
 			if (tile[i].mesh) {
 				delete (Mesh*)tile[i].mesh;
 				tile[i].mesh = NULL;
@@ -413,21 +370,21 @@ void Base::Attach (Planet *_parent)
 	rotvel.Set (-v*slng, 0.0, v*clng);        // velocity vector in non-rotating planet coords
 }
 
-DWORD Base::GetTileList (const SurftileSpec **_tile) const
+int Base::GetTileList (const SurftileSpec **_tile) const
 {
 	if (ntile && !tile[0].mesh)
 		InitSurfaceTiles();
 	*_tile = tile; return ntile;
 }
 
-void Base::ExportBaseStructures (Mesh ***mesh_us, DWORD *nmesh_us, Mesh ***mesh_os, DWORD *nmesh_os) const
+void Base::ExportBaseStructures (Mesh ***mesh_us, int *nmesh_us, Mesh ***mesh_os, int *nmesh_os) const
 {
 	ScanObjectMeshes();
 	*mesh_os = objmsh_os;  *nmesh_os = nobjmsh_os;
 	*mesh_us = objmsh_us;  *nmesh_us = nobjmsh_us;
 }
 
-void Base::ExportShadowGeometry (Mesh ***mesh_shadow, double **elev, DWORD *nmesh_shadow) const
+void Base::ExportShadowGeometry (Mesh ***mesh_shadow, double **elev, int *nmesh_shadow) const
 {
 	ScanObjectMeshes();
 	*mesh_shadow = objmsh_sh;
@@ -439,11 +396,11 @@ void Base::ScanObjectMeshes () const
 {
 	if (objmsh_valid) return; // done already
 
-	DWORD i, j, k, ng, spec, nvtx, nidx;
-	LONGLONG texid;
+	int i, j, k, ng, spec, nvtx, nidx;
+	uint64_t texid;
 	bool undersh, groundsh;
 	GroupSpec *grp_os = 0, *grp_us = 0; // mesh groups for the meshes compiled from generic primitives (over and under shadows)
-	DWORD ngrp_os = 0, ngrp_us = 0;
+	int ngrp_os = 0, ngrp_us = 0;
 	nobjmsh_os = nobjmsh_us = nobjmsh_sh = 0;
 	bool bshadow = g_pOrbiter->Cfg()->CfgVisualPrm.bShadows;
 
@@ -455,9 +412,9 @@ void Base::ScanObjectMeshes () const
 			ng = bo->nGroup();
 			for (j = 0; j < ng; j++) {
 				if (bo->GetGroupSpec (j, nvtx, nidx, texid, undersh, groundsh)) {
-					DWORD &ngrp     = (undersh ? ngrp_us : ngrp_os);
+					int &ngrp     = (undersh ? ngrp_us : ngrp_os);
 					GroupSpec *&grp = (undersh ? grp_us : grp_os);
-					DWORD texidx = GetGenericTextureIdx (texid);
+					int texidx = GetGenericTextureIdx (texid);
 					for (k = 0; k < ngrp; k++) {
 						if (grp[k].TexIdx == texidx && (grp[k].UsrFlag & 0x1) != groundsh) {
 							grp[k].nVtx += nvtx;
@@ -488,11 +445,11 @@ void Base::ScanObjectMeshes () const
 		if (bshadow && (spec & OBJSPEC_EXPORTSHADOWMESH)) nobjmsh_sh++;
 	}
 	for (i = 0; i < 2; i++) {
-		DWORD &ngrp = (i==0 ? ngrp_us : ngrp_os);
+		int &ngrp = (i==0 ? ngrp_us : ngrp_os);
 		GroupSpec *&grp = (i==0 ? grp_us : grp_os);
 		for (j = 0; j < ngrp; j++) {
 			grp[j].Vtx = new NTVERTEX[grp[j].nVtx]; TRACENEW
-			grp[j].Idx = new WORD[grp[j].nIdx]; TRACENEW
+			grp[j].Idx = new uint16_t[grp[j].nIdx]; TRACENEW
 			grp[j].nVtx = 0;
 			grp[j].nIdx = 0;
 		}
@@ -510,9 +467,9 @@ void Base::ScanObjectMeshes () const
 			ng = bo->nGroup();
 			for (j = 0; j < ng; j++) {
 				bo->GetGroupSpec (j, nvtx, nidx, texid, undersh, groundsh);
-				DWORD &ngrp     = (undersh ? ngrp_us : ngrp_os);
+				int &ngrp     = (undersh ? ngrp_us : ngrp_os);
 				GroupSpec *&grp = (undersh ? grp_us : grp_os);
-				DWORD texidx = GetGenericTextureIdx (texid);
+				int texidx = GetGenericTextureIdx (texid);
 				for (k = 0; k < ngrp; k++) {
 					if (grp[k].TexIdx == texidx && (grp[k].UsrFlag & 0x1) != groundsh) break;
 				}
@@ -532,20 +489,20 @@ void Base::ScanObjectMeshes () const
 	}
 
 	for (i = 0; i < 2; i++) {
-		DWORD &ngrp = (i==0 ? ngrp_us : ngrp_os);
+		int &ngrp = (i==0 ? ngrp_us : ngrp_os);
 		if (ngrp) {
 			GroupSpec *&grp = (i==0 ? grp_us : grp_os);
 			Mesh *mesh = new Mesh; TRACENEW
 			if (i==0) genmsh_us = mesh;
 			else      genmsh_os = mesh;
 			for (j = 0; j < ngrp; j++) {
-				DWORD texidx = grp[j].TexIdx;
-				int tidx = (texidx != (DWORD)-1 ? mesh->AddTexture (generic_dtex[texidx]) : SPEC_DEFAULT);
+				int texidx = grp[j].TexIdx;
+				int tidx = (texidx != (int)-1 ? mesh->AddTexture (generic_dtex[texidx]) : SPEC_DEFAULT);
 				// note: shallow copy - don't delete vertex and index arrays!
 				int gidx = mesh->AddGroup (grp[j].Vtx, grp[j].nVtx, grp[j].Idx, grp[j].nIdx, SPEC_DEFAULT, tidx);
 				mesh->GetGroup(gidx)->UsrFlag = grp[j].UsrFlag;
 				// add night texture
-				if (texidx != (DWORD)-1 && generic_ntex[texidx]) {
+				if (texidx != (int)-1 && generic_ntex[texidx]) {
 					tidx = mesh->AddTexture (generic_ntex[texidx]);
 					mesh->GetGroup(gidx)->TexIdxEx[0] = tidx;
 				}
@@ -583,7 +540,7 @@ void Base::Rel_EquPos (const Vector &relpos, double &_lng, double &_lat) const
 	_lat = lat - relpos.x/cbody->Size();
 }
 
-void Base::Pad_EquPos (DWORD padno, double &_lng, double &_lat) const
+void Base::Pad_EquPos (int padno, double &_lng, double &_lat) const
 {
 	_lng = lng;
 	_lat = lat;
@@ -593,30 +550,31 @@ void Base::Pad_EquPos (DWORD padno, double &_lng, double &_lat) const
 	}
 }
 
-bool Base::GetGenericTexture (LONGLONG id, SURFHANDLE &daytex, SURFHANDLE &nighttex) const
+bool Base::GetGenericTexture (uint64_t id, SURFHANDLE &daytex, SURFHANDLE &nighttex) const
 {
 	for (int i = 0; i < ngenerictex; i++)
 		if (id == generic_tex_id[i]) {
 			daytex   = generic_dtex[i];
 			nighttex = generic_ntex[i];
+
 			return true;
 		}
 	daytex = nighttex = 0;
 	return false;
 }
 
-DWORD Base::GetGenericTextureIdx (LONGLONG id) const
+int Base::GetGenericTextureIdx (uint64_t id) const
 {
-	for (DWORD i = 0; i < ngenerictex; i++)
+	for (int i = 0; i < ngenerictex; i++)
 		if (id == generic_tex_id[i])
 			return i;
-	return (DWORD)-1;
+	return (int)-1;
 }
 
 int Base::OccupyPad (Vessel *vessel, int pad, bool forcepad)
 {
 	int pd;
-	DWORD i;
+	int i;
 
 	if (forcepad) {
 		if (pad < 0) return -1;
@@ -633,7 +591,7 @@ int Base::OccupyPad (Vessel *vessel, int pad, bool forcepad)
 		return pad;
 	}
 	// pick random free pad
-	pd = (rand()*padfree)/(RAND_MAX+1);
+	pd = rand()%padfree;
 	for (i = 0; i < npad; i++) {
 		if (lspec[i].status == 0) {
 			if (!pd--) {
@@ -652,7 +610,7 @@ int Base::OccupyPad (Vessel *vessel, double _lng, double _lat)
 {
 	const double padrad = 20.0; // landing pad size
 	double plng, plat, dist, bdir;
-	for (DWORD i = 0; i < npad; i++) {
+	for (int i = 0; i < npad; i++) {
 		Pad_EquPos (i, plng, plat);
 		Orthodome (_lng, _lat, plng, plat, dist, bdir);
 		dist *= cbody->Size();
@@ -670,7 +628,7 @@ int Base::OccupyPad (Vessel *vessel, double _lng, double _lat)
 
 void Base::ClearPad (Vessel *vessel)
 {
-	for (DWORD i = 0; i < npad; i++)
+	for (int i = 0; i < npad; i++)
 		if (lspec[i].status && lspec[i].vessel == vessel) {
 			lspec[i].status = 0;
 			lspec[i].vessel = 0;
@@ -680,18 +638,18 @@ void Base::ClearPad (Vessel *vessel)
 
 int Base::LandedAtPad (const Vessel *vessel) const
 {
-	for (DWORD i = 0; i < npad; i++)
+	for (int i = 0; i < npad; i++)
 		if (lspec[i].status == 1 && lspec[i].vessel == vessel)
 			return (int)i;
 	return -1;
 }
 
-int Base::RequestLanding (Vessel *vessel, DWORD &padno)
+int Base::RequestLanding (Vessel *vessel, int &padno)
 {
 	if (rand() < RAND_MAX/2) return 2; // keep pending
 	if (!padfree) return 1;     // deny
-	int pd = (rand()*padfree)/(RAND_MAX+1);
-	for (DWORD i = 0; i < npad; i++) {
+	int pd = rand()%padfree;
+	for (int i = 0; i < npad; i++) {
 		if (lspec[i].status == 0) {
 			if (!pd--) {
 				lspec[i].status = 2;
@@ -714,7 +672,7 @@ int Base::RequestTakeoff ()
 
 void Base::ReportTakeoff (Vessel *vessel)
 {
-	for (DWORD i = 0; i < npad; i++) {
+	for (int i = 0; i < npad; i++) {
 		if (lspec[i].status == 1 && lspec[i].vessel == vessel) {
 			lspec[i].status = 0;
 			lspec[i].vessel = 0;
@@ -727,7 +685,7 @@ int Base::ReportTouchdown (VesselBase *vessel, double vlng, double vlat)
 {
 	const double padrad = 30.0; // landing pad size
 	double plng, plat, dist, bdir;
-	DWORD i, padno = (DWORD)-1;
+	int i, padno = (int)-1;
 	for (i = 0; i < npad; i++) {
 		Pad_EquPos (i, plng, plat);
 		Orthodome (vlng, vlat, plng, plat, dist, bdir);
@@ -741,7 +699,7 @@ int Base::ReportTouchdown (VesselBase *vessel, double vlng, double vlat)
 			break;
 		}
 	}
-	if (padno != (DWORD)-1) { // cancel all other requests for this vessel
+	if (padno != (int)-1) { // cancel all other requests for this vessel
 		if (g_pOrbiter->Cfg()->CfgLogicPrm.bPadRefuel)
 			vessel->Refuel();
 		for (i = 0; i < npad; i++) {

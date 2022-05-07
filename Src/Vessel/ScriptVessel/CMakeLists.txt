@@ -15,9 +15,9 @@ target_include_directories(ScriptVessel
 )
 
 target_link_libraries(ScriptVessel
-	${ORBITER_LIB}
+#	${ORBITER_LIB}
 	${ORBITER_SDK_LIB}
-	${LUA_LIB}
+	lua::lib
 )
 
 add_dependencies(ScriptVessel
@@ -27,6 +27,6 @@ add_dependencies(ScriptVessel
 
 # Installation
 install(TARGETS ScriptVessel
-	RUNTIME
+#	RUNTIME
 	DESTINATION ${ORBITER_INSTALL_MODULE_DIR}
 )

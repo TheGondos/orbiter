@@ -28,14 +28,14 @@ InstrSpd::InstrSpd (VESSEL3 *v): PanelElement (v)
 
 // ==============================================================
 
-void InstrSpd::AddMeshData2D (MESHHANDLE hMesh, DWORD grpidx)
+void InstrSpd::AddMeshData2D (MESHHANDLE hMesh, int grpidx)
 {
-	const DWORD texw = PANELEL_TEXW, texh = PANELEL_TEXH;
+	const int texw = PANELEL_TEXW, texh = PANELEL_TEXH;
 	const float tapex0 = 68.0f, tapew = 32.0f;
 	const float tapey0 = (float)(texh-422), tapeh = 333.0f;
 
-	const DWORD NVTX = 22;
-	const DWORD NIDX = 30;
+	const int NVTX = 22;
+	const int NIDX = 30;
 
 	static NTVERTEX VTX[NVTX] = {
 		// Spd tape
@@ -64,7 +64,7 @@ void InstrSpd::AddMeshData2D (MESHHANDLE hMesh, DWORD grpidx)
 		{stape_xcnt+ 5,stape_ycnt   ,0,  0,0,0,  65.0f/(float)texw, (float)(texh-12.5f)/(float)texh},
 		{stape_xcnt+16,stape_ycnt+11,0,  0,0,0,  77.5f/(float)texw, (float)(texh)/(float)texh}
 	};
-	static WORD IDX[NIDX] = {
+	static uint16_t IDX[NIDX] = {
 		0,1,2, 3,2,1,
 		4,5,6, 7,6,5,
 		8,9,10, 11,10,9,
@@ -186,14 +186,14 @@ InstrAlt::InstrAlt (VESSEL3 *v): PanelElement (v)
 
 // ==============================================================
 
-void InstrAlt::AddMeshData2D (MESHHANDLE hMesh, DWORD grpidx)
+void InstrAlt::AddMeshData2D (MESHHANDLE hMesh, int grpidx)
 {
-	const DWORD texw = PANELEL_TEXW, texh = PANELEL_TEXH;
+	const int texw = PANELEL_TEXW, texh = PANELEL_TEXH;
 	const float tapex0 = 34.0f, tapew = 32.0f;
 	const float tapey0 = (float)(texh-422), tapeh = 333.0f;
 
-	const DWORD NVTX = 22;
-	const DWORD NIDX = 30;
+	const int NVTX = 22;
+	const int NIDX = 30;
 
 	static NTVERTEX VTX[NVTX] = {
 		// VS tape
@@ -222,7 +222,7 @@ void InstrAlt::AddMeshData2D (MESHHANDLE hMesh, DWORD grpidx)
 		{atape_xcnt+ 5,atape_ycnt   ,0,  0,0,0,  65.0f/(float)texw, (float)(texh-12.5f)/(float)texh},
 		{atape_xcnt+16,atape_ycnt+11,0,  0,0,0,  77.5f/(float)texw, (float)(texh)/(float)texh}
 	};
-	static WORD IDX[NIDX] = {
+	static uint16_t IDX[NIDX] = {
 		0,1,2, 3,2,1,
 		4,5,6, 7,6,5,
 		8,9,10, 11,10,9,
@@ -342,14 +342,14 @@ InstrVS::InstrVS (VESSEL3 *v): PanelElement (v)
 
 // ==============================================================
 
-void InstrVS::AddMeshData2D (MESHHANDLE hMesh, DWORD grpidx)
+void InstrVS::AddMeshData2D (MESHHANDLE hMesh, int grpidx)
 {
-	const DWORD texw = PANELEL_TEXW, texh = PANELEL_TEXH;
+	const int texw = PANELEL_TEXW, texh = PANELEL_TEXH;
 	const float tapex0 = 0.0f, tapew = 32.0f;
 	const float tapey0 = (float)(texh-422), tapeh = 333.0f;
 
-	const DWORD NVTX = 18;
-	const DWORD NIDX = 24;
+	const int NVTX = 18;
+	const int NIDX = 24;
 
 	static NTVERTEX VTX[NVTX] = {
 		// VS tape
@@ -374,7 +374,7 @@ void InstrVS::AddMeshData2D (MESHHANDLE hMesh, DWORD grpidx)
 		{vtape_xcnt+ 5,vtape_ycnt   ,0,  0,0,0,  65.0f/(float)texw, (float)(texh-12.5f)/(float)texh},
 		{vtape_xcnt+16,vtape_ycnt+11,0,  0,0,0,  77.5f/(float)texw, (float)(texh)/(float)texh}
 	};
-	static WORD IDX[NIDX] = {
+	static uint16_t IDX[NIDX] = {
 		0,1,2, 3,2,1,
 		4,5,6, 7,6,5,
 		8,9,10, 11,10,9,
@@ -508,14 +508,14 @@ InstrVAcc::InstrVAcc (VESSEL3 *v): PanelElement (v)
 
 // ==============================================================
 
-void InstrVAcc::AddMeshData2D (MESHHANDLE hMesh, DWORD grpidx)
+void InstrVAcc::AddMeshData2D (MESHHANDLE hMesh, int grpidx)
 {
-	const DWORD texw = PANELEL_TEXW, texh = PANELEL_TEXH;
+	const int texw = PANELEL_TEXW, texh = PANELEL_TEXH;
 	const float tapex0 = 0.0f, tapew = 32.0f;
 	const float tapey0 = (float)(texh-422), tapeh = 333.0f;
 
-	const DWORD NVTX = 3;
-	const DWORD NIDX = 3;
+	const int NVTX = 3;
+	const int NIDX = 3;
 
 	static NTVERTEX VTX[NVTX] = {
 		// VAcc needle
@@ -523,7 +523,7 @@ void InstrVAcc::AddMeshData2D (MESHHANDLE hMesh, DWORD grpidx)
 		{vtape_xcnt+31,vtape_ycnt-6,0,  0,0,0,  71.5f/(float)texw, (texh-1.0f)/(float)texh},
 		{vtape_xcnt+31,vtape_ycnt+6,0,  0,0,0,  61.5f/(float)texw, (texh-1.0f)/(float)texh},
 	};
-	static WORD IDX[NIDX] = {
+	static uint16_t IDX[NIDX] = {
 		0,1,2
 	};
 
@@ -547,7 +547,7 @@ bool InstrVAcc::Redraw2D (SURFHANDLE surf)
 	if (t > pt) {
 		const double yscale = 6.2455;
 		double vacc = (vspd-pvspd)/(t-pt);
-		yofs = -(float)((vacc >= 0.0 ? sqrt(min(40,vacc)) : -sqrt(min(40,-vacc))) * yscale);
+		yofs = -(float)((vacc >= 0.0 ? sqrt(std::min(40.0,vacc)) : -sqrt(std::min(40.0,-vacc))) * yscale);
 		static const float y0[3] = {vtape_ycnt, vtape_ycnt-6, vtape_ycnt+6};
 		for (i = 0; i < 3; i++)
 			grp->Vtx[vtxofs+i].y = y0[i] + yofs;

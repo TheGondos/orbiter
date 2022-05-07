@@ -46,7 +46,7 @@ public:
 	class MFDvariable *GetCurrVariable(unsigned int curvarfunction,int currviewmode); //Gets the current variable in the current function
 	static void updatefocusvessel(OBJHANDLE newfocus); //Updates handles when vessel changes
 	void updateownfocusvessel(OBJHANDLE newfocus); //Non-void section that updates focus vessel in every function
-	bool sethelpsystem(bool thelpsystem) {helpsystem=thelpsystem;};
+	bool sethelpsystem(bool thelpsystem) {helpsystem=thelpsystem;return true;};
 	bool fliphelpsystem(){return helpsystem=!helpsystem;};
 	void togglefunctionswitch();
 	int getnumfunctions(){return baselist.size();};

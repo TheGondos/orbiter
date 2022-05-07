@@ -12,6 +12,9 @@
 
 #include "Instrument.h"
 #include "Orbitersdk.h"
+#include <cstring>
+
+#define _strnicmp strncasecmp
 
 PanelElement::PanelElement (VESSEL3 *v)
 {
@@ -54,7 +57,7 @@ void PanelElement::LoadVC (int vcid)
 
 // --------------------------------------------------------------
 
-void PanelElement::LoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH)
+void PanelElement::LoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH)
 {
 }
 
@@ -88,7 +91,7 @@ bool PanelElement::ProcessMouseVC (int event, VECTOR3 &p)
 
 // --------------------------------------------------------------
 
-void PanelElement::AddGeometry (MESHHANDLE hMesh, DWORD grpidx, const NTVERTEX *vtx, DWORD nvtx, const WORD *idx, DWORD nidx)
+void PanelElement::AddGeometry (MESHHANDLE hMesh, int grpidx, const NTVERTEX *vtx, int nvtx, const uint16_t *idx, int nidx)
 {
 	mesh = hMesh;
 	gidx = grpidx;
@@ -99,7 +102,7 @@ void PanelElement::AddGeometry (MESHHANDLE hMesh, DWORD grpidx, const NTVERTEX *
 
 // --------------------------------------------------------------
 
-void PanelElement::SelectGeometry (MESHHANDLE hMesh, DWORD grpidx, int vofs)
+void PanelElement::SelectGeometry (MESHHANDLE hMesh, int grpidx, int vofs)
 {
 	mesh = hMesh;
 	gidx = grpidx;
@@ -351,7 +354,7 @@ void Subsystem::clbkPostStep (double simt, double simdt, double mjd)
 
 // --------------------------------------------------------------
 
-bool Subsystem::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH)
+bool Subsystem::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH)
 {
 	for (std::vector<PanelElement*>::iterator it = element.begin(); it != element.end(); ++it)
 		(*it)->LoadPanel2D (panelid, hPanel, viewW, viewH);
@@ -455,11 +458,11 @@ bool Subsystem::clbkPlaybackEvent (double simt, double event_t, const char *even
 
 // --------------------------------------------------------------
 
-int Subsystem::clbkConsumeBufferedKey (DWORD key, bool down, char *kstate)
+int Subsystem::clbkConsumeBufferedKey (int key, bool down, char *kstate)
 {
 	int res;
 	for (std::vector<Subsystem*>::iterator it = child.begin(); it != child.end(); ++it)
-		if (res = (*it)->clbkConsumeBufferedKey (key, down, kstate))
+		if ((res = (*it)->clbkConsumeBufferedKey (key, down, kstate)))
 			return res;
 	return 0;
 }
@@ -470,7 +473,7 @@ int Subsystem::clbkConsumeDirectKey (char *kstate)
 {
 	int res;
 	for (std::vector<Subsystem*>::iterator it = child.begin(); it != child.end(); ++it)
-		if (res = (*it)->clbkConsumeDirectKey (kstate))
+		if ((res = (*it)->clbkConsumeDirectKey (kstate)))
 			return res;
 	return 0;
 }
@@ -596,7 +599,7 @@ void ComponentVessel::clbkResetVC (int vcid, DEVMESHHANDLE hMesh)
 
 // --------------------------------------------------------------
 
-bool ComponentVessel::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH)
+bool ComponentVessel::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH)
 {
 	bool b = false;
 	for (std::vector<Subsystem*>::iterator it = ssys.begin(); it != ssys.end(); ++it) {
@@ -640,11 +643,11 @@ bool ComponentVessel::clbkVCRedrawEvent (int elid, int event, DEVMESHHANDLE hMes
 
 // --------------------------------------------------------------
 
-int ComponentVessel::clbkConsumeBufferedKey (DWORD key, bool down, char *kstate)
+int ComponentVessel::clbkConsumeBufferedKey (int key, bool down, char *kstate)
 {
 	int res;
 	for (std::vector<Subsystem*>::iterator it = ssys.begin(); it != ssys.end(); ++it) {
-		if (res = (*it)->clbkConsumeBufferedKey (key, down, kstate))
+		if ((res = (*it)->clbkConsumeBufferedKey (key, down, kstate)))
 			return res;
 	}
 	return 0;
@@ -656,7 +659,7 @@ int ComponentVessel::clbkConsumeDirectKey (char *kstate)
 {
 	int res;
 	for (std::vector<Subsystem*>::iterator it = ssys.begin(); it != ssys.end(); ++it) {
-		if (res = (*it)->clbkConsumeDirectKey (kstate))
+		if ((res = (*it)->clbkConsumeDirectKey (kstate)))
 			return res;
 	}
 	return 0;

@@ -31,9 +31,9 @@ CloudManager::CloudManager (const D3D7Client *gclient, const vPlanet *vplanet)
 	delete []objname;
 	objname = texname;
 
-	maxlvl = min (*(int*)gc->GetConfigParam (CFGPRM_SURFACEMAXLEVEL),        // global setting
+	maxlvl = std::min (*(int*)gc->GetConfigParam (CFGPRM_SURFACEMAXLEVEL),        // global setting
 	              *(int*)oapiGetObjectParam (obj, OBJPRM_PLANET_SURFACEMAXLEVEL)); // planet-specific setting
-	maxbaselvl = min (8, maxlvl);
+	maxbaselvl = std::min (8, maxlvl);
 	pcdir = _V(1,0,0);
 	lightfac = *(double*)gc->GetConfigParam (CFGPRM_SURFACELIGHTBRT);
 	nmask = 0;

@@ -134,7 +134,7 @@ bool ZTreeMgr::OpenArchive()
 {
 	const char *name[6] = { "Surf", "Mask", "Elev", "Elev_mod", "Label", "Cloud" };
 	char fname[256];
-	sprintf (fname, "%s\\Archive\\%s.tree", path, name[layer]);
+	sprintf (fname, "%s/Archive/%s.tree", path, name[layer]);
 	treef = fopen(fname, "rb");
 	if (!treef) return false;
 
@@ -188,7 +188,7 @@ DWORD ZTreeMgr::ReadData(DWORD idx, BYTE **outp)
 	DWORD esize = NodeSizeInflated(idx);
 	if (!esize) // node doesn't have data, but has descendants with data
 		return 0;
-
+#define _fseeki64 fseek
 	if (_fseeki64(treef, toc[idx].pos+dofs, SEEK_SET))
 		return 0;
 

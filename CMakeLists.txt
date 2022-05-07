@@ -1,8 +1,9 @@
 # Copyright (c) Martin Schweiger
 # Licensed under the MIT License
 
-cmake_minimum_required(VERSION 3.19)
-
+cmake_minimum_required(VERSION 3.16)
+#add_compile_options(-fsanitize=address)
+#add_link_options(-fsanitize=address)
 # Set the project name
 project (Orbiter VERSION 21.7.24)
 
@@ -12,12 +13,17 @@ include(ExternalProject)
 # Some functions to simplify debugging CMake scripts
 include(CMakePrintHelpers)
 
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_INSTALL_RPATH $ORIGIN:$ORIGIN/Modules:$ORIGIN/Modules/Plugin:$ORIGIN/..)
+
 # Support for including runtime libraries in packages
 set(CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS_SKIP TRUE)
 include(InstallRequiredSystemLibraries)
 
 # Set the pools for compilers that can't run concurrently
-set_property(GLOBAL PROPERTY JOB_POOLS latex=1 soffice=1 htmlhelp=1)
+set_property(GLOBAL PROPERTY JOB_POOLS latex=1 soffice=1)
 
 # Group projects in VS
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -31,17 +37,17 @@ else()
 	set(ARCH "x86")
 	set(PLATFORM_STRING "Win32")
 endif()
+set( CMAKE_CXX_EXTENSIONS ON )
 
 # Define directories and file paths for some common binaries
 set(OVP_DIR "${CMAKE_SOURCE_DIR}/OVP")
-set(GDICLIENT_DIR "${OVP_DIR}/GDIClient")
 
 set(ORBITER_SOURCE_ROOT_DIR ${CMAKE_SOURCE_DIR})
 set(ORBITER_SOURCE_DIR ${ORBITER_SOURCE_ROOT_DIR}/Src/Orbiter)
 set(ORBITER_SOURCE_MODULE_DIR ${ORBITER_SOURCE_ROOT_DIR}/Src/Plugin)
 set(ORBITER_SOURCE_SDK_DIR ${ORBITER_SOURCE_ROOT_DIR}/Orbitersdk)
 set(ORBITER_SOURCE_SDK_INCLUDE_DIR ${ORBITER_SOURCE_SDK_DIR}/include)
-set(ORBITER_SOURCE_HTML_DIR ${ORBITER_SOURCE_ROOT_DIR}/Html)
+#set(ORBITER_SOURCE_HTML_DIR ${ORBITER_SOURCE_ROOT_DIR}/Html)
 set(ORBITER_SOURCE_SDK_DIR ${ORBITER_SOURCE_ROOT_DIR}/Orbitersdk)
 
 set(ORBITER_BINARY_ROOT_DIR ${CMAKE_BINARY_DIR})
@@ -53,57 +59,86 @@ set(ORBITER_BINARY_CELBODY_DIR ${ORBITER_BINARY_MODULE_DIR}/Celbody)
 set(ORBITER_BINARY_PLUGIN_DIR ${ORBITER_BINARY_MODULE_DIR}/Plugin)
 set(ORBITER_BINARY_VESSEL_DIR ${ORBITER_BINARY_MODULE_DIR})
 set(ORBITER_BINARY_TEXTURES_DIR ${ORBITER_BINARY_ROOT_DIR}/Textures)
-set(ORBITER_BINARY_HTML_DIR ${ORBITER_BINARY_ROOT_DIR}/Html)
+#set(ORBITER_BINARY_HTML_DIR ${ORBITER_BINARY_ROOT_DIR}/Html)
 set(ORBITER_BINARY_DOC_DIR ${ORBITER_BINARY_ROOT_DIR}/Doc)
 set(ORBITER_BINARY_SDK_DIR ${ORBITER_BINARY_ROOT_DIR}/Orbitersdk)
+set(ORBITER_BINARY_BITMAP_DIR ${ORBITER_BINARY_ROOT_DIR}/Bitmaps)
 
 set(ORBITER_INSTALL_ROOT_DIR "Orbiter") # This path is relative to CMAKE_INSTALL_PREFIX
 set(ORBITER_INSTALL_MODULE_DIR ${ORBITER_INSTALL_ROOT_DIR}/Modules)
 set(ORBITER_INSTALL_CELBODY_DIR ${ORBITER_INSTALL_MODULE_DIR}/Celbody)
 set(ORBITER_INSTALL_PLUGIN_DIR ${ORBITER_INSTALL_MODULE_DIR}/Plugin)
 set(ORBITER_INSTALL_TEXTURES_DIR ${ORBITER_INSTALL_ROOT_DIR}/Textures)
-set(ORBITER_INSTALL_HTML_DIR  ${ORBITER_INSTALL_ROOT_DIR}/Html)
+#set(ORBITER_INSTALL_HTML_DIR  ${ORBITER_INSTALL_ROOT_DIR}/Html)
 set(ORBITER_INSTALL_DOC_DIR ${ORBITER_INSTALL_ROOT_DIR}/Doc)
 set(ORBITER_INSTALL_UTILS_DIR ${ORBITER_INSTALL_ROOT_DIR}/Utils)
 set(ORBITER_INSTALL_SDK_DIR ${ORBITER_INSTALL_ROOT_DIR}/Orbitersdk)
 
 set(ORBITER_SDK_LIB $<TARGET_FILE:Orbitersdk>)
-set(ORBITER_DLGCTRL_LIB $<TARGET_FILE:DlgCtrl>)
 set(LUAINTERPRETER_LIB $<TARGET_LINKER_FILE:LuaInterpreter>)
-set(GDICLIENT_LIB $<TARGET_LINKER_FILE:GDIClient>)
 
 set(EXTERN_DIR "${CMAKE_SOURCE_DIR}/Extern")
 
-set(ZLIB_VER "1.2.11")
-set(ZLIB_DIR "${EXTERN_DIR}/zlib/zlib-${ZLIB_VER}-${ARCH}")
-set(ZLIB_INCLUDE_DIR "${ZLIB_DIR}/include")
-set(ZLIB_LIB_DIR "${ZLIB_DIR}/lib")
-set(ZLIB_LIB "${ZLIB_LIB_DIR}/zlibstatic.lib")
+#set(ZLIB_DIR "${EXTERN_DIR}/zlib-ng")
+#set(ZLIB_INCLUDE_DIR "${ZLIB_DIR}")
+#set(ZLIB_LIB_DIR "${ZLIB_DIR}")
+#set(ZLIB_LIB "${ZLIB_LIB_DIR}/libz.a")
 
-set(Lua_VER "5.1")
-set(LUA_DIR "${EXTERN_DIR}/Lua/Lua-${Lua_VER}-${ARCH}")
-set(LUA_INCLUDE_DIR "${LUA_DIR}/include")
-set(LUA_LIB_DIR "${LUA_DIR}/lib")
-set(LUA_DLL_DIR "${LUA_DIR}/dll")
-set(LUA_LIB "${LUA_DLL_DIR}/lua${Lua_VER}.lib")
-
-set(DX7SDK_PATH "${EXTERN_DIR}/mssdk_dx7")
-set(DX7SDK_INCLUDE_DIR "${DX7SDK_PATH}/include")
-set(DX7SDK_LIB_DIR "${DX7SDK_PATH}/lib")
-
-set(HTMLHELP_DIR "${EXTERN_DIR}/Htmlhelp")
-set(HTMLHELP_INCLUDE_DIR ${HTMLHELP_DIR}/include)
-set(HTMLHELP_LIB_DIR ${HTMLHELP_DIR}/lib-${ARCH})
-set(HTMLHELP_LIB ${HTMLHELP_LIB_DIR}/Htmlhelp.lib)
+#set(Lua_VER "5.1")
+#set(LUA_DIR "${EXTERN_DIR}/lua")
+#set(LUA_INCLUDE_DIR "${LUA_DIR}")
+#set(LUA_LIB_DIR "${LUA_DIR}")
+#set(LUA_DLL_DIR "${LUA_DIR}")
+#set(LUA_LIB "${LUA_DLL_DIR}/$<TARGET_FILE:lua>")
 
 set(ORBITER_TOOL_MESHC "$<TARGET_FILE:meshc>")
-set(LUA_EXE ${LUA_DIR}/bin/lua.exe)
+set(LUA_EXE "${LUA_DIR}$<TARGET_FILE:lua>")
 set(ldoc ${LUA_EXE} ${LUA_DIR}/packages/LDoc/ldoc.lua)
 
-find_package(OpenGL QUIET)
 find_package(HTMLHelp)
 find_package(Doxygen)
 find_package(LATEX)		
+find_package(glfw3 3.3 REQUIRED)
+
+
+# ImGui
+set(IMGUI_LIB_NAME "Extern/imgui")
+
+set(IMGUI_SOURCES
+    "${IMGUI_LIB_NAME}/imgui.cpp"
+    "${IMGUI_LIB_NAME}/imgui_demo.cpp"
+    "${IMGUI_LIB_NAME}/imgui_draw.cpp"
+    "${IMGUI_LIB_NAME}/imgui_tables.cpp"
+    "${IMGUI_LIB_NAME}/imgui_widgets.cpp"
+)
+
+set(IMGUI_HEADERS
+    "${IMGUI_LIB_NAME}/imgui.h"
+)
+
+set(IMGUI_INC_PATH "${IMGUI_LIB_NAME}/")
+
+add_library(imgui
+    STATIC
+        ${IMGUI_SOURCES}
+        ${IMGUI_HEADERS}
+)
+
+target_compile_definitions(imgui
+    PRIVATE
+        IMGUI_IMPL_OPENGL_LOADER_GLAD=1
+)
+
+target_include_directories(imgui
+    PUBLIC
+        "${IMGUI_INC_PATH}"
+        "${GLFW_INC_PATH}"
+        "${GLAD_INC_PATH}"
+)
+
+# zlib-ng
+
+
 
 # We don't query Qt with find_package because we need the 64-bit version here
 set(Qt5_x64_DIR
@@ -128,9 +163,10 @@ add_custom_target(CopyData ALL
 	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/Config/ ${CMAKE_BINARY_DIR}/Config
 	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/Flights/ ${CMAKE_BINARY_DIR}/Flights
 	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/Orbitersdk/include/ ${CMAKE_BINARY_DIR}/Orbitersdk/include
-	COMMAND ${CMAKE_COMMAND} -E make_directory ${ORBITER_BINARY_SDK_DIR}/lib/Lua
-	COMMAND ${CMAKE_COMMAND} -E copy ${LUA_DLL_DIR}/lua5.1.lib ${ORBITER_BINARY_SDK_DIR}/lib/Lua/
-	COMMAND ${CMAKE_COMMAND} -E copy ${LUA_DLL_DIR}/lua5.1.dll ${CMAKE_BINARY_DIR}
+	
+#	COMMAND ${CMAKE_COMMAND} -E make_directory ${ORBITER_BINARY_SDK_DIR}/lib/Lua
+#	COMMAND ${CMAKE_COMMAND} -E copy ${LUA_DLL_DIR}/lua5.1.lib ${ORBITER_BINARY_SDK_DIR}/lib/Lua/
+#	COMMAND ${CMAKE_COMMAND} -E copy ${LUA_DLL_DIR}/lua5.1.dll ${CMAKE_BINARY_DIR}
 )
 set_target_properties(CopyData
 	PROPERTIES
@@ -140,9 +176,9 @@ set_target_properties(CopyData
 # =====================================================================================
 # work around Html Help compiler bug returning error code
 
-set(HHC_CMD ${CMAKE_CURRENT_BINARY_DIR}/cmake/hhc_fix.bat)
-file(TO_NATIVE_PATH "${HTML_HELP_COMPILER}" HHC_PATH_W)
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/hhc_fix.bat.in ${HHC_CMD})
+#set(HHC_CMD ${CMAKE_CURRENT_BINARY_DIR}/cmake/hhc_fix.bat)
+#file(TO_NATIVE_PATH "${HTML_HELP_COMPILER}" HHC_PATH_W)
+#configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/hhc_fix.bat.in ${HHC_CMD})
 
 
 # =====================================================================================
@@ -155,47 +191,10 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/pdftex_fix.bat.in ${PDFTEX_CMD}
 
 # =====================================================================================
 
-set(OrbiterExe_graphics "Orbiter (built-in DX7 graphics engine)")
 set(OrbiterExe_ng "Orbiter (graphics server version)")
-set(OrbiterExe_both "Both (inline DX7 graphics + graphics server)")
 
-if(BUILD64) # only allow graphics server version on x64 builds
-
-	set(ORBITER_GRAPHICS ${OrbiterExe_ng})
-
-else()
-
-	set(ORBITER_GRAPHICS
-		${OrbiterExe_both}
-		CACHE
-		STRING
-		"Orbiter executables to be built."
-	)
-	set_property(CACHE ORBITER_GRAPHICS
-		PROPERTY
-		STRINGS ${OrbiterExe_both} ${OrbiterExe_graphics} ${OrbiterExe_ng}
-	)
-
-endif()
-
-if(NOT ${ORBITER_GRAPHICS} STREQUAL ${OrbiterExe_ng})
-	set(BUILD_ORBITER_DX7 1)
-else()
-	set(BUILD_ORBITER_DX7 0)
-endif()
-if(NOT ${ORBITER_GRAPHICS} STREQUAL ${OrbiterExe_graphics})
-	set(BUILD_ORBITER_SERVER 1)
-else()
-	set(BUILD_ORBITER_SERVER 0)
-endif()
-
-if(BUILD_ORBITER_DX7)
-	set(OrbiterTgt Orbiter)
-	set(ORBITER_LIB $<TARGET_LINKER_FILE:Orbiter>)
-else()
-	set(OrbiterTgt Orbiter_server)
-	set(ORBITER_LIB $<TARGET_LINKER_FILE:Orbiter_server>)
-endif()
+set(OrbiterTgt Orbiter_server)
+set(ORBITER_LIB $<TARGET_LINKER_FILE:Orbiter_server>)
 
 # =====================================================================================
 # Configure Orbiter.cfg for externally installed planet textures
@@ -208,26 +207,21 @@ set(ORBITER_PLANET_TEXTURE_INSTALL_DIR
 )
 string(COMPARE NOTEQUAL ${ORBITER_PLANET_TEXTURE_INSTALL_DIR} "${ORBITER_BINARY_ROOT_DIR}/Textures" CUSTOM_PLANET_TEXTURE_DIR)
 
-if (${CUSTOM_PLANET_TEXTURE_DIR})
-	string(REPLACE  "/" "\\" ORBITER_PLANET_TEXTURE_INSTALL_DIR_W "${ORBITER_PLANET_TEXTURE_INSTALL_DIR}")
-
-	if(BUILD_ORBITER_DX7)
-		configure_file(${ORBITER_SOURCE_DIR}/Orbiter.cfg.in ${ORBITER_BINARY_ROOT_DIR}/Orbiter.cfg)
-		install(FILES
-			${ORBITER_BINARY_ROOT_DIR}/Orbiter.cfg
-			DESTINATION ${ORBITER_INSTALL_ROOT_DIR}
-		)
-	endif()
-	
-	if(BUILD_ORBITER_SERVER)
-		configure_file(${ORBITER_SOURCE_DIR}/Orbiter.cfg.in ${ORBITER_BINARY_ROOT_DIR}/Orbiter_NG.cfg)
-		install(FILES
-			${ORBITER_BINARY_ROOT_DIR}/Orbiter_NG.cfg
-			DESTINATION ${ORBITER_INSTALL_ROOT_DIR}
-		)
-	endif()
-	
-endif()
+#if (${CUSTOM_PLANET_TEXTURE_DIR})
+#	string(REPLACE  "/" "\\" ORBITER_PLANET_TEXTURE_INSTALL_DIR_W "${ORBITER_PLANET_TEXTURE_INSTALL_DIR}")
+#
+#	configure_file(${ORBITER_SOURCE_DIR}/Orbiter.cfg.in ${ORBITER_BINARY_ROOT_DIR}/Orbiter_NG.cfg)
+#	install(FILES
+#		${ORBITER_BINARY_ROOT_DIR}/Orbiter_NG.cfg
+#		DESTINATION ${ORBITER_INSTALL_ROOT_DIR}
+#	)
+#	
+#endif()
+configure_file(${ORBITER_SOURCE_DIR}/Orbiter.cfg.in ${ORBITER_BINARY_ROOT_DIR}/Orbiter_NG.cfg)
+install(FILES
+	${ORBITER_BINARY_ROOT_DIR}/Orbiter_NG.cfg
+	DESTINATION ${ORBITER_INSTALL_ROOT_DIR}
+)
 
 
 # =====================================================================================
@@ -264,14 +258,14 @@ option(ORBITER_ENABLE_ASAN
 	OFF
 )
 
-if(ORBITER_BUILD_XRSOUND)
-	set(IRRKLANG_DIR
-		irrKlang_NOTFOUND
-		CACHE
-		PATH
-		"Root folder of irrKlang installation."
-	)
-endif()
+#if(ORBITER_BUILD_XRSOUND)
+#	set(IRRKLANG_DIR
+#		irrKlang_NOTFOUND
+#		CACHE
+#		PATH
+#		"Root folder of irrKlang installation."
+#	)
+#endif()
 
 if (ORBITER_MAKE_DOC)
 
@@ -400,12 +394,15 @@ endfunction()
 install(DIRECTORY Scenarios Textures Meshes Config Script Flights BinAssets/
 	DESTINATION ${ORBITER_INSTALL_ROOT_DIR}
 )
-install(FILES ${LUA_DLL_DIR}/lua5.1.dll
+install(FILES ${CMAKE_SOURCE_DIR}/Extern/imgui/misc/fonts/Roboto-Medium.ttf
 	DESTINATION ${ORBITER_INSTALL_ROOT_DIR}
 )
-install(FILES ${LUA_DLL_DIR}/lua5.1.lib
-	DESTINATION ${ORBITER_INSTALL_SDK_DIR}/lib/Lua
-)
+#install(FILES ${LUA_DLL_DIR}/lua5.1.dll
+#	DESTINATION ${ORBITER_INSTALL_ROOT_DIR}
+#)
+#install(FILES ${LUA_DLL_DIR}/lua5.1.lib
+#	DESTINATION ${ORBITER_INSTALL_SDK_DIR}/lib/Lua
+#)
 
 set(CMAKE_MODULE_PATH
 	${ORBITER_BINARY_ROOT_DIR}
@@ -420,12 +417,16 @@ INSTALL(FILES ${CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS}
 )
 
 # Sub-projects
+add_subdirectory(Extern/lua-5.1.5)
+#set(ZLIB_COMPAT ON)
+#add_subdirectory(Extern/zlib-ng)
 add_subdirectory(Src)
 add_subdirectory(Utils)
 add_subdirectory(Orbitersdk)
 add_subdirectory(OVP)
 add_subdirectory(Sound)
-add_subdirectory(Html)
+#add_subdirectory(Html)
+add_subdirectory(Addons)
 
 if(ORBITER_MAKE_DOC)
 	add_subdirectory(Doc)
@@ -476,10 +477,10 @@ cpack_add_component(RuntimeLibraries
 
 #set(CPACK_PRE_BUILD_SCRIPTS ${ORBITER_SOURCE_ROOT_DIR}/cmake/cpack_install.cmake)
 
-if (ORBITER_MAKE_TESTS)
-      enable_testing()
-      add_subdirectory(Tests)
-endif()
+#if (ORBITER_MAKE_TESTS)
+#      enable_testing()
+#      add_subdirectory(Tests)
+#endif()
 
 if (ORBITER_ENABLE_ASAN AND MSVC)
 	add_dependencies(Orbiter_server AsanBinaries)

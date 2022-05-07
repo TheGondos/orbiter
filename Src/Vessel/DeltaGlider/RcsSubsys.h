@@ -29,8 +29,8 @@ public:
 
 	void SetMode (int mode);
 	void SetProg (int prog, bool active);
-	bool clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH);
-	bool clbkLoadVC (int vcid);
+	bool clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH) override;
+	bool clbkLoadVC (int vcid) override;
 
 private:
 	RcsModeSelector *modeselector;
@@ -42,6 +42,7 @@ private:
 // Control selector dial
 // ==============================================================
 
+class RcsModeDial;
 class RcsModeSelector: public DGSubsystem {
 	friend class RcsModeDial;
 
@@ -51,8 +52,8 @@ public:
 	void SetMode (int mode);
 	bool IncMode ();
 	bool DecMode ();
-	bool clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH);
-	bool clbkLoadVC (int vcid);
+	bool clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH) override;
+	bool clbkLoadVC (int vcid) override;
 
 public:
 	RcsModeDial *dial;
@@ -87,8 +88,8 @@ public:
 	RcsProgButtons (RcsSubsystem *_subsys);
 	~RcsProgButtons ();
 	void SetMode (int mode, bool active);
-	void DefineAnimationsVC (const VECTOR3 &axis, DWORD meshgrp, DWORD meshgrp_label,
-		DWORD vofs[6], DWORD vofs_label[6]);
+	void DefineAnimationsVC (const VECTOR3 &axis, int meshgrp, int meshgrp_label,
+		int vofs[6], int vofs_label[6]);
 	void Reset2D (int panelid, MESHHANDLE hMesh);
 	void ResetVC (DEVMESHHANDLE hMesh);
 	bool Redraw2D (SURFHANDLE surf);

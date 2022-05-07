@@ -15,9 +15,12 @@
 #define ORBITER_MODULE
 #define ATLANTIS_SRB_MODULE
 
+#define _strnicmp strncasecmp
+
 #include "Atlantis.h"
 #include "math.h"
 #include "stdio.h"
+#include <cstring>
 
 // ==============================================================
 // Specialised vessel class Atlantis_SRB
@@ -45,12 +48,12 @@ Atlantis_SRB::Atlantis_SRB (OBJHANDLE hObj)
 : VESSEL2(hObj)
 {
 	// preload mesh
-	hSRBMesh = oapiLoadMeshGlobal ("Atlantis\\Atlantis_srb");
+	hSRBMesh = oapiLoadMeshGlobal ("Atlantis/Atlantis_SRB");
 }
 
 void Atlantis_SRB::SetLaunchElevation (double elev)
 {
-	if (launchelev = elev) {
+	if ((launchelev = elev)) {
 		TOUCHDOWNVTX launch_tdvtx[ntdvtx];
 		memcpy (launch_tdvtx, tdvtx, ntdvtx*sizeof(TOUCHDOWNVTX));
 		for (int i = 0; i < 6; i++)
@@ -203,7 +206,7 @@ void Atlantis_SRB::clbkPostCreation ()
 	// find out which side of the ET we are attached to
 	OBJHANDLE hTank = GetDockStatus (GetDockHandle (0));
 	if (hTank) {
-		for (UINT i = 1; i <= 2; i++) {
+		for (unsigned int i = 1; i <= 2; i++) {
 			OBJHANDLE hSRB = oapiGetDockStatus (oapiGetDockHandle (hTank, i));
 			if (hSRB == GetHandle()) {
 				srbpos = (i == 1 ? SRB_LEFT : SRB_RIGHT);

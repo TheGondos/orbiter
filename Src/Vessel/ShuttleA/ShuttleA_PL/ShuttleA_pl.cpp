@@ -14,7 +14,7 @@
 #include "ShuttleA_pl.h"
 #include <math.h>
 #include <stdio.h>
-
+#include <strings.h>
 
 //Payload parachute airfoil definitions
 void None_MomentCoeff (double aoa,double M,double Re,double *cl,double *cm,double *cd0)
@@ -136,9 +136,9 @@ void ShuttleA_PL::clbkLoadStateEx (FILEHANDLE scn, void *vs)
 	char *line;
 
 	while (oapiReadScenario_nextline (scn, line)) {
-		if (!_strnicmp (line, "PARACHUTE", 9)) {
+		if (!strncasecmp (line, "PARACHUTE", 9)) {
 			sscanf (line+9, "%d", &Parachute_mode);
-		} else if (!_strnicmp (line, "TIMER", 5)) {
+		} else if (!strncasecmp (line, "TIMER", 5)) {
 			sscanf (line+5, "%lf", &timer);
 		
 		} else {
@@ -290,17 +290,15 @@ void ShuttleA_PL::clbkPostStep(double simt,double simdt,double mjd)
 // --------------------------------------------------------------
 // Module initialisation
 // --------------------------------------------------------------
-DLLCLBK void InitModule (HINSTANCE hModule)
+DLLCLBK void InitModule (oapi::DynamicModule *hModule)
 {
-   
 }
 
 // --------------------------------------------------------------
 // Module cleanup
 // --------------------------------------------------------------
-DLLCLBK void ExitModule (HINSTANCE hModule)
+DLLCLBK void ExitModule (oapi::DynamicModule *hModule)
 {
-
 	 int d=0;
 }
 

@@ -18,18 +18,15 @@
 ** OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 ** THE SOFTWARE.*/
 
-#define STRICT
-
-#include <windows.h>
 #include <stdio.h>
 #include <math.h>
-#include "orbitersdk.h"
+#include "Orbitersdk.h"
 #include "shiplist.h"
 #include "viewstate.h"
 
 bool viewstate::renderviewport=true;
 
-viewstate::viewstate(UINT tmfd, class shipptrs *shipptrs)
+viewstate::viewstate(MfdId tmfd, class shipptrs *shipptrs):mfdposition(tmfd)
 {
 	viewmode=2;
 	varviewmode=2;
@@ -38,7 +35,6 @@ viewstate::viewstate(UINT tmfd, class shipptrs *shipptrs)
 	switchmode=true;
 	mfdactive=false;
 	renderviewport=true;
-	mfdposition=tmfd;
 	state=shipptrs->gettransxstate();
 }
 

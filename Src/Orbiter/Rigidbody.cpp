@@ -270,7 +270,7 @@ void RigidBody::Update (bool force)
 		// numerical instabilities in the angular integration to
 		// leading to a velocity explosion - a last resort
 		const double vmag_max = 100.0*Pi; // limit angular velocities to 100Hz - make user-definable!
-		extern int errno;
+		//extern int errno;
 		errno = 0;
 		double vmag = s1->omega.length();
 		if (vmag > vmag_max || errno) {
@@ -508,19 +508,19 @@ Vector RigidBody::EulerInv_zero (const Vector &tau, const Vector &omega) const
 void RigidBody::SetDynamicUpdate (bool dynamic)
 {
 	if (bDynamicPosVel == dynamic) return; // nothing to do
-	if (bDynamicPosVel = dynamic) {
+	if ((bDynamicPosVel = dynamic)) {
 		rpos_base.Set (s0->pos);
 		rpos_add.Set (0,0,0);
 	} else {
 	}
 }
 
-const char *RigidBody::PropagatorStr (DWORD idx, bool verbose) {
-	static char *ShortPropModeStr[NPROP_METHOD] = {
+const char *RigidBody::PropagatorStr (int idx, bool verbose) {
+	static const char *ShortPropModeStr[NPROP_METHOD] = {
 		"RK2", "RK4", "RK5", "RK6", "RK7", "RK8",
 		"SY2", "SY4", "SY6", "SY8"
 	};
-	static char *LongPropModeStr[NPROP_METHOD] = {
+	static const char *LongPropModeStr[NPROP_METHOD] = {
 		"Runge-Kutta, 2nd order (RK2)", "Runge-Kutta, 4th order (RK4)", "Runge-Kutta, 5th order (RK5)", "Runge-Kutta, 6th order (RK6)",
 		"Runge-Kutta, 7th order (RK7)", "Runge-Kutta, 8th order (RK8)",
 		"Symplectic, 2nd order (SY2)", "Symplectic, 4th order (SY4)", "Symplectic, 6th order (SY6)", "Symplectic, 8th order (SY8)"

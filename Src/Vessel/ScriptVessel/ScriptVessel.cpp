@@ -20,9 +20,10 @@
 #define ORBITER_MODULE
 
 extern "C" {
-#include "Lua\lua.h"
+#include "lua.h"
 }
-#include "orbitersdk.h"
+#include "Orbitersdk.h"
+#include <cstring>
 
 const int NCLBK        = 4;
 const int SETCLASSCAPS = 0;
@@ -97,7 +98,7 @@ ScriptVessel::~ScriptVessel ()
 // --------------------------------------------------------------
 void ScriptVessel::clbkSetClassCaps (FILEHANDLE cfg)
 {
-	char script[256], cmd[256];
+	char script[256], cmd[290];
 	int i;
 
 	// Load the vessel script
@@ -107,14 +108,14 @@ void ScriptVessel::clbkSetClassCaps (FILEHANDLE cfg)
 
 	// Define the vessel instance
 	lua_pushlightuserdata (L, GetHandle());  // push vessel handle
-	lua_setfield (L, LUA_GLOBALSINDEX, "hVessel");
+	lua_setglobal (L, "hVessel");
 	strcpy (cmd, "vi = vessel.get_interface(hVessel)");
 	oapiExecScriptCmd (hInterp, cmd);
 
 	// check for defined callback functions in script
 	for (i = 0; i < NCLBK; i++) {
 		strcpy (func+5, CLBKNAME[i]);
-		lua_getfield (L, LUA_GLOBALSINDEX, func);
+		lua_getglobal (L, func);
 		bclbk[i] = (lua_isfunction (L,-1) != 0);
 		lua_pop(L,1);
 	}
@@ -122,7 +123,7 @@ void ScriptVessel::clbkSetClassCaps (FILEHANDLE cfg)
 	// Run the SetClassCaps function
 	if (bclbk[SETCLASSCAPS]) {
 		strcpy (func+5, "setclasscaps");
-		lua_getfield (L, LUA_GLOBALSINDEX, func);
+		lua_getglobal (L, func);
 		lua_pushlightuserdata (L, cfg);
 		lua_call (L, 1, 0);
 	}
@@ -132,7 +133,7 @@ void ScriptVessel::clbkPostCreation ()
 {
 	if (bclbk[POSTCREATION]) {
 		strcpy (func+5, "postcreation");
-		lua_getfield (L, LUA_GLOBALSINDEX, func);
+		lua_getglobal (L, func);
 		lua_call (L, 0, 0);
 	}
 }
@@ -141,7 +142,7 @@ void ScriptVessel::clbkPreStep (double simt, double simdt, double mjd)
 {
 	if (bclbk[PRESTEP]) {
 		strcpy (func+5, "prestep");
-		lua_getfield (L, LUA_GLOBALSINDEX, func);
+		lua_getglobal (L, func);
 		lua_pushnumber(L,simt);
 		lua_pushnumber(L,simdt);
 		lua_pushnumber(L,mjd);
@@ -153,7 +154,7 @@ void ScriptVessel::clbkPostStep (double simt, double simdt, double mjd)
 {
 	if (bclbk[POSTSTEP]) {
 		strcpy (func+5, "poststep");
-		lua_getfield (L, LUA_GLOBALSINDEX, func);
+		lua_getglobal (L, func);
 		lua_pushnumber(L,simt);
 		lua_pushnumber(L,simdt);
 		lua_pushnumber(L,mjd);

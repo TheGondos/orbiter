@@ -1,7 +1,6 @@
 // Copyright (c) Martin Schweiger
 // Licensed under the MIT License
 
-#include <dinput.h>
 #include "MfdSurface.h"
 #include "Orbiter.h"
 #include "Pane.h"
@@ -10,10 +9,6 @@
 #include "Select.h"
 #include "Util.h"
 #include "Log.h"
-
-#ifdef INLINEGRAPHICS
-#include "Texture.h"
-#endif // INLINEGRAPHICS
 
 using namespace std;
 
@@ -27,7 +22,7 @@ extern Pane *g_pane;
 COLORREF Instrument_Surface::tapelabelcol[2] = {0xFFFFFF,0x60A0FF}; // make configurable
 struct Instrument_Surface::SavePrm Instrument_Surface::saveprm = { 1 };
 
-Instrument_Surface::Instrument_Surface (Pane *_pane, INT_PTR _id, const Spec &spec, Vessel *_vessel)
+Instrument_Surface::Instrument_Surface (Pane *_pane, MfdId _id, const Spec &spec, Vessel *_vessel)
 : Instrument (_pane, _id, spec, _vessel)
 {
 	sp = 0;
@@ -46,9 +41,9 @@ Instrument_Surface::Instrument_Surface (Pane *_pane, INT_PTR _id, const Spec &sp
 
 	if (gc) {
 		horizonpen = gc->clbkCreatePen (1, 3, 0xFFFFFF);
-		brush[0] = gc->clbkCreateBrush (RGB( 99, 93,231));
-		brush[1] = gc->clbkCreateBrush (RGB(173,125, 37));
-		brush[2] = gc->clbkCreateBrush (RGB(0,0,0));
+		brush[0] = gc->clbkCreateBrush (0x00635de7);
+		brush[1] = gc->clbkCreateBrush (0x00ad7d25);
+		brush[2] = gc->clbkCreateBrush (0x00000000);
 	} else {
 		int i;
 		horizonpen = 0;
@@ -103,7 +98,7 @@ void Instrument_Surface::InitDeviceObjects ()
 	// Create heading indicator tape
 	if (heading) {
 		g_pOrbiter->FillSurface (heading, tapecol);
-		if (skp = gc->clbkGetSketchpad (heading)) {
+		if ((skp = gc->clbkGetSketchpad (heading))) {
 			skp->SetFont (GetDefaultFont (3));
 			skp->SetTextColor (tapelabelcol[0]);
 			skp->SetTextAlign (oapi::Sketchpad::CENTER);
@@ -128,7 +123,7 @@ void Instrument_Surface::InitDeviceObjects ()
 	// Create tick strip for top row of tapes
 	if (ticks1) {
 		g_pOrbiter->FillSurface (ticks1, tapecol);
-		if (skp = gc->clbkGetSketchpad (ticks1)) {
+		if ((skp = gc->clbkGetSketchpad (ticks1))) {
 			skp->SetPen (wpen);
 			y0 = (hrzr*3)/2;
 			dy = (hrzr*2)/5;
@@ -153,7 +148,7 @@ void Instrument_Surface::InitDeviceObjects ()
 	if (ticks2) {
 		// Create tick strip for bottom row of tapes
 		g_pOrbiter->FillSurface (ticks2, tapecol);
-		if (skp = gc->clbkGetSketchpad (ticks2)) {
+		if ((skp = gc->clbkGetSketchpad (ticks2))) {
 			skp->SetPen (wpen);
 			y0 = (accr*3)/2;
 			dy = (accr*2)/5;
@@ -177,32 +172,25 @@ void Instrument_Surface::InitDeviceObjects ()
 	gc->clbkReleasePen (wpen);
 }
 
-HELPCONTEXT *Instrument_Surface::HelpTopic () const
-{
-	extern HELPCONTEXT DefHelpContext;
-	DefHelpContext.topic = "/mfd_surf.htm";
-	return &DefHelpContext;
-}
-
-bool Instrument_Surface::KeyBuffered (DWORD key)
+bool Instrument_Surface::KeyBuffered (int key)
 {
 	switch (key) {
-	case DIK_G: // ground-relative speed (GRS)
+	case OAPI_KEY_G: // ground-relative speed (GRS)
 		spdmode = 1;
 		Refresh();
 		return true;
-	case DIK_H: // copy data to HUD
+	case OAPI_KEY_H: // copy data to HUD
 		CopyToHUD ();
 		return true;
-	case DIK_I: // indicated airspeed (IAS)
+	case OAPI_KEY_I: // indicated airspeed (IAS)
 		spdmode = 3;
 		Refresh();
 		return true;
-	case DIK_O: // orbital speed (OS)
+	case OAPI_KEY_O: // orbital speed (OS)
 		spdmode = 4;
 		Refresh();
 		return true;
-	case DIK_T: // true airspeed (TAS)
+	case OAPI_KEY_T: // true airspeed (TAS)
 		spdmode = 2;
 		Refresh();
 		return true;
@@ -212,7 +200,7 @@ bool Instrument_Surface::KeyBuffered (DWORD key)
 
 bool Instrument_Surface::ProcessButton (int bt, int event)
 {
-	static const DWORD btkey[5] = { DIK_I, DIK_T, DIK_G, DIK_O, DIK_H };
+	static const int btkey[5] = { OAPI_KEY_I, OAPI_KEY_T, OAPI_KEY_G, OAPI_KEY_O, OAPI_KEY_H };
 	if (event & PANEL_MOUSE_LBDOWN) {
 		if (bt < 5) return KeyBuffered (btkey[bt]);
 	}
@@ -489,7 +477,7 @@ void Instrument_Surface::UpdateTapes ()
 	g_pOrbiter->Blt (tapes2, cw*10, 0, ticks2, cw, r.top, cw, 2*accr);
 
 	oapi::Sketchpad *skp;
-	if (skp = gc->clbkGetSketchpad (tapes1)) {
+	if ((skp = gc->clbkGetSketchpad (tapes1))) {
 		// speed tape
 		skp->SetFont (GetDefaultFont (3));
 		skp->SetTextColor (tapelabelcol[0]);
@@ -552,7 +540,7 @@ void Instrument_Surface::UpdateTapes ()
 		gc->clbkReleaseSketchpad (skp);
 	}
 
-	if (skp = gc->clbkGetSketchpad (tapes2)) {
+	if ((skp = gc->clbkGetSketchpad (tapes2))) {
 		// acceleration tape
 		skp->SetFont (GetDefaultFont (1));
 		skp->SetBackgroundMode (oapi::Sketchpad::BK_TRANSPARENT);
@@ -607,32 +595,32 @@ void Instrument_Surface::UpdateBlt ()
 
 	if (horizon && heading) {
 		UpdateHorizon();
-		g_pOrbiter->Blt (surf, hrzx0, hrzy0, horizon);
+		g_pOrbiter->Blt (m_surf, hrzx0, hrzy0, horizon);
 
 		static RECT r = {0,0,0,0};
 		r.left   = (int)((DEG*sp->dir + 40.0)/440.0 * hdgbmpw) - hrzr;
 		r.right  = r.left+2*hrzr;
 		r.bottom = (3*ch)/2;
-		g_pOrbiter->Blt (surf, hrzx0, diry0, heading, r.left, 0, 2*hrzr, r.bottom);
+		g_pOrbiter->Blt (m_surf, hrzx0, diry0, heading, r.left, 0, 2*hrzr, r.bottom);
 
 		UpdateTapes();
 		r.left = 0, r.right = cw*6, r.top = 0, r.bottom = hrzr*2;
-		g_pOrbiter->Blt (surf, spdx0, hrzy0, tapes1, 0, 0, r.right, r.bottom);
+		g_pOrbiter->Blt (m_surf, spdx0, hrzy0, tapes1, 0, 0, r.right, r.bottom);
 		//surf->BltFast (spdx0, hrzy0, tapes1, &r, DDBLTFAST_WAIT);
 		r.left = cw*6, r.right = cw*12;
-		g_pOrbiter->Blt (surf, altx0, hrzy0, tapes1, cw*6, 0, cw*6, r.bottom);
+		g_pOrbiter->Blt (m_surf, altx0, hrzy0, tapes1, cw*6, 0, cw*6, r.bottom);
 		//surf->BltFast (altx0, hrzy0, tapes1, &r, DDBLTFAST_WAIT);
 		r.left = cw*12, r.right = cw*17;
-		g_pOrbiter->Blt (surf, vspx0, hrzy0, tapes1, cw*12, 0, cw*5, r.bottom);
+		g_pOrbiter->Blt (m_surf, vspx0, hrzy0, tapes1, cw*12, 0, cw*5, r.bottom);
 		//surf->BltFast (vspx0, hrzy0, tapes1, &r, DDBLTFAST_WAIT);
 		r.left = 0, r.right = cw*5, r.top = 0, r.bottom = accr*2;
-		g_pOrbiter->Blt (surf, accx0, accy0, tapes2, 0, 0, cw*5, accr*2);
+		g_pOrbiter->Blt (m_surf, accx0, accy0, tapes2, 0, 0, cw*5, accr*2);
 		//surf->BltFast (accx0, accy0, tapes2, &r, DDBLTFAST_WAIT);
 		r.left = cw*5, r.right = cw*10;
-		g_pOrbiter->Blt (surf, vacx0, accy0, tapes2, cw*5, 0, cw*5, accr*2);
+		g_pOrbiter->Blt (m_surf, vacx0, accy0, tapes2, cw*5, 0, cw*5, accr*2);
 		//surf->BltFast (vacx0, accy0, tapes2, &r, DDBLTFAST_WAIT);
 		r.left = cw*10, r.right = cw*14;
-		g_pOrbiter->Blt (surf, aoax0, accy0, tapes2, cw*10, 0, cw*4, accr*2);
+		g_pOrbiter->Blt (m_surf, aoax0, accy0, tapes2, cw*10, 0, cw*4, accr*2);
 		//surf->BltFast (aoax0, accy0, tapes2, &r, DDBLTFAST_WAIT);
 	}
 }
@@ -792,17 +780,17 @@ void Instrument_Surface::UpdateDraw (oapi::Sketchpad *skp)
 	// position data -> move to Map MFD
 	y = hrzy1+6*ch;
 	x0 = accx0+6*cw; x1 = x0 + 8*cw; x = x0 + 4*cw;
-	if (lng >= 0.0)  sprintf (cbuf, "%07.3lfº E", Deg(lng));
-	else             sprintf (cbuf, "%07.3lfº W", Deg(-lng));
+	if (lng >= 0.0)  sprintf (cbuf, "%07.3lfï¿½ E", Deg(lng));
+	else             sprintf (cbuf, "%07.3lfï¿½ W", Deg(-lng));
 	skp->Text (x0, y, cbuf, strlen(cbuf));
-	if (vlng >= 0.0) sprintf (cbuf, "[%0.4lfº/s E]", Deg(vlng));
-	else             sprintf (cbuf, "[%0.4lfº/s W]", Deg(-vlng));
+	if (vlng >= 0.0) sprintf (cbuf, "[%0.4lfï¿½/s E]", Deg(vlng));
+	else             sprintf (cbuf, "[%0.4lfï¿½/s W]", Deg(-vlng));
 	skp->Text (x1, y, cbuf, strlen(cbuf)); y += ch;
-	if (lat >= 0.0)  sprintf (cbuf, "%07.3lfº N", Deg(lat));
-	else             sprintf (cbuf, "%07.3lfº S", Deg(-lat));
+	if (lat >= 0.0)  sprintf (cbuf, "%07.3lfï¿½ N", Deg(lat));
+	else             sprintf (cbuf, "%07.3lfï¿½ S", Deg(-lat));
 	skp->Text (x0, y, cbuf, strlen(cbuf));
-	if (vlat >= 0.0) sprintf (cbuf, "[%0.4lfº/s N]", Deg(vlat));
-	else             sprintf (cbuf, "[%0.4lfº/s S]", Deg(-vlat));
+	if (vlat >= 0.0) sprintf (cbuf, "[%0.4lfï¿½/s N]", Deg(vlat));
+	else             sprintf (cbuf, "[%0.4lfï¿½/s S]", Deg(-vlat));
 	skp->Text (x1, y, cbuf, strlen(cbuf)); y += ch;
 
 	// heading indicator
@@ -863,7 +851,7 @@ void Instrument_Surface::UpdateDraw (oapi::Sketchpad *skp)
 	sprintf (cbuf, "%0.*f", avacc < 10 ? 2 : avacc < 100 ? 1 : 0, vacc);
 	skp->Text (vacx0+(25*cw)/8, accy-(3*ch)/8-1, cbuf, strlen(cbuf));
 	skp->Text (x, accy0-(7*ch)/4, "VACC", 4);
-	skp->Text (x, accy0-ch, "m/s²", 4);
+	skp->Text (x, accy0-ch, "m/sï¿½", 4);
 
 	// aoa indicator
 	x = aoax0+2*cw;
@@ -880,14 +868,14 @@ void Instrument_Surface::UpdateDraw (oapi::Sketchpad *skp)
 	else strcpy (cbuf, "----");
 	skp->Text (accx0+(15*cw)/8, accy-(3*ch)/8-1, cbuf, strlen(cbuf));
 	skp->Text (x, accy0-(7*ch)/4, "ACC", 3);
-	skp->Text (x, accy0-ch, "m/s²", 4);
+	skp->Text (x, accy0-ch, "m/sï¿½", 4);
 
 	// pitch and bank values
 	skp->SetTextAlign (oapi::Sketchpad::RIGHT);
-	sprintf (cbuf, "BNK %03.0fº%c", DEG*fabs(bank), bank >= 0 ? 'L':'R');
+	sprintf (cbuf, "BNK %03.0fï¿½%c", DEG*fabs(bank), bank >= 0 ? 'L':'R');
 	skp->Text (hrzx1, hrzy1, cbuf, 9);
 	skp->SetTextAlign (oapi::Sketchpad::LEFT);
-	sprintf (cbuf, "PTCH %+03.0fº", DEG*pitch);
+	sprintf (cbuf, "PTCH %+03.0fï¿½", DEG*pitch);
 	skp->Text (hrzx0, hrzy1, cbuf, 9);
 
 }

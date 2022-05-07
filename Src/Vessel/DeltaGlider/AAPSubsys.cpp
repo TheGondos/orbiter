@@ -22,12 +22,16 @@
 #include "AAPSubsys.h"
 #include "InstrHsi.h"
 #include "meshres_p0.h"
+#include <cstring>
+
+#define _strnicmp strncasecmp
+#define sprintf_s snprintf
 
 static const float texw = (float)PANEL2D_TEXW; // texture width
 static const float texh = (float)PANEL2D_TEXH; // texture height
 static const int xofs = 742;
 static const int yofs = 400;
-static const WORD idx_bb[6] = {0,1,2,3,2,1};
+static const uint16_t idx_bb[6] = {0,1,2,3,2,1};
 
 // ==============================================================
 // Atmospheric autopilot subsystem
@@ -41,7 +45,7 @@ AAPSubsystem::AAPSubsystem (DGSubsystem *parent)
 
 // --------------------------------------------------------------
 
-bool AAPSubsystem::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH)
+bool AAPSubsystem::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH)
 {
 	if (panelid != 0) return false;
 
@@ -83,7 +87,7 @@ AAP::AAP (AAPSubsystem *_subsys)
 	int i;
 	hAAP = oapiCreateInterpreter();
 	hsi = NULL;
-	oapiExecScriptCmd (hAAP, "run('dg/aap')"); // load the autopilot code
+	oapiExecScriptCmd (hAAP, "run('DG/aap')"); // load the autopilot code
 
 	char setVesselCmd[256];
 	sprintf_s(setVesselCmd,256,"setvessel(vessel.get_interface('%s'))",vessel->GetName());
@@ -186,7 +190,7 @@ bool AAP::ProcessMouse2D (int event, int mx, int my)
 
 	if (scanmode && event == PANEL_MOUSE_LBPRESSED) {
 		double t = oapiGetSysTime();
-		double dt = max (t-t0, 0.0);
+		double dt = std::max (t-t0, 0.0);
 		double step, mag;
 		switch (active_block) {
 			case 0:
@@ -194,14 +198,14 @@ bool AAP::ProcessMouse2D (int event, int mx, int my)
 				mag = (dt < 1 ? 2 : dt < 2 ? 1 : 0);
 				if (t-tp > 0.5-mag*0.2) {
 					tp = t;
-					step = max(1,min(1e4,pow(10,floor(log10 (max(tgt[active_block],1)))-mag)));
-					tgt[active_block] = max(0,floor(tgt[active_block]/step)*step + scanmode*step);
+					step = std::max(1.0,std::min(1e4,pow(10,floor(log10 (std::max(tgt[active_block],1.0)))-mag)));
+					tgt[active_block] = std::max(0.0,floor(tgt[active_block]/step)*step + scanmode*step);
 					if (active[active_block]) SetValue (active_block, tgt[active_block]);
 					return true;
 				}
 				break;
 			case 2: // heading/course
-				mag = min (sqrt(dt)*0.2, 0.8);
+				mag = std::min (sqrt(dt)*0.2, 0.8);
 				step = oapiGetSysStep() * mag * scanmode;
 				tgt[2] += step;
 				while (tgt[2] < 0.0) tgt[2] += PI2;

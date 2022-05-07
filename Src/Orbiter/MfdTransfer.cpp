@@ -8,21 +8,19 @@
 #include "Log.h"
 #include "Select.h"
 #include "Orbiter.h"
-#include <dinput.h>
-
+#include <cmath>
 using namespace std;
 
+extern Orbiter *g_pOrbiter;
 extern TimeData td;
 extern PlanetarySystem *g_psys;
-extern InputBox *g_input;
-extern Select *g_select;
 
 // =======================================================================
 // class Instrument_Transfer
 
 struct Instrument_Transfer::SavePrm Instrument_Transfer::saveprm = {0,0,0,0,0.0,0.0,false,false};
 
-Instrument_Transfer::Instrument_Transfer (Pane *_pane, INT_PTR _id, const Spec &spec, Vessel *_vessel)
+Instrument_Transfer::Instrument_Transfer (Pane *_pane, MfdId _id, const Spec &spec, Vessel *_vessel)
 : Instrument (_pane, _id, spec, _vessel)
 {
 	if (_vessel == saveprm.usr) {
@@ -79,13 +77,6 @@ Instrument_Transfer::~Instrument_Transfer ()
 	delete shpel2;
 	delete []path;
 	delete []pathp;
-}
-
-HELPCONTEXT *Instrument_Transfer::HelpTopic () const
-{
-	extern HELPCONTEXT DefHelpContext;
-	DefHelpContext.topic = "/mfd_transfer.htm";
-	return &DefHelpContext;
 }
 
 void Instrument_Transfer::SetSize (const Spec &spec)
@@ -161,7 +152,7 @@ void Instrument_Transfer::UpdateDraw (oapi::Sketchpad *skp)
 	if (src != vessel) {
 		int x, y;
 		Vector dp (mul (irot, vessel->GPos() - src->GPos()));
-		double r = _hypot (dp.x, dp.z);
+		double r = std::hypot (dp.x, dp.z);
 		x = (int)(IW*0.1/r*dp.x);
 		y = (int)(IW*0.1/r*dp.z);
 		MapScreen (ICNTX, ICNTY, scale, mul (irot, shpel->RVec()), &p0);
@@ -259,10 +250,10 @@ void Instrument_Transfer::UpdateDraw (oapi::Sketchpad *skp)
 	y = y0;
 	sprintf (cbuf, "Src %s", src == vessel ? "[self]" : src->Name());
 	skp->Text (x0, y, cbuf, strlen(cbuf)); y += ch;
-	sprintf (cbuf, "TrL% 7.2fº", DEG*shpel->TrueLng());
+	sprintf (cbuf, "TrL% 7.2fï¿½", DEG*shpel->TrueLng());
 	skp->Text (x0, y, cbuf, strlen(cbuf)); y += ch;
 	if (!enable_hyp && dt0 >= 0.0) {
-		sprintf (cbuf, "TLi% 7.2fº", DEG*posangle(rlng+shpel->omegab));
+		sprintf (cbuf, "TLi% 7.2fï¿½", DEG*posangle(rlng+shpel->omegab));
 		skp->Text (x0, y, cbuf, strlen(cbuf)); y += ch;
 		sprintf (cbuf, "DTi%s", DistStr (dt0));
 		skp->Text (x0, y, cbuf, strlen(cbuf)); y += ch;
@@ -274,14 +265,14 @@ void Instrument_Transfer::UpdateDraw (oapi::Sketchpad *skp)
 		skp->Text (x0, y, "HTO", 3); y += ch;
 		sprintf (cbuf, "SMa%s", DistStr (shpel2->a));          // semi-major axis
 		skp->Text (x0, y, cbuf, strlen(cbuf)); y += ch;
-		sprintf (cbuf, "TLe% 7.2fº", DEG*l_eject);             // longitude of ejection point
+		sprintf (cbuf, "TLe% 7.2fï¿½", DEG*l_eject);             // longitude of ejection point
 		skp->Text (x0, y, cbuf, strlen(cbuf)); y += ch;
 		sprintf (cbuf, "DTe%s", DistStr(dte));                 // time to ejection point
 		skp->Text (x0, y, cbuf, strlen(cbuf)); y += ch;
 		sprintf (cbuf, "Dv %s", DistStr (deltav));             // Dvel at ejection point
 		skp->Text (x0, y, cbuf, strlen(cbuf)); y += ch;
 		if (dt0 >= 0.0) {
-			sprintf (cbuf, "TLi% 7.2fº", DEG*posangle(rlng+shpel2->omegab));
+			sprintf (cbuf, "TLi% 7.2fï¿½", DEG*posangle(rlng+shpel2->omegab));
 			skp->Text (x0, y, cbuf, strlen(cbuf)); y += ch;
 			sprintf (cbuf, "DTi%s", DistStr (dt0));
 			skp->Text (x0, y, cbuf, strlen(cbuf)); y += ch;
@@ -293,9 +284,9 @@ void Instrument_Transfer::UpdateDraw (oapi::Sketchpad *skp)
 	if (bTarget) {
 		strcpy (cbuf, "Tgt "); strcat (cbuf, tgt->Name());
 		skp->Text (x1, y, cbuf, strlen(cbuf)); y += ch;
-		sprintf (cbuf, "TrL% 7.2fº", DEG*tgtel->TrueLng());
+		sprintf (cbuf, "TrL% 7.2fï¿½", DEG*tgtel->TrueLng());
 		skp->Text (x1, y, cbuf, strlen(cbuf)); y += ch;
-		if (dt0 >= 0.0) sprintf (cbuf, "TLi% 7.2fº", DEG*tlng);
+		if (dt0 >= 0.0) sprintf (cbuf, "TLi% 7.2fï¿½", DEG*tlng);
 		else            sprintf (cbuf, "TLi  N/A");
 		skp->Text (x1, y, cbuf, strlen(cbuf)); y += ch;
 	} else {
@@ -333,7 +324,7 @@ void Instrument_Transfer::UpdateDraw (oapi::Sketchpad *skp)
 
 		// relative inclination ship orbit <-> target orbit
 		skp->SetTextColor (draw[reli < RAD*1.0 ? 0:1][1].col);
-		sprintf (cbuf, "RInc%7.2fº", Deg(reli));
+		sprintf (cbuf, "RInc%7.2fï¿½", Deg(reli));
 		skp->Text (x0, IH-(3*ch)/2, cbuf, strlen(cbuf));
 	}
 }
@@ -415,69 +406,72 @@ bool Instrument_Transfer::InitNumTrajectory (const Elements *el)
 	return true;
 }
 
-bool Instrument_Transfer::KeyBuffered (DWORD key)
+bool Instrument_Transfer::KeyBuffered (int key)
 {
 	switch (key) {
-	case DIK_F:  // decrease step scale for numerical trajectory
+	case OAPI_KEY_F:  // decrease step scale for numerical trajectory
 		step_scale *= 0.5;
 		return true;
-	case DIK_G:  // increase step scale for numerical trajectory
+	case OAPI_KEY_G:  // increase step scale for numerical trajectory
 		step_scale *= 2.0;
 		return true;
-	case DIK_M:  // toggle numerical trajectory
+	case OAPI_KEY_M:  // toggle numerical trajectory
 		enable_num = !enable_num;
 		if (enable_num) InitNumTrajectory (enable_hyp ? shpel2 : shpel);
 		Refresh();
 		return true;
-	case DIK_N:  // deselect target
+	case OAPI_KEY_N:  // deselect target
 		tgt = 0;
 		Refresh();
 		return true;
-	case DIK_R:  // select reference
+	case OAPI_KEY_R:  // select reference
 		OpenSelect_CelBody ("Transfer MFD: Reference", ClbkEnter_Ref);
 		return true;
-	case DIK_S:  // select source
+	case OAPI_KEY_S:  // select source
 		OpenSelect_Tgt ("Transfer MFD: Source", ClbkEnter_Src, elref, 0);
 		//g_input->Open ("Enter source orbit body:", 0, 20, Instrument_Transfer::ClbkName_Src, (void*)this);
 		return true;
-	case DIK_T:  // select target
+	case OAPI_KEY_T:  // select target
 		OpenSelect_Tgt ("Transfer MFD: Target", ClbkEnter_Tgt, elref, 0);
 		return true;
-	case DIK_U:  // update numerical trajectory
+	case OAPI_KEY_U:  // update numerical trajectory
 		if (enable_num) InitNumTrajectory (enable_hyp ? shpel2 : shpel);
 		Refresh();
 		return true;
-	case DIK_X:  // toggle HTO orbit
+	case OAPI_KEY_X:  // toggle HTO orbit
 		enable_hyp = !enable_hyp;
 		Refresh();
 		return true;
-	case DIK_Z:  // change number of trajectory steps
-		g_input->Open ("Enter # time steps:", 0, 20, Instrument_Transfer::ClbkNstep, (void*)this);
-		return true;
+	case OAPI_KEY_Z:  // change number of trajectory steps
+		{
+			InputBox *input = (InputBox *)g_pOrbiter->m_pGUIManager->GetCtrl<InputBox>();
+			input->Open ("Enter # time steps:", 0, 20, Instrument_Transfer::ClbkNstep, (void*)this);
+			return true;
+		}
 	}
 	return false;
 }
 
 bool Instrument_Transfer::KeyImmediate (char *kstate)
 {
-	if (KEYDOWN (kstate, DIK_COMMA)) {
-		if (BufKey (DIK_COMMA, 0.1)) {
+	if (KEYDOWN (kstate, OAPI_KEY_COMMA)) {
+		if (BufKey (OAPI_KEY_COMMA, 0.1)) {
 			l_eject = posangle (l_eject-RAD);
 			dv_manip = true;
 			Refresh();
 		}
 		return true;
 	}
-	if (KEYDOWN (kstate, DIK_PERIOD)) {
-		if (BufKey (DIK_PERIOD, 0.1)) {
+	if (KEYDOWN (kstate, OAPI_KEY_PERIOD)) {
+		if (BufKey (OAPI_KEY_PERIOD, 0.1)) {
 			l_eject = posangle (l_eject+RAD);
 			dv_manip = true;
 			Refresh();
 		}
 		return true;
 	}
-	if (KEYDOWN (kstate, DIK_MINUS)) {
-		if (BufKey (DIK_MINUS, 0.1)) {
+	if (KEYDOWN (kstate, OAPI_KEY_MINUS)) {
+		if (BufKey (OAPI_KEY_MINUS, 0.1)) {
 			double da = 1.0;
 			if (td.SysT0-tbpress < 0.2)
 				da = (td.SysT0-tbdown < 1.0 ? 1.0:10.0);
@@ -490,8 +484,8 @@ bool Instrument_Transfer::KeyImmediate (char *kstate)
 		}
 		return true;
 	}
-	if (KEYDOWN (kstate, DIK_EQUALS)) {
-		if (BufKey (DIK_EQUALS, 0.1)) {
+	if (KEYDOWN (kstate, OAPI_KEY_EQUALS)) {
+		if (BufKey (OAPI_KEY_EQUALS, 0.1)) {
 			double da = 1.0;
 			if (td.SysT0-tbpress < 0.2)
 				da = (td.SysT0-tbdown < 1.0 ? 1.0:10.0);
@@ -509,8 +503,8 @@ bool Instrument_Transfer::KeyImmediate (char *kstate)
 
 bool Instrument_Transfer::ProcessButton (int bt, int event)
 {
-	static const DWORD btkey[14] = { DIK_R, DIK_S, DIK_T, DIK_N, DIK_X, DIK_M, DIK_U, DIK_Z,
-		DIK_COMMA, DIK_PERIOD, DIK_MINUS, DIK_EQUALS, DIK_F, DIK_G };
+	static const int btkey[14] = { OAPI_KEY_R, OAPI_KEY_S, OAPI_KEY_T, OAPI_KEY_N, OAPI_KEY_X, OAPI_KEY_M, OAPI_KEY_U, OAPI_KEY_Z,
+		OAPI_KEY_COMMA, OAPI_KEY_PERIOD, OAPI_KEY_MINUS, OAPI_KEY_EQUALS, OAPI_KEY_F, OAPI_KEY_G };
 	if (event & PANEL_MOUSE_LBDOWN) {
 		if (bt < 8 || bt >= 12) return KeyBuffered (btkey[bt]);
 	} else if (event & PANEL_MOUSE_LBPRESSED) {
@@ -548,25 +542,25 @@ int Instrument_Transfer::BtnMenu (const MFDBUTTONMENU **menu) const
 	return 14;
 }
 
-bool Instrument_Transfer::ClbkEnter_Tgt (Select *menu, int item, char *str, void *data)
+bool Instrument_Transfer::ClbkEnter_Tgt (Select *menu, int item, const char *str, void *data)
 {
 	Instrument_Transfer *instr = (Instrument_Transfer*)data;
 	return instr->SelectTarget (str);
 }
 
-bool Instrument_Transfer::ClbkEnter_Ref (Select *menu, int item, char *str, void *data)
+bool Instrument_Transfer::ClbkEnter_Ref (Select *menu, int item, const char *str, void *data)
 {
 	Instrument_Transfer* instr = (Instrument_Transfer*)data;
 	return instr->SelectRef (str);
 }
 
-bool Instrument_Transfer::ClbkEnter_Src (Select *menu, int item, char *str, void *data)
+bool Instrument_Transfer::ClbkEnter_Src (Select *menu, int item, const char *str, void *data)
 {
 	Instrument_Transfer* instr = (Instrument_Transfer*)data;
 	return instr->SelectSrc (str);
 }
 
-bool Instrument_Transfer::ClbkNstep (InputBox*, char *str, void *data)
+bool Instrument_Transfer::ClbkNstep (InputBox*, const char *str, void *data)
 {
 	Instrument_Transfer* instr = (Instrument_Transfer*)data;
 	int np;
@@ -574,7 +568,7 @@ bool Instrument_Transfer::ClbkNstep (InputBox*, char *str, void *data)
 	return instr->SetNstep (np);
 }
 
-bool Instrument_Transfer::SelectRef (char *str)
+bool Instrument_Transfer::SelectRef (const char *str)
 {
 	CelestialBody *obj = g_psys->GetGravObj (str, true);
 	if (!obj) return false;
@@ -591,7 +585,7 @@ bool Instrument_Transfer::SelectRef (char *str)
 	return true;
 }
 
-bool Instrument_Transfer::SelectSrc (char *str)
+bool Instrument_Transfer::SelectSrc (const char *str)
 {
 	RigidBody *obj;
 	if (!_stricmp (str, "x")) {
@@ -612,7 +606,7 @@ bool Instrument_Transfer::SelectSrc (char *str)
 	return true;
 }
 
-bool Instrument_Transfer::SelectTarget (char *str)
+bool Instrument_Transfer::SelectTarget (const char *str)
 {
 	RigidBody *body = (RigidBody*)g_psys->GetObj (str, true);
 	if (body && body->ElRef() == elref) {
@@ -627,7 +621,7 @@ bool Instrument_Transfer::SetNstep (int np)
 	if (np < 2) return false;
 	if (np == nstep) return true; // nothing to do
 	Vector *path_tmp = new Vector[np]; TRACENEW
-	memcpy (path_tmp, path, min (np, nstep)*sizeof(Vector));
+	memcpy (path_tmp, path, std::min (np, nstep)*sizeof(Vector));
 	delete []path;
 	path = path_tmp;
 	if (enable_num && np > nstep)

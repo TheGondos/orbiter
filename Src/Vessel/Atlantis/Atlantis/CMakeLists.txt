@@ -9,10 +9,7 @@ add_library(Atlantis SHARED
 	AscentAP.cpp
 	Atlantis.cpp
 	PlBayOp.cpp
-	Atlantis.rc
 	../Common.cpp
-	${ORBITER_SOURCE_MODULE_DIR}/Common/Dialog/Graph.cpp
-	${ORBITER_SOURCE_MODULE_DIR}/Common/Dialog/TabDlg.cpp
 )
 
 set_target_properties(Atlantis
@@ -28,10 +25,8 @@ target_include_directories(Atlantis
 )
 
 target_link_libraries(Atlantis
-	${ORBITER_LIB}
+#	${ORBITER_LIB}
 	${ORBITER_SDK_LIB}
-	${ORBITER_DLGCTRL_LIB}
-	UxTheme.lib
 	$<TARGET_LINKER_FILE:Atlantis_Tank>
 )
 
@@ -69,7 +64,6 @@ add_custom_command(
 add_dependencies(Atlantis
 	${OrbiterTgt}
 	Orbitersdk
-	DlgCtrl
 	Atlantis_SRB
 	Atlantis_Tank
 	Atlantis_Prerequisites
@@ -82,7 +76,7 @@ set_target_properties(Atlantis_Prerequisites
 
 # Installation
 install(TARGETS Atlantis
-	RUNTIME
+#	RUNTIME
 	DESTINATION ${ORBITER_INSTALL_MODULE_DIR}
 )
 install(DIRECTORY ${CONFIG_SOURCE_DIR}/

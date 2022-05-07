@@ -27,17 +27,17 @@ using namespace oapi;
 
 class TransxMFD: public MFD2 {
 public:
-	TransxMFD (DWORD w, DWORD h, VESSEL *Vessel, UINT mfd);
+	TransxMFD (int w, int h, VESSEL *Vessel, MfdId mfd);
 	~TransxMFD();
-	char *ButtonLabel (int bt);
+	const char *ButtonLabel (int bt);
 	int  ButtonMenu (const MFDBUTTONMENU **menu) const;
 	bool ConsumeKeyImmediate(char *kstate);
 	bool ConsumeButton(int bt, int event);
-	bool ConsumeKeyBuffered(DWORD key);
+	bool ConsumeKeyBuffered(int key);
 	bool Update (Sketchpad *sketchpad);
 	void WriteStatus(FILEHANDLE scn) const;
 	void ReadStatus(FILEHANDLE scn);
-	static OAPI_MSGTYPE MsgProc (UINT msg, UINT mfd, WPARAM wparam, LPARAM lparam);
+	static OAPI_MSGTYPE MsgProc (MFD_msg msg, MfdId mfd,  MFDMODEOPENSPEC *param, VESSEL *vessel);
 
 	int getwidth();
 	int getheight();

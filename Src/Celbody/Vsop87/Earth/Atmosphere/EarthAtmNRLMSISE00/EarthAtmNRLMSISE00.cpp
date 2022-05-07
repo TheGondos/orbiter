@@ -18,7 +18,7 @@ EarthAtmosphere_NRLMSISE00::EarthAtmosphere_NRLMSISE00 (CELBODY2 *body): ATMOSPH
 
 const char *EarthAtmosphere_NRLMSISE00::clbkName () const
 {
-	static char *name = "NRLMSISE00";
+	static const char *name = "NRLMSISE00";
 	return name;
 }
 
@@ -105,10 +105,10 @@ bool EarthAtmosphere_NRLMSISE00::clbkParams (const PRM_IN *prm_in, PRM_OUT *prm)
 // API interface
 // ======================================================================
 
-DLLCLBK void InitModule (HINSTANCE hModule)
+DLLCLBK void InitModule (oapi::DynamicModule *hModule)
 {}
 
-DLLCLBK void ExitModule (HINSTANCE hModule)
+DLLCLBK void ExitModule (oapi::DynamicModule *hModule)
 {}
 
 DLLCLBK ATMOSPHERE *CreateAtmosphere (CELBODY2 *cbody)
@@ -121,14 +121,14 @@ DLLCLBK void DeleteAtmosphere (ATMOSPHERE *atm)
 	delete (EarthAtmosphere_NRLMSISE00*)atm;
 }
 
-DLLCLBK char *ModelName ()
+DLLCLBK const char *ModelName ()
 {
-	static char *name = "NRLMSIS-00 atmosphere model";
+	static const char *name = "NRLMSIS-00 atmosphere model";
 	return name;
 }
 
-DLLCLBK char *ModelDesc ()
+DLLCLBK const char *ModelDesc ()
 {
-	static char *desc = "An empirical atmosphere model developed by Mike Picone, Alan Hedin, and Doug Drob based on the MSISE90 model. The MSISE90 model describes the neutral temperature and densities in Earth's atmosphere from ground to thermospheric heights.\r\n\r\nSee Doc\\Technotes\\earth_atm.pdf for details.";
+	static const char *desc = "An empirical atmosphere model developed by Mike Picone, Alan Hedin, and Doug Drob based on the MSISE90 model. The MSISE90 model describes the neutral temperature and densities in Earth's atmosphere from ground to thermospheric heights.\r\n\r\nSee Doc\\Technotes\\earth_atm.pdf for details.";
 	return desc;
 }

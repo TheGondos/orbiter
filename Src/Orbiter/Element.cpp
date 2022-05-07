@@ -5,8 +5,8 @@
 #include "Element.h"
 #include "Config.h"
 #include <fstream>
-#include <windows.h>
 #include <stdio.h>
+#include <cmath>
 
 using namespace std;
 
@@ -424,7 +424,7 @@ void Elements::Calculate (const Vector &R, const Vector &V, double simt)
 
 	// longitude of ascending node
 	if (i > I_NOINC_LIMIT) {
-		double tmp = 1.0/_hypot (priv_H.z, priv_H.x);
+		double tmp = 1.0/std::hypot (priv_H.z, priv_H.x);
 		priv_N.Set (-priv_H.z*tmp, 0.0, priv_H.x*tmp); // unit vector
 		theta = acos (priv_N.x);
 		if (priv_N.z < 0.0) theta = Pi2-theta;
@@ -521,7 +521,7 @@ void Elements::Calculate (const Vector &R, const Vector &V, double simt)
 	// DEBUG OUTPUT
 	if (!closed_orbit) {
 		double tra_limit = acos(-1.0/e);
-		sprintf (DBG_MSG, "tra=%f°, tra_limit=%f°, diff=%g°", priv_tra*DEG, tra_limit*DEG, (fabs(tra_limit)-fabs(priv_tra))*DEG);
+		sprintf (DBG_MSG, "tra=%fï¿½, tra_limit=%fï¿½, diff=%gï¿½", priv_tra*DEG, tra_limit*DEG, (fabs(tra_limit)-fabs(priv_tra))*DEG);
 	}
 #endif
 }

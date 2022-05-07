@@ -16,7 +16,7 @@
 
 #define STRICT 1
 #define ORBITER_MODULE
-#include "orbitersdk.h"
+#include "Orbitersdk.h"
 #include "D3D7Client.h"
 #include "D3D7Config.h"
 #include "D3D7Extra.h"
@@ -36,7 +36,7 @@
 
 using namespace oapi;
 
-HINSTANCE g_hInst = 0;
+DynamicModule *g_hInst = 0;
 D3D7Client *g_client = 0;
 
 // ==============================================================
@@ -45,8 +45,7 @@ D3D7Client *g_client = 0;
 
 // ==============================================================
 // Initialise module
-
-DLLCLBK void InitModule (HINSTANCE hDLL)
+DLLCLBK void InitModule (DynamicModule *hDLL)
 {
 	g_hInst = hDLL;
 	g_client = new D3D7Client (hDLL);
@@ -56,16 +55,27 @@ DLLCLBK void InitModule (HINSTANCE hDLL)
 	}
 }
 
+HMODULE GetCurrentModule()
+{ // NB: XP+ solution!
+  HMODULE hModule = NULL;
+  GetModuleHandleEx(
+    GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS,
+    (LPCTSTR)GetCurrentModule,
+    &hModule);
+
+  return hModule;
+}
+
 // ==============================================================
 // Clean up module
 
 DLLCLBK void ExitModule (HINSTANCE hDLL)
 {
-	//if (g_client) {
-	//	oapiUnregisterGraphicsClient (g_client);
-	//	delete g_client;
-	//	g_client = 0;
-	//}
+	if (g_client) {
+		oapiUnregisterGraphicsClient (g_client);
+		delete g_client;
+		g_client = 0;
+	}
 }
 
 // ==============================================================
@@ -138,7 +148,9 @@ bool D3D7Client::clbkInitialise ()
 
 	// enumerate available D3D devices
 	if (FAILED (D3D7Enum_EnumerateDevices (clbkConfirmDevice))) {
-		LOGOUT_ERR ("Could not enumerate devices");
+		//LOGOUT_ERR ("Could not enumerate devices");
+		fprintf(stderr, "D3D7Client::clbkInitialise: Could not enumerate devices\n");
+		exit(-1);
 		return false;
 	}
 
@@ -148,14 +160,18 @@ bool D3D7Client::clbkInitialise ()
 
 	if (!(m_pDeviceInfo = PickDevice (&dev_id)))
 		if (FAILED (D3D7Enum_SelectDefaultDevice (&m_pDeviceInfo))) {
-			LOGOUT_ERR ("Could not select a device");
+			//LOGOUT_ERR ("Could not select a device");
+			fprintf(stderr, "D3D7Client::clbkInitialise: Could not select a device\n");
+			exit(-1);
 			return false;
 		}
 
     // Create a new CD3DFramework class. This class does all of our D3D
     // initialization and manages the common D3D objects.
     if (NULL == (m_pFramework = new CD3DFramework7())) {
-		LOGOUT_ERR ("Could not create D3D7 framework");
+		//LOGOUT_ERR ("Could not create D3D7 framework");
+		fprintf(stderr, "D3D7Client::clbkInitialise: Could not create D3D7 framework\n");
+		exit(-1);
         return false;
     }
 
@@ -438,7 +454,7 @@ HRESULT D3D7Client::Initialise3DEnvironment ()
 		m_pDeviceInfo->pDeviceGUID,
 		&m_pDeviceInfo->ddsdFullscreenMode,
 		dwFrameworkFlags))) {
-		LOGOUT ("3D environment ok");
+		//LOGOUT ("3D environment ok");
 
 		pDD        = m_pFramework->GetDirectDraw();
         pD3D       = m_pFramework->GetDirect3D();
@@ -495,7 +511,7 @@ HRESULT D3D7Client::Initialise3DEnvironment ()
 		// Create scene instance
 		scene = new Scene (this, viewW, viewH);
 	} else {
-		LOGOUT_ERR ("Could not initialise 3D environment");
+		//LOGOUT_ERR ("Could not initialise 3D environment");
 	}
 	return hr;
 }

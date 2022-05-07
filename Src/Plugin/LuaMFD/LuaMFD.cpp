@@ -3,8 +3,9 @@
 
 #define STRICT 1
 #define ORBITER_MODULE
-#include "orbitersdk.h"
+#include "Orbitersdk.h"
 #include "LuaMFD.h"
+#include <cstring>
 
 // ==============================================================
 // Global variables
@@ -16,7 +17,7 @@ InterpreterList *g_IList = NULL;
 // MFD class implementation
 
 // Constructor
-ScriptMFD::ScriptMFD (DWORD w, DWORD h, VESSEL *vessel)
+ScriptMFD::ScriptMFD (int w, int h, VESSEL *vessel)
 : MFD (w, h, vessel)
 {
 	hVessel = pV->GetHandle();
@@ -35,10 +36,10 @@ ScriptMFD::~ScriptMFD ()
 {}
 
 // Return button labels
-char *ScriptMFD::ButtonLabel (int bt)
+const char *ScriptMFD::ButtonLabel (int bt)
 {
 	// The labels for the two buttons used by our MFD mode
-	static char *label[5] = {"INP", "NEW", "DEL", "PG>", "<PG"};
+	static const char *label[5] = {"INP", "NEW", "DEL", "PG>", "<PG"};
 	return (bt < 5 ? label[bt] : 0);
 }
 
@@ -57,7 +58,7 @@ int ScriptMFD::ButtonMenu (const MFDBUTTONMENU **menu) const
 	return 5; // return the number of buttons used
 }
 
-bool ScriptMFD::ConsumeKeyBuffered (DWORD key)
+bool ScriptMFD::ConsumeKeyBuffered (int key)
 {
 	switch (key) {
 	case OAPI_KEY_I:
@@ -81,21 +82,22 @@ bool ScriptMFD::ConsumeKeyBuffered (DWORD key)
 
 bool ScriptMFD::ConsumeButton (int bt, int event)
 {
-	if (!(event & PANEL_MOUSE_LBDOWN)) return false;
-	static const DWORD btkey[5] = { OAPI_KEY_I, OAPI_KEY_N, OAPI_KEY_D, OAPI_KEY_PERIOD, OAPI_KEY_COMMA };
+	//Open popup on button up, or the ImGui modal will absorbe the event
+	if (!(event & PANEL_MOUSE_LBUP)) return false;
+	static const int btkey[5] = { OAPI_KEY_I, OAPI_KEY_N, OAPI_KEY_D, OAPI_KEY_PERIOD, OAPI_KEY_COMMA };
 	if (bt < 5) return ConsumeKeyBuffered (btkey[bt]);
 	else return false;
 }
 
 void ScriptMFD::SetFontSize (double size)
 {
-	if (hFont) DeleteObject (hFont);
+	if (hFont) oapiReleaseFont (hFont);
 	int h = (int)(H*size*9.0/200.0);
-	hFont = CreateFont (-h, 0, 0, 0, 400, 0, 0, 0, 0, 3, 2, 1, 49, "Courier New");
+	hFont =  oapiCreateFont(-h, true, "Arial", FONT_NORMAL);
 	fw = fh = 0;
 }
 
-bool ScriptMFD::ScriptInput (void *id, char *str, void *data)
+bool ScriptMFD::ScriptInput (void *id, const char *str, void *data)
 {
 	return ((ScriptMFD*)data)->Input (str);
 }
@@ -126,14 +128,14 @@ void ScriptMFD::CreateInterpreter ()
 void ScriptMFD::DeleteInterpreter ()
 {
 	g_IList->DeleteInterpreter (hVessel, pg);
-	pg = min (pg, vi->nenv-1);
+	pg = std::min (pg, vi->nenv-1);
 	InvalidateDisplay();
 }
 
-void ScriptMFD::SetPage (DWORD newpg)
+void ScriptMFD::SetPage (int newpg)
 {
-	DWORD npg = vi->nenv;
-	if (newpg == (DWORD)-1) newpg = npg-1;
+	int npg = vi->nenv;
+	if (newpg == (int)-1) newpg = npg-1;
 	else if  (newpg >= npg) newpg = 0;
 	if (newpg != pg) {
 		pg = newpg;
@@ -142,22 +144,22 @@ void ScriptMFD::SetPage (DWORD newpg)
 }
 
 // Repaint the MFD
-void ScriptMFD::Update (HDC hDC)
+bool ScriptMFD::Update (oapi::Sketchpad *skp)
 {
-	DWORD npg = vi->nenv;
-	pg = min (pg, npg-1);
+	int npg = vi->nenv;
+	pg = std::min (pg, npg-1);
 	InterpreterList::Environment *env = vi->env[pg];
 	int yofs = (5*ch)/4;
 	char cbuf[256];
 	sprintf (cbuf, "Term %d/%d", pg+1, npg);
-	Title (hDC, cbuf);
+	Title (skp, cbuf);
 	if (env->interp->IsBusy())
-		TextOut (hDC, W-cw*5, 1, "busy", 4);
+		skp->Text (W-cw*5, 1, "busy", 4);
 
-	SelectDefaultPen (hDC, 0);
-	MoveToEx (hDC, 0, yofs, NULL); LineTo (hDC, W, yofs);
+	//SelectDefaultPen (hDC, 0);
+	skp->MoveTo (0, yofs); skp->LineTo (W, yofs);
 
-	HGDIOBJ oFont = SelectObject (hDC, hFont);
+	/*HGDIOBJ oFont = SelectObject (hDC, hFont);
 	if (!fh) {
 		TEXTMETRIC tm;
 		GetTextMetrics (hDC, &tm);
@@ -165,33 +167,35 @@ void ScriptMFD::Update (HDC hDC)
 		fh = tm.tmHeight-tm.tmInternalLeading;
 		nchar = (W-fw/2)/fw;
 		nline = (H-yofs-fh/2)/fh;
-	}
-	DWORD nbuf = env->interp->LineCount();
+	}*/
+	int nbuf = env->interp->LineCount();
 	MFDInterpreter::LineSpec *ls = env->interp->FirstLine();
 	int xofs = fw/2;
-	COLORREF col = 0;
+	uint32_t col = 0;
 	for (; ls && nbuf > nline; ls = ls->next) { // skip lines scrolled out of sight
 		nbuf--;
 	}
 	for (; ls; ls = ls->next) {
 		if (ls->col != col) {
 			col = ls->col;
-			SetTextColor (hDC, col);
+			//SetTextColor (hDC, col);
 		}
-		TextOut (hDC, xofs, yofs, ls->buf, min(strlen(ls->buf),nchar));
+		skp->Text (xofs, yofs, ls->buf, std::min((int)strlen(ls->buf),nchar));
 		yofs += fh;
 	}
-	SelectObject (hDC, oFont);
+	//SelectObject (hDC, oFont);
+	return true;
 }
 
 // MFD message parser
-OAPI_MSGTYPE ScriptMFD::MsgProc (UINT msg, UINT mfd, WPARAM wparam, LPARAM lparam)
+OAPI_MSGTYPE ScriptMFD::MsgProc (MFD_msg msg, MfdId mfd,  MFDMODEOPENSPEC *param, VESSEL *vessel)
 {
 	switch (msg) {
-	case OAPI_MSG_MFD_OPENED:
+	case OAPI_MSG_MFD_OPENEDEX:
 		// Our new MFD mode has been selected, so we create the MFD and
 		// return a pointer to it.
-		return (OAPI_MSGTYPE) new ScriptMFD(LOWORD(wparam), HIWORD(wparam), (VESSEL*)lparam);
+		return (OAPI_MSGTYPE) new ScriptMFD(param->w, param->h, vessel);
+	default: break;
 	}
 	return 0;
 }
@@ -199,9 +203,9 @@ OAPI_MSGTYPE ScriptMFD::MsgProc (UINT msg, UINT mfd, WPARAM wparam, LPARAM lpara
 // ==============================================================
 // API interface
 
-DLLCLBK void InitModule (HINSTANCE hDLL)
+DLLCLBK void InitModule (oapi::DynamicModule *hDLL)
 {
-	static char *name = "Terminal MFD";
+	static const char *name = "Terminal MFD";
 	MFDMODESPECEX spec;
 	spec.name = name;
 	spec.key = OAPI_KEY_T;
@@ -211,7 +215,7 @@ DLLCLBK void InitModule (HINSTANCE hDLL)
 	g_IList = new InterpreterList;
 }
 
-DLLCLBK void ExitModule (HINSTANCE hDLL)
+DLLCLBK void ExitModule (void *hDLL)
 {
 	oapiUnregisterMFDMode (g_MFDmode);
 	delete g_IList;
@@ -223,11 +227,11 @@ DLLCLBK void opcPostStep (double simt, double simdt, double mjd)
 		g_IList->Update (simt, simdt, mjd);
 	}
 }
-
-DLLCLBK void opcOpenRenderViewport (HWND hWnd, DWORD w, DWORD h, BOOL bFullscreen)
+/*
+DLLCLBK void opcOpenRenderViewport (HWND hWnd, int w, int h, bool bFullscreen)
 {
 }
-
+*/
 DLLCLBK void opcCloseRenderViewport ()
 {
 	g_IList->DeleteList();

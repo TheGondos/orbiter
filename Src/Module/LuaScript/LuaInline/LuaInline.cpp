@@ -22,10 +22,11 @@
 
 #define STRICT
 #define ORBITER_MODULE
-#include "orbitersdk.h"
+#include "Orbitersdk.h"
 #include "LuaInline.h"
-#include <direct.h>
-#include <process.h>
+#include <cstring>
+//#include <direct.h>
+//#include <process.h>
 
 // ==============================================================
 // class InterpreterList::Environment: implementation
@@ -34,23 +35,18 @@ InterpreterList::Environment::Environment()
 {
 	cmd = NULL;
 	singleCmd = false;
-	hThread = NULL;
 	interp = CreateInterpreter ();
 }
 
 InterpreterList::Environment::~Environment()
 {
 	if (interp) {
-		if (hThread) {
+		if (hThread.joinable()) {
 			termInterp = true;
 			interp->Terminate();
-			interp->EndExec(); // give the thread opportunity to close
+			interp->StepInterpreter(); // give the thread opportunity to close
 
-			if (WaitForSingleObject (hThread, 1000) != 0) {
-				oapiWriteLog("LuaInline: timeout while waiting for interpreter thread");
-				TerminateThread (hThread, 0);
-			}
-			CloseHandle (hThread);
+			hThread.join();
 		}
 		delete interp;
 	}
@@ -62,18 +58,17 @@ Interpreter *InterpreterList::Environment::CreateInterpreter ()
 	termInterp = false;
 	interp = new Interpreter ();
 	interp->Initialise();
-	hThread = (HANDLE)_beginthreadex (NULL, 4096, &InterpreterThreadProc, this, 0, &id);
+	hThread = std::thread(InterpreterThreadProc, this);
 	return interp;
 }
 
-unsigned int WINAPI InterpreterList::Environment::InterpreterThreadProc (LPVOID context)
+unsigned int InterpreterList::Environment::InterpreterThreadProc (InterpreterList::Environment* env)
 {
-	InterpreterList::Environment *env = (InterpreterList::Environment*)context;
 	Interpreter *interp = env->interp;
 
 	// interpreter loop
 	for (;;) {
-		interp->WaitExec(); // wait for execution permission
+		interp->WaitForStep(); // wait for execution permission
 		if (env->termInterp) break; // close thread requested
 		if (env->cmd) {
 			interp->RunChunk (env->cmd, strlen (env->cmd)); // run command from buffer
@@ -84,10 +79,9 @@ unsigned int WINAPI InterpreterList::Environment::InterpreterThreadProc (LPVOID 
 			interp->RunChunk ("", 0); // idle loop
 		}
 		if (interp->Status() == 1) break;
-		interp->EndExec();  // return control
+		interp->StepDone();  // return control
 	}
-	interp->EndExec();  // return mutex (is this necessary?)
-	_endthreadex(0);
+	interp->StepDone();  // return mutex (is this necessary?)
 	return 0;
 }
 
@@ -95,7 +89,7 @@ unsigned int WINAPI InterpreterList::Environment::InterpreterThreadProc (LPVOID 
 // ==============================================================
 // class InterpreterList: implementation
 
-InterpreterList::InterpreterList (HINSTANCE hDLL): Module (hDLL)
+InterpreterList::InterpreterList (oapi::DynamicModule *hDLL): Module (hDLL)
 {
 	nlist = nbuf = 0;
 }
@@ -112,14 +106,13 @@ void InterpreterList::clbkSimulationEnd ()
 
 void InterpreterList::clbkPostStep (double simt, double simdt, double mjd)
 {
-	DWORD i;
+	int i;
 	for (i = 0; i < nlist; i++) // prune all finished interpreters
 		if (!list[i]->interp) DelInterpreter (list[i--]);
 
 	for (i = 0; i < nlist; i++) { // let the interpreter do some work
 		if (list[i]->interp->IsBusy() || list[i]->cmd || list[i]->interp->nJobs()) {
-			list[i]->interp->EndExec();
-			list[i]->interp->WaitExec();
+			list[i]->interp->StepInterpreter();
 		}
 	}
 }
@@ -143,7 +136,7 @@ InterpreterList::Environment *InterpreterList::AddInterpreter ()
 int InterpreterList::DelInterpreter (InterpreterList::Environment *env)
 {
 	// remove interpreter from list
-	DWORD i, j;
+	int i, j;
 	for (i = 0; i < nlist; i++)
 		if (list[i] == env) break;
 	if (i == nlist) return 2; // interpreter not found
@@ -161,13 +154,13 @@ int InterpreterList::DelInterpreter (InterpreterList::Environment *env)
 
 static InterpreterList *g_IList = NULL;
 
-DLLCLBK void InitModule (HINSTANCE hDLL)
+DLLCLBK void InitModule (oapi::DynamicModule *hDLL)
 {
 	g_IList = new InterpreterList (hDLL);
 	oapiRegisterModule (g_IList);
 }
 
-DLLCLBK void ExitModule (HINSTANCE hDLL)
+DLLCLBK void ExitModule (oapi::DynamicModule *hDLL)
 {
 	// note g_IList has already been deleted by Orbiter
 }
@@ -234,8 +227,7 @@ DLLCLBK bool opcExecScriptCmd (INTERPRETERHANDLE hInterp, const char *cmd)
 	env->cmd = str;
 	while (env->cmd) {
 		// wait until command has been executed
-		env->interp->EndExec();
-		env->interp->WaitExec();
+		env->interp->StepInterpreter();
 	}
 	if (cmd_async) // restore the asynchronous request
 		env->cmd = cmd_async;

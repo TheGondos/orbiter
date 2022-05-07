@@ -27,7 +27,7 @@ public:
 	void setAltCmd(double alt);
 	void unsetAltCmd();
 
-	void clbkPreStep(double simt, double simdt, double mjd);
+	void clbkPreStep(double simt, double simdt, double mjd) override;
 
 	enum RotorId {
 		ROTOR_FL,

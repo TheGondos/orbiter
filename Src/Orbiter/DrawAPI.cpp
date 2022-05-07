@@ -5,6 +5,7 @@
 #define OAPI_IMPLEMENTATION
 
 #include "DrawAPI.h"
+#include <cstring>
 
 using namespace oapi;
 
@@ -71,10 +72,10 @@ bool Sketchpad::TextBox (int x1, int y1, int x2, int y2, const char *str, int le
 
 	int w0 = x2-x1, w;
 
-	DWORD h = GetCharSize() & 0xFFFF;
+	int h = GetCharSize() & 0xFFFF;
 
 	const char *p0 = str, *p, *pp;
-	for (p0 = str, pp = str, p = str; *p0; *p && p < str+len) {
+	for (p0 = str, pp = str, p = str; *p0; /**p && p < str+len*/) {
 		if (*p == '\0' || *p == '\n' || *p == '\r' || *p == ' ' || *p == '-') {
 			w = (p > p0 ? GetTextWidth (p0, p-p0) : 0);
 			if (w <= w0 && *p != '\0' && *p != '\n' && *p != '\r') {
@@ -85,6 +86,7 @@ bool Sketchpad::TextBox (int x1, int y1, int x2, int y2, const char *str, int le
 					pp = p;
 				if (pp == p0) pp = p;
 				if (pp > p0) Text (x1, y1, p0, pp-p0);
+				if(*pp ==' ') pp++;
 				p0 = pp;
 				if (*p0 == '\r') p0++;
 				if (*p0 == '\n') p0++;

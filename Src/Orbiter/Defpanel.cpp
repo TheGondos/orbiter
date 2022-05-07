@@ -10,7 +10,7 @@ extern Orbiter *g_pOrbiter;
 extern Vessel *g_focusobj;
 extern char DBG_MSG[256];
 
-static char *btmlbl[3] = {"PWR","SEL","MNU"};
+static const char *btmlbl[3] = {"PWR","SEL","MNU"};
 int nnv0 = 7; // number of nav modes available
 
 // texture dimensions
@@ -109,41 +109,41 @@ void DefaultPanel::SetGeometry ()
 
 	// viewport dimensions
 	viewW = pane->Width(), viewH = pane->Height();
-	scale = max(0.625f,viewH/800.0f); //viewW/1280.0f;
+	scale = std::max(0.625f,viewH/800.0f); //viewW/1280.0f;
 
 	// MFD display dimensions
 	mfdw = mfdh = (int)(scale*35.0*(g_pOrbiter->Cfg()->CfgLogicPrm.MFDSize+5));//(viewH*(g_pOrbiter->Cfg()->CfgLogicPrm.MFDSize+5))/23;
-	btnw = max(28,viewH/18) /*viewW/28*/, btnh = (33*btnw)/44;
+	btnw = std::max(28,viewH/18) /*viewW/28*/, btnh = (33*btnw)/44;
 	gapw = btnw/20;
 	float mfdy0 = (float)(viewH-mfdh-btnh-2*gapw);
 	float mfdy1 = mfdy0 + (float)mfdh;
 
 	blockdx = (float)gapw+0.5f;
 	if (compact_layout)
-		blockdx = max (blockdx, viewW/2 - viewH*0.45f - mfdw - 2*btnw - 3*gapw + 0.5f);
+		blockdx = std::max (blockdx, viewW/2 - viewH*0.45f - mfdw - 2*btnw - 3*gapw + 0.5f);
 	blockdy = viewH*0.06f;
 	for (i = 0; i < 6; i++)
 		btny[i] = mfdy0 + mfdh/6.0f + (i*mfdh)/7.0f - btnh/2.0f;
 	bbtny = (float)(viewH-btnh-gapw);
 
-	WORD idx[6] = {0,1,2,3,2,1}; // default billboard index list
+	uint16_t idx[6] = {0,1,2,3,2,1}; // default billboard index list
 
 	int nVtx, nIdx;
 	NTVERTEX *Vtx;
-	WORD *Idx;
+	uint16_t *Idx;
 
 	// MFD display billboards
 	for (n = 0; n < 2; n++) { // left/right MFD
 		float mfdx0 = (float)(n == 0 ? btnw+2*gapw : viewW-mfdw-btnw-2*gapw)-0.5f;
 		if (compact_layout) {
 			if (n == 0)
-				mfdx0 = max (mfdx0, viewW/2 - (viewH*45)/100 - mfdw - btnw - gapw + 0.5f);
+				mfdx0 = std::max (mfdx0, viewW/2 - (viewH*45)/100 - mfdw - btnw - gapw + 0.5f);
 			else
-				mfdx0 = min (mfdx0, viewW/2 + (viewH*45)/100 + btnw + gapw + 0.5f);
+				mfdx0 = std::min (mfdx0, viewW/2 + (viewH*45)/100 + btnw + gapw + 0.5f);
 		}
 		float mfdx1 = mfdx0 + (float)mfdw;
 		Vtx = new NTVERTEX[nVtx = 4];
-		Idx = new WORD[nIdx = 6];
+		Idx = new uint16_t[nIdx = 6];
 		memset (Vtx, 0, nVtx*sizeof(NTVERTEX));
 		for (i = 0; i < 4; i++) {
 			Vtx[i].x = (i%2 ? mfdx1:mfdx0);
@@ -151,13 +151,13 @@ void DefaultPanel::SetGeometry ()
 			Vtx[i].tu = (i%2 ? 1.0f:0.0f);
 			Vtx[i].tv = (i/2 ? 1.0f:0.0f);
 		}
-		memcpy (Idx, idx, 6*sizeof(WORD));
+		memcpy (Idx, idx, 6*sizeof(uint16_t));
 
 		mesh.AddGroup (Vtx, nVtx, Idx, nIdx, 0, TEXIDX_MFD0+n);
 
 		// MFD buttons
 		Vtx = new NTVERTEX[nVtx = 4*54];
-		Idx = new WORD[nIdx = 6*54];
+		Idx = new uint16_t[nIdx = 6*54];
 		btnx[n][0] = mfdx0-btnw-gapw;
 		btnx[n][1] = mfdx1+gapw;
 		for (k = vofs = 0; k < 2; k++) { // left/right button row
@@ -211,7 +211,7 @@ void DefaultPanel::SetGeometry ()
 	// MFD power button (when MFD display is disabled)
 	for (n = 0; n < 2; n++) {
 		Vtx = new NTVERTEX[nVtx = 4];
-		Idx = new WORD[nIdx = 6];
+		Idx = new uint16_t[nIdx = 6];
 		memset (Vtx, 0, nVtx*sizeof(NTVERTEX));
 		for (j = vofs = 0; j < 4; j++) {
 			Vtx[vofs+j].x = bbtnx[n][0]+(j%2)*btnw;
@@ -228,7 +228,7 @@ void DefaultPanel::SetGeometry ()
 
 	// navigation buttons
 	Vtx = new NTVERTEX[nVtx = 4*7];
-	Idx = new WORD[nIdx = 6*7];
+	Idx = new uint16_t[nIdx = 6*7];
 	memset (Vtx, 0, nVtx*sizeof(NTVERTEX));
 	float xb[4] = {0,(float)btnw,0,(float)btnw};
 	float yb[4] = {0,0,(float)btnh,(float)btnh};
@@ -249,7 +249,7 @@ void DefaultPanel::SetGeometry ()
 	
 	// engine status display
 	Vtx = new NTVERTEX[nVtx = 27*4];
-	Idx = new WORD[nIdx = 27*6];
+	Idx = new uint16_t[nIdx = 27*6];
 	memset (Vtx, 0, nVtx*sizeof(NTVERTEX));
 	float dx = blockdx, dy = blockdy;
 	float xe[4] = {0,195*scale,0,195*scale};
@@ -368,22 +368,11 @@ void DefaultPanel::InitDeviceObjects ()
 
 	surf = LoadTexture (colidx);
 
-	int fh1 = max(12, min(20, pane->H/50));
-	int fh2 = max(10, min(18, pane->H/55));
+	int fh1 = std::max(12, std::min(20, pane->H/50));
+	int fh2 = std::max(10, std::min(18, pane->H/55));
 	int fh3 = (4*fh)/5;
-	mfdPen  = gc->clbkCreatePen (1, 0, RGB(0,255,0));
+	mfdPen  = gc->clbkCreatePen (1, 0, 0x0000ff00);
 	mfdFont = gc->clbkCreateFont (fh1, true, "Sans");
-}
-
-void DefaultPanel::RestoreDeviceObjects (LPDIRECT3D7 d3d, LPDIRECT3DDEVICE7 dev)
-{
-	// This method is currently only supported by the inline client
-#ifdef INLINEGRAPHICS
-	int i;
-	InitDeviceObjects();
-	for (i = 0; i < 2; i++) RepaintMFDButtons (i);
-#endif
-	rcsmode = -1;
 }
 
 void DefaultPanel::DestroyDeviceObjects ()
@@ -397,7 +386,7 @@ void DefaultPanel::DestroyDeviceObjects ()
 
 SURFHANDLE DefaultPanel::LoadTexture (int idx)
 {
-	char cbuf[64] = "Cockpit\\Glasspit";
+	char cbuf[64] = "Cockpit/Glasspit";
 	switch (idx) {
 		case 1: strcat (cbuf, "_red"); break;
 		case 2: strcat (cbuf, "_yellow"); break;
@@ -466,7 +455,7 @@ void DefaultPanel::Render ()
 	vofs += 12;
 	ts = g_focusobj->DefaultPropellantHandle();
 	double newfuel = (ts ? g_focusobj->GetPropellantLevel (ts) : 0.0);
-	if (upd_fuel = (newfuel != fuel)) {
+	if ((upd_fuel = (newfuel != fuel))) {
 		fuel = newfuel;
 		grp->Vtx[vofs+1].x = grp->Vtx[vofs+3].x = dx+(float)((46.0+fuel*94.0)*scale);
 	}
@@ -499,18 +488,18 @@ void DefaultPanel::Render ()
 	vofs += 4;
 	if (upd_fuel) {
 		cb = FmtNum (ts ? fuel*ts->maxmass : 0.0);
-		NumOut (cb, engstat_str[0], min(strlen(cb),5), grp->Vtx+vofs);
+		NumOut (cb, engstat_str[0], std::min((int)strlen(cb),5), grp->Vtx+vofs);
 	}
 	// Update main engine readout
 	vofs += 4*5;
 	th = (engmain >= 0.0 ? engmain*g_focusobj->GetThrusterGroupMaxth(THGROUP_MAIN) :
 		-engmain*g_focusobj->GetThrusterGroupMaxth(THGROUP_RETRO));
 	cb = FmtNum (th);
-	NumOut (cb, engstat_str[1], min(strlen(cb),5), grp->Vtx+vofs);
+	NumOut (cb, engstat_str[1], std::min((int)strlen(cb),5), grp->Vtx+vofs);
 	// Update hover engine readout
 	vofs += 4*5;
 	cb = FmtNum (enghovr*g_focusobj->GetThrusterGroupMaxth(THGROUP_HOVER));
-	NumOut (cb, engstat_str[2], min(strlen(cb),5), grp->Vtx+vofs);
+	NumOut (cb, engstat_str[2], std::min((int)strlen(cb),5), grp->Vtx+vofs);
 	// Update trim indicator and readout
 	vofs += 4*5;
 	if (g_focusobj->bElevTrim) {
@@ -520,7 +509,7 @@ void DefaultPanel::Render ()
 				grp->Vtx[vofs+j].y = dy + (95.0f + 5.0f*(j/2) - (float)trim*14.5f)*scale;
 			char cbuf[16];
 			sprintf (cbuf, "%3.1f", fabs(trim));
-			NumOut (cbuf, engstat_str[3], min(strlen(cbuf),3), grp->Vtx+vofs+4);
+			NumOut (cbuf, engstat_str[3], std::min((int)strlen(cbuf),3), grp->Vtx+vofs+4);
 			float ofs = (fabs(trim) < 0.01 ? 0.0f : trim < 0 ? 15.0f : 31.0f);
 			for (j = 0; j < 4; j++)
 				grp->Vtx[vofs+16+j].tu = (314.0f+ofs+14.0f*(j%2))/texw;
@@ -532,25 +521,29 @@ void DefaultPanel::Render ()
 	gc->clbkRender2DPanel (&surf, (MESHHANDLE)&mesh, &transf, transpmfd);
 }
 
-bool DefaultPanel::ProcessMouse (UINT event, DWORD state, int x, int y)
+bool DefaultPanel::ProcessMouse (oapi::MouseEvent event, int state, int x, int y)
 {
 	switch (event) {
-	case WM_LBUTTONDOWN:
+	case oapi::MOUSE_LBUTTONDOWN:
 		mstate = PANEL_MOUSE_LBDOWN | PANEL_MOUSE_LBPRESSED;
 		break;
-	case WM_RBUTTONDOWN:
+	case oapi::MOUSE_RBUTTONDOWN:
 		mstate = PANEL_MOUSE_RBDOWN | PANEL_MOUSE_RBPRESSED;
 		break;
-	case WM_LBUTTONUP:
+	case oapi::MOUSE_LBUTTONUP:
 		mstate = PANEL_MOUSE_LBUP;
 		break;
-	case WM_RBUTTONUP:
+	case oapi::MOUSE_RBUTTONUP:
 		mstate = PANEL_MOUSE_RBUP;
 		break;
 	default:
 		mstate = 0;
 		break;
 	}
+	if (state & oapi::MouseModifier::MOUSE_CTRL)  mstate |= PANEL_MOUSE_CTRL;
+	if (state & oapi::MouseModifier::MOUSE_SHIFT) mstate |= PANEL_MOUSE_SHIFT;
+	if (state & oapi::MouseModifier::MOUSE_ALT)   mstate |= PANEL_MOUSE_ALT;
+
 	if (mstate & PANEL_MOUSE_DOWN) { // locate mouse event
 		int mfd, btn;
 		if (GetMFDButton (x, y, mfd, btn)) {
@@ -644,7 +637,7 @@ bool DefaultPanel::GetTrimButton (int mx, int my, int &btn) const
 	float dx = (float)gapw, dy = blockdy;
 	if (mx >= dx + 135.0f*scale && mx <= dx + 148.0f*scale &&
 		my >= dy +  80.0f*scale && my <= dy + 115.0f*scale) {
-		btn = min(2, max (0, (int)((my - dy - 80.0f*scale)*(3.0f/(35.0f*scale)))));
+		btn = std::min(2, std::max (0, (int)((my - dy - 80.0f*scale)*(3.0f/(35.0f*scale)))));
 		return true;
 	}
 	return false;
@@ -674,9 +667,9 @@ void DefaultPanel::PressTrimButton (int btn)
 {
 	double tgt, ptgt = g_focusobj->ctrlsurf_level[AIRCTRL_ELEVATORTRIM].ptgt;
 	switch (btn) {
-		case 0: tgt = min ( 1.0, ptgt+0.2); break;
+		case 0: tgt = std::min ( 1.0, ptgt+0.2); break;
 		case 1: tgt = 0.0; break;
-		case 2: tgt = max (-1.0, ptgt-0.2); break;
+		case 2: tgt = std::max (-1.0, ptgt-0.2); break;
 	}
 	if (tgt != ptgt) {
 		g_focusobj->SetControlSurfaceLevel (AIRCTRL_ELEVATORTRIM, tgt, false);
@@ -687,7 +680,11 @@ void DefaultPanel::GetButtonState (int &state, int &mfd, int &btn)
 {
 	if (activemfd >= 0 && mstate & PANEL_MOUSE_PRESSED) {
 		POINT pt;
-		GetCursorPos (&pt);
+//		GetCursorPos (&pt);
+		double xpos, ypos;
+		glfwGetCursorPos(g_pOrbiter->GetRenderWnd(), &xpos, &ypos);
+		pt.x = floor(xpos);
+		pt.y = floor(ypos);
 		g_pOrbiter->ScreenToClient (&pt);
 		if (GetMFDButton (pt.x, pt.y, mfd, btn) && mfd == activemfd && btn == activebtn) {
 			if (btn < 12) {

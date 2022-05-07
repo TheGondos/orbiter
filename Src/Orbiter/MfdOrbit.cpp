@@ -1,7 +1,6 @@
 // Copyright (c) Martin Schweiger
 // Licensed under the MIT License
 
-#include <dinput.h>
 #include "MfdOrbit.h"
 #include "Pane.h"
 #include "Celbody.h"
@@ -14,8 +13,6 @@ using namespace std;
 extern PlanetarySystem *g_psys;
 extern TimeData td;
 extern Pane *g_pane;
-extern InputBox *g_input;
-extern Select *g_select;
 extern char DBG_MSG[256];
 
 // =======================================================================
@@ -29,7 +26,7 @@ struct Instrument_Orbit::SavePrm Instrument_Orbit::saveprm = {
 	Instrument_Orbit::DISP_BOTH
 };
 
-Instrument_Orbit::Instrument_Orbit (Pane *_pane, INT_PTR _id, const Spec &spec, Vessel *_vessel)
+Instrument_Orbit::Instrument_Orbit (Pane *_pane, MfdId _id, const Spec &spec, Vessel *_vessel)
 : Instrument (_pane, _id, spec, _vessel)
 {
 	projmode = saveprm.projmode;
@@ -85,46 +82,39 @@ Instrument_Orbit::~Instrument_Orbit ()
 	saveprm.dispmode = dispmode;
 }
 
-HELPCONTEXT *Instrument_Orbit::HelpTopic () const
-{
-	extern HELPCONTEXT DefHelpContext;
-	DefHelpContext.topic = "/mfd_orbit.htm";
-	return &DefHelpContext;
-}
-
-bool Instrument_Orbit::KeyBuffered (DWORD key)
+bool Instrument_Orbit::KeyBuffered (int key)
 {
 	switch (key) {
-	case DIK_A:  // auto reference
+	case OAPI_KEY_A:  // auto reference
 		SelectAutoRef ();
 		return true;
-	case DIK_D:  // toggle distance display mode
+	case OAPI_KEY_D:  // toggle distance display mode
 		dstmode = (dstmode == DIST_RAD ? DIST_ALT : DIST_RAD);
 		Refresh();
 		return true;
-	case DIK_F:  // reference frame
+	case OAPI_KEY_F:  // reference frame
 		frmmode = (frmmode == FRM_ECL ? FRM_EQU : FRM_ECL);
 		Refresh();
 		return true;
-	case DIK_H:  // copy reference to HUD
+	case OAPI_KEY_H:  // copy reference to HUD
 		CopyToHUD ();
 		return true;
-	case DIK_M:  // display mode
+	case OAPI_KEY_M:  // display mode
 		dispmode = (DisplayMode)((((int)dispmode)+1) % 3);
 		Refresh();
 		return true;
-	case DIK_N:  // deselect target
+	case OAPI_KEY_N:  // deselect target
 		UnselectTarget ();
 		return true;
-	case DIK_P:  // projection plane
+	case OAPI_KEY_P:  // projection plane
 		projmode = (ProjectionMode)((((int)projmode)+1) % 3);
 		if (projmode == PRJ_TGT && !tgt) projmode = PRJ_FRM;
 		Refresh();
 		return true;
-	case DIK_R:  // select reference
+	case OAPI_KEY_R:  // select reference
 		OpenSelect_CelBody ("Orbit MFD: Reference", ClbkEnter_Ref);
 		return true;
-	case DIK_T:  // select target
+	case OAPI_KEY_T:  // select target
 		OpenSelect_Tgt ("Orbit MFD: Target", ClbkEnter_Tgt, elref, 0);
 		return true;
 	}
@@ -133,7 +123,7 @@ bool Instrument_Orbit::KeyBuffered (DWORD key)
 
 bool Instrument_Orbit::ProcessButton (int bt, int event)
 {
-	static const DWORD btkey[9] = { DIK_R, DIK_A, DIK_T, DIK_N, DIK_M, DIK_F, DIK_P, DIK_D, DIK_H };
+	static const int btkey[9] = { OAPI_KEY_R, OAPI_KEY_A, OAPI_KEY_T, OAPI_KEY_N, OAPI_KEY_M, OAPI_KEY_F, OAPI_KEY_P, OAPI_KEY_D, OAPI_KEY_H };
 	if (event & PANEL_MOUSE_LBDOWN) {
 		if (bt < 9) return KeyBuffered (btkey[bt]);
 	}
@@ -163,13 +153,13 @@ int Instrument_Orbit::BtnMenu (const MFDBUTTONMENU **menu) const
 	return 9;
 }
 
-bool Instrument_Orbit::ClbkEnter_Tgt (Select *menu, int item, char *str, void *data)
+bool Instrument_Orbit::ClbkEnter_Tgt (Select *menu, int item, const char *str, void *data)
 {
 	Instrument_Orbit *instr = (Instrument_Orbit*)data;
 	return instr->SelectTarget (str);
 }
 
-bool Instrument_Orbit::ClbkEnter_Ref (Select *menu, int item, char *str, void *data)
+bool Instrument_Orbit::ClbkEnter_Ref (Select *menu, int item, const char *str, void *data)
 {
 	Instrument_Orbit* instr = (Instrument_Orbit*)data;
 	return instr->SelectRef (str);
@@ -186,7 +176,7 @@ void Instrument_Orbit::SetRef (const CelestialBody *ref)
 	}
 }
 
-bool Instrument_Orbit::SelectRef (char *str)
+bool Instrument_Orbit::SelectRef (const char *str)
 {
 	CelestialBody *obj = g_psys->GetGravObj (str, true);
 	if (!obj) return false;
@@ -199,7 +189,7 @@ void Instrument_Orbit::SelectAutoRef ()
 	SetRef (vessel->ElRef());
 }
 
-bool Instrument_Orbit::SelectTarget (char *str)
+bool Instrument_Orbit::SelectTarget (const char *str)
 {
 	Body *body = g_psys->GetObj (str, true);
 	if (body == (Body*)elref) return false;
@@ -261,7 +251,7 @@ void Instrument_Orbit::DisplayOrbit (oapi::Sketchpad *skp, int which, oapi::IVEC
 
 void Instrument_Orbit::UpdateDraw (oapi::Sketchpad *skp)
 {
-	static char *projstr[3] = {"Ecliptic", "Ship", "Target"};
+	static const char *projstr[3] = {"Ecliptic", "Ship", "Target"};
 	Matrix rot1, rot2, irot;
 
 	bool bValidShpEl = (elref != 0);
@@ -368,7 +358,7 @@ void Instrument_Orbit::UpdateDraw (oapi::Sketchpad *skp)
 
 void Instrument_Orbit::DisplayElements (oapi::Sketchpad *skp, const Elements *el, int x, int y)
 {
-	char cbuf[16];
+	char cbuf[32];
 	int dy = ch;
 	if (el) {
 		if (el->e < 1.0) { // closed orbit
@@ -402,21 +392,21 @@ void Instrument_Orbit::DisplayElements (oapi::Sketchpad *skp, const Elements *el
 			skp->Text (x, y, cbuf, strlen(cbuf)); y += dy;
 			sprintf (cbuf, "Vel%s", FloatStr (el->Vel()));
 			skp->Text (x, y, cbuf, strlen(cbuf)); y += dy;
-			sprintf (cbuf, "Inc% 7.2fº", Deg(el->i));
+			sprintf (cbuf, "Inc% 7.2fï¿½", Deg(el->i));
 			skp->Text (x, y, cbuf, strlen(cbuf)); y += dy;
-			sprintf (cbuf, "LAN% 7.2fº", Deg(el->theta));
+			sprintf (cbuf, "LAN% 7.2fï¿½", Deg(el->theta));
 			skp->Text (x, y, cbuf, strlen(cbuf)); y += dy;
-			sprintf (cbuf, "LPe% 7.2fº", Deg(el->omegab));
+			sprintf (cbuf, "LPe% 7.2fï¿½", Deg(el->omegab));
 			skp->Text (x, y, cbuf, strlen(cbuf)); y += dy;
-			sprintf (cbuf, "AgP% 7.2fº", Deg(el->ArgPer()));
+			sprintf (cbuf, "AgP% 7.2fï¿½", Deg(el->ArgPer()));
 			skp->Text (x, y, cbuf, strlen(cbuf)); y += dy;
-			sprintf (cbuf, "TrA% 7.2fº", Deg(el->TrueAnm()));
+			sprintf (cbuf, "TrA% 7.2fï¿½", Deg(el->TrueAnm()));
 			skp->Text (x, y, cbuf, strlen(cbuf)); y += dy;
-			sprintf (cbuf, "TrL% 7.2fº", Deg(el->TrueLng()));
+			sprintf (cbuf, "TrL% 7.2fï¿½", Deg(el->TrueLng()));
 			skp->Text (x, y, cbuf, strlen(cbuf)); y += dy;
-			sprintf (cbuf, "MnA% 7.2fº", Deg(posangle(el->MeanAnm())));
+			sprintf (cbuf, "MnA% 7.2fï¿½", Deg(posangle(el->MeanAnm())));
 			skp->Text (x, y, cbuf, strlen(cbuf)); y += dy;
-			sprintf (cbuf, "MnL% 7.2fº", Deg(el->MeanLng()));
+			sprintf (cbuf, "MnL% 7.2fï¿½", Deg(el->MeanLng()));
 			skp->Text (x, y, cbuf, strlen(cbuf)); y += dy;
 		} else { // open orbit
 			sprintf (cbuf, "SMa%s", -el->a < 1e5*AU ? DistStr (el->a) : " N/A");
@@ -454,19 +444,19 @@ void Instrument_Orbit::DisplayElements (oapi::Sketchpad *skp, const Elements *el
 			skp->Text (x, y, "ApT N/A", 7); y += dy;
 			sprintf (cbuf, "Vel%s", DistStr (el->Vel()));
 			skp->Text (x, y, cbuf, strlen(cbuf)); y += dy;
-			sprintf (cbuf, "Inc% 7.2fº", Deg(el->i));
+			sprintf (cbuf, "Inc% 7.2f?", Deg(el->i));
 			skp->Text (x, y, cbuf, strlen(cbuf)); y += dy;
-			sprintf (cbuf, "LAN% 7.2fº", Deg(el->theta));
+			sprintf (cbuf, "LAN% 7.2f?", Deg(el->theta));
 			skp->Text (x, y, cbuf, strlen(cbuf)); y += dy;
-			sprintf (cbuf, "LPe% 7.2fº", Deg(el->omegab));
+			sprintf (cbuf, "LPe% 7.2f?", Deg(el->omegab));
 			skp->Text (x, y, cbuf, strlen(cbuf)); y += dy;
-			sprintf (cbuf, "AgP% 7.2fº", Deg(el->ArgPer()));
+			sprintf (cbuf, "AgP% 7.2f?", Deg(el->ArgPer()));
 			skp->Text (x, y, cbuf, strlen(cbuf)); y += dy;
-			sprintf (cbuf, "TrA% 7.2fº", Deg(el->TrueAnm()));
+			sprintf (cbuf, "TrA% 7.2f?", Deg(el->TrueAnm()));
 			skp->Text (x, y, cbuf, strlen(cbuf)); y += dy;
-			sprintf (cbuf, "TrL% 7.2fº", Deg(el->TrueLng()));
+			sprintf (cbuf, "TrL% 7.2f?", Deg(el->TrueLng()));
 			skp->Text (x, y, cbuf, strlen(cbuf)); y += dy;
-			sprintf (cbuf, "MnA%sº", FloatStr (DEG*el->MeanAnm(),4));
+			sprintf (cbuf, "MnA%s?", FloatStr (DEG*el->MeanAnm(),4));
 			skp->Text (x, y, cbuf, strlen(cbuf)); y += dy;
 			skp->Text (x, y, "MnL N/A", 7); y += dy;
 		}

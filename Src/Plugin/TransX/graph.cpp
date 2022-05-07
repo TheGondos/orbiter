@@ -20,28 +20,27 @@
 
 #define STRICT
 
-#include <windows.h>
 #include <stdio.h>
 #include <math.h>
-#include "orbitersdk.h"
+#include "Orbitersdk.h"
 #include "mfd.h"
 #include "graph.h"
 #include "TransXFunction.h"
 #include "mapfunction.h"
 
 
-void Graph::setviewwindow(DWORD xstart,DWORD ystart,DWORD xend,DWORD yend)
+void Graph::setviewwindow(int xstart,int ystart,int xend,int yend)
 {
 	ixstart=xstart;
 	ixend=xend;
 	iystart=ystart;
 	iyend=yend;
 	windowsize=ixend-ixstart;
-	DWORD temp=iyend-iystart;
+	int temp=iyend-iystart;
 	if (temp<windowsize) windowsize=temp;
 }
 
-void Graph::getviewwindow(DWORD *xstart, DWORD *ystart, DWORD *xend, DWORD *yend)
+void Graph::getviewwindow(int *xstart, int *ystart, int *xend, int *yend)
 {
 	*xstart=ixstart;
 	*xend=ixend;

@@ -36,13 +36,13 @@
 
 class OAPIFUNC ExternalCameraControl {
 public:
-	ExternalCameraControl (DWORD dmode, DWORD cmode);
+	ExternalCameraControl (int dmode, int cmode);
 
-	void SetDataMode (DWORD mode);
-	DWORD GetDataMode () const;
+	void SetDataMode (int mode);
+	int GetDataMode () const;
 
-	void SetCameraMode (DWORD mode);
-	DWORD GetCameraMode () const;
+	void SetCameraMode (int mode);
+	int GetCameraMode () const;
 
 	struct CamData { // position data
 		double x, y, z;
@@ -74,8 +74,8 @@ public:
 	// must be provided by implementations
 
 protected:
-	DWORD datamode;
-	DWORD cameramode;
+	int datamode;
+	int cameramode;
 	VCMode vcmode;
 	TrackMode trkmode;
 };

@@ -37,7 +37,7 @@ const char *CLBKNAME[NCLBK] = {
 
 typedef struct {
 	int mode;
-	DWORD key;
+	int key;
 	char *name;
 	char *script;
 	int persist;
@@ -46,19 +46,19 @@ typedef struct {
 
 class ScriptMFD: public MFD2 {
 public:
-	ScriptMFD (DWORD w, DWORD h, VESSEL *vessel, const SCRIPTMFDMODESPEC *spec);
+	ScriptMFD (int w, int h, VESSEL *vessel, const SCRIPTMFDMODESPEC *spec);
 	~ScriptMFD ();
 	bool ConsumeButton (int bt, int event);
-	bool ConsumeKeyBuffered (DWORD key);
+	bool ConsumeKeyBuffered (int key);
 	bool ConsumeKeyImmediate (char *kstate);
-	char *ButtonLabel (int bt);
+	const char *ButtonLabel (int bt);
 	int ButtonMenu (const MFDBUTTONMENU **menu) const;
 	bool Update (oapi::Sketchpad *skp);
 	void StoreStatus() const;
 	void RecallStatus();
 	void WriteStatus (FILEHANDLE scn) const;
 	void ReadStatus (FILEHANDLE scn);
-	static OAPI_MSGTYPE MsgProc (UINT msg, UINT mfd, WPARAM wparam, LPARAM lparam);
+	static OAPI_MSGTYPE MsgProc (MFD_msg msg, MfdId mfd, MFDMODEOPENSPEC *param, VESSEL *vessel);
 
 protected:
 	INTERPRETERHANDLE hInterp;

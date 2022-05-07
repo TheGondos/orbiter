@@ -23,7 +23,7 @@
 // Global variables
 // ==============================================================
 
-HINSTANCE g_hInst;    // module instance handle
+DynamicModule *g_hInst;    // module instance handle
 HWND g_hDlg = 0;      // dialog window handle
 DWORD g_dwCmd;        // custom function identifier
 VESSEL *g_vessel;     // focus vessel interface
@@ -57,7 +57,7 @@ INT_PTR CALLBACK MsgProc (HWND, UINT, WPARAM, LPARAM);
 // This function is called when Orbiter starts or when the module
 // is activated.
 
-DLLCLBK void InitModule (HINSTANCE hModule)
+DLLCLBK void InitModule (DynamicModule *hModule)
 {
 	g_hInst = hModule;
 	g_dwCmd = oapiRegisterCustomCmd ("Mesh debugger",

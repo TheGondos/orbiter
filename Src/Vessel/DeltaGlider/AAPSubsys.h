@@ -36,9 +36,9 @@ class AAP;
 class AAPSubsystem: public DGSubsystem {
 public:
 	AAPSubsystem (DGSubsystem *parent);
-	bool clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH);
-	void clbkSaveState (FILEHANDLE scn);
-	bool clbkParseScenarioLine (const char *line);
+	bool clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH) override;
+	void clbkSaveState (FILEHANDLE scn) override;
+	bool clbkParseScenarioLine (const char *line) override;
 	void AttachHSI (InstrHSI *_hsi);
 
 private:

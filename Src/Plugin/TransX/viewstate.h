@@ -28,14 +28,14 @@ using namespace std;
 
 class viewstate
 {
-	int mfdposition;
+	MfdId mfdposition;
 	int viewmode;
 	int varviewmode;
 	int viewfunction,varviewfunction;
 	bool switchmode;
 	static bool renderviewport;
 	bool mfdactive;//If there's an MFD associated with this
-	viewstate(UINT tmfd, class shipptrs *shipptrs);
+	viewstate(MfdId tmfd, class shipptrs *shipptrs);
 	class transxstate *state;//Pointer to the transxstate associated with this
 	void selfdownshift();
 	void resetshift();

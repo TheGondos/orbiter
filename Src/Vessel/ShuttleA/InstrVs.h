@@ -12,14 +12,14 @@
 #ifndef __INSTRVS_H
 #define __INSTRVS_H
 
-#include "..\Common\Instrument.h"
+#include "../Common/Instrument.h"
 
 // ==============================================================
 
 class InstrSpd: public PanelElement {
 public:
 	InstrSpd (VESSEL3 *v);
-	void AddMeshData2D (MESHHANDLE hMesh, DWORD grpidx);
+	void AddMeshData2D (MESHHANDLE hMesh, int grpidx);
 	bool Redraw2D (SURFHANDLE surf);
 
 private:
@@ -31,7 +31,7 @@ private:
 class InstrAlt: public PanelElement {
 public:
 	InstrAlt (VESSEL3 *v);
-	void AddMeshData2D (MESHHANDLE hMesh, DWORD grpidx);
+	void AddMeshData2D (MESHHANDLE hMesh, int grpidx);
 	bool Redraw2D (SURFHANDLE surf);
 
 private:
@@ -43,7 +43,7 @@ private:
 class InstrVS: public PanelElement {
 public:
 	InstrVS (VESSEL3 *v);
-	void AddMeshData2D (MESHHANDLE hMesh, DWORD grpidx);
+	void AddMeshData2D (MESHHANDLE hMesh, int grpidx);
 	bool Redraw2D (SURFHANDLE surf);
 
 private:
@@ -55,7 +55,7 @@ private:
 class InstrVAcc: public PanelElement {
 public:
 	InstrVAcc (VESSEL3 *v);
-	void AddMeshData2D (MESHHANDLE hMesh, DWORD grpidx);
+	void AddMeshData2D (MESHHANDLE hMesh, int grpidx);
 	bool Redraw2D (SURFHANDLE surf);
 
 private:

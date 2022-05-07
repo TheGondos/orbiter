@@ -5,7 +5,6 @@
 #include "Panel2D.h"
 #include "Pane.h"
 #include "Vessel.h"
-#include <zmouse.h>
 
 using namespace std;
 
@@ -39,10 +38,10 @@ Panel2D::Panel2D (int _id, Pane *_pane, double scale)
 	narea = nareabuf = 0;
 	idx_mfocus = aid_mfocus = -1;
 	mstate = 0;
-
+/*
 	if (g_pOrbiter->IsFullscreen()) cwnd = 0;
 	else                            cwnd = g_pOrbiter->GetRenderWnd();
-
+*/
 	for (i = 0; i < 4; i++)
 		connect[i] = -1;
 
@@ -79,12 +78,12 @@ void Panel2D::SetConnections (int left, int right, int top, int bottom)
 	connect[3] = bottom;
 }
 
-int Panel2D::SetBackground (SURFHANDLE *hSurface, DWORD nsurf, MESHHANDLE hMesh, DWORD width, DWORD height, DWORD baseline, DWORD scrollflag)
+int Panel2D::SetBackground (SURFHANDLE *hSurface, int nsurf, MESHHANDLE hMesh, int width, int height, int baseline, int scrollflag)
 {
 	ReleaseSurfaces();
-	if (nSurf = nsurf) {
+	if ((nSurf = nsurf)) {
 		hSurf = new SURFHANDLE[nSurf];
-		for (DWORD i = 0; i < nsurf; i++) {
+		for (int i = 0; i < nsurf; i++) {
 			hSurf[i] = hSurface[i];
 			gc->clbkIncrSurfaceRef (hSurface[i]);
 		}
@@ -107,8 +106,8 @@ int Panel2D::SetBackground (SURFHANDLE *hSurface, DWORD nsurf, MESHHANDLE hMesh,
 
 int Panel2D::SetScaling (double scale1, double scale2)
 {
-	minscale = min (scale1,scale2)*userscale;
-	maxscale = max (scale1,scale2)*userscale;
+	minscale = std::min (scale1,scale2)*userscale;
+	maxscale = std::max (scale1,scale2)*userscale;
 	panelscale = scale1*userscale;
 	tgtW = (double)panelW * panelscale;
 	tgtH = (double)panelH * panelscale;
@@ -133,11 +132,11 @@ void Panel2D::SetActiveScale (double scale, bool force)
 		x0 = 0.5 * ((double)viewW - tgtW);
 	else {
 		x0 = refx - sr*(refx-x0);
-		x0 = max (min(0,x0), viewW-tgtW);
+		x0 = std::max (std::min(0.0,x0), viewW-tgtW);
 	}
 	y0 = refy - sr*(refy-y0);
-	if      (shiftflag & PANEL_ATTACH_BOTTOM) y0 = max (y0, viewH-tgtH);
-	else if (shiftflag & PANEL_ATTACH_TOP)    y0 = min (y0, 0);
+	if      (shiftflag & PANEL_ATTACH_BOTTOM) y0 = std::max (y0, viewH-tgtH);
+	else if (shiftflag & PANEL_ATTACH_TOP)    y0 = std::min (y0, 0.0);
 
 	if (panelscale == 1.0) { // pixel alignment 
 		x0 = floor(x0+0.5);
@@ -157,11 +156,11 @@ int Panel2D::RegisterMFDGeometry (int MFD_id, int nmesh, int ngroup)
 		grp->TexIdx = TEXIDX_MFD0 + MFD_id;
 		float xmin, xmax, ymin, ymax;
 		xmin = xmax = grp->Vtx[0].x, ymin = ymax = grp->Vtx[0].y;
-		for (DWORD i = 1; i < grp->nVtx; i++) {
-			xmin = min (xmin, grp->Vtx[i].x);
-			xmax = max (xmax, grp->Vtx[i].x);
-			ymin = min (ymin, grp->Vtx[i].y);
-			ymax = max (ymax, grp->Vtx[i].y);
+		for (int i = 1; i < grp->nVtx; i++) {
+			xmin = std::min (xmin, grp->Vtx[i].x);
+			xmax = std::max (xmax, grp->Vtx[i].x);
+			ymin = std::min (ymin, grp->Vtx[i].y);
+			ymax = std::max (ymax, grp->Vtx[i].y);
 		}
 		mfdspec[MFD_id].left   = xmin;
 		mfdspec[MFD_id].right  = xmax;
@@ -201,7 +200,7 @@ void Panel2D::Move (double dx, double dy)
 
 	if (dx && tgtW > viewW) { // horizontal panning only if panel wider than viewport
 		x0 += dx;
-		x0 = max (min (x0, 0), viewW-tgtW);
+		x0 = std::max (std::min (x0, 0.0), viewW-tgtW);
 		moved = true;
 	}
 	if (dy) {
@@ -279,39 +278,50 @@ void Panel2D::Render ()
 	}
 }
 
-bool Panel2D::ProcessMouse_System(UINT event, DWORD state, int x, int y, const char *kstate)
+bool Panel2D::ProcessMouse_System(oapi::MouseEvent event, int state, int x, int y, const char *kstate)
 {
 	// Windows event handler for mouse events
 	switch (event) {
-	case WM_MOUSEWHEEL:
-		if ((KEYMOD_CONTROL(kstate))) {
-			short zDelta = (short)HIWORD(state);
+	case oapi::MOUSE_WHEEL:
+		if (state & oapi::MouseModifier::MOUSE_CTRL) {
+			short zDelta = (short)state;
 			zoomaction = (zDelta < 0 ? ZOOM_OUT : ZOOM_IN);
 			refx = x, refy = y;
 			return true;
 		}
 		break;
+	default: break;
 	}
 	return false;
 }
 
-bool Panel2D::ProcessMouse_OnRunning (UINT event, DWORD state, int x, int y, const char *kstate)
+bool Panel2D::ProcessMouse_OnRunning (oapi::MouseEvent event, int state, int x, int y, const char *kstate)
 {
 	mstate = 0;
 
+	int mod_bits = 0;
+	if (state & oapi::MouseModifier::MOUSE_CTRL)  mod_bits |= PANEL_MOUSE_CTRL;
+	if (state & oapi::MouseModifier::MOUSE_ALT)   mod_bits |= PANEL_MOUSE_ALT;
+	if (state & oapi::MouseModifier::MOUSE_SHIFT) mod_bits |= PANEL_MOUSE_SHIFT;
+
 	// Windows event handler for mouse events
 	switch (event) {
-	case WM_LBUTTONDOWN:
+	case oapi::MOUSE_LBUTTONDOWN:
 		state = PANEL_MOUSE_LBDOWN | PANEL_MOUSE_LBPRESSED;
 		break;
-	case WM_RBUTTONDOWN:
+	case oapi::MOUSE_RBUTTONDOWN:
 		state = PANEL_MOUSE_RBDOWN | PANEL_MOUSE_RBPRESSED;
 		break;
-	case WM_LBUTTONUP:
+	case oapi::MOUSE_LBUTTONUP:
 		state = PANEL_MOUSE_LBUP;
 		break;
-	case WM_RBUTTONUP:
+	case oapi::MOUSE_RBUTTONUP:
 		state = PANEL_MOUSE_RBUP;
+		break;
+	case oapi::MOUSE_MBUTTONDOWN:
+	case oapi::MOUSE_MBUTTONUP:
+	case oapi::MOUSE_MOVE:
+	case oapi::MOUSE_WHEEL:
 		break;
 	//case WM_MOUSEWHEEL:
 	//	if ((KEYMOD_CONTROL(kstate))) {
@@ -322,6 +332,8 @@ bool Panel2D::ProcessMouse_OnRunning (UINT event, DWORD state, int x, int y, con
 	//	}
 	//	break;
 	}
+
+	state |= mod_bits;
 
 	// mouse state event handler (button-down events only)
 	if (state & PANEL_MOUSE_DOWN) {
@@ -358,9 +370,14 @@ void Panel2D::GetMouseState (int &idx, int &state, int &mx, int &my) const
 {
 	if (mstate & PANEL_MOUSE_PRESSED) {
 		POINT pt;
-		GetCursorPos (&pt);
-		if (cwnd) // need to subtract client window offset
-			ScreenToClient (cwnd, &pt);
+//		GetCursorPos (&pt);
+//		if (cwnd) // need to subtract client window offset
+//			ScreenToClient (cwnd, &pt);
+		double xpos, ypos;
+		glfwGetCursorPos(g_pOrbiter->GetRenderWnd(), &xpos, &ypos);
+		pt.x = floor(xpos);
+		pt.y = floor(ypos);
+
 	    double tx, ty;  // transformed coordinates
 	    tx = ((double)pt.x-x0)/panelscale;
 	    ty = ((double)pt.y-y0)/panelscale;
@@ -376,10 +393,10 @@ void Panel2D::Update (double SimT, double SysT)
 		const double zoomspeed = 1.0;
 		double newscale;
 		if (zoomaction == ZOOM_IN) {
-			newscale = min (maxscale, panelscale + zoomspeed*SysT);
+			newscale = std::min (maxscale, panelscale + zoomspeed*SysT);
 			if (newscale == maxscale) zoomaction = NONE;
 		} else {
-			newscale = max (minscale, panelscale - zoomspeed*SysT);
+			newscale = std::max (minscale, panelscale - zoomspeed*SysT);
 			if (newscale == minscale) zoomaction = NONE;
 		}
 		if (newscale != panelscale) {
@@ -416,7 +433,7 @@ int Panel2D::DefineArea (int aid, const RECT &pos, int draw_mode, int mouse_mode
 	if (surf && gc) gc->clbkIncrSurfaceRef (surf);
 	area[narea]->bksurf  = NULL;
 	area[narea]->redraw  = draw_mode & 0xFF;
-	area[narea]->mouse   = mouse_mode;
+	area[narea]->mouse   = mouse_mode | PANEL_MOUSE_CTRL | PANEL_MOUSE_ALT | PANEL_MOUSE_SHIFT;
 	area[narea]->context = context;
 	narea++;
 	return 0;
@@ -446,7 +463,7 @@ int Panel2D::DefineArea (int aid, const RECT &pos, int texid, const RECT &texpos
 	area[narea]->h       = pos.bottom-pos.top;
 	area[narea]->bltmode = bkmode;
 	area[narea]->redraw  = draw_event_mode;
-	area[narea]->mouse   = mouse_mode;
+	area[narea]->mouse   = mouse_mode | PANEL_MOUSE_CTRL | PANEL_MOUSE_ALT | PANEL_MOUSE_SHIFT;
 	area[narea]->context = 0;
 
 	// allocate surfaces for area
@@ -454,8 +471,7 @@ int Panel2D::DefineArea (int aid, const RECT &pos, int texid, const RECT &texpos
 		area[narea]->surf = NULL;
 		area[narea]->bksurf = NULL;
 	} else {
-		DWORD attrib = OAPISURFACE_RENDERTARGET;
-		if (draw_mode & PANEL_REDRAW_GDI) attrib |= OAPISURFACE_GDI;
+		int attrib = OAPISURFACE_RENDERTARGET;
 		if (draw_mode & PANEL_REDRAW_SKETCHPAD) attrib |= OAPISURFACE_SKETCHPAD;
 		area[narea]->surf = gc->clbkCreateSurfaceEx (area[narea]->w, area[narea]->h, attrib);
 		switch (bkmode) {

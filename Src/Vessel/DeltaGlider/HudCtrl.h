@@ -33,8 +33,8 @@ class HUDUpDownSwitch;
 class HUDControl: public DGSubsystem {
 public:
 	HUDControl (DeltaGlider *vessel);
-	void clbkSaveState(FILEHANDLE scn);
-	bool clbkParseScenarioLine(const char *line);
+	void clbkSaveState(FILEHANDLE scn) override;
+	bool clbkParseScenarioLine(const char *line) override;
 	int GetHUDMode () const;
 	void SetHUDMode (int mode);
 	void ToggleHUDMode ();
@@ -42,12 +42,12 @@ public:
 	void ExtendHud();
 	void RevertHud ();
 	void ModHUDBrightness (bool increase);
-	void clbkPostStep (double simt, double simdt, double mjd);
-	bool clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH);
-	bool clbkLoadVC (int vcid);
-	void clbkReset2D(int panelid, MESHHANDLE hMesh);
-	void clbkResetVC (int vcid, DEVMESHHANDLE hMesh);
-	int clbkConsumeBufferedKey (DWORD key, bool down, char *kstate);
+	void clbkPostStep (double simt, double simdt, double mjd) override;
+	bool clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH) override;
+	bool clbkLoadVC (int vcid) override;
+	void clbkReset2D(int panelid, MESHHANDLE hMesh) override;
+	void clbkResetVC (int vcid, DEVMESHHANDLE hMesh) override;
+	int clbkConsumeBufferedKey (int key, bool down, char *kstate) override;
 
 private:
 	int last_mode;
@@ -64,8 +64,8 @@ private:
 	int ELID_HUDCOLOUR;            // element ID: colour button
 	int ELID_HUDRETRACT;           // element ID: HUD extend/retract switch
 
-	UINT anim_vc_hudbdial;         // VC HUD brightness dial
-	UINT anim_vc_hud;              // VC HUD folding away
+	unsigned int anim_vc_hudbdial;         // VC HUD brightness dial
+	unsigned int anim_vc_hud;              // VC HUD folding away
 };
 
 // ==============================================================
@@ -75,12 +75,12 @@ class HUDModeButtons: public PanelElement {
 public:
 	HUDModeButtons (HUDControl *hc);
 	~HUDModeButtons ();
-	void DefineAnimationsVC (const VECTOR3 &axis, DWORD meshgrp, DWORD meshgrp_label,
-		DWORD vofs[3], DWORD vofs_label[3]);
+	void DefineAnimationsVC (const VECTOR3 &axis, int meshgrp, int meshgrp_label,
+		int vofs[3], int vofs_label[3]);
 	void SetMode (int mode);
 	void Reset2D (int panelid, MESHHANDLE hMesh);
 	void ResetVC (DEVMESHHANDLE hMesh);
-	void LoadPanel2D(int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH);
+	void LoadPanel2D(int panelid, PANELHANDLE hPanel, int viewW, int viewH);
 	void LoadVC (int vcid);
 	bool Redraw2D (SURFHANDLE surf);
 	bool RedrawVC (DEVMESHHANDLE hMesh, SURFHANDLE surf);

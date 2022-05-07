@@ -16,6 +16,7 @@ class Elements;
 class CelestialBody;
 class Body;
 class VObject;
+class PlanetarySystem;
 
 class Body {
 	friend class PlanetarySystem;
@@ -32,9 +33,9 @@ public:
 
 	inline char *Name() const { return name; }
 
-	virtual const void *GetParam (DWORD paramtype) const { return 0; }
+	virtual const void *GetParam (int paramtype) const { return 0; }
 
-	void BroadcastVisMsg (DWORD msg, DWORD_PTR content);
+	void BroadcastVisMsg (visevent msg, visevent_data content);
 	// send a message to all existing visuals
 
 	inline double Size() const { return size; }

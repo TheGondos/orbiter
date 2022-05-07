@@ -34,7 +34,8 @@ Camera::Camera (LPDIRECT3DDEVICE7 _dev, DWORD w, DWORD h)
 
 	D3DMAT_Identity (&mView);
 	bProjView_valid = false;
-	SetFrustumLimits (2.5f, 5e6f); // initial limits
+//	SetFrustumLimits (2.5f, 5e6f); // initial limits
+	SetFrustumLimits (0.05f, 5e3f); // initial limits
 }
 
 MATRIX4 Camera::ProjectionMatrix() const
@@ -96,7 +97,7 @@ bool Camera::Direction2Viewport(const VECTOR3 &dir, int &x, int &y)
 	D3DVECTOR idir = {-dir.x, -dir.y, -dir.z};
 	D3DMAT_VectorMatrixMultiply (&homog, &idir, &mProjView);
 	if (homog.x >= -1.0f && homog.y <= 1.0f && homog.z >= 0.0) {
-		if (_hypot(homog.x, homog.y) < 1e-6) {
+		if (std::hypot(homog.x, homog.y) < 1e-6) {
 			x = viewW/2, y = viewH/2;
 		} else {
 			x = (int)(viewW*0.5f*(1.0f+homog.x));

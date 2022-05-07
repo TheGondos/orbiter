@@ -15,7 +15,9 @@
 #ifndef __MFD_H
 #define __MFD_H
 
+#ifndef STRICT
 #define STRICT 1
+#endif
 #include "OrbiterAPI.h"
 #include "GraphicsAPI.h"
 #include "Vessel.h"
@@ -36,15 +38,12 @@ struct MFDMODE {          // MFD mode (for builtin and user-defined modes)
 	int id;               // mode id
 
 public:
-	inline int Id() const { return id; }
+	inline int ModeId() const { return id; }
 	inline const MFDMODESPECEX *Spec() const { return spec; }
 	inline const MFDMODESPEC *Oldspec() const { return oldspec; }
 };
 
 class Pane;
-class InputBox;
-class Select;
-class oapi::GraphicsClient;
 
 static char work_kstate[256];
 inline char *KstateSet (int key) {
@@ -67,20 +66,18 @@ public:
 		int nbtl, nbtr; // number of buttons on left and right side of display
 		int bt_y0;      // y-offset of top button centreline from top edge of display
 		int bt_dy;      // y-distance between buttons
-		DWORD flag;     // bit flags
+		int flag;     // bit flags
 	};
 
-	Instrument (Pane *_pane, INT_PTR _id, const Spec &spec, Vessel *_vessel, bool defer_alloc=false);
+	Instrument (Pane *_pane, MfdId _id, const Spec &spec, Vessel *_vessel);
 	virtual ~Instrument ();
-	virtual void RestoreDeviceObjects (LPDIRECT3D7 d3d, LPDIRECT3DDEVICE7 dev) {}
 	virtual int Type () const = 0;                 // mode id
 	virtual char ModeSelKey () const = 0;          // mode selection key
-	virtual HELPCONTEXT *HelpTopic () const { return 0; } // help topic (CHM file address) if available
 	bool ConsumeKeyImmediate (char *kstate);
-	bool ConsumeKeyBuffered (DWORD key);
+	bool ConsumeKeyBuffered (int key);
 	bool ConsumeButton (int bt, int event);
 	virtual bool KeyImmediate (char *kstate) { return false; }
-	virtual bool KeyBuffered (DWORD key) { return false; }
+	virtual bool KeyBuffered (int key) { return false; }
 
 	virtual bool ProcessButton (int bt, int event) { return false; }
 	// used to process buttons in the frame of the MFD (panel mode)
@@ -104,22 +101,17 @@ public:
 
 	virtual bool Update (double upDTscale);
 	virtual void UpdateDraw (oapi::Sketchpad *skp) = 0;
-	virtual void UpdateDraw (HDC hDC) {}
 	virtual void UpdateBlt () {}
 	virtual void Timejump ();
 	void Refresh (); // force refresh
 	void RepaintButtons ();
 	Vessel *GetVessel () const { return vessel; }
 	virtual void VesselChanged (Vessel *_vessel);
-	void SetSize (const Spec &spec, bool defer_alloc = false);
-	SURFHANDLE Surface () { return surf; }
-	SURFHANDLE Texture () { return tex; }
+	void SetSize (const Spec &spec);
+	SURFHANDLE Surface () { return m_surf; }
 
 	void DisplayTitle (oapi::Sketchpad *skp, const char *title) const;
 	// to be called from UpdateDraw
-
-	void DisplayTitle (HDC hDC, const char *title) const;
-	// obsolete
 
 	void DisplayModes (int page);
 
@@ -129,22 +121,18 @@ public:
 	// BeginDraw also draws a rectangle around the border of the instrument
 	// note that BLT operations are not allowed between Begin and End
 
-	HDC BeginDrawHDC ();
-	void EndDrawHDC (HDC hDC);
-	// Compatibility versions
-
 	// ******************************************************************
 	// **** Default Instrument registration: these functions must be ****
 	// ****     updated when a new builtin instrument is defined     ****
 	// ******************************************************************
 
 	static Instrument *Create (int type, Pane *_pane,
-		INT_PTR _id, const Spec &spec, Vessel *_vessel, bool restore = true);
+		MfdId _id, const Spec &spec, Vessel *_vessel, bool restore = true);
 	// create instrument of the required type
 	// if restore==true then parameters are restored from static saved
 
 	static Instrument *Create (std::ifstream &ifs, Pane *_pane,
-		INT_PTR _id, const Spec &spec, Vessel *_vessel);
+		MfdId _id, const Spec &spec, Vessel *_vessel);
 	// create instrument from stream
 
 	static void RegisterBuiltinModes ();
@@ -167,7 +155,7 @@ public:
 	// Un-register a previously registered user mode
 	// Returns false if mode was not found
 
-	static int ModeIdFromKey (DWORD key);
+	static int ModeIdFromKey (int key);
 	// Returns the id of an instrument mode, given its activation key
 	// If no mode matches the key, return value is MFD_NONE
 
@@ -184,21 +172,21 @@ public:
 	// If spec is defined, it points to the mode specs on return
 	// If no mode matches the key, return value is MFD_NONE
 
-	inline const MFDMODE *GetMode (DWORD i) const
+	inline const MFDMODE *GetMode (int i) const
 	{ return (i < nGlobalModes ? GlobalMode+i :
 	          i < nGlobalModes+nVesselModes ?
 			  VesselMode+(i-nGlobalModes) : 0); }
 	// Return a mode across global and vessel-specific modes
 
-	static int GetUserMode (DWORD i, MFDMODESPEC *spec);  // may not be necessary
+	static int GetUserMode (int i, MFDMODESPEC *spec);  // may not be necessary
 	int GetMFDMode (char *name, const MFDMODESPECEX **spec) const; // may not be necessary
 	int GetMFDModeOld (char *name, const MFDMODESPEC **spec) const; // obsolete
 
 	static int nextmodeid;       // id for next user-defined mode
-	static DWORD nGlobalModes;   // total number of registered modes
+	static int nGlobalModes;   // total number of registered modes
 	static MFDMODE *GlobalMode;  // list of pointers to registered modes
 
-	DWORD nVesselModes;          // number of registered vessel-specific modes
+	int nVesselModes;          // number of registered vessel-specific modes
 	const MFDMODE *VesselMode;   // list of vessel-specific modes
 
 	static void DisableMode (int id);
@@ -208,12 +196,12 @@ public:
 	void Write (std::ostream &ofs) const;
 	// read/write instrument status from/to stream
 
-	void AllocSurface (DWORD w, DWORD h);
+	void AllocSurface (int w, int h);
 
 protected:
 	Pane *pane;                 // pointer to pane
 	oapi::GraphicsClient *gc;   // graphics client, if available
-	INT_PTR id;                	// instrument id
+	MfdId mfdid;               	// instrument id
 	bool BufKey (char key, double repdelay = 0.5);
 	void SetBuf (char key);
 	int IW, IH;                 // instrument dimensions
@@ -222,14 +210,13 @@ protected:
 	int nbt;                    // total number of buttons per page
 	int bt_y0, bt_dy;           // offset of top button, and button y-distances (pixel)
 	int btnpage;                // currently displayed button page
-	DWORD flag;                 // bit flags
+	int flag;                   // bit flags
 	Vessel *vessel;             // spacecraft to which the instrument refers
 	double instrDT;             // instrument update interval
 	double updT, updSysT;       // simulation/system time of next update
 	double dT, pT;              // last update interval, last update time
 	bool blink;                 // flag for blinking objects: alternates true/false
-	SURFHANDLE surf;            // MFD drawing surface
-	SURFHANDLE tex;             // texture version of MFD display
+	SURFHANDLE m_surf;            // MFD drawing surface
 
 	// MFD colours
 	static COLORREF col_green1;   // light green
@@ -240,19 +227,13 @@ protected:
 	static COLORREF col_grey2;    // dark grey
 	static COLORREF col_red1;     // light red
 
-	oapi::Font *GetDefaultFont (DWORD fontidx);
+	oapi::Font *GetDefaultFont (int fontidx);
 	// Returns a predefined font resource
 
-	HFONT SelectDefaultFont (HDC hDC, DWORD i);
-	// obsolete
-
-	oapi::Pen *GetDefaultPen (DWORD colidx, DWORD intens=0, DWORD style=1);
+	oapi::Pen *GetDefaultPen (int colidx, int intens=0, int style=1);
 	// Returns a predefined pen resource
 
-	HPEN SelectDefaultPen (HDC hDC, DWORD i);
-	// obsolete
-
-	DWORD GetDefaultColour (DWORD colidx, DWORD intens) const;
+	int GetDefaultColour (int colidx, int intens) const;
 	// Return one of the default MFD colours.
 
 	bool FindScnHeader (std::ifstream &ifs) const;
@@ -260,14 +241,14 @@ protected:
 	virtual bool ReadParams (std::ifstream &ifs) = 0;
 	virtual void WriteParams (std::ostream &ofs) const = 0;
 
-	void OpenSelect_CelBody (char *title, Select::Callbk enter_cbk, DWORD flag = 0);
-	static bool ClbkSelect_CelBody (Select *menu, int item, char *str, void *data);
+	void OpenSelect_CelBody (const char *title, Select::Callbk enter_cbk, int flag = 0);
+	static bool ClbkSelect_CelBody (Select *menu, int item, const char *str, void *data);
 	// Open a selection box for a celestial object.
 	// The callback function is called if a selection is made.
 	// The following bit flags are supported:
 	//   1: do not include Star objects
 
-	void OpenSelect_Tgt (char *title, Select::Callbk enter_cbk, const CelestialBody *ref = 0, DWORD flag = 0);
+	void OpenSelect_Tgt (const char *title, Select::Callbk enter_cbk, const CelestialBody *ref = 0, int flag = 0);
 	// Open a selection box for a target object
 	// Supported bitflags:
 	//   1: don't display 'By name' option
@@ -275,7 +256,6 @@ protected:
 
 	// Drawing resources
 	oapi::Font *mfdfont[4];     // MFD font resources
-	bool use_skp_interface;     // true if drawing through Sketchpad, false for HDC
 
 public:
 	static struct DrawResource { // MFD drawing resources
@@ -283,8 +263,6 @@ public:
 		oapi::Pen *solidpen;
 		oapi::Pen *dashpen;
 	} draw[MAXDEFCOL][2];  // first index: colour scheme, second index: intensity (0=bright, 1=dim)
-
-	static HPEN hdefpen[MAXPEN];       // deprecated pen resources
 
 	static void GlobalInit (oapi::GraphicsClient *gc);
 	static void GlobalExit (oapi::GraphicsClient *gc);
@@ -296,17 +274,17 @@ private:
 
 	void DrawMenu ();
 
-	static bool ClbkSelect_Tgt (Select *menu, int item, char *str, void *data);
-	static bool ClbkEnter_Tgt (Select *menu, int item, char *str, void *data);
-	static bool ClbkName_Tgt (InputBox*, char *str, void *data);
+	static bool ClbkSelect_Tgt (Select *menu, int item, const char *str, void *data);
+	static bool ClbkEnter_Tgt (Select *menu, int item, const char *str, void *data);
+	static bool ClbkName_Tgt (InputBox*, const char *str, void *data);
 	// internal callback functions for generic selection dialogs
 
-	static DWORD SelCelBodyFlag;
+	static int SelCelBodyFlag;
 	static struct SelTgtPrm {
 		Select::Callbk clbk;
 		char title[256];
 		const CelestialBody *ref;
-		DWORD flag;
+		int flag;
 	} seltgtprm;
 
 	int modepage;               // currently displayed modepage (-1=none)
@@ -316,7 +294,7 @@ private:
 	bool showmenu;              // show button menu instead of regular MFD display
 	bool pageonmenu;            // combine menu and page buttons
 
-	static DWORD nDisabledModes;  // number of disabled MFD modes
+	static int nDisabledModes;  // number of disabled MFD modes
 	static int *DisabledModes;    // list of disabled MFD modes
 };
 

@@ -47,6 +47,8 @@ private:
 // Instrument lights
 // ==============================================================
 
+class InstrumentLightSwitch;
+class InstrumentBrightnessDial;
 class InstrumentLight: public DGSubsystem {
 	friend class InstrumentLightSwitch;
 	friend class InstrumentBrightnessDial;
@@ -56,10 +58,10 @@ public:
 	void SetLight (bool on, bool force=false);
 	inline bool GetLight () const { return light_on; }
 	void ModBrightness (bool up);
-	void clbkSaveState (FILEHANDLE scn);
-	bool clbkParseScenarioLine (const char *line);
-	bool clbkLoadVC (int vcid);
-	void clbkResetVC (int vcid, DEVMESHHANDLE hMesh);
+	void clbkSaveState (FILEHANDLE scn) override;
+	bool clbkParseScenarioLine (const char *line) override;
+	bool clbkLoadVC (int vcid) override;
+	void clbkResetVC (int vcid, DEVMESHHANDLE hMesh) override;
 
 private:
 	bool light_on;                     // instrument illumination switch status
@@ -70,7 +72,7 @@ private:
 	InstrumentBrightnessDial *dial;
 	int ELID_SWITCH;
 	int ELID_DIAL;
-	UINT anim_dial;                    // VC instrument brightness dial
+	unsigned int anim_dial;                    // VC instrument brightness dial
 };
 
 // ==============================================================
@@ -100,6 +102,8 @@ private:
 // Cockpit floodlights
 // ==============================================================
 
+class CockpitLightSwitch;
+class CockpitBrightnessDial;
 class CockpitLight: public DGSubsystem {
 	friend class CockpitLightSwitch;
 	friend class CockpitBrightnessDial;
@@ -109,10 +113,10 @@ public:
 	void SetLight (int mode, bool force=false);
 	inline int GetLight () const { return light_mode; }
 	void ModBrightness (bool up);
-	void clbkSaveState (FILEHANDLE scn);
-	bool clbkParseScenarioLine (const char *line);
-	bool clbkLoadVC (int vcid);
-	void clbkResetVC (int vcid, DEVMESHHANDLE hMesh);
+	void clbkSaveState (FILEHANDLE scn) override;
+	bool clbkParseScenarioLine (const char *line) override;
+	bool clbkLoadVC (int vcid) override;
+	void clbkResetVC (int vcid, DEVMESHHANDLE hMesh) override;
 
 private:
 	int light_mode;                  // 0=off, 1=red, 2=white
@@ -123,7 +127,7 @@ private:
 	CockpitBrightnessDial *dial;
 	int ELID_SWITCH;
 	int ELID_DIAL;
-	UINT anim_dial;                  // VC floodlight brightness dial
+	unsigned int anim_dial;                  // VC floodlight brightness dial
 };
 
 // ==============================================================
@@ -153,6 +157,7 @@ private:
 // Landing/docking lights
 // ==============================================================
 
+class LandDockLightSwitch;
 class LandDockLight: public DGSubsystem {
 	friend class LandDockLightSwitch;
 
@@ -160,11 +165,11 @@ public:
 	LandDockLight (LightCtrlSubsystem *_subsys);
 	void SetLight (int mode, bool force=false);
 	inline int GetLight () const { return light_mode; }
-	void clbkSaveState (FILEHANDLE scn);
-	bool clbkParseScenarioLine (const char *line);
-	bool clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH);
-	bool clbkLoadVC (int vcid);
-	void clbkResetVC (int vcid, DEVMESHHANDLE hMesh);
+	void clbkSaveState (FILEHANDLE scn) override;
+	bool clbkParseScenarioLine (const char *line) override;
+	bool clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH) override;
+	bool clbkLoadVC (int vcid) override;
+	void clbkResetVC (int vcid, DEVMESHHANDLE hMesh) override;
 
 private:
 	int light_mode;                      // 0=off, 1=docking, 2=landing
@@ -191,6 +196,7 @@ private:
 // Strobes
 // ==============================================================
 
+class StrobeLightSwitch;
 class StrobeLight: public DGSubsystem {
 	friend class StrobeLightSwitch;
 
@@ -198,11 +204,11 @@ public:
 	StrobeLight (LightCtrlSubsystem *_subsys);
 	void SetLight (bool on);
 	inline bool GetLight () const { return light_on; }
-	void clbkSaveState (FILEHANDLE scn);
-	bool clbkParseScenarioLine (const char *line);
-	bool clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH);
-	bool clbkLoadVC (int vcid);
-	void clbkResetVC (int vcid, DEVMESHHANDLE hMesh);
+	void clbkSaveState (FILEHANDLE scn) override;
+	bool clbkParseScenarioLine (const char *line) override;
+	bool clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH) override;
+	bool clbkLoadVC (int vcid) override;
+	void clbkResetVC (int vcid, DEVMESHHANDLE hMesh) override;
 
 private:
 	bool light_on;                        // false=off, true=on
@@ -228,6 +234,7 @@ private:
 // Navigation lights
 // ==============================================================
 
+class NavLightSwitch;
 class NavLight: public DGSubsystem {
 	friend class NavLightSwitch;
 
@@ -235,11 +242,11 @@ public:
 	NavLight (LightCtrlSubsystem *_subsys);
 	inline bool GetLight () const { return light_on; }
 	void SetLight (bool on);
-	void clbkSaveState (FILEHANDLE scn);
-	bool clbkParseScenarioLine (const char *line);
-	bool clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH);
-	bool clbkLoadVC (int vcid);
-	void clbkResetVC (int vcid, DEVMESHHANDLE hMesh);
+	void clbkSaveState (FILEHANDLE scn) override;
+	bool clbkParseScenarioLine (const char *line) override;
+	bool clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH) override;
+	bool clbkLoadVC (int vcid) override;
+	void clbkResetVC (int vcid, DEVMESHHANDLE hMesh) override;
 
 private:
 	bool light_on;                           // false=off, true=on

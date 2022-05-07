@@ -15,6 +15,7 @@
 #include "meshres_vc.h"
 #include "meshres_p0.h"
 #include <math.h>
+#include <cstring>
 
 extern GDIParams g_Param;
 
@@ -94,13 +95,14 @@ void InstrAtt::Redraw (NTVERTEX *Vtx)
 
 	// speed and altitude readout
 	for (int disp = 0; disp < 3; disp++) {
-		char *c, *str, cbuf[6];
+		char *c, *str, cbuf[16];
 		int vofs, maxnum;
 		switch (disp) {
 		case 0: vofs = 16; maxnum = 6; str = DispStr (alt)+1; break;
 		case 1: vofs = 40; maxnum = 6; str = DispStr (spd)+1; break;
 		case 2: vofs = 64; maxnum = 3;
-			    sprintf (cbuf, "%03d", (int)(yaw*DEG+0.5));
+			    snprintf (cbuf, 16, "%03d", (int)(yaw*DEG+0.5));
+				cbuf[15] = '\0';
 				str = cbuf;
 				break;
 		}

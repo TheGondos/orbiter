@@ -40,7 +40,7 @@ using namespace oapi;
 
 static struct {
 	RControl *rcontrol;
-	HINSTANCE hDLL;
+	DynamicModule *hDLL;
 	HWND      hDlg;
 	DWORD     dwCmd;
 	VESSEL    *vessel;
@@ -106,7 +106,7 @@ void RControl::clbkPreStep (double simt, double simdt, double mjd)
 // ==============================================================
 // DLL entry and exit points
 
-DLLCLBK void InitModule (HINSTANCE hDLL)
+DLLCLBK void InitModule (DynamicModule *hDLL)
 {
 	g_Param.hDLL = hDLL;
 

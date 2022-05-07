@@ -15,6 +15,7 @@
 #include "meshres_p0.h"
 #include "meshres_vc.h"
 #include "dg_vc_anim.h"
+#include <cstring>
 
 // ==============================================================
 
@@ -24,13 +25,13 @@ InstrVS::InstrVS (VESSEL3 *v): PanelElement (v)
 
 	memset (&vc_grp, 0, sizeof(GROUPREQUESTSPEC));
 	for (int i = 0; i < 4; i++)
-		vperm[i] = (WORD)(i+VC_VSTAPE_vofs);
+		vperm[i] = (uint16_t)(i+VC_VSTAPE_vofs);
 	vc_grp.VtxPerm = vperm;
 	vc_grp.nVtx = 4;
 
 	memset (&vc_grp_readout, 0, sizeof(GROUPREQUESTSPEC));
 	for (int i = 0; i < 20; i++)
-		vperm_readout[i] = (WORD)(i+VC_VS_READOUT_vofs);
+		vperm_readout[i] = (uint16_t)(i+VC_VS_READOUT_vofs);
 	vc_grp_readout.VtxPerm = vperm_readout;
 	vc_grp_readout.nVtx = 20;
 }
@@ -71,15 +72,15 @@ void InstrVS::ResetVC (DEVMESHHANDLE hMesh)
 
 // --------------------------------------------------------------
 
-void InstrVS::AddMeshData2D (MESHHANDLE hMesh, DWORD grpidx)
+void InstrVS::AddMeshData2D (MESHHANDLE hMesh, int grpidx)
 {
-	const DWORD texw = INSTR3D_TEXW, texh = INSTR3D_TEXH;
+	const int texw = INSTR3D_TEXW, texh = INSTR3D_TEXH;
 	const float tapex0 = (float)texw-197.5f, tapew = 41.0f;
 	const float tapey0 = (float)(texh-764), tapeh = 512.0f;
 	const float xcnt = 682.0f, ycnt = 311.0f;
 
-	const DWORD NVTX = 24;
-	const DWORD NIDX = 36;
+	const int NVTX = 24;
+	const int NIDX = 36;
 	static NTVERTEX VTX[NVTX] = {
 		// VS tape
 		{xcnt-22,ycnt-59,0,  0,0,0,  tapex0/(float)texw,        tapey0/(float)texh},
@@ -108,7 +109,7 @@ void InstrVS::AddMeshData2D (MESHHANDLE hMesh, DWORD grpidx)
 		{xcnt+34.0f,ycnt+7.0f,0,  0,0,0,  0, 0},
 		{xcnt+41.0f,ycnt+7.0f,0,  0,0,0,  0, 0}
 	};
-	static WORD IDX[NIDX] = {
+	static uint16_t IDX[NIDX] = {
 		0,1,2, 3,2,1,
 		4,5,6, 7,6,5,
 		8,9,10, 11,10,9,

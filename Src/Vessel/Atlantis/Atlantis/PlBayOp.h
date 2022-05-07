@@ -4,7 +4,6 @@
 #ifndef __PLBAYOP_H
 #define __PLBAYOP_H
 
-#include <windows.h>
 #include "Atlantis.h"
 
 // ==============================================================
@@ -20,7 +19,7 @@ class PayloadBayOp {
 public:
 	PayloadBayOp (Atlantis *_sts);
 	void OpenDialog ();
-	void DefineAnimations (UINT vcidx);
+	void DefineAnimations (unsigned int vcidx);
 	void RegisterVC ();
 	void UpdateVC ();
 	bool VCMouseEvent (int id, int event, VECTOR3 &p);
@@ -44,10 +43,12 @@ public:
 
 private:
 	Atlantis *sts; // vessel instance pointer
+	/*
 	HWND hDlg;     // control dialog handle
 	INT_PTR DlgProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 	friend INT_PTR CALLBACK PlOp_DlgProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 	void UpdateDialog (HWND hWnd);
+	*/
 	bool VCDrawTalkback (SURFHANDLE surf, int idx, int label);
 
 	// status of control switches
@@ -60,7 +61,7 @@ private:
 	enum {KU_DIRECT_ON, KU_DIRECT_OFF} KuDirectCtrl;
 
 	// VC switch animations
-	UINT anim_VC_R13L[11];
+	unsigned int anim_VC_R13L[11];
 	int tkbk_state[6];
 
 	// physical status

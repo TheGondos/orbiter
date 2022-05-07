@@ -13,9 +13,9 @@ target_include_directories(ScriptMFD
 )
 
 target_link_libraries(ScriptMFD
-	${ORBITER_LIB}
+#	${ORBITER_LIB}
 	${ORBITER_SDK_LIB}
-	${LUA_LIB}
+	lua::lib
 	${LUAINTERPRETER_LIB}
 )
 
@@ -32,6 +32,6 @@ set_target_properties(ScriptMFD
 
 # Installation
 install(TARGETS ScriptMFD
-	RUNTIME
+#	RUNTIME
 	DESTINATION ${ORBITER_INSTALL_PLUGIN_DIR}
 )

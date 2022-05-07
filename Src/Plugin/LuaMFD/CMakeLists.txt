@@ -3,7 +3,6 @@
 
 add_library(LuaMFD SHARED
 	LuaMFD.cpp
-	LuaMFD.rc
 	MfdInterpreter.cpp
 )
 
@@ -14,9 +13,9 @@ target_include_directories(LuaMFD
 )
 
 target_link_libraries(LuaMFD
-	${ORBITER_LIB}
+#	${ORBITER_LIB}
 	${ORBITER_SDK_LIB}
-	${LUA_LIB}
+	lua::lib
 	${LUAINTERPRETER_LIB}
 )
 
@@ -33,6 +32,6 @@ set_target_properties(LuaMFD
 
 # Installation
 install(TARGETS LuaMFD
-	RUNTIME
+#	RUNTIME
 	DESTINATION ${ORBITER_INSTALL_PLUGIN_DIR}
 )

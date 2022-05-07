@@ -14,10 +14,10 @@
 #ifndef __ATLANTIS_ASCENTAP
 #define __ATLANTIS_ASCENTAP
 
-#include "Common\Dialog\TabDlg.h"
+///#include "Common/Dialog/TabDlg.h"
 
 class Atlantis;
-class Graph;
+//class Graph;
 
 struct ProfSample {
 	double t;
@@ -107,15 +107,14 @@ private:
 
 class AscentApMfd: public MFD2 {
 public:
-	AscentApMfd (DWORD w, DWORD h, VESSEL *v);
+	AscentApMfd (int w, int h, VESSEL *v);
 	~AscentApMfd();
 	bool Update (oapi::Sketchpad *skp);
-	char *ButtonLabel (int bt);
+	const char *ButtonLabel (int bt);
 	int ButtonMenu (const MFDBUTTONMENU **menu) const;
-	bool ConsumeKeyBuffered (DWORD key);
+	bool ConsumeKeyBuffered (int key);
 	bool ConsumeButton (int bt, int event);
-	static OAPI_MSGTYPE MsgProc (UINT msg, UINT mfd, WPARAM wparam, LPARAM lparam);
-
+	static OAPI_MSGTYPE MsgProc (MFD_msg msg, MfdId mfd, MFDMODEOPENSPEC *, VESSEL*vessel);
 private:
 	void UpdatePg_Prm (oapi::Sketchpad *skp);
 	void UpdatePg_Gbl (oapi::Sketchpad *skp);
@@ -138,14 +137,14 @@ private:
 	double ref_t;
 	double ref_val;
 	AscentAP *ap;
-	DWORD cpg;  // current page
+	int cpg;  // current page
 	oapi::Pen *pen[2];
 };
 
 // ==============================================================
 // class AscentAPDlg: dialog interface for ascent autopilot
 // ==============================================================
-
+/*
 class AscentAPDlgTab;
 
 class AscentAPDlg: public TabbedDialog {
@@ -160,11 +159,11 @@ public:
 private:
 	AscentAP *ap;
 };
-
+*/
 // ==============================================================
 // class AscentAPDlgTab: base class for dialog tabs
 // ==============================================================
-
+/*
 class AscentAPDlgTab: public TabPage {
 public:
 	AscentAPDlgTab (AscentAPDlg *frame, int dlgId);
@@ -172,11 +171,11 @@ public:
 protected:
 	AscentAP *ap;
 };
-
+*/
 // ==============================================================
 // class AscentAPDlgTabControl: AP control tab
 // ==============================================================
-
+/*
 class AscentAPDlgTabControl: public AscentAPDlgTab {
 public:
 	AscentAPDlgTabControl (AscentAPDlg *frame);
@@ -186,11 +185,11 @@ protected:
 	int OnLaunch ();
 	int OnCommand (WPARAM wParam, LPARAM lParam);
 };
-
+*/
 // ==============================================================
 // class AscentAPDlgTabGimbal: AP gimbal tab
 // ==============================================================
-
+/*
 class AscentAPDlgTabGimbal: public AscentAPDlgTab {
 public:
 	AscentAPDlgTabGimbal (AscentAPDlg *frame);
@@ -209,11 +208,11 @@ private:
 	double rad;
 	HPEN pen1, pen2;
 };
-
+*/
 // ==============================================================
 // class AscentAPDlgTabThrust: AP thrust tab
 // ==============================================================
-
+/*
 class AscentAPDlgTabThrust: public AscentAPDlgTab {
 public:
 	AscentAPDlgTabThrust (AscentAPDlg *frame);
@@ -230,11 +229,11 @@ private:
 	double updt;
 	double dupdt;
 };
-
+*/
 // ==============================================================
 // class AscentAPDlgTabAltitude: AP altitude tab
 // ==============================================================
-
+/*
 class AscentAPDlgTabAltitude: public AscentAPDlgTab {
 public:
 	AscentAPDlgTabAltitude (AscentAPDlg *frame);
@@ -251,7 +250,7 @@ private:
 	double updt;
 	double dupdt;
 };
-
+*/
 
 // ==============================================================
 // auxiliary functions

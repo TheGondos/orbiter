@@ -18,12 +18,9 @@
 ** OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 ** THE SOFTWARE.*/
 
-#define STRICT
-
-#include <windows.h>
 #include <stdio.h>
 #include <math.h>
-#include "orbitersdk.h"
+#include "Orbitersdk.h"
 #include "mfd.h"
 #include "mfdvartypes.h"
 #include "doublelink.h"
@@ -32,17 +29,17 @@
 
 liststring::liststring(bool manageme) : listelement(manageme)
 {
-	ZeroMemory(buffer, MAX_STRING_LENGTH);
+	memset(buffer, 0, MAX_STRING_LENGTH);
 }
 
-void MFDsemiintdiscrete::init(MFDvarhandler *vars,int viewmode1,int viewmode2,char *vname,int tvalue)
+void MFDsemiintdiscrete::init(MFDvarhandler *vars,int viewmode1,int viewmode2,const char *vname,int tvalue)
 {
 	value=tvalue;
 	initialise(vars,viewmode1,viewmode2);
 	strcpy(name,vname);
 }
 
-void MFDvarmoon::init(MFDvarhandler *vars,int viewmode1,int viewmode2,char *vname,OBJHANDLE tcentralbody)
+void MFDvarmoon::init(MFDvarhandler *vars,int viewmode1,int viewmode2,const char *vname,OBJHANDLE tcentralbody)
 {
 	adjMode = Planet;
 	initialise(vars,viewmode1,viewmode2);
@@ -261,7 +258,7 @@ bool MFDvarmoon::loadvalue(char *buffer)
 }
 
 
-bool MFDvarmoon::SetVariableBody(char *str)
+bool MFDvarmoon::SetVariableBody(const char *str)
 {
 	OBJHANDLE temp=oapiGetGbodyByName(str);
 	if (temp !=NULL)
@@ -324,7 +321,7 @@ MFDvarfloat::MFDvarfloat()
 	continuous = true;
 }
 
-void MFDvarfloat::init(MFDvarhandler *vars,int viewmode1,int viewmode2,char *vname, double vvalue, double vmin, double vmax, double vincrement, double vlogborder)
+void MFDvarfloat::init(MFDvarhandler *vars,int viewmode1,int viewmode2,const char *vname, double vvalue, double vmin, double vmax, double vincrement, double vlogborder)
 {
 	initialise(vars,viewmode1,viewmode2);
 	strcpy(name,vname);
@@ -344,11 +341,8 @@ bool MFDvarshiplist::show(Sketchpad *sketchpad,int width,int line)
 	else
 	{
 		char *shipname=entry->getbuffer();
-		int length=strlen(shipname);
-		if (length>19)
-			length=19;
-		strncpy(buffer,shipname,length);
-		buffer[length]=0;
+		strncpy(buffer,shipname,20);
+		buffer[19]=0;
 	}
 	return showgeneric(sketchpad, width,line,buffer);
 }
@@ -599,13 +593,13 @@ void MFDvarMJD::dec_variable()
 	}
 }
 
-void MFDvarshiplist::init(MFDvarhandler *vars,int viewmode1,int viewmode2,char *vname)
+void MFDvarshiplist::init(MFDvarhandler *vars,int viewmode1,int viewmode2,const char *vname)
 {
 	initialise(vars,viewmode1,viewmode2);
 	strcpy(name,vname);//brings in variable name
 }
 
-void MFDvardiscrete::init(MFDvarhandler *vars,int viewmode1,int viewmode2,char *vname, int vvalue, int vlimit, char *st1, char *st2, char *st3, char *st4, char *st5)
+void MFDvardiscrete::init(MFDvarhandler *vars,int viewmode1,int viewmode2,const char *vname, int vvalue, int vlimit, const char *st1, const char *st2, const char *st3, const char *st4, const char *st5)
 {
 	initialise(vars,viewmode1,viewmode2);
 	strcpy(name,vname);
@@ -655,7 +649,7 @@ void MFDvardiscrete::inc_variable()
 		value=0;
 }
 
-void MFDvarangle::init(MFDvarhandler *vars,char *vname, bool vloop)
+void MFDvarangle::init(MFDvarhandler *vars,const char *vname, bool vloop)
 {
 	initialise(vars,3,3); //FIXME
 	strcpy(name,vname);

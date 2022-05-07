@@ -15,6 +15,7 @@
 #include "meshres_p0.h"
 #include "meshres_vc.h"
 #include "dg_vc_anim.h"
+#include <cstring>
 
 // ==============================================================
 
@@ -24,13 +25,13 @@ InstrAOA::InstrAOA (VESSEL3 *v): PanelElement (v)
 
 	memset (&vc_grp, 0, sizeof(GROUPREQUESTSPEC));
 	for (int i = 0; i < 8; i++)
-		vperm[i] = (WORD)(i+VC_AOA_vofs);
+		vperm[i] = (uint16_t)(i+VC_AOA_vofs);
 	vc_grp.VtxPerm = vperm;
 	vc_grp.nVtx = 8;
 
 	memset (&vc_grp_readout, 0, sizeof(GROUPREQUESTSPEC));
 	for (int i = 0; i < 16; i++)
-		vperm_readout[i] = (WORD)(i+VC_AOA_READOUT_vofs);
+		vperm_readout[i] = (uint16_t)(i+VC_AOA_READOUT_vofs);
 	vc_grp_readout.VtxPerm = vperm_readout;
 	vc_grp_readout.nVtx = 16;
 }
@@ -73,7 +74,7 @@ void InstrAOA::ResetVC (DEVMESHHANDLE hMesh)
 
 // --------------------------------------------------------------
 
-void InstrAOA::LoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH)
+void InstrAOA::LoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH)
 {
 	ycnt = 311.0f;
 	disph = 118.0f;
@@ -89,15 +90,15 @@ void InstrAOA::LoadVC (int vcid)
 
 // --------------------------------------------------------------
 
-void InstrAOA::AddMeshData2D (MESHHANDLE hMesh, DWORD grpidx)
+void InstrAOA::AddMeshData2D (MESHHANDLE hMesh, int grpidx)
 {
-	const DWORD texw = INSTR3D_TEXW, texh = INSTR3D_TEXH;
-	const DWORD scaleh = 512;
+	const int texw = INSTR3D_TEXW, texh = INSTR3D_TEXH;
+	const int scaleh = 512;
 	const float horzx = (float)texw-239.5f, horzw = 41.0f;
 	const float horzy = (float)(texh-765);
 	const float xcnt = 593.0f, ycnt = 311.0f;
-	const DWORD NVTX = 40;
-	const DWORD NIDX = 66;
+	const int NVTX = 40;
+	const int NIDX = 66;
 	static NTVERTEX VTX[NVTX] = {
 		// AOA tape
 		{xcnt-22.0f, ycnt-59,0,  0,0,0,  horzx/(float)texw,        horzy/(float)texh},
@@ -144,7 +145,7 @@ void InstrAOA::AddMeshData2D (MESHHANDLE hMesh, DWORD grpidx)
 		{xcnt+27.0f,ycnt+7.0f,0,  0,0,0,  0, 0},
 		{xcnt+34.0f,ycnt+7.0f,0,  0,0,0,  0, 0}
 	};
-	static WORD IDX[NIDX] = {
+	static uint16_t IDX[NIDX] = {
 		0,1,2, 3,2,1, 2,3,4, 5,4,3, 4,5,6, 7,6,5,
 		8,9,10, 11,10,9,
 		12,13,14, 15,14,13,
@@ -356,7 +357,7 @@ bool InstrAOA::Redraw2D (SURFHANDLE surf)
 		double load = vessel->GetLift() / 190.0;
 		static double rowh = 60.0;
 		static double loadmax = WINGLOAD_MAX*60.0/51.0;
-		double h = min(fabs(load)/loadmax,1.0)*rowh;
+		double h = std::min(fabs(load)/loadmax,1.0)*rowh;
 		vofs = 16+vtxofs;
 		if (load >= 0) {
 			grp->Vtx[vofs+2].y = grp->Vtx[vofs+3].y = (float)(ycnt-h);

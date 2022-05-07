@@ -4,9 +4,12 @@
 #define STRICT 1
 #define ORBITER_MODULE
 
-#include "orbitersdk.h"
+#include "Orbitersdk.h"
 #include "resource.h"
-#include <io.h>
+//#include <io.h>
+#include <unistd.h>
+#define _access access
+#define _stricmp strcasecmp
 
 using namespace std;
 
@@ -16,7 +19,7 @@ const char *CelbodyDir = "Modules\\Celbody";
 char *ModuleItem = "MODULE_ATM";
 
 struct {
-	HINSTANCE hInst;
+	DynamicModule *hInst;
 	AtmConfig *item;
 } gParams;
 
@@ -214,6 +217,41 @@ void AtmConfig::OpenHelp (HWND hWnd)
 void AtmConfig::ScanCelbodies (HWND hWnd)
 {
 	SendDlgItemMessage (hWnd, IDC_COMBO2, CB_RESETCONTENT, 0, 0);
+	fprintf(stderr,"FIXME: AtmConfig::ScanCelbodies\n");
+	return;
+	/*
+	DIR *dir = opendir(CelbodyDir);
+	if (dir != NULL) {
+		struct dirent * dp = NULL;
+		while ((dp = readdir(dir)) != NULL) {
+			fprintf(stderr,"found '%s'\n",dp->d_name);
+			if(dp->d_type == DT_DIR) {
+				if(!strcmp(dp->d_name, ".") || !strcmp(dp->d_name,".."))
+					continue;
+				char spath[256];
+				sprintf (spath, "%s/%s", CelbodyDir, dp->d_name);
+				fprintf(stderr,"found '%s'\n", spath);
+
+				struct stat s;
+				if( stat(path,&s) == 0 )
+				{
+					if( s.st_mode & S_IFDIR )
+					{
+						SendDlgItemMessage (hWnd, IDC_COMBO2, CB_ADDSTRING, 0, (LPARAM)info.name);
+					}
+				}
+			}
+		}
+		closedir(dir);
+	} else {
+		fprintf(stderr,"AtmConfig::ScanCelbodies Cannot find %s\n", CelbodyDir);
+	}
+	*/
+}
+/*
+void AtmConfig::ScanCelbodies (HWND hWnd)
+{
+	SendDlgItemMessage (hWnd, IDC_COMBO2, CB_RESETCONTENT, 0, 0);
 
 	char filespec[256];
 	sprintf (filespec, "%s\\*.*", CelbodyDir);
@@ -235,11 +273,14 @@ void AtmConfig::ScanCelbodies (HWND hWnd)
 	}
 	_findclose (id);
 }
-
+*/
 void AtmConfig::ScanModules (const char *celbody)
 {
 	ClearModules ();
 
+	fprintf(stderr, "FIXME: AtmConfig::ScanModules %s\n", celbody);
+	return;
+	/*
 	char filespec[256];
 	sprintf (filespec, "%s\\%s\\Atmosphere\\*.dll", CelbodyDir, celbody);
 	_finddata_t info;
@@ -274,6 +315,7 @@ void AtmConfig::ScanModules (const char *celbody)
 		} while (!res);
 	}
 	_findclose (id);
+	*/
 }
 
 INT_PTR CALLBACK AtmConfig::DlgProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -313,14 +355,14 @@ INT_PTR CALLBACK AtmConfig::DlgProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM
 // The DLL entry point
 // ==============================================================
 
-DLLCLBK void InitModule (HINSTANCE hDLL)
+DLLCLBK void InitModule (DynamicModule *hDLL)
 {
 	gParams.hInst = hDLL;
 	gParams.item = new AtmConfig;
 	// create the new config item
-	LAUNCHPADITEM_HANDLE root = oapiFindLaunchpadItem ("Celestial body configuration");
+	//LAUNCHPADITEM_HANDLE root = oapiFindLaunchpadItem ("Celestial body configuration");
 	// find the config root entry provided by orbiter
-	oapiRegisterLaunchpadItem (gParams.item, root);
+	//oapiRegisterLaunchpadItem (gParams.item, root);
 	// register the DG config entry
 }
 
@@ -328,9 +370,9 @@ DLLCLBK void InitModule (HINSTANCE hDLL)
 // The DLL exit point
 // ==============================================================
 
-DLLCLBK void ExitModule (HINSTANCE hDLL)
+DLLCLBK void ExitModule (DynamicModule *hDLL)
 {
 	// Unregister the launchpad items
-	oapiUnregisterLaunchpadItem (gParams.item);
+	//oapiUnregisterLaunchpadItem (gParams.item);
 	delete gParams.item;
 }

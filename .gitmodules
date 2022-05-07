@@ -1,0 +1,9 @@
+[submodule "Extern/imgui"]
+	path = Extern/imgui
+	url = https://github.com/TheGondos/imgui.git
+[submodule "Addons/XRVessels"]
+	path = Addons/XRVessels
+	url = https://github.com/TheGondos/XRVessels.git
+[submodule "OVP/OGLClient/SOIL2"]
+	path = OVP/OGLClient/SOIL2
+	url = https://github.com/TheGondos/SOIL2.git

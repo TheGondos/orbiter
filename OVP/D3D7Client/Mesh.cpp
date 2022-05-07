@@ -368,28 +368,11 @@ void D3D7Mesh::SetTexMixture (DWORD ntex, float mix)
 
 void D3D7Mesh::RenderGroup (LPDIRECT3DDEVICE7 dev, GROUPREC *grp)
 {
-#ifdef UNDEF
-	if (setstate) {
-		if (grp->TexIdx[0] != SPEC_INHERIT) {
-			if (grp->TexIdx[0] < nTex)
-				dev->SetTexture (0, Tex[grp->TexIdx[0]]);
-			else
-				dev->SetTexture (0, 0);
-		}
-		if (grp->MtrlIdx != SPEC_INHERIT) {
-			if (grp->MtrlIdx < nMtrl)
-				dev->SetMaterial (Mtrl+grp->MtrlIdx);
-			else
-				dev->SetMaterial (&defmat);
-		}
-	}
-#endif
-
 	if (grp->nVtx && grp->nIdx) {
 		if (FAILED (dev->DrawIndexedPrimitiveVB (
 			D3DPT_TRIANGLELIST,
 			grp->VtxBuf, 0, grp->nVtx, grp->Idx, grp->nIdx, 0)))
-				LOGOUT_ERR("Render error\n");
+				fprintf(stderr,"Render error\n");
 	}
 }
 

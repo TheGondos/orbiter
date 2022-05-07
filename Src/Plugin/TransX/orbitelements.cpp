@@ -18,12 +18,9 @@
 ** OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 ** THE SOFTWARE.*/
 
-#define STRICT
-
-#include <windows.h>
 #include <stdio.h>
 #include <math.h>
-#include "orbitersdk.h"
+#include "Orbitersdk.h"
 #include "mfd.h"
 #include "graph.h"
 #include "orbitelements.h"
@@ -715,13 +712,13 @@ void OrbitElements::draworbit(Sketchpad *sketchpad, const Graph *graph, bool dra
 	const double yoffset = (graph->iystart+graph->iyend)/2;
 	VECTOR3 xaxis=graph->xaxis;
 	VECTOR3 yaxis=graph->yaxis;
-	DWORD xstart=graph->ixstart;
-	DWORD xend=graph->ixend;
-	DWORD ystart=graph->iystart;
-	DWORD yend=graph->iyend;
+	int xstart=graph->ixstart;
+	int xend=graph->ixend;
+	int ystart=graph->iystart;
+	int yend=graph->iyend;
 	double scale=graph->scale;
 	IVECTOR2 pointarray[50];
-	DWORD numpoints;
+	int numpoints;
 	int xpos, ypos;
 	double xposd,yposd;
 	double step=PI/50;
@@ -802,7 +799,7 @@ void OrbitElements::draworbit(Sketchpad *sketchpad, const Graph *graph, bool dra
 			if (++ct>49) exit=true;
 		}
 		while (!exit);
-		numpoints=DWORD(ct);
+		numpoints=ct;
 		sketchpad->LineTo(pointarray[0].x, pointarray[0].y); // draw the line from the current position to the start of the polyline
 		sketchpad->Polyline(pointarray, numpoints);
 		sinstep=-sinstep;

@@ -5,7 +5,7 @@
 #define __VSOP_H
 
 #include "OrbiterAPI.h"
-#include "CelbodyAPI.h"
+#include "CelBodyAPI.h"
 
 #define VSOP_MAXALPHA 5		// max power of time
 
@@ -22,13 +22,13 @@ public:
 	VSOPOBJ (OBJHANDLE hCBody);
 	virtual ~VSOPOBJ ();
 	bool bEphemeris() const;
-	void clbkInit (FILEHANDLE cfg);
+	void clbkInit (FILEHANDLE cfg) override;
 
 protected:
 	void SetSeries (char series);
 	// Set VSOP series ('A' to 'E')
 
-	bool ReadData (char *name);
+	bool ReadData (const char *name);
 	// Read perturbation terms up to required accuracy from data file
 
 	void Init ();

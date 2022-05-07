@@ -21,6 +21,7 @@
 
 class RadiatorControl;
 
+class CoolantLoop;
 class ThermalSubsystem: public DGSubsystem {
 	friend class CoolantLoop;
 
@@ -29,9 +30,9 @@ public:
 	void OpenRadiator ();
 	void CloseRadiator ();
 	const AnimState2 &RadiatorState() const;
-	void clbkPreStep (double simt, double simdt, double mjd);
-	void clbkSaveState (FILEHANDLE scn);
-	bool clbkParseScenarioLine (const char *line);
+	void clbkPreStep (double simt, double simdt, double mjd) override;
+	void clbkSaveState (FILEHANDLE scn) override;
+	bool clbkParseScenarioLine (const char *line) override;
 
 private:
 	/**
@@ -110,6 +111,10 @@ private:
 // Coolant loop
 // ==============================================================
 
+class CoolantLoopDisplay;
+class CoolantPumpSwitch;
+class CoolantPumpDial;
+class CoolantReftempDial;
 class CoolantLoop: public DGSubsystem {
 	friend class CoolantLoopDisplay;
 	friend class CoolantPumpSwitch;
@@ -124,11 +129,11 @@ public:
 	void IncPumprate (bool increase);
 	void SetReftemp (double temp);
 	void IncReftemp (bool increase);
-	void clbkPreStep (double simt, double simdt, double mjd);
-	bool clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH);
-	bool clbkLoadVC (int vcid);
-	void clbkSaveState (FILEHANDLE scn);
-	bool clbkParseScenarioLine (const char *line);
+	void clbkPreStep (double simt, double simdt, double mjd) override;
+	bool clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH) override;
+	bool clbkLoadVC (int vcid) override;
+	void clbkSaveState (FILEHANDLE scn) override;
+	bool clbkParseScenarioLine (const char *line) override;
 
 private:
 	ThermalSubsystem *ssys_th;
@@ -178,8 +183,8 @@ private:
 	int ELID_PUMPSWITCH;
 	int ELID_PUMPDIAL;
 	int ELID_REFTEMPDIAL;
-	UINT anim_vc_pumpdial;
-	UINT anim_vc_reftempdial;
+	unsigned int anim_vc_pumpdial;
+	unsigned int anim_vc_reftempdial;
 };
 
 // ==============================================================
@@ -241,6 +246,7 @@ private:
 // Radiator control
 // ==============================================================
 
+class RadiatorSwitch;
 class RadiatorControl: public DGSubsystem {
 	friend class RadiatorSwitch;
 
@@ -251,22 +257,22 @@ public:
 	void Revert ();
 	inline const AnimState2 &State() const { return radiator_state; }
 	inline bool GetRadiator () const { return radiator_extend; }
-	void clbkPostCreation();
-	void clbkSaveState (FILEHANDLE scn);
-	bool clbkParseScenarioLine (const char *line);
-	void clbkPostStep (double simt, double simdt, double mjd);
-	bool clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH);
-	bool clbkLoadVC (int vcid);
-	void clbkResetVC (int vcid, DEVMESHHANDLE hMesh);
-	bool clbkPlaybackEvent (double simt, double event_t, const char *event_type, const char *event);
-	int clbkConsumeBufferedKey (DWORD key, bool down, char *kstate);
+	void clbkPostCreation() override;
+	void clbkSaveState (FILEHANDLE scn) override;
+	bool clbkParseScenarioLine (const char *line) override;
+	void clbkPostStep (double simt, double simdt, double mjd) override;
+	bool clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH) override;
+	bool clbkLoadVC (int vcid) override;
+	void clbkResetVC (int vcid, DEVMESHHANDLE hMesh) override;
+	bool clbkPlaybackEvent (double simt, double event_t, const char *event_type, const char *event) override;
+	int clbkConsumeBufferedKey (int key, bool down, char *kstate) override;
 
 private:
 	bool radiator_extend;
 	AnimState2 radiator_state;
 	RadiatorSwitch *sw;
 	int ELID_SWITCH;
-	UINT anim_radiator;         // handle for radiator animation
+	unsigned int anim_radiator;         // handle for radiator animation
 };
 
 // ==============================================================

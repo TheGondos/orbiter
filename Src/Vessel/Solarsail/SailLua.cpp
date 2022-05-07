@@ -4,16 +4,16 @@
 #include "SolarSail.h"
 
 extern "C" {
-#include <lua\lua.h>
-#include <lua\lualib.h>
-#include <lua\lauxlib.h>
+#include <lua.h>
+#include <lualib.h>
+#include <lauxlib.h>
 }
 
 // ==========================================================================
 // API function prototypes
 
 SolarSail *lua_toSSail (lua_State *L, int idx = 1);
-int sailSetPaddle (lua_State *L);
+static int sailSetPaddle (lua_State *L);
 
 // ==========================================================================
 // API initialisation
@@ -102,7 +102,7 @@ static int sailSetPaddle (lua_State *L)
 	int p = lua_tointeger (L, 2);
 	if (p < 1 || p > 4) return 0;
 	double pos = lua_tonumber (L, 3);
-	pos = max (-1.0, min (1.0, pos));
+	pos = std::max (-1.0, std::min (1.0, pos));
 	sail->SetPaddle (p-1, (pos+1)*0.5);
 	return 0;
 }

@@ -35,8 +35,6 @@ add_library(DeltaGlider SHARED
 	${VESSEL_COMMON_DIR}/Instrument.cpp
 	InstrVs.cpp
 	MomentInd.cpp
-	# Resources
-	DeltaGlider.rc
 )
 
 set_target_properties(DeltaGlider
@@ -45,6 +43,7 @@ set_target_properties(DeltaGlider
 )
 
 target_include_directories(DeltaGlider
+	PUBLIC ${EXTERN_DIR}
 	PUBLIC ${ORBITER_SOURCE_SDK_INCLUDE_DIR}
 	PUBLIC ${VESSEL_COMMON_DIR}
 	PUBLIC ${ORBITER_SOURCE_MODULE_DIR}/ScnEditor      # for ScnEditorAPI.h
@@ -52,10 +51,9 @@ target_include_directories(DeltaGlider
 )
 
 target_link_libraries(DeltaGlider
-	${ORBITER_LIB}
+#	${ORBITER_LIB}
 	${ORBITER_SDK_LIB}
-	${ORBITER_DLGCTRL_LIB}
-	${LUA_LIB}
+	lua::lib
 )
 
 # scan mesh files for labels and output to header file
@@ -105,7 +103,6 @@ add_custom_command(
 add_dependencies(DeltaGlider
 	${OrbiterTgt}
 	Orbitersdk
-	DlgCtrl
 	DeltaGlider_Prerequisites
 )
 
@@ -116,7 +113,7 @@ set_target_properties(DeltaGlider_Prerequisites
 
 # Installation
 install(TARGETS DeltaGlider
-	RUNTIME
+#	RUNTIME
 	DESTINATION ${ORBITER_INSTALL_MODULE_DIR}
 )
 install(DIRECTORY ${CONFIG_SOURCE_DIR}/
@@ -132,7 +129,12 @@ install(DIRECTORY ${SCRIPT_SOURCE_DIR}/
 	DESTINATION ${ORBITER_INSTALL_ROOT_DIR}/Script/DG
 )
 
-add_subdirectory(DGConfigurator)
+set(BITMAP_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/Bitmaps)
+install(DIRECTORY ${BITMAP_SOURCE_DIR}/
+	DESTINATION ${ORBITER_INSTALL_ROOT_DIR}/Bitmaps/DeltaGlider
+)
+
+#add_subdirectory(DGConfigurator)
 if(ORBITER_MAKE_DOC)
 	add_subdirectory(Help)
 endif()

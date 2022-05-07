@@ -30,7 +30,7 @@ private:
 
 	static ConsoleConfig *cc;
 	static const char *cfgfile;
-	HINSTANCE hModule;
+	void *hModule;
 };
 
 #endif // !__CONSOLECFG_H

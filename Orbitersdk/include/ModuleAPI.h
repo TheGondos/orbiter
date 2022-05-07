@@ -11,7 +11,58 @@
 #ifndef __MODULEAPI_H
 #define __MODULEAPI_H
 
+#include "OrbiterAPI.h"
+//class DynamicModule;
+#include <map>
+#include <string>
+#include <utility>
 namespace oapi {
+
+	class OAPIFUNC DynamicModule final {
+		public:
+		DynamicModule() noexcept;
+		DynamicModule(const char *path) noexcept;
+		DynamicModule(const DynamicModule&) = delete;
+		DynamicModule& operator=(DynamicModule const&) = delete;
+		DynamicModule(DynamicModule&&from) {
+			m_Opaque = from.m_Opaque;
+			m_Path = std::move(from.m_Path);
+			from.m_Opaque = nullptr;
+			from.m_Path = "moved from";
+		}
+		~DynamicModule() noexcept;
+		bool Load(const char *module) noexcept;
+		bool Loaded() {return m_Opaque != nullptr;}
+		void Unload() noexcept;
+		void *operator[](const char *func) noexcept;
+		std::string m_Path;
+		void * m_Opaque;
+	};
+
+	class OAPIFUNC ModuleLoader final {
+		static std::map<std::string, std::pair<DynamicModule, int>> m_Modules;
+		public:
+		static DynamicModule *Load(const char *path);
+		static void Unload(DynamicModule *);
+	};
+
+	enum MouseEvent {
+		MOUSE_LBUTTONDOWN,
+		MOUSE_LBUTTONUP,
+		MOUSE_MBUTTONDOWN,
+		MOUSE_MBUTTONUP,
+		MOUSE_RBUTTONDOWN,
+		MOUSE_RBUTTONUP,
+		MOUSE_MOVE,
+		MOUSE_WHEEL
+	};
+
+	enum MouseModifier {
+		MOUSE_NONE  = 0,
+		MOUSE_SHIFT = 1,
+		MOUSE_ALT   = 2,
+		MOUSE_CTRL  = 4
+	};
 
 	/**
 	 * \brief Generic Orbiter plugin interface class
@@ -29,19 +80,13 @@ namespace oapi {
 		 * \brief Creates a new ModuleNV instance.
 		 * \param hDLL DLL library instance handle (see \ref InitModule)
 		 */
-		ModuleNV (HINSTANCE hDLL);
+		ModuleNV (oapi::DynamicModule *hDLL);
 
 		/**
 		 * \brief Module interface version
 		 * \return version number
 		 */
 		inline int Version() const { return version; }
-
-		/**
-		 * \brief Returns the module instance handle.
-		 * \return Module instance handle.
-		 */
-		inline HINSTANCE GetModule() const { return hModule; }
 
 		/**
 		 * \brief Returns simulation time since session start.
@@ -78,7 +123,7 @@ namespace oapi {
 
 	protected:
 		int version;
-		HINSTANCE hModule;
+		DynamicModule *hModule;
 	}; // class ModuleNV
 
 	/**
@@ -95,7 +140,7 @@ namespace oapi {
 		 * \brief Creates a new Module instance.
 		 * \param hDLL DLL library instance handle (see \ref InitModule)
 		 */
-		Module (HINSTANCE hDLL);
+		Module (DynamicModule *);
 		virtual ~Module();
 
 		/**
@@ -274,7 +319,7 @@ namespace oapi {
 		 * \note Mouse-processing of the Orbiter main menu cannot be blocked.
 		 * \sa clbkProcessKeyboardImmediate, clbkProcessKeyboardBuffered
 		 */
-		virtual bool clbkProcessMouse (UINT event, DWORD state, DWORD x, DWORD y) { return false; }
+		virtual bool clbkProcessMouse (MouseEvent event, int, int x, int y) { return false; }
 
 		/**
 		 * \brief Process immediate keyboard events
@@ -314,7 +359,7 @@ namespace oapi {
 		 *   the event notification.
 		 * \sa clbkProcessKeyboardImmediate, clbkProcessMouse
 		 */
-		virtual bool clbkProcessKeyboardBuffered (DWORD key, char kstate[256], bool simRunning) { return false; }
+		virtual bool clbkProcessKeyboardBuffered (int key, char kstate[256], bool simRunning) { return false; }
 
 	}; // class Module
 

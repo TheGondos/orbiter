@@ -10,16 +10,16 @@
 #define __CONFIG_CPP
 #define STRICT 1
 
+#include "Config.h"
 #include <fstream>
 #include <iomanip>
 #include <string.h>
 #include <stdio.h>
-#include "Config.h"
 #include "Astro.h"
 #include "Log.h"
 #include "VectorMap.h"
 #include "GraphicsAPI.h"
-#include "resource.h"
+//#include "resource.h"
 
 using namespace std;
 
@@ -32,12 +32,12 @@ static int g_buflen = 1024;
 const bool bEchoAll_default = false;          // only echo non-default parameters
 
 CFG_DIRPRM CfgDirPrm_default = {
-	".\\Config\\",		// ConfigDir
-	".\\Meshes\\",		// MeshDir
-	".\\Textures\\",	// TextureDir
-	".\\Textures2\\",	// HightexDir
-	".\\Textures\\",	// PlanetTexDir
-	".\\Scenarios\\"	// ScnDir
+	"./Config/",		// ConfigDir
+	"./Meshes/",		// MeshDir
+	"./Textures/",	// TextureDir
+	"./Textures2/",	// HightexDir
+	"./Textures/",	// PlanetTexDir
+	"./Scenarios/"	// ScnDir
 };
 
 CFG_PHYSICSPRM CfgPhysicsPrm_default = {
@@ -64,7 +64,7 @@ CFG_PHYSICSPRM CfgPhysicsPrm_default = {
 };
 
 CFG_LOGICPRM CfgLogicPrm_default = {
-	false,		// bStartPaused (don't start paused)
+	true,		// bStartPaused (don't start paused)
 	1,			// FlightModelLevel (use realistic flight model)
 	0,			// DamageSetting (no vessel damage)
 	true,		// bLimitedFuel (fuel is being consumed)
@@ -106,8 +106,8 @@ CFG_VISUALPRM CfgVisualPrm_default = {
 
 CFG_CAPTUREPRM CfgCapturePrm_default = {
 	0,          // Write screenshots to clipboard by default
-	"capture\\images\\0000",     // screenshot outpuf file name
-	"capture\\frames",           // output directory for frame sequence
+	"capture/images/0000",     // screenshot outpuf file name
+	"capture/frames",           // output directory for frame sequence
 	2,          // image file format (JPG)
 	7,          // image quality setting (1-10)
 	0,          // starting frame for sequence
@@ -135,8 +135,6 @@ CFG_DEBUGPRM CfgDebugPrm_default = {
 	0,			// ShutdownMode (0=deallocate memory)
 	0.0,		// fixed time step (0=variable)
 	0,			// timer mode (0=auto)
-	false,      // bDisableSmoothFont (don't disable font smoothing)
-	false,      // bForceReenableSmoothFont (don't force reenabling font smoothing on exit)
 	2,          // bHtmlScnDesc (use html browser window for scenario desciption in launchpad)
 	true,       // bSaveExitScreen (capture screen on scenario exit)
 	false,      // bWireframeMode (don't set renderer to wireframe mode)
@@ -213,7 +211,6 @@ CFG_UIPRM CfgUIPrm_default = {
 
 CFG_DEMOPRM CfgDemoPrm_default = {
 	false,		// bDemo (don't start in demo mode)
-	false,		// bBkImage (don't cover desktop with background image in demo mode)
 	false,		// bBlockExit (don't disable exit button in demo mode)
 	300.0,		// MaxDemoTime (max. runtime for a demo simulation [s])
 	15.0		// LPIdleTime (max demo idle time in launchpad window [s])
@@ -287,7 +284,7 @@ char *trim_string (char *cbuf)
 	}
 	// strip trailing white space
 	for (--c; c >= cbuf; c--) {
-		if (*c == ' ' || *c == '\t') *c = '\0';
+		if (*c == ' ' || *c == '\t'|| *c == '\r') *c = '\0';
 		else break;
 	}
 	// skip leading white space
@@ -328,7 +325,6 @@ bool GetItemString (istream &is, const char *label, char *val)
 {
 	char cbuf[512], *cl, *cv;
 	int i;
-
 	is.clear();
 	is.seekg (0, ios::beg);
 
@@ -344,6 +340,7 @@ bool GetItemString (istream &is, const char *label, char *val)
 			while (*cv == ' ' || *cv == '\t') cv++;
 			if (*cv) {
 				strcpy (val, cv);
+
 				return true;
 			} else {
 				return false;
@@ -405,7 +402,7 @@ bool GetItemVECTOR (istream &is, const char *label, VECTOR3 &val)
 	return true;
 }
 
-bool FindLine (istream &is, char *line)
+bool FindLine (istream &is, const char *line)
 {
 	bool ok = false;
 	is.seekg (0); // rewind stream
@@ -458,7 +455,6 @@ bool Config::Load(const char *fname)
 	double d;
 	bool b;
 	char cbuf[256], tag[256];
-
 	Root = new char[strlen(fname)+1]; TRACENEW
 	strcpy (Root, fname);
 
@@ -471,57 +467,57 @@ bool Config::Load(const char *fname)
 
 	// configuration directory
 	if (GetString (ifs, "ConfigDir", CfgDirPrm.ConfigDir))
-		if (CfgDirPrm.ConfigDir[strlen(CfgDirPrm.ConfigDir)-1] != '\\')
-			strcat (CfgDirPrm.ConfigDir, "\\");
+		if (CfgDirPrm.ConfigDir[strlen(CfgDirPrm.ConfigDir)-1] != '/')
+			strcat (CfgDirPrm.ConfigDir, "/");
 	strcpy (cfgpath, CfgDirPrm.ConfigDir); cfglen = strlen (cfgpath);
 
 	// mesh directory
 	if (GetString (ifs, "MeshDir", CfgDirPrm.MeshDir))
-		if (CfgDirPrm.MeshDir[strlen(CfgDirPrm.MeshDir)-1] != '\\')
-			strcat (CfgDirPrm.MeshDir, "\\");
+		if (CfgDirPrm.MeshDir[strlen(CfgDirPrm.MeshDir)-1] != '/')
+			strcat (CfgDirPrm.MeshDir, "/");
 	strcpy (mshpath, CfgDirPrm.MeshDir);   mshlen = strlen (mshpath);
 
 	// texture directory
 	if (GetString (ifs, "TextureDir", CfgDirPrm.TextureDir))
-		if (CfgDirPrm.TextureDir[strlen(CfgDirPrm.TextureDir)-1] != '\\')
-			strcat (CfgDirPrm.TextureDir, "\\");
+		if (CfgDirPrm.TextureDir[strlen(CfgDirPrm.TextureDir)-1] != '/')
+			strcat (CfgDirPrm.TextureDir, "/");
 	strcpy (texpath, CfgDirPrm.TextureDir);  texlen = strlen (texpath);
 
 	// highres texture directory
 	if (GetString (ifs, "HightexDir", CfgDirPrm.HightexDir)) {
-		if (CfgDirPrm.HightexDir[strlen(CfgDirPrm.HightexDir)-1] != '\\')
-			strcat (CfgDirPrm.HightexDir, "\\");
+		if (CfgDirPrm.HightexDir[strlen(CfgDirPrm.HightexDir)-1] != '/')
+			strcat (CfgDirPrm.HightexDir, "/");
 		strcpy (htxpath, CfgDirPrm.HightexDir);  htxlen = strlen (htxpath);
 	}
 
 	// planetary texture directory
 	if (GetString(ifs, "PlanetTexDir", CfgDirPrm.PlanetTexDir)) {
-		if (CfgDirPrm.PlanetTexDir[strlen(CfgDirPrm.PlanetTexDir) - 1] != '\\')
-			strcat(CfgDirPrm.PlanetTexDir, "\\");
+		if (CfgDirPrm.PlanetTexDir[strlen(CfgDirPrm.PlanetTexDir) - 1] != '/')
+			strcat(CfgDirPrm.PlanetTexDir, "/");
 		strcpy(ptxpath, CfgDirPrm.PlanetTexDir); ptxlen = strlen(ptxpath);
 	}
 
 	// scenario directory
 	if (GetString (ifs, "ScenarioDir", CfgDirPrm.ScnDir))
-		if (CfgDirPrm.ScnDir[strlen(CfgDirPrm.ScnDir)-1] != '\\')
-			strcat (CfgDirPrm.ScnDir, "\\");
+		if (CfgDirPrm.ScnDir[strlen(CfgDirPrm.ScnDir)-1] != '/')
+			strcat (CfgDirPrm.ScnDir, "/");
 	strcpy (scnpath, CfgDirPrm.ScnDir); scnlen = strlen (scnpath);
 
 	// Device information
 	GetInt  (ifs, "DeviceIndex", CfgDevPrm.Device_idx);
-	if (GetInt (ifs, "ModeIndex", i)) CfgDevPrm.Device_mode = (DWORD)i;
+	if (GetInt (ifs, "ModeIndex", i)) CfgDevPrm.Device_mode = i;
 	GetBool (ifs, "DeviceForceEnum", CfgDevPrm.bForceEnum);
 	GetBool (ifs, "Fullscreen", CfgDevPrm.bFullscreen);
 	GetBool (ifs, "Stereo", CfgDevPrm.bStereo);
 	GetBool (ifs, "NoVSync", CfgDevPrm.bNoVsync);
 	GetBool (ifs, "StencilBuffer", CfgDevPrm.bTryStencil);
 	GetBool (ifs, "FullscreenPageflip", CfgDevPrm.bPageflip);
-	if (GetInt (ifs, "WindowWidth", i))  CfgDevPrm.WinW = (DWORD)i;
-	if (GetInt (ifs, "WindowHeight", i)) CfgDevPrm.WinH = (DWORD)i;
+	if (GetInt (ifs, "WindowWidth", i))  CfgDevPrm.WinW = i;
+	if (GetInt (ifs, "WindowHeight", i)) CfgDevPrm.WinH = i;
 
 	// Joystick information
 	if (GetInt (ifs, "JoystickIndex", i))
-		CfgJoystickPrm.Joy_idx = (DWORD)i;
+		CfgJoystickPrm.Joy_idx = i;
 	if (GetInt (ifs, "JoystickThrottleAxis", i))
 		CfgJoystickPrm.ThrottleAxis = max (0, min (3, i));
 	if (GetInt (ifs, "JoystickThrottleSaturation", i))
@@ -549,11 +545,11 @@ bool Config::Load(const char *fname)
 	if (GetReal (ifs, "PlanetResolutionBias", d))
 		CfgPRenderPrm.ResolutionBias = max (-2.0, min (2.0, d));
 	if (GetInt (ifs, "TileLoadFlags", i))
-		CfgPRenderPrm.TileLoadFlags = max (min((DWORD)i, 3), 1);
+		CfgPRenderPrm.TileLoadFlags = max (min(i, 3), 1);
 
 	// map dialog parameters
 	if (GetInt (ifs, "MapDlgFlag", i))
-		CfgMapPrm.DispFlag = (DWORD)i;
+		CfgMapPrm.DispFlag = i;
 
 	// Logical parameters
 	GetBool (ifs, "StartPaused", CfgLogicPrm.bStartPaused);
@@ -631,15 +627,15 @@ bool Config::Load(const char *fname)
 	GetBool (ifs, "EnableParticleStreams", CfgVisualPrm.bParticleStreams);
 	GetBool (ifs, "EnableLocalLights", CfgVisualPrm.bLocalLight);
 	if (GetInt (ifs, "MaxLights", i))
-		CfgVisualPrm.MaxLight = (DWORD)i;
+		CfgVisualPrm.MaxLight = i;
 	if (GetInt (ifs, "AmbientLevel", i))
-		SetAmbientLevel ((DWORD)i);
+		SetAmbientLevel (i);
 	if (GetInt (ifs, "PlanetMaxPatchLevel", i))
-		CfgVisualPrm.PlanetMaxLevel = max (1, min (SURF_MAX_PATCHLEVEL2, i));
+		CfgVisualPrm.PlanetMaxLevel = std::max (1, std::min (SURF_MAX_PATCHLEVEL2, i));
 	if (GetReal (ifs, "PlanetPatchRes", d))
-		CfgVisualPrm.PlanetPatchRes = max (0.1, min (10, d));
+		CfgVisualPrm.PlanetPatchRes = std::max (0.1, std::min (10.0, d));
 	if (GetReal (ifs, "NightlightBrightness", d))
-		CfgVisualPrm.LightBrightness = max (0.0, min (1.0, d));
+		CfgVisualPrm.LightBrightness = std::max (0.0, std::min (1.0, d));
 	if (GetString (ifs, "StarPrm", cbuf)) {
 		sscanf (cbuf, "%lf%lf%lf%d", &CfgVisualPrm.StarPrm.mag_hi, &CfgVisualPrm.StarPrm.mag_lo, &CfgVisualPrm.StarPrm.brt_min, &i);
 		CfgVisualPrm.StarPrm.map_log = (i != 0);
@@ -648,17 +644,24 @@ bool Config::Load(const char *fname)
 		CfgVisualPrm.ElevMode = i;
 	if (GetString (ifs, "CSphereBgImage", cbuf)) {
 		strncpy (CfgVisualPrm.CSphereBgImage, cbuf, 64);
-		if (GetString (ifs, "CSphereBgPath", cbuf))
+		CfgVisualPrm.CSphereBgImage[63]='\0';
+		if (GetString (ifs, "CSphereBgPath", cbuf)) {
 			strncpy (CfgVisualPrm.CSphereBgPath, cbuf, 128);
+			CfgVisualPrm.CSphereBgPath[127]='\0';
+		}
 	}
 	GetReal (ifs, "CSphereBgIntensity", CfgVisualPrm.CSphereBgIntens);
 
 	// screen capture parameters
 	GetInt (ifs, "CaptureTarget", CfgCapturePrm.ImageTgt);
-	if (GetString (ifs, "CaptureFile", cbuf))
+	if (GetString (ifs, "CaptureFile", cbuf)) {
 		strncpy (CfgCapturePrm.ImageFile, cbuf, 128);
-	if (GetString (ifs, "CaptureSequenceDir", cbuf))
+		CfgCapturePrm.ImageFile[127] = '\0';
+	}
+	if (GetString (ifs, "CaptureSequenceDir", cbuf)) {
 		strncpy (CfgCapturePrm.SequenceDir, cbuf, 128);
+		CfgCapturePrm.SequenceDir[127] = '\0';
+	}
 	GetInt (ifs, "CaptureImageFormat", CfgCapturePrm.ImageFormat);
 	GetInt (ifs, "CaptureImageQuality", CfgCapturePrm.ImageQuality);
 	GetInt (ifs, "CaptureSequenceStart", CfgCapturePrm.SequenceStart);
@@ -672,7 +675,7 @@ bool Config::Load(const char *fname)
 
 	// visual helper parameters
 	if (GetInt (ifs, "Planetarium", i))
-		CfgVisHelpPrm.flagPlanetarium = (DWORD)i;
+		CfgVisHelpPrm.flagPlanetarium = i;
 	if (GetString (ifs, "Bodyforces", cbuf))
 		sscanf (cbuf, "%u%f%f", &CfgVisHelpPrm.flagBodyforce, &CfgVisHelpPrm.scaleBodyforce, &CfgVisHelpPrm.opacBodyforce);
 	if (GetString (ifs, "CoordinateAxes", cbuf))
@@ -685,8 +688,6 @@ bool Config::Load(const char *fname)
 		CfgDebugPrm.FixedStep = d;
 	if (GetInt (ifs, "TimerMode", i) && i >= 0 && i <= 2)
 		CfgDebugPrm.TimerMode = i;
-	GetBool (ifs, "DisableFontSmoothing", CfgDebugPrm.bDisableSmoothFont);
-	GetBool (ifs, "ForceReenableFontSmoothing", CfgDebugPrm.bForceReenableSmoothFont);
 	GetInt (ifs, "HtmlScnDesc", CfgDebugPrm.bHtmlScnDesc);
 	GetBool (ifs, "SaveExitScreen", CfgDebugPrm.bSaveExitScreen);
 	GetBool (ifs, "WireframeMode", CfgDebugPrm.bWireframeMode);
@@ -700,32 +701,31 @@ bool Config::Load(const char *fname)
 	// user interface parameters
 	GetBool (ifs, "FocusFollowsMouse", CfgUIPrm.bFocusFollowsMouse);
 	if (GetInt (ifs, "MenubarMode", i) && i >= 0 && i <= 2)
-		CfgUIPrm.MenuMode = (DWORD)i;
+		CfgUIPrm.MenuMode = i;
 	GetBool (ifs, "MenubarLabelOnly", CfgUIPrm.bMenuLabelOnly);
 	GetBool (ifs, "ShowWarpAlways", CfgUIPrm.bWarpAlways);
 	GetBool (ifs, "ShowWarpScientific", CfgUIPrm.bWarpScientific);
 	if (GetInt (ifs, "InfobarMode", i) && i >= 0 && i <= 2)
-		CfgUIPrm.InfoMode = (DWORD)i;
+		CfgUIPrm.InfoMode = i;
 	if (GetString (ifs, "InfoAuxIdx", cbuf)) {
 		sscanf (cbuf, "%d%d", CfgUIPrm.InfoAuxIdx+0, CfgUIPrm.InfoAuxIdx+1);
 		for (i = 0; i < 2; i++)
 			if (CfgUIPrm.InfoAuxIdx[i] > 3) CfgUIPrm.InfoAuxIdx[i] = 0;
 	}
 	if (GetInt (ifs, "MenubarOpacity", i) && i >= 0 && i <= 10)
-		CfgUIPrm.MenuOpacity = (DWORD)i;
+		CfgUIPrm.MenuOpacity = i;
 	if (GetInt (ifs, "InfobarOpacity", i) && i >= 0 && i <= 10)
-		CfgUIPrm.InfoOpacity = (DWORD)i;
+		CfgUIPrm.InfoOpacity = i;
 	if (GetInt (ifs, "MenubarSpeed", i) && i >= 1 && i <= 20)
-		CfgUIPrm.MenuScrollspeed = (DWORD)i;
+		CfgUIPrm.MenuScrollspeed = i;
 	if (GetInt (ifs, "PauseIndicatorMode", i) && i >= 0 && i <= 2)
-		CfgUIPrm.PauseIndMode = (DWORD)i;
+		CfgUIPrm.PauseIndMode = i;
 	GetInt (ifs, "SelVesselTab", CfgUIPrm.SelVesselTab);
 	GetInt (ifs, "SelVesselRange", CfgUIPrm.SelVesselRange);
 	GetBool (ifs, "SelVesselFlat", CfgUIPrm.bSelVesselFlat);
 
 	// demo parameters
 	GetBool (ifs, "DemoMode", CfgDemoPrm.bDemo);
-	GetBool (ifs, "BackgroundImage", CfgDemoPrm.bBkImage);
 	GetBool (ifs, "BlockExit", CfgDemoPrm.bBlockExit);
 	GetReal (ifs, "MaxDemoTime", CfgDemoPrm.MaxDemoTime);
 	GetReal (ifs, "MaxLaunchpadIdleTime", CfgDemoPrm.LPIdleTime);
@@ -778,26 +778,16 @@ bool Config::Load(const char *fname)
 		char cbuf[256], *pc;
 		while (ifs.getline (cbuf, 256) && _strnicmp (cbuf, "END_MODULES", 11)) {
 			pc = trim_string (cbuf);
-			char **tmp = new char*[nactmod+1]; TRACENEW
-			if (nactmod) {
-				memcpy (tmp, actmod, nactmod*sizeof(char*));
-				delete []actmod;
-			}
-			actmod = tmp;
-			actmod[nactmod] = new char[strlen(pc)+1]; TRACENEW
-			strcpy (actmod[nactmod++], pc);
+			m_actmod.push_back(pc);
 		}
 	}
+
 	return true;
 }
 
 Config::~Config()
 {
 	if (Root) delete []Root;
-	if (nactmod) {
-		for (int i = 0; i < nactmod; i++) delete []actmod[i];
-		delete []actmod;
-	}
 }
 
 void Config::SetDefaults ()
@@ -819,14 +809,20 @@ void Config::SetDefaults ()
 	if (Root) delete []Root;
 	Root = 0;
 
-	nactmod = 0; // no active modules
+	m_actmod.clear(); // no active modules
 
 	bEchoAll = bEchoAll_default;
 	memset (&rLaunchpad, 0, sizeof(RECT));
 
-	RECT r;
-	GetWindowRect (GetDesktopWindow(), &r);
-	CfgDevPrm_default.WinW = r.right-r.left; CfgDevPrm_default.WinH = r.bottom-r.top;
+//	RECT r;
+//	GetWindowRect (GetDesktopWindow(), &r);
+//	CfgDevPrm_default.WinW = r.right-r.left;
+//	CfgDevPrm_default.WinH = r.bottom-r.top;
+
+	GLFWmonitor *pMon = glfwGetPrimaryMonitor();
+	glfwGetMonitorWorkarea(pMon, nullptr, nullptr,
+		&CfgDevPrm_default.WinW, &CfgDevPrm_default.WinH 
+	);
 	// use the screen size as the default render window size
 
 	AmbientColour = 0x0c0c0c0c;
@@ -858,7 +854,7 @@ void Config::SetDefaults_Capture ()
 	CfgCapturePrm = CfgCapturePrm_default;       // screen capture parameters
 }
 
-const void *Config::GetParam (DWORD paramtype) const
+const void *Config::GetParam (int paramtype) const
 {
 	switch (paramtype) {
 	case CFGPRM_SURFACEMAXLEVEL:
@@ -918,64 +914,28 @@ const void *Config::GetParam (DWORD paramtype) const
 
 bool Config::PlanetariumItem (int item) const
 {
-	switch (item) {
-	case IDC_PLANETARIUM:   return (CfgVisHelpPrm.flagPlanetarium & PLN_ENABLE)    != 0;
-	case IDC_PLN_CELGRID:   return (CfgVisHelpPrm.flagPlanetarium & PLN_CGRID)     != 0;
-	case IDC_PLN_ECLGRID:   return (CfgVisHelpPrm.flagPlanetarium & PLN_EGRID)     != 0;
-	case IDC_PLN_ECLIPTIC:  return (CfgVisHelpPrm.flagPlanetarium & PLN_ECL)       != 0;
-	case IDC_PLN_EQUATOR:   return (CfgVisHelpPrm.flagPlanetarium & PLN_EQU)       != 0;
-	case IDC_PLN_CONST:     return (CfgVisHelpPrm.flagPlanetarium & PLN_CONST)     != 0;
-	case IDC_PLN_CNSTLABEL: return (CfgVisHelpPrm.flagPlanetarium & PLN_CNSTLABEL) != 0;
-	case IDC_PLN_CMARKER:   return (CfgVisHelpPrm.flagPlanetarium & PLN_CMARK)     != 0;
-	case IDC_PLN_VMARKER:   return (CfgVisHelpPrm.flagPlanetarium & PLN_VMARK)     != 0;
-	case IDC_PLN_BMARKER:   return (CfgVisHelpPrm.flagPlanetarium & PLN_BMARK)     != 0;
-	case IDC_PLN_RMARKER:   return (CfgVisHelpPrm.flagPlanetarium & PLN_RMARK)     != 0;
-	case IDC_PLN_LMARKER:   return (CfgVisHelpPrm.flagPlanetarium & PLN_LMARK)     != 0;
-	case IDC_PLN_CCMARKER:  return (CfgVisHelpPrm.flagPlanetarium & PLN_CCMARK)    != 0;
-	case IDC_PLN_FULL:      return (CfgVisHelpPrm.flagPlanetarium & PLN_CNSTLONG)  != 0;
-	case IDC_PLN_SHORT:     return (CfgVisHelpPrm.flagPlanetarium & PLN_CNSTSHORT) != 0;
-	default:                return false;
-	}
+	return (CfgVisHelpPrm.flagPlanetarium & item) != 0;
 }
 
 void Config::SetPlanetariumItem (int item, bool activate)
 {
-	DWORD flag;
-
-	switch (item) {
-	case IDC_PLANETARIUM:   flag = PLN_ENABLE;    break;
-	case IDC_PLN_CELGRID:   flag = PLN_CGRID;     break;
-	case IDC_PLN_ECLGRID:   flag = PLN_EGRID;     break;
-	case IDC_PLN_ECLIPTIC:  flag = PLN_ECL;       break;
-	case IDC_PLN_EQUATOR:   flag = PLN_EQU;       break;
-	case IDC_PLN_CONST:     flag = PLN_CONST;     break;
-	case IDC_PLN_CNSTLABEL: flag = PLN_CNSTLABEL; break;
-	case IDC_PLN_CMARKER:   flag = PLN_CMARK;     break;
-	case IDC_PLN_VMARKER:   flag = PLN_VMARK;     break;
-	case IDC_PLN_BMARKER:   flag = PLN_BMARK;     break;
-	case IDC_PLN_RMARKER:   flag = PLN_RMARK;     break;
-	case IDC_PLN_LMARKER:   flag = PLN_LMARK;     break;
-	case IDC_PLN_CCMARKER:  flag = PLN_CCMARK;    break;
-	case IDC_PLN_FULL:      flag = PLN_CNSTLONG;  break;
-	case IDC_PLN_SHORT:     flag = PLN_CNSTSHORT; break;
-	}
-	if (activate) CfgVisHelpPrm.flagPlanetarium |=  flag;
-	else          CfgVisHelpPrm.flagPlanetarium &= ~flag;
+	if (activate) CfgVisHelpPrm.flagPlanetarium |=  item;
+	else          CfgVisHelpPrm.flagPlanetarium &= ~item;
 }
 
 void Config::TogglePlanetarium ()
 {
-	SetPlanetariumItem (IDC_PLANETARIUM, !PlanetariumItem (IDC_PLANETARIUM));
+	SetPlanetariumItem (PLN_ENABLE, !PlanetariumItem (PLN_ENABLE));
 }
 
-BOOL Config::Write (const char *fname) const
+bool Config::Write (const char *fname) const
 {
 	int i;
 
 	if (!fname) fname = Root;
-	if (!fname) return FALSE;
+	if (!fname) return false;
 	ofstream ofs (fname);
-	if (!ofs) return FALSE;
+	if (!ofs) return false;
 
 	ofs << "; === ORBITER Master Configuration File ===\n";
 	ofs << "EchoAllParams = " << BoolStr (bEchoAll) << '\n';
@@ -1138,10 +1098,6 @@ BOOL Config::Write (const char *fname) const
 			ofs << "FixedStep = " << CfgDebugPrm.FixedStep << '\n';
 		if (CfgDebugPrm.TimerMode != CfgDebugPrm_default.TimerMode || bEchoAll)
 			ofs << "TimerMode = " << CfgDebugPrm.TimerMode << '\n';
-		if (CfgDebugPrm.bDisableSmoothFont != CfgDebugPrm_default.bDisableSmoothFont || bEchoAll)
-			ofs << "DisableFontSmoothing = " << BoolStr (CfgDebugPrm.bDisableSmoothFont) << '\n';
-		if (CfgDebugPrm.bForceReenableSmoothFont != CfgDebugPrm_default.bForceReenableSmoothFont || bEchoAll)
-			ofs << "ForceReenableFontSmoothing = " << BoolStr (CfgDebugPrm.bForceReenableSmoothFont) << '\n';
 		if (CfgDebugPrm.bHtmlScnDesc != CfgDebugPrm_default.bHtmlScnDesc || bEchoAll)
 			ofs << "HtmlScnDesc = " << CfgDebugPrm.bHtmlScnDesc << '\n';
 		if (CfgDebugPrm.bSaveExitScreen != CfgDebugPrm_default.bSaveExitScreen || bEchoAll)
@@ -1308,8 +1264,6 @@ BOOL Config::Write (const char *fname) const
 		ofs << "\n; === Demo parameters ===\n";
 		if (CfgDemoPrm.bDemo != CfgDemoPrm_default.bDemo || bEchoAll)
 			ofs << "DemoMode = " << BoolStr (CfgDemoPrm.bDemo) << '\n';
-		if (CfgDemoPrm.bBkImage != CfgDemoPrm_default.bBkImage || bEchoAll)
-			ofs << "BackgroundImage = " << BoolStr (CfgDemoPrm.bBkImage) << '\n';
 		if (CfgDemoPrm.bBlockExit != CfgDemoPrm_default.bBlockExit || bEchoAll)
 			ofs << "BlockExit = " << BoolStr (CfgDemoPrm.bBlockExit) << '\n';
 		if (CfgDemoPrm.MaxDemoTime != CfgDemoPrm_default.MaxDemoTime || bEchoAll)
@@ -1370,33 +1324,45 @@ BOOL Config::Write (const char *fname) const
 			ofs << "LpadExtListWidth = " << CfgWindowPos.LaunchpadExtListWidth << '\n';
 	}
 
-	if (nactmod) {
+	if (m_actmod.size()>0) {
 		ofs << "\n; === Active plugin list ===" << endl;
 		ofs << "ACTIVE_MODULES" << endl;
-		for (int i = 0; i < nactmod; i++)
-			ofs << "  " << actmod[i] << endl;
+		for (const auto &mod: m_actmod) {
+			ofs << "  " << mod << endl;
+		}
 		ofs << "END_MODULES" << endl;
 	}
 	ofs << flush;
-	return TRUE;
+	return true;
 }
 
 char *Config::ConfigPath (const char *name) const
 {
 	strcpy (cfgpath+cfglen, name);
-	return strcat (cfgpath, ".cfg");
+	strcat (cfgpath, ".cfg");
+	for(int i = 0; i < strlen(cfgpath); i++) {
+		if(cfgpath[i] == '\\') cfgpath[i]='/';
+	}
+	return cfgpath;
 }
 
 char *Config::ConfigPathNoext (const char *name)
 {
 	strcpy (cfgpath+cfglen, name);
+	for(int i = 0; i < strlen(cfgpath); i++) {
+		if(cfgpath[i] == '\\') cfgpath[i]='/';
+	}
 	return cfgpath;
 }
 
 char *Config::MeshPath (const char *name)
 {
 	strcpy (mshpath+mshlen, name);
-	return strcat (mshpath, ".msh");
+	strcat (mshpath, ".msh");
+	for(int i = 0; i < strlen(mshpath); i++) {
+		if(mshpath[i] == '\\') mshpath[i]='/';
+	}
+	return mshpath;
 }
 
 char *Config::TexPath (const char *name, const char *ext)
@@ -1444,60 +1410,30 @@ void Config::PTexPath(char* cbuf, const char* name, const char* ext)
 	else     strcpy(cbuf + ptxlen, name);
 }
 
-void Config::AddModule (char *cbuf)
+void Config::AddModule (const char *cbuf)
 {
-	int i;
-	for (i = 0; i < nactmod; i++)
-		if (!_stricmp (actmod[i], cbuf)) return; // already present
-	char **tmp = new char*[nactmod+1]; TRACENEW
-	if (nactmod) {
-		memcpy (tmp, actmod, nactmod*sizeof(char*));
-		delete []actmod;
+	for(const auto &mod: m_actmod) {
+		if(mod == cbuf)
+			return; // already present
 	}
-	actmod = tmp;
-	actmod[nactmod] = new char[strlen(cbuf)+1]; TRACENEW
-	strcpy (actmod[nactmod++], cbuf);
+	m_actmod.push_back(cbuf);
 }
 
-void Config::DelModule (char *cbuf)
+void Config::DelModule (const char *cbuf)
 {
-	int i, j, k;
-	char **tmp;
-	for (i = 0; i < nactmod; i++)
-		if (!_stricmp (actmod[i], cbuf)) break;
-	if (i == nactmod) return; // not present
-	if (nactmod > 1) {
-		tmp = new char*[nactmod-1]; TRACENEW
-		for (j = k = 0; j < nactmod; j++)
-			if (j != i) tmp[k++] = actmod[j];
-	} else tmp = 0;
-	delete []actmod;
-	actmod = tmp;
-	nactmod--;
+	m_actmod.erase(std::remove(m_actmod.begin(), m_actmod.end(), cbuf), m_actmod.end());
 }
 
 void Config::SetBodyforceItem (int item, bool activate)
 {
-	DWORD flag;
-
-	switch (item) {
-	case IDC_BODYFORCE:  flag = BF_ENABLE;  break;
-	case IDC_WEIGHT:     flag = BF_WEIGHT;  break;
-	case IDC_THRUST:     flag = BF_THRUST;  break;
-	case IDC_LIFT:       flag = BF_LIFT;    break;
-	case IDC_DRAG:       flag = BF_DRAG;    break;
-	case IDC_TOTAL:      flag = BF_TOTAL;   break;
-	case IDC_TORQUE:     flag = BF_TORQUE;  break;
-	case IDC_LINSCALE:   flag = BF_LOGSCALE; activate = false; break;
-	case IDC_LOGSCALE:   flag = BF_LOGSCALE; activate = true;  break;
-	}
-	if (activate) CfgVisHelpPrm.flagBodyforce |=  flag;
-	else          CfgVisHelpPrm.flagBodyforce &= ~flag;
+	if (activate) CfgVisHelpPrm.flagBodyforce |=  item;
+	else          CfgVisHelpPrm.flagBodyforce &= ~item;
 }
 
 void Config::SetCoordinateAxesItem (int item, bool activate)
 {
-	DWORD flag;
+	/*
+	int flag = 0;
 
 	switch (item) {
 	case IDC_COORDINATES:  flag = CA_ENABLE; break;
@@ -1505,12 +1441,12 @@ void Config::SetCoordinateAxesItem (int item, bool activate)
 	case IDC_CRD_VESSEL:   flag = CA_VESSEL; break;
 	case IDC_CRD_CBODY:    flag = CA_CBODY;  break;
 	case IDC_CRD_BASE:     flag = CA_BASE;   break;
-	}
-	if (activate) CfgVisHelpPrm.flagCrdAxes |=  flag;
-	else          CfgVisHelpPrm.flagCrdAxes &= ~flag;
+	}*/
+	if (activate) CfgVisHelpPrm.flagCrdAxes |=  item;
+	else          CfgVisHelpPrm.flagCrdAxes &= ~item;
 }
 
-bool Config::GetString (istream &is, char *category, char *val)
+bool Config::GetString (istream &is, const char *category, char *val)
 {
 	char cbuf[512];
 	int i;
@@ -1529,32 +1465,37 @@ bool Config::GetString (istream &is, char *category, char *val)
 
 	// find value
 	for (i = 0; cbuf[i] && cbuf[i] != '='; i++);
-	if (!cbuf[i]) return false;
+	if (!cbuf[i]) {
+		return false;
+	}
 	i++;
 	while (cbuf[i] == ' ' || cbuf[i] == '\t') i++;
 	strcpy (val, cbuf+i);
+	for(int i = 0; i < strlen(val); i++) {
+		if(val[i]=='\\') val[i]='/';
+	}
 	return true;
 }
 
-bool Config::GetReal (istream &is, char *category, double &val)
+bool Config::GetReal (istream &is, const char *category, double &val)
 {
 	if (!GetString (is, category, g_cbuf)) return false;
 	return (sscanf (g_cbuf, "%lf", &val) == 1);
 }
 
-bool Config::GetInt (istream &is, char *category, int &val)
+bool Config::GetInt (istream &is, const char *category, int &val)
 {
 	if (!GetString (is, category, g_cbuf)) return false;
 	return (sscanf (g_cbuf, "%d", &val) == 1);
 }
 
-bool Config::GetSize(istream& is, char* category, size_t& val)
+bool Config::GetSize(istream& is, const char* category, size_t& val)
 {
 	if (!GetString(is, category, g_cbuf)) return false;
 	return (sscanf(g_cbuf, "%zu", &val) == 1);
 }
 
-bool Config::GetBool (istream &is, char *category, bool &val)
+bool Config::GetBool (istream &is, const char *category, bool &val)
 {
 	if (!GetString (is, category, g_cbuf)) return false;
 	if (!_strnicmp (g_cbuf, "true", 4)) { val = true; return true; }
@@ -1562,7 +1503,7 @@ bool Config::GetBool (istream &is, char *category, bool &val)
 	return false;
 }
 
-bool Config::GetVector (istream &is, char *category, Vector &val)
+bool Config::GetVector (istream &is, const char *category, Vector &val)
 {
 	double x, y, z;
 	if (!GetString (is, category, g_cbuf)) return false;
@@ -1571,7 +1512,7 @@ bool Config::GetVector (istream &is, char *category, Vector &val)
 	return true;
 }
 
-bool Config::GetString (char *category, char *val)
+bool Config::GetString (const char *category, char *val)
 {
 	if (!Root) return false;
 	ifstream ifs (Root);
@@ -1579,7 +1520,7 @@ bool Config::GetString (char *category, char *val)
 	return GetString (ifs, category, val);
 }
 
-bool Config::GetReal (char *category, double &val)
+bool Config::GetReal (const char *category, double &val)
 {
 	if (!Root) return false;
 	ifstream ifs (Root);
@@ -1587,7 +1528,7 @@ bool Config::GetReal (char *category, double &val)
 	return GetReal (ifs, category, val);
 }
 
-bool Config::GetInt (char *category, int &val)
+bool Config::GetInt (const char *category, int &val)
 {
 	if (!Root) return false;
 	ifstream ifs (Root);
@@ -1595,7 +1536,7 @@ bool Config::GetInt (char *category, int &val)
 	return GetInt (ifs, category, val);
 }
 
-bool Config::GetSize(char* category, size_t& val)
+bool Config::GetSize(const char* category, size_t& val)
 {
 	if (!Root) return false;
 	ifstream ifs(Root);
@@ -1603,7 +1544,7 @@ bool Config::GetSize(char* category, size_t& val)
 	return GetSize(ifs, category, val);
 }
 
-bool Config::GetBool (char *category, bool &val)
+bool Config::GetBool (const char *category, bool &val)
 {
 	if (!Root) return false;
 	ifstream ifs (Root);
@@ -1611,45 +1552,10 @@ bool Config::GetBool (char *category, bool &val)
 	return GetBool (ifs, category, val);
 }
 
-bool Config::GetVector (char *category, Vector &val)
+bool Config::GetVector (const char *category, Vector &val)
 {
 	if (!Root) return false;
 	ifstream ifs (Root);
 	if (!ifs) return false;
 	return GetVector (ifs, category, val);
-}
-
-// =============================================================
-
-GDIResources::GDIResources (HWND hWnd, DWORD winW, DWORD winH, const Config &config)
-{
-	TEXTMETRIC tm;
-	int lineh = (int)(winH*0.02*config.CfgFontPrm.dlgFont_Scale);
-	if (lineh < 8) lineh = 8;
-	HDC hDC = GetDC (hWnd);
-
-	dlgF1r = CreateFont (lineh, 0, 0, 0, FW_NORMAL, 0, 0, 0, 0, 3, 2, 1, 49, config.CfgFontPrm.dlgFont1_Face);
-	HGDIOBJ ofont = SelectObject (hDC, dlgF1r);
-	GetTextMetrics (hDC, &tm);
-	dlgF1W = tm.tmAveCharWidth;
-	dlgF1H  = tm.tmHeight;
-
-	dlgF2 = CreateFont (lineh, 0, 0, 0, FW_NORMAL, 0, 0, 0, 0, 3, 2, 1, 49, "Courier New");
-	SelectObject (hDC, dlgF2);
-	GetTextMetrics (hDC, &tm);
-	dlgF2W = tm.tmAveCharWidth;
-	dlgF2H  = tm.tmHeight;
-
-	dlgF1i = CreateFont (lineh, 0, 0, 0, FW_NORMAL, TRUE, 0, 0, 0, 3, 2, 1, 49, config.CfgFontPrm.dlgFont1_Face);
-	// insert other resources here
-
-	SelectObject (hDC, ofont);
-	ReleaseDC (hWnd, hDC);
-}
-
-GDIResources::~GDIResources ()
-{
-	DeleteObject (dlgF1r);
-	DeleteObject (dlgF1i);
-	DeleteObject (dlgF2);
 }

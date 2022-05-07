@@ -17,9 +17,11 @@
 #include "MenuInfoBar.h"
 #include <fstream>
 #include <iomanip>
-#include <io.h>
-#include <direct.h>
 #include <errno.h>
+#include <sys/stat.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <ftw.h>
 
 using namespace std;
 
@@ -96,7 +98,7 @@ void Vessel::FRecorder_Activate (bool active, const char *fname, bool append)
 		if (!append) FRecorder_Reset();
 		bFRrecord = true;
 		char cbuf[256];
-		sprintf (cbuf, "Flights\\%s\\%s.pos", fname, name);
+		sprintf (cbuf, "Flights/%s/%s.pos", fname, name);
 		if (FRfname) delete []FRfname;
 		FRfname = new char[strlen(cbuf)+1]; TRACENEW
 		strcpy (FRfname, cbuf);
@@ -113,7 +115,7 @@ void Vessel::FRecorder_Activate (bool active, const char *fname, bool append)
 void Vessel::FRecorder_Save (bool force)
 {
 	int i, iter = 0, niter = 1;
-	DWORD j;
+	int j;
 	double dt, alim;
 	bool isfirst   = (frec_last.fstatus == FLIGHTSTATUS_UNDEFINED);
 	bool newstatus = (frec_last.fstatus != fstatus);
@@ -313,7 +315,8 @@ void Vessel::FRecorder_SaveEvent (const char *event_type, const char *event)
 void Vessel::FRecorder_SaveEventInt (const char *event_type, int event)
 {
 	static char cbuf[24];
-	FRecorder_SaveEvent (event_type, _itoa (event, cbuf, 10));
+	sprintf(cbuf, "%d", event);
+	FRecorder_SaveEvent (event_type, cbuf);
 }
 
 void Vessel::FRecorder_SaveEventFloat (const char *event_type, double event)
@@ -352,8 +355,8 @@ bool Vessel::FRecorder_Read (const char *scname)
 	char fname[256], cbuf[256];
 
 	for (i = strlen(scname)-1; i > 0; i--)
-		if (scname[i-1] == '\\') break;
-	sprintf (fname, "Flights\\%s\\%s.pos", scname+i, name);
+		if (scname[i-1] == '/') break;
+	sprintf (fname, "Flights/%s/%s.pos", scname+i, name);
 
 	ifstream ifs (fname);
 	if (!ifs) {
@@ -475,7 +478,7 @@ void Vessel::FRecorder_Play ()
 
 	if (fstatus == FLIGHTSTATUS_FREEFLIGHT) {
 
-		double dT, dt, w0, w1;
+		double dT, dt, w1;
 		double r0, r1, v0, v1, a0, b, lng, lat, rad, vref;
 		int i;
 		static Vector s;
@@ -539,7 +542,7 @@ void Vessel::FRecorder_Play ()
 			while (cfrec_att+2 < nfrec_att && frec_att[cfrec_att+1].simt < td.SimT1) cfrec_att++;
 			dt = frec_att[cfrec_att+1].simt - frec_att[cfrec_att].simt;
 			w1 = (td.SimT1-frec_att[cfrec_att].simt)/dt;
-			w0 = 1.0-w1;
+			//w0 = 1.0-w1;
 
 			// Orientation at intermediate time point by interpolating endpoint quaternions
 			if (frec_att[cfrec_att].frm == 0) {
@@ -589,19 +592,23 @@ void Vessel::FRecorder_PlayEvent ()
 		char cbuf[1024], *s, *e, c;
 		double lvl;
 		int i;
-		DWORD id;
+		int id;
 		FRatc_stream->getline (cbuf, 1024);
+		size_t len = strlen(cbuf);
+		if(cbuf[len-1]=='\r') {
+			cbuf[len-1]='\0';
+		}
 		s = strtok (cbuf, " \t");
 		if (s) {
 			if (!_stricmp (s, "ENG")) {
-				while (s = strtok (NULL, " \t\n")) {
+				while ((s = strtok (NULL, " \t\n"))) {
 					if (sscanf (s, "%d%c%lf", &id, &c, &lvl) == 3 && c == ':') {
 						if (id < nthruster) SetThrusterLevel_playback (thruster[id], lvl);
 					} else {
 						for (i = 0; i < NTHGROUP; i++)
 							if (!_strnicmp (s, THGROUPSTR[i], strlen (THGROUPSTR[i]))) break;
 						if (i < NTHGROUP && sscanf (s+strlen(THGROUPSTR[i])+1, "%lf", &lvl)) {
-							for (DWORD j = 0; j < thruster_grp_default[i].nts; j++)
+							for (int j = 0; j < thruster_grp_default[i].nts; j++)
 								SetThrusterLevel_playback (thruster_grp_default[i].ts[j], lvl);
 						}
 					}
@@ -637,7 +644,7 @@ void Vessel::FRecorder_PlayEvent ()
 				sscanf (s+8, "%d", &i);
 				SetADCtrlMode (i, true);
 			} else if (!_stricmp (s, "UNDOCK")) {
-				while (s = strtok (NULL, " \t\n")) {
+				while ((s = strtok (NULL, " \t\n"))) {
 					int dock;
 					sscanf (s, "%d", &dock);
 					Undock (dock);
@@ -649,7 +656,7 @@ void Vessel::FRecorder_PlayEvent ()
 				AttachmentSpec *as = GetAttachmentFromIndex (false, id);
 				if (as) DetachChild (as, v);
 			} else if (!_stricmp (s, "ATTACH")) {
-				DWORD pidx, cidx;
+				int pidx, cidx;
 				char cname[128], modestr[32];
 				int res = sscanf (s+7, "%s%d%d%s", cname, &pidx, &cidx, modestr);
 				Vessel *child = g_psys->GetVessel (cname, true);
@@ -662,11 +669,11 @@ void Vessel::FRecorder_PlayEvent ()
 				}
 			} else if (!_strnicmp (s, "LIGHTSOURCE", 11)) { // light emitter event
 				s = strtok (NULL, " \t\n");
-				DWORD idx;
+				int idx;
 				if (sscanf (s, "%d", &idx) == 1 && idx < nemitter) {
 					s = strtok (NULL, " \t\n");
 					if (!_stricmp (s, "ACTIVATE")) {
-						DWORD flag;
+						int flag;
 						if (sscanf (s+9, "%d", &flag) == 1)
 							emitter[idx]->Activate (flag != 0);
 					}
@@ -757,30 +764,36 @@ void Orbiter::FRecorder_Reset ()
 {
 	FRsysname = 0;
 	FRsys_stream = 0;
-	FReditor = 0;
+	//FReditor = 0;
 	frec_sys_simt = -1e10;
 	bRecord = bPlayback = false;
 }
 
+static int rmFiles(const char *pathname, const struct stat *sbuf, int type, struct FTW *ftwb)
+{
+	if(ftwb->level == 0)
+		return 0;
+    if(remove(pathname) < 0)
+     {
+        perror("ERROR: remove");
+        return -1;
+    }
+    return 0;
+}
+
+
 bool Orbiter::FRecorder_PrepareDir (const char *fname, bool force)
 {
 	char cbuf[256];
-	strcpy (cbuf, "Flights\\"); strcat (cbuf, fname);
-	if (_mkdir (cbuf) == -1) {
+	strcpy (cbuf, "Flights/"); strcat (cbuf, fname);
+	if (mkdir (cbuf, 0755) == -1) {
 		if (errno == EEXIST && !force) return false;
 		// don't overwrite existing recording
-		struct _finddata_t fd;
-		char cb2[256], cb3[256];
-		strcpy (cb2, cbuf); strcat (cb2, "\\*");
-		intptr_t handle = _findfirst (cb2, &fd), res = handle;
-		while (res != -1) {
-			if (!(fd.attrib & _A_SUBDIR)) {
-				sprintf (cb3, "%s\\%s", cbuf, fd.name);
-				_unlink (cb3);
-			}
-			res = _findnext (handle, &fd);
+		if (nftw(cbuf, rmFiles,10, FTW_DEPTH|FTW_MOUNT|FTW_PHYS) < 0)
+		{
+			perror("ERROR: ntfw");
+			exit(1);
 		}
-		_findclose (handle);
 	}
 	return true;
 }
@@ -792,7 +805,7 @@ void Orbiter::FRecorder_Activate (bool active, const char *fname, bool append)
 		if (!append) FRecorder_Reset();
 		bRecord = true;
 		char cbuf[256];
-		sprintf (cbuf, "Flights\\%s\\system.dat", fname);
+		sprintf (cbuf, "Flights/%s/system.dat", fname);
 		if (FRsysname) delete []FRsysname;
 		FRsysname = new char[strlen(cbuf)+1]; TRACENEW
 		strcpy (FRsysname, cbuf);
@@ -818,8 +831,8 @@ void Orbiter::FRecorder_OpenPlayback (const char *scname)
 	if (FRsys_stream) delete FRsys_stream;
 
 	for (i = strlen(scname)-1; i > 0; i--)
-		if (scname[i-1] == '\\') break;
-	sprintf (cbuf, "Flights\\%s\\system.dat", scname+i);
+		if (scname[i-1] == '/') break;
+	sprintf (cbuf, "Flights/%s/system.dat", scname+i);
 	if (FRsysname) delete []FRsysname;
 	FRsysname = new char[strlen(cbuf)+1]; TRACENEW
 	strcpy (FRsysname, cbuf);
@@ -855,10 +868,11 @@ void Orbiter::FRecorder_ClosePlayback ()
 		delete FRsys_stream;
 		FRsys_stream = 0;
 	}
+	/*
 	if (FReditor) {
 		delete FReditor;
 		FReditor = 0;
-	}
+	}*/
 }
 
 void Orbiter::FRecorder_Play ()
@@ -889,7 +903,7 @@ void Orbiter::FRecorder_Play ()
 				s = strtok (NULL, " \t\n");
 				vfocus = g_psys->GetVessel (s, true);
 				if (vfocus && Cfg()->CfgRecPlayPrm.bReplayFocus)
-					g_pOrbiter->SetFocusObject (vfocus);
+					SetFocusObject (vfocus);
 			} else if (!_strnicmp (s, "NOTE", 4)) {
 				oapi::ScreenAnnotation *sa = SNotePB();
 				if (sa) {
@@ -916,10 +930,10 @@ void Orbiter::FRecorder_Play ()
 				double jumptime;
 				if (sscanf (s+11, "%lf", &jumptime) && jumptime > td.SimT0) {
 					double tgtmjd = td.MJD0 + (jumptime-td.SimT0)/86400.0;
-					g_pOrbiter->Timejump(tgtmjd, PROP_ORBITAL_FIXEDSURF);
+					Timejump(tgtmjd, PROP_ORBITAL_FIXEDSURF);
 				}
 			} else if (!_strnicmp (s, "ENDSESSION", 10)) {
-				if (hRenderWnd) PostMessage (hRenderWnd, WM_CLOSE, 0, 0);
+				if (hRenderWnd) glfwSetWindowShouldClose(hRenderWnd, GL_TRUE);
 			}
 		}
 		*FRsys_stream >> frec_sys_simt; // read time for next event
@@ -932,13 +946,17 @@ void Orbiter::FRecorder_Play ()
 
 void Orbiter::FRecorder_ToggleEditor ()
 {
+	m_pGUIManager->ShowCtrl<DlgPlaybackEditor>();
+	const char *playbackdir = pState->PlaybackDir();
+	m_DlgPlaybackEditor->Load(playbackdir);
+	/*
 	if (FReditor) {
 		delete FReditor;
 		FReditor = 0;
 	} else {
 		const char *playbackdir = pState->PlaybackDir();
 		FReditor = new PlaybackEditor (this, playbackdir); TRACENEW
-	}
+	}*/
 }
 
 // ================================================================

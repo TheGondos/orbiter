@@ -7,25 +7,22 @@
 #include "Celbody.h"
 #include "Planet.h"
 #include "Base.h"
-#include <dinput.h>
 
 using namespace std;
 
 extern Orbiter *g_pOrbiter;
 extern PlanetarySystem *g_psys;
 extern Vessel *g_focusobj;
-extern InputBox *g_input;
-extern Select *g_select;
 extern TimeData td;
 extern char DBG_MSG[256];
 
 struct Instrument_Map::SavePrm Instrument_Map::saveprm = {0,0,{0,0},1,true};
-DWORD dispflag_default = DISP_GRIDLINE | DISP_COASTLINE | DISP_CONTOURS | DISP_HORIZONLINE | DISP_VESSEL | DISP_BASE | DISP_GROUNDTRACK | DISP_TERMINATOR | DISP_ORBITFOCUS | DISP_ORBITSEL;
+int dispflag_default = DISP_GRIDLINE | DISP_COASTLINE | DISP_CONTOURS | DISP_HORIZONLINE | DISP_VESSEL | DISP_BASE | DISP_GROUNDTRACK | DISP_TERMINATOR | DISP_ORBITFOCUS | DISP_ORBITSEL;
 
 // =======================================================================
 // class Instrument_Map
 
-Instrument_Map::Instrument_Map (Pane *_pane, INT_PTR _id, const Spec &spec, Vessel *_vessel)
+Instrument_Map::Instrument_Map (Pane *_pane, MfdId _id, const Spec &spec, Vessel *_vessel)
 : Instrument (_pane, _id, spec, _vessel)
 {
 	strcpy (title, "Map: ");
@@ -34,7 +31,7 @@ Instrument_Map::Instrument_Map (Pane *_pane, INT_PTR _id, const Spec &spec, Vess
 	refplanet = NULL;
 	VectorMap::OBJTYPE sel = {0,0};
 	dispflag = dispflag_default;
-	DWORD mkrflag = 0;
+	int mkrflag = 0;
 	if (_vessel == saveprm.usr) {
 		refplanet = saveprm.ref;
 		sel       = saveprm.sel;
@@ -93,15 +90,6 @@ Instrument_Map::~Instrument_Map ()
 
 // =======================================================================
 
-HELPCONTEXT *Instrument_Map::HelpTopic () const
-{
-	extern HELPCONTEXT DefHelpContext;
-	DefHelpContext.topic = "/mfd_map.htm";
-	return &DefHelpContext;
-}
-
-// =======================================================================
-
 int Instrument_Map::ProcessMessage (int msg, void *data)
 {
 	switch (msg) {
@@ -115,54 +103,57 @@ int Instrument_Map::ProcessMessage (int msg, void *data)
 
 // =======================================================================
 
-bool Instrument_Map::KeyBuffered (DWORD key)
+bool Instrument_Map::KeyBuffered (int key)
 {
 	switch (disp_mode) {
 	case 0: // default display
 		switch (key) {
-		case DIK_R:  // select reference
+		case OAPI_KEY_R:  // select reference
 			OpenSelect_CelBody ("Map MFD: Reference", ClbkEnter_Map, 1);
 			return true;
-		case DIK_T:  // select target
-			g_select->Open ("Map MFD: Target", ClbkSubmn_Target, ClbkEnter_Target, (void*)this);
-			return true;
-		case DIK_D:  // switch to display parameters page
+		case OAPI_KEY_T:  // select target
+			{
+				Select *select = g_pOrbiter->m_pGUIManager->GetCtrl<Select>();
+				select->Open ("Map MFD: Target", ClbkSubmn_Target, ClbkEnter_Target, (void*)this);
+				return true;
+			}
+		case OAPI_KEY_D:  // switch to display parameters page
 			disp_mode = 1;
 			disp_sel = 0;
 			btnpage = 0;
 			RepaintButtons();
 			Refresh();
 			return true;
-		case DIK_K:
+		case OAPI_KEY_K:
 			ToggleTrack();
 			RepaintButtons();
 			return true;
-		case DIK_X:  ZoomOut(); return true;
-		case DIK_Z:  ZoomIn();  return true;
-		case DIK_LBRACKET:
-		case DIK_RBRACKET:
-		case DIK_MINUS:
-		case DIK_EQUALS:
+		case OAPI_KEY_X:  ZoomOut(); return true;
+		case OAPI_KEY_Z:  ZoomIn();  return true;
+		case OAPI_KEY_LBRACKET:
+		case OAPI_KEY_RBRACKET:
+		case OAPI_KEY_MINUS:
+		case OAPI_KEY_EQUALS:
 			scroll_t0 = scroll_tp = td.SysT0;
 			break;
 		}
 		break;
 	case 1: // display parameters
 		switch (key) {
-		case DIK_O:
+		case OAPI_KEY_O:
 			disp_mode = 0;
 			RepaintButtons();
 			Refresh();
 			return true;
-		case DIK_MINUS:
+		case OAPI_KEY_MINUS:
 			if (--disp_sel < 0) disp_sel = ndispprm-1;
 			Refresh();
 			return true;
-		case DIK_EQUALS:
+		case OAPI_KEY_EQUALS:
 			disp_sel = (disp_sel+1)%ndispprm;
 			Refresh();
 			return true;
-		case DIK_M:
+		case OAPI_KEY_M:
 			if (ToggleDispParam (disp_sel)) {
 				map->SetDisplayFlags (dispflag);
 				Refresh();
@@ -179,36 +170,36 @@ bool Instrument_Map::KeyBuffered (DWORD key)
 bool Instrument_Map::KeyImmediate (char *kstate)
 {
 	double t = td.SysT0;
-	double dt = max(t-scroll_t0, 0);
-	double mag = min(dt*0.5, 8.0);
+	double dt = std::max(t-scroll_t0, 0.0);
+	double mag = std::min(dt*0.5, 8.0);
 	double step = (t-scroll_tp) * mag / zoom;
 
-	if (KEYDOWN (kstate, DIK_LBRACKET)) { // scroll left
-		if (!track && BufKey (DIK_LBRACKET, 0.05)) {
+	if (KEYDOWN (kstate, OAPI_KEY_LBRACKET)) { // scroll left
+		if (!track && BufKey (OAPI_KEY_LBRACKET, 0.05)) {
 			map->SetCenter (map->CntLng()-step, map->CntLat());
 			scroll_tp = t;
 			Refresh();
 		}
 		return true;
 	}
-	if (KEYDOWN (kstate, DIK_RBRACKET)) { // scroll right
-		if (!track && BufKey (DIK_RBRACKET, 0.05)) {
+	if (KEYDOWN (kstate, OAPI_KEY_RBRACKET)) { // scroll right
+		if (!track && BufKey (OAPI_KEY_RBRACKET, 0.05)) {
 			map->SetCenter (map->CntLng()+step, map->CntLat());
 			scroll_tp = t;
 			Refresh();
 		}
 		return true;
 	}
-	if (KEYDOWN (kstate, DIK_MINUS)) { // scroll down
-		if (!track && BufKey (DIK_MINUS, 0.05)) {
+	if (KEYDOWN (kstate, OAPI_KEY_MINUS)) { // scroll down
+		if (!track && BufKey (OAPI_KEY_MINUS, 0.05)) {
 			map->SetCenter (map->CntLng(), min (Pi, map->CntLat()+step));
 			scroll_tp = t;
 			Refresh();
 		}
 		return true;
 	}
-	if (KEYDOWN (kstate, DIK_EQUALS)) { // scroll up
-		if (!track && BufKey (DIK_EQUALS, 0.05)) {
+	if (KEYDOWN (kstate, OAPI_KEY_EQUALS)) { // scroll up
+		if (!track && BufKey (OAPI_KEY_EQUALS, 0.05)) {
 			map->SetCenter (map->CntLng(), max (-Pi, map->CntLat()-step));
 			scroll_tp = t;
 			Refresh();
@@ -224,7 +215,7 @@ bool Instrument_Map::ProcessButton (int bt, int event)
 {
 	switch (disp_mode) {
 	case 0: {
-		static const DWORD btkey[10] = { DIK_R, DIK_T, DIK_X, DIK_Z, DIK_K, DIK_D, DIK_MINUS, DIK_EQUALS, DIK_LBRACKET, DIK_RBRACKET };
+		static const int btkey[10] = { OAPI_KEY_R, OAPI_KEY_T, OAPI_KEY_X, OAPI_KEY_Z, OAPI_KEY_K, OAPI_KEY_D, OAPI_KEY_MINUS, OAPI_KEY_EQUALS, OAPI_KEY_LBRACKET, OAPI_KEY_RBRACKET };
 		if (event & PANEL_MOUSE_LBDOWN) {
 			if (bt < (track ? 6:10)) return KeyBuffered (btkey[bt]);
 		}
@@ -233,7 +224,7 @@ bool Instrument_Map::ProcessButton (int bt, int event)
 		}
 		} break;
 	case 1: {
-		static const DWORD btkey[4] = { DIK_MINUS, DIK_EQUALS, DIK_M, DIK_O };
+		static const int btkey[4] = { OAPI_KEY_MINUS, OAPI_KEY_EQUALS, OAPI_KEY_M, OAPI_KEY_O };
 		if (event & PANEL_MOUSE_LBDOWN) {
 			if (bt < 4) return KeyBuffered (btkey[bt]);
 		}
@@ -298,9 +289,11 @@ void Instrument_Map::SetSize (const Spec &spec)
 {
 	if (!gc) return;
 
-	oapi::Sketchpad *skp = gc->clbkGetSketchpad (surf);
-	map->SetCanvas (skp, IW, IH);
-	gc->clbkReleaseSketchpad (skp);
+	oapi::Sketchpad *skp = gc->clbkGetSketchpad (m_surf);
+	if(skp) {
+	  map->SetCanvas (skp, IW, IH);
+	  gc->clbkReleaseSketchpad (skp);
+	}
 }
 
 // =======================================================================
@@ -350,7 +343,7 @@ void Instrument_Map::UpdateDraw_Map (oapi::Sketchpad *skp)
 			const Body *b = (const Body*)sel.obj;
 			double lng, lat, rad;
 			refplanet->GlobalToEquatorial (b->GPos(), lng, lat, rad);
-			sprintf (cbuf, "%s [%6.2fº%c %6.2fº%c, Alt %s]",
+			sprintf (cbuf, "%s [%6.2fï¿½%c %6.2fï¿½%c, Alt %s]",
 				b->Name(), fabs(lng)*DEG, lng>=0.0 ? 'E':'W', fabs(lat)*DEG,
 				lat>=0.0 ? 'N':'S', DistStr(rad-refplanet->Size()));
 			skp->SetTextColor (draw[1][0].col);
@@ -363,14 +356,14 @@ void Instrument_Map::UpdateDraw_Map (oapi::Sketchpad *skp)
 			const Base *base = (const Base*)sel.obj;
 			double lng, lat, lng0, lat0, rad, adist, hdg;
 			base->EquPos (lng, lat);
-			sprintf (cbuf, "%s [%6.2fº%c %6.2fº%c]",
+			sprintf (cbuf, "%s [%6.2fï¿½%c %6.2fï¿½%c]",
 				base->Name(), fabs(lng)*DEG, lng>=0.0 ? 'E':'W', fabs(lat)*DEG,
 				lat>=0.0 ? 'N':'S');
 			if (sp) lng0 = sp->lng, lat0 = sp->lat;
 			else    refplanet->GlobalToEquatorial (g_focusobj->GPos(), lng0, lat0, rad);
 			rad = refplanet->Size();
 			Orthodome (lng0, lat0, lng, lat, adist, hdg);
-			sprintf (cbuf+strlen(cbuf)-1, ", Dst%s, Brg %05.1fº]", DistStr(adist*rad), Deg(posangle(hdg)));
+			sprintf (cbuf+strlen(cbuf)-1, ", Dst%s, Brg %05.1fï¿½]", DistStr(adist*rad), Deg(posangle(hdg)));
 			skp->SetTextColor (draw[2][0].col);
 			if (!pfont) pfont = skp->SetFont (GetDefaultFont (1));
 			skp->Text (cw/2, y, "BSE:", 4);
@@ -380,14 +373,14 @@ void Instrument_Map::UpdateDraw_Map (oapi::Sketchpad *skp)
 		}
 		double lng, lat, rad;
 		refplanet->GlobalToEquatorial (g_focusobj->GPos(), lng, lat, rad);
-		sprintf (cbuf, "%s [%6.2fº%c %6.2fº%c, Alt %s]",
+		sprintf (cbuf, "%s [%6.2fï¿½%c %6.2fï¿½%c, Alt %s]",
 			g_focusobj->Name(), fabs(lng)*DEG, lng>=0.0 ? 'E':'W', fabs(lat)*DEG,
 			lat>=0.0 ? 'N':'S', DistStr(rad-refplanet->Size()));
 		if (sp) {
 			Vector hvel (tmul (sp->ref->GRot(), sp->groundvel_glob));
 			hvel.Set (mul (sp->L2H, hvel));
 			double crs = atan2 (hvel.x, hvel.z);
-			sprintf (cbuf+strlen(cbuf)-1, ", Crs %05.1fº]", Deg(posangle(crs)));
+			sprintf (cbuf+strlen(cbuf)-1, ", Crs %05.1fï¿½]", Deg(posangle(crs)));
 		}
 		skp->SetTextColor (draw[0][0].col);
 		if (!pfont) pfont = skp->SetFont (GetDefaultFont (1));
@@ -497,7 +490,7 @@ void Instrument_Map::UpdateDraw_Dispprm (oapi::Sketchpad *skp)
 	}
 
 	CustomMkrSet &set = map->GetCustomMarkerSet();
-	for (i = max(0,dispprm_top-ndefault); i < min(set.nset,nlist-ndefault+dispprm_top); i++) {
+	for (i = std::max(0,dispprm_top-ndefault); i < std::min(set.nset,(int)(nlist-ndefault+dispprm_top)); i++) {
 		char *name = set.set[i].list->name;
 		bool active = set.set[i].active;
 		skp->Text (x0, y, name, strlen(name));
@@ -526,13 +519,16 @@ void Instrument_Map::UpdateBlt ()
 	}
 #else
 	map->DrawMap ();
-	gc->clbkCopyBitmap (surf, map->GetMap(), 0, 0, IW, IH);
+	//gc->clbkCopyBitmap (surf, map->GetMap(), 0, 0, IW, IH);
+
+	oapiBlt (m_surf, map->GetMap(), 0, 0, 0, 0, IW, IH);
+
 #endif
 }
 
 // =======================================================================
 
-bool Instrument_Map::SelectMap (char *str)
+bool Instrument_Map::SelectMap (const char *str)
 {
 	Planet *planet = g_psys->GetPlanet (str, true);
 	if (planet) {
@@ -549,7 +545,7 @@ bool Instrument_Map::SelectMap (char *str)
 
 // =======================================================================
 
-bool Instrument_Map::SelectTarget (char *str)
+bool Instrument_Map::SelectTarget (const char *str)
 {
 	const Body *body = g_psys->GetObj (str, true);
 	if (!body) {
@@ -671,7 +667,7 @@ bool Instrument_Map::ReadParams (std::ifstream &ifs)
 	char otgt[128] = "", btgt[128] = "";
 	zoom = 1;
 	double lng, lat;
-	DWORD dflag = dispflag;
+	int dflag = dispflag;
 	track = true;
 
 	for (;;) {
@@ -727,7 +723,7 @@ void Instrument_Map::WriteParams (std::ostream &ofs) const
 
 // =======================================================================
 
-bool Instrument_Map::ClbkEnter_Map (Select *menu, int item, char *str, void *data)
+bool Instrument_Map::ClbkEnter_Map (Select *menu, int item, const char *str, void *data)
 {
 	Instrument_Map *map = (Instrument_Map*)data;
 	return map->SelectMap (str);
@@ -735,9 +731,9 @@ bool Instrument_Map::ClbkEnter_Map (Select *menu, int item, char *str, void *dat
 
 // =======================================================================
 
-bool Instrument_Map::ClbkSubmn_Target (Select *menu, int item, char *str, void *data)
+bool Instrument_Map::ClbkSubmn_Target (Select *menu, int item, const char *str, void *data)
 {
-	DWORD i, j;
+	int i, j;
 	Instrument_Map *map = (Instrument_Map*)data;
 
 	if (!str) { // main menu
@@ -776,11 +772,12 @@ bool Instrument_Map::ClbkSubmn_Target (Select *menu, int item, char *str, void *
 
 // =======================================================================
 
-bool Instrument_Map::ClbkEnter_Target (Select *menu, int item, char *str, void *data)
+bool Instrument_Map::ClbkEnter_Target (Select *menu, int item, const char *str, void *data)
 {
 	Instrument_Map *map = (Instrument_Map*)data;
 	if (!_stricmp (str, "By name ...")) {
-		g_input->Open ("Enter target:", 0, 20, Instrument_Map::ClbkName_Target,
+		InputBox *input = (InputBox *)g_pOrbiter->m_pGUIManager->GetCtrl<InputBox>();
+		input->Open ("Enter target:", 0, 20, Instrument_Map::ClbkName_Target,
 			map);
 		return true;
 	} else if (!_stricmp (str, "[none]")) {
@@ -792,9 +789,8 @@ bool Instrument_Map::ClbkEnter_Target (Select *menu, int item, char *str, void *
 
 // =======================================================================
 
-bool Instrument_Map::ClbkName_Target (InputBox*, char *str, void *data)
+bool Instrument_Map::ClbkName_Target (InputBox*, const char *str, void *data)
 {
 	Instrument_Map *map = (Instrument_Map*)data;
 	return map->SelectTarget (str);
 }
-

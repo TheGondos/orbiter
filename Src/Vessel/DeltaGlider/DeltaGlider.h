@@ -21,8 +21,8 @@
 
 #define STRICT 1
 
-#include "orbitersdk.h"
-#include "..\Common\Instrument.h"
+#include "Orbitersdk.h"
+#include "../Common/Instrument.h"
 
 // ==============================================================
 // Some vessel class caps
@@ -141,11 +141,11 @@ const double DYNP_MAX = 300e3;
 // =============================================
 // 2D instrument panel parameters
 
-const DWORD PANEL2D_WIDTH = 1280;  // panel width [pixel]
-const DWORD PANEL2D_TEXW  = 2048;  // texture width
-const DWORD PANEL2D_TEXH  = 1024;  // texture height
-const DWORD INSTR3D_TEXW  =  512;
-const DWORD INSTR3D_TEXH  = 1024;
+const int PANEL2D_WIDTH = 1280;  // panel width [pixel]
+const int PANEL2D_TEXW  = 2048;  // texture width
+const int PANEL2D_TEXH  = 1024;  // texture height
+const int INSTR3D_TEXW  =  512;
+const int INSTR3D_TEXH  = 1024;
 
 // ==========================================================
 // Forward declarations
@@ -172,6 +172,18 @@ class AAPSubsystem;
 // ==========================================================
 // Interface for derived vessel class: DeltaGlider
 // ==========================================================
+#include "OrbiterAPI.h"
+
+#include <cassert>
+class DeltaGlider;
+class DlgDGControls : public GUIElement {
+public:
+	DlgDGControls(const std::string &name, DeltaGlider *);
+	void Show() override;
+	static const std::string etype;
+	DeltaGlider *m_dg;
+};
+
 
 class DeltaGlider: public ComponentVessel {
 	friend class FuelMFD;
@@ -186,12 +198,10 @@ public:
 	void InitPanel (int panel);
 	void InitVC (int vc);
 	inline bool ScramVersion() const { return ssys_scram != NULL; }
-	void DrawHUD (int mode, const HUDPAINTSPEC *hps, HDC hDC);
-	void DrawNeedle (HDC hDC, int x, int w, double rad, double angle, double *pangle = 0, double speed = PI);
 	void UpdateStatusIndicators();
 	void SetPassengerVisuals ();
 	void SetDamageVisuals ();
-	void SetPanelScale (PANELHANDLE hPanel, DWORD viewW, DWORD viewH);
+	void SetPanelScale (PANELHANDLE hPanel, int viewW, int viewH);
 	void DefinePanelMain (PANELHANDLE hPanel);
 	void DefinePanelOverhead (PANELHANDLE hPanel);
 	bool RedrawPanel_ScramTempDisp (SURFHANDLE surf);
@@ -216,31 +226,31 @@ public:
 	void RepairDamage ();
 
 	// Overloaded callback functions
-	void clbkSetClassCaps (FILEHANDLE cfg);
-	void clbkLoadStateEx (FILEHANDLE scn, void *vs);
-	void clbkSaveState (FILEHANDLE scn);
-	void clbkPostCreation ();
-	void clbkVisualCreated (VISHANDLE vis, int refcount);
-	void clbkVisualDestroyed (VISHANDLE vis, int refcount);
-	void clbkPostStep (double simt, double simdt, double mjd);
-	bool clbkDrawHUD (int mode, const HUDPAINTSPEC *hps, oapi::Sketchpad *skp);
-	void clbkRenderHUD (int mode, const HUDPAINTSPEC *hps, SURFHANDLE hTex);
-	void clbkRCSMode (int mode);
-	void clbkADCtrlMode (DWORD mode);
-	void clbkHUDMode (int mode);
-	void clbkMFDMode (int mfd, int mode);
-	void clbkNavMode (int mode, bool active);
-	void clbkDockEvent (int dock, OBJHANDLE mate);
-	int  clbkNavProcess (int mode);
-	int  clbkConsumeBufferedKey (DWORD key, bool down, char *kstate);
-	bool clbkLoadGenericCockpit ();
-	bool clbkLoadPanel2D (int id, PANELHANDLE hPanel, DWORD viewW, DWORD viewH);
-	bool clbkPanelMouseEvent (int id, int event, int mx, int my, void *context);
-	bool clbkPanelRedrawEvent (int id, int event, SURFHANDLE surf, void *context);
-	bool clbkLoadVC (int id);
-	bool clbkVCMouseEvent (int id, int event, VECTOR3 &p);
-	bool clbkVCRedrawEvent (int id, int event, SURFHANDLE surf);
-	int  clbkGeneric (int msgid, int prm, void *context);
+	void clbkSetClassCaps (FILEHANDLE cfg) override;
+	void clbkLoadStateEx (FILEHANDLE scn, void *vs) override;
+	void clbkSaveState (FILEHANDLE scn) override;
+	void clbkPostCreation () override;
+	void clbkVisualCreated (VISHANDLE vis, int refcount) override;
+	void clbkVisualDestroyed (VISHANDLE vis, int refcount) override;
+	void clbkPostStep (double simt, double simdt, double mjd) override;
+	bool clbkDrawHUD (int mode, const HUDPAINTSPEC *hps, oapi::Sketchpad *skp) override;
+	void clbkRenderHUD (int mode, const HUDPAINTSPEC *hps, SURFHANDLE hTex) override;
+	void clbkRCSMode (int mode) override;
+	void clbkADCtrlMode (int mode) override;
+	void clbkHUDMode (int mode) override;
+	void clbkMFDMode (int mfd, int mode) override;
+	void clbkNavMode (int mode, bool active) override;
+	void clbkDockEvent (int dock, OBJHANDLE mate) override;
+	int  clbkNavProcess (int mode) override;
+	int  clbkConsumeBufferedKey (int key, bool down, char *kstate) override;
+	bool clbkLoadGenericCockpit () override;
+	bool clbkLoadPanel2D (int id, PANELHANDLE hPanel, int viewW, int viewH) override;
+	bool clbkPanelMouseEvent (int id, int event, int mx, int my, void *context) override;
+	bool clbkPanelRedrawEvent (int id, int event, SURFHANDLE surf, void *context) override;
+	bool clbkLoadVC (int id) override;
+	bool clbkVCMouseEvent (int id, int event, VECTOR3 &p) override;
+	bool clbkVCRedrawEvent (int id, int event, SURFHANDLE surf) override;
+	int  clbkGeneric (int msgid, int prm, void *context) override;
 
 	bool psngr[4];              // passengers?
 	bool bDamageEnabled;        // damage/failure testing?
@@ -252,11 +262,11 @@ public:
 	void SetGearParameters (double state);
 
 	// Animation handles
-	UINT anim_rudder;           // handle for rudder animation
-	UINT anim_elevator;         // handle for elevator animation
-	UINT anim_elevatortrim;     // handle for elevator trim animation
-	UINT anim_laileron;         // handle for left aileron animation
-	UINT anim_raileron;         // handle for right aileron animation
+	unsigned int anim_rudder;           // handle for rudder animation
+	unsigned int anim_elevator;         // handle for elevator animation
+	unsigned int anim_elevatortrim;     // handle for elevator trim animation
+	unsigned int anim_laileron;         // handle for left aileron animation
+	unsigned int anim_raileron;         // handle for right aileron animation
 
 	SURFHANDLE insignia_tex;    // vessel-specific fuselage markings
 	SURFHANDLE contrail_tex;    // contrail particle texture
@@ -330,14 +340,16 @@ private:
 
 	int mainflowidx[2], retroflowidx[2], hoverflowidx, scflowidx[2];
 	int mainTSFCidx, scTSFCidx[2];
+
+	std::unique_ptr<DlgDGControls> m_DlgDGControls;
 };
 
 // ==============================================================
 
 typedef struct {
-	HINSTANCE hDLL;
-	DWORD col[4];
-	HPEN pen[2];
+	void *hDLL;
+	uint32_t col[4];
+	oapi::Pen *pen[2];
 	SURFHANDLE surf;
 } GDIParams;
 

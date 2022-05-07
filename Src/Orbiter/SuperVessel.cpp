@@ -197,9 +197,9 @@ void SuperVessel::Attach (Vessel *vessel1, int port1, Vessel *vessel2, int port2
 
 // =======================================================================
 
-void SuperVessel::Detach (Vessel *vessel, DWORD port, double vsep)
+void SuperVessel::Detach (Vessel *vessel, int port, double vsep)
 {
-	DWORD i, j, port2, idx1, idx2;
+	int i, j, port2, idx1, idx2;
 	bool atomic1, atomic2;
 
 	Vessel *vessel2 = vessel->dock[port]->mate;
@@ -304,7 +304,7 @@ bool SuperVessel::Activate (bool force)
 
 void SuperVessel::RPlace (const Vector &_rpos, const Vector &_rvel, const Vessel *ref)
 {
-	DWORD i;
+	int i;
 	Vector dp = _rpos-s0->pos;
 	if (ref)
 		for (i = 0; i < nv; i++)
@@ -330,7 +330,7 @@ void SuperVessel::RPlace (const Vector &_rpos, const Vector &_rvel, const Vessel
 
 void SuperVessel::SetGlobalOrientation (const Vector &arot, const Vessel *ref)
 {
-	DWORD i;
+	int i;
 	double sinx = sin(arot.x), cosx = cos(arot.x);
 	double siny = sin(arot.y), cosy = cos(arot.y);
 	double sinz = sin(arot.z), cosz = cos(arot.z);
@@ -361,7 +361,7 @@ void SuperVessel::SetGlobalOrientation (const Vector &arot, const Vessel *ref)
 
 void SuperVessel::SetRotationMatrix (const Matrix &R, const Vessel *ref)
 {
-	DWORD i;
+	int i;
 	s0->R.Set (R);
 	if (ref) {
 		for (i = 0; i < nv; i++)
@@ -387,7 +387,7 @@ void SuperVessel::SetRotationMatrix (const Matrix &R, const Vessel *ref)
 
 void SuperVessel::SetAngVel (const Vector &omega, const Vessel *ref)
 {
-	DWORD i;
+	int i;
 	s0->omega.Set (omega);
 	if (ref) {
 		for (i = 0; i < nv; i++)
@@ -421,7 +421,7 @@ void SuperVessel::GetIntermediateMoments (Vector &acc, Vector &tau,
 
 bool SuperVessel::RemoveEntry (const Vessel *v)
 {
-	DWORD i, j;
+	int i, j;
 	bool found = false;
 	if (nv <= 1) return false; // sanity check: can't remove last entry
 	SubVesselData *tmp = new SubVesselData[nv-1]; TRACENEW
@@ -439,8 +439,7 @@ bool SuperVessel::RemoveEntry (const Vessel *v)
 
 void SuperVessel::TransferAllDocked (Vessel *v, SuperVessel *sv, const Vessel *exclude)
 {
-	DWORD n;
-	for (n = 0; n < v->ndock; n++) {
+	for (int n = 0; n < v->ndock; n++) {
 		Vessel *mate = v->dock[n]->mate;
 		if (mate && mate != exclude && isComponent(mate)) {
 			sv->Add (v, n, mate, v->dock[n]->matedock, false);
@@ -452,14 +451,14 @@ void SuperVessel::TransferAllDocked (Vessel *v, SuperVessel *sv, const Vessel *e
 
 bool SuperVessel::isComponent (const Vessel *v) const
 {
-	for (DWORD i = 0; i < nv; i++)
+	for (int i = 0; i < nv; i++)
 		if (vlist[i].vessel == v) return true;
 	return false;
 }
 
 bool SuperVessel::Add (Vessel *vessel1, int port1, Vessel *vessel2, int port2, bool mixmoments)
 {
-	DWORD idx1;
+	int idx1;
 
 	// make sure vessel1 is part of the superstructure
 	for (idx1 = 0; idx1 < nv; idx1++)
@@ -537,7 +536,7 @@ bool SuperVessel::Add (Vessel *vessel1, int port1, Vessel *vessel2, int port2, b
 	// calculate angular velocity from conservation of angular momentum
 	if (mixmoments) {
 		Vector am;
-		for (DWORD i = 0; i < nv; i++) {
+		for (int i = 0; i < nv; i++) {
 			// individual spin of each vessel
 			am += mul (vlist[i].rrot, vlist[i].vessel->AngularMomentum()) * vlist[i].vessel->mass;
 			// contribution of vessel motion to angular momentum
@@ -555,7 +554,7 @@ bool SuperVessel::Add (Vessel *vessel1, int port1, Vessel *vessel2, int port2, b
 
 bool SuperVessel::Merge (Vessel *vessel1, int port1, Vessel *vessel2, int port2)
 {
-	DWORD i, idx1, idx2, nv2;
+	int i, idx1, idx2, nv2;
 
 	// make sure vessel1 is part of the superstructure
 	for (idx1 = 0; idx1 < nv; idx1++)
@@ -643,7 +642,7 @@ bool SuperVessel::Merge (Vessel *vessel1, int port1, Vessel *vessel2, int port2)
 bool SuperVessel::AddSurfaceForces (Vector *F, Vector *M, const StateVectors *s, double tfrac, double dt) const
 {
 	bool impact = false;
-	DWORD comp;
+	int comp;
 	StateVectors scomp;
 	for (comp = 0; comp < nv; comp++) {
 		Vector Fcomp, Mcomp;
@@ -658,7 +657,7 @@ bool SuperVessel::AddSurfaceForces (Vector *F, Vector *M, const StateVectors *s,
 
 void SuperVessel::Update (bool force)
 {
-	DWORD i;
+	int i;
 	bool grot_changed = false;
 	bool el_updated = false;;
 
@@ -754,14 +753,14 @@ void SuperVessel::SetOrbitReference (CelestialBody *body)
 		cbody = body;
 		el->Setup (mass, cbody->Mass(), el->MJDepoch());
 		bOrbitStabilised = false;      // enforce recalculation of elements
-		for (DWORD i = 0; i < nv; i++) // propagate to individual vessels
+		for (int i = 0; i < nv; i++) // propagate to individual vessels
 			vlist[i].vessel->SetOrbitReference (body);
 	}
 }
 
 bool SuperVessel::CheckSurfaceContact () const
 {
-	for (DWORD comp = 0; comp < nv; comp++)
+	for (int comp = 0; comp < nv; comp++)
 		if (vlist[comp].vessel->CheckSurfaceContact ())
 			return true;
 	return false;
@@ -772,7 +771,7 @@ void SuperVessel::InitLanded (Planet *planet, double lng, double lat, double dir
 	dASSERT(!g_bStateUpdate, "SuperVessel::InitLanded must not be called during state update"); // not valid during update phase
 	dASSERT(hrot, "hrot parameter for SuperVessel::InitLanded must be supplied");               // only support dynamic impact model for now
 
-	DWORD comp;
+	int comp;
 	proxybody = proxyplanet = planet;
 	double slng = sin(lng), clng = cos(lng);
 	double slat = sin(lat), clat = cos(lat);
@@ -806,13 +805,13 @@ void SuperVessel::InitLanded (Planet *planet, double lng, double lat, double dir
 
 void SuperVessel::Refuel ()
 {
-	for (DWORD comp = 0; comp < nv; comp++)
+	for (int comp = 0; comp < nv; comp++)
 		vlist[comp].vessel->Refuel();	
 }
 
 bool SuperVessel::ThrustEngaged () const
 {
-	for (DWORD comp = 0; comp < nv; comp++)
+	for (int comp = 0; comp < nv; comp++)
 		if (vlist[comp].vessel->ThrustEngaged ())
 			return true;
 	return false;
@@ -847,7 +846,7 @@ void SuperVessel::AddComponentForceAndMoment (Vector *F, Vector *M,
 
 void SuperVessel::NotifyShiftVesselOrigin (Vessel *vessel, const Vector &dr)
 {
-	for (DWORD i = 0; i < nv; i++) {
+	for (int i = 0; i < nv; i++) {
 		if (vlist[i].vessel == vessel) {
 			vlist[i].rpos += mul (vlist[i].rrot, dr);
 			return;
@@ -857,7 +856,7 @@ void SuperVessel::NotifyShiftVesselOrigin (Vessel *vessel, const Vector &dr)
 
 bool SuperVessel::GetCG (const Vessel *vessel, Vector &vcg)
 {
-	for (DWORD i = 0; i < nv; i++) {
+	for (int i = 0; i < nv; i++) {
 		if (vlist[i].vessel == vessel) {
 			vcg.Set (tmul (vlist[i].rrot, cg-vlist[i].rpos));
 			return true;
@@ -868,7 +867,7 @@ bool SuperVessel::GetCG (const Vessel *vessel, Vector &vcg)
 
 bool SuperVessel::GetPMI (const Vessel *vessel, Vector &vpmi)
 {
-	for (DWORD i = 0; i < nv; i++) {
+	for (int i = 0; i < nv; i++) {
 		if (vlist[i].vessel == vessel) {
 			vpmi.Set (0,0,0);
 			Vector r0[6], rt;
@@ -876,7 +875,7 @@ bool SuperVessel::GetPMI (const Vessel *vessel, Vector &vpmi)
 			r0[1].x = -(r0[0].x = 0.5 * sqrt (fabs (-pmi.x + pmi.y + pmi.z)));
 			r0[3].y = -(r0[2].y = 0.5 * sqrt (fabs ( pmi.x - pmi.y + pmi.z)));
 			r0[5].z = -(r0[4].z = 0.5 * sqrt (fabs ( pmi.x + pmi.y - pmi.z)));
-			for (DWORD j = 0; j < 6; j++) {
+			for (int j = 0; j < 6; j++) {
 				rt.Set (tmul (vlist[i].rrot, r0[j] + cg - vlist[i].rpos));
 				rtx2 = rt.x*rt.x, rty2 = rt.y*rt.y, rtz2 = rt.z*rt.z;
 				vpmi.x += rty2 + rtz2;
@@ -891,14 +890,14 @@ bool SuperVessel::GetPMI (const Vessel *vessel, Vector &vpmi)
 
 void SuperVessel::SetFlightStatus (FlightStatus fstatus)
 {
-	for (DWORD i = 0; i < nv; i++)
+	for (int i = 0; i < nv; i++)
 		vlist[i].vessel->fstatus = fstatus;
 }
 
 void SuperVessel::ResetSize ()
 {
 	size = 0.0;
-	for (DWORD i = 0; i < nv; i++) {
+	for (int i = 0; i < nv; i++) {
 		Vector p (vlist[i].rpos - cg);
 		double r = p.length() + vlist[i].vessel->Size();
 		if (r > size) size = r;
@@ -910,7 +909,7 @@ void SuperVessel::ResetMassAndCG ()
 	// centre of gravity and total mass
 	Vector cg_new;
 	mass = 0.0;
-	for (DWORD i = 0; i < nv; i++) {
+	for (int i = 0; i < nv; i++) {
 		mass += vlist[i].vessel->mass;
 		cg_new += vlist[i].rpos * vlist[i].vessel->mass;
 	}
@@ -929,7 +928,7 @@ void SuperVessel::CalcPMI ()
 	// Calculates the PMI values for the supervessel from the layout and component PMI
 	// values. For details see Doc/Technotes/composite.pdf.
 
-	DWORD i, j;
+	int i, j;
 	Vector r0[6], rt;
 	double rtx2, rty2, rtz2, vmass;
 	double vpmix, vpmiy, vpmiz;

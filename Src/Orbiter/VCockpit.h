@@ -63,7 +63,7 @@ public:
 	bool SetClickZone_Spherical (int i, const Vector &cnt, double rad);
 	bool SetClickZone_Quadrilateral (int i, const Vector &p1, const Vector &p2, const Vector &p3, const Vector &p4);
 
-	bool ProcessMouse (UINT event, DWORD state, int x, int y);
+	bool ProcessMouse (oapi::MouseEvent event, int state, int x, int y);
 	void GetMouseState (int &idx, int &state, Vector &xs) const;
 	inline void SetMouseState (int state) { mstate = state; }
 
@@ -85,13 +85,13 @@ private:
 	int idx_mfocus;   // index of area currently receiving mouse focus
 	int mstate;       // current mouse state
 	mutable Vector mouse_r;   // mouse position coefficients (area-type dependent)
-	HWND cwnd;        // window handle for mouse position offset calculations
+	//HWND cwnd;        // window handle for mouse position offset calculations
 
 	struct {          // HUD parameters
 		VCHUDSPEC spec;             // VC HUD specs
 		SURFHANDLE surf;            // surface for VC HUD
 		COLORREF col;               // HUD colour
-		BYTE intens;                // HUD intensity
+		uint8_t intens;                // HUD intensity
 	} hud;
 
 	struct Area {
@@ -110,12 +110,12 @@ private:
 			struct {
 				Vector cnt;   // centre of click area in local vessel coords
 				double rad;   // radius of click area
-			};
+			} spherical;
 			struct {
 				Vector p[4];            // corner points
 				float a, b, c, d;       // coeffs for equation of plane: ax+by+cz+d = 0
 				float u[4], v[4];       // coefficients for transforming to local quad frame
-			};
+			} quad;
 		};
 	} **area;
 	int narea, nareabuf;

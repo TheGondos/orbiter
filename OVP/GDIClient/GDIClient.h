@@ -24,7 +24,6 @@
 #endif
 
 class GDIPad;
-union oapi::IVECTOR2;
 
 // ======================================================================
 // class GDIClient

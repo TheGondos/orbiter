@@ -5,7 +5,7 @@
 #define __MARSATM2006_H
 
 #include "OrbiterAPI.h"
-#include "CelbodyAPI.h"
+#include "CelBodyAPI.h"
 
 // ======================================================================
 // class MarsAtmosphere_2006
@@ -15,9 +15,9 @@
 class MarsAtmosphere_2006: public ATMOSPHERE {
 public:
 	MarsAtmosphere_2006 (CELBODY2 *body): ATMOSPHERE (body) {}
-	const char *clbkName () const;
-	bool clbkConstants (ATMCONST *atmc) const;
-	bool clbkParams (const PRM_IN *prm_in, PRM_OUT *prm);
+	const char *clbkName () const override;
+	bool clbkConstants (ATMCONST *atmc) const override;
+	bool clbkParams (const PRM_IN *prm_in, PRM_OUT *prm) override;
 };
 
 #endif // !__MARSATM2006_H

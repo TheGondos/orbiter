@@ -18,9 +18,7 @@
 ** OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 ** THE SOFTWARE.*/
 
-#define STRICT
-
-#include "orbitersdk.h"
+#include "Orbitersdk.h"
 #include <deque>
 #include "mfd.h"
 #include "intercept.h"
@@ -493,7 +491,8 @@ bool transxstate::doupdate(Sketchpad *sketchpad, int tw, int th,unsigned int cur
 		cfunction->doupdate(sketchpad,tw,th,currview);
 	}
 	char buffer[20];
-	int length=sprintf(buffer,"Stage %i:%z",curfunction,baselist.size());
+	printf("size=%zu\n", baselist.size());
+	int length=sprintf(buffer,"Stage %i:%zu",curfunction,baselist.size());
 	sketchpad->Text(tw/2,0,buffer,length);
 	length=sprintf(buffer,"Vars Stage %i",curvarfunction);
 	sketchpad->Text(tw/2,4*linespacing,buffer,length);

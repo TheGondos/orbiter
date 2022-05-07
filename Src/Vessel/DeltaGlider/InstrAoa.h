@@ -12,7 +12,7 @@
 #ifndef __INSTRAOA_H
 #define __INSTRAOA_H
 
-#include "..\Common\Instrument.h"
+#include "../Common/Instrument.h"
 
 class InstrAOA: public PanelElement {
 public:
@@ -21,9 +21,9 @@ public:
 	void Reset2D (int panelid, MESHHANDLE hMesh);
 	void ResetVC (DEVMESHHANDLE hMesh);
 	void LoadVC (int vcid);
-	void LoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH);
+	void LoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH);
 
-	void AddMeshData2D (MESHHANDLE hMesh, DWORD grpidx);
+	void AddMeshData2D (MESHHANDLE hMesh, int grpidx);
 
 	bool Redraw2D (SURFHANDLE surf);
 	bool RedrawVC (DEVMESHHANDLE hMesh, SURFHANDLE surf);
@@ -33,8 +33,8 @@ private:
 	double paoa; // previous AOA value
 	GROUPREQUESTSPEC vc_grp;         ///< Buffered VC vertex data (tape)
 	GROUPREQUESTSPEC vc_grp_readout; ///< Buffered VC vertex data (readout)
-	WORD vperm[8];
-	WORD vperm_readout[16];
+	uint16_t vperm[8];
+	uint16_t vperm_readout[16];
 	float ycnt, disph; // display geometry
 };
 

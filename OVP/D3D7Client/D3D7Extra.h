@@ -15,7 +15,7 @@
 #ifndef __D3D7EXTRA_H
 #define __D3D7EXTRA_H
 
-#include "orbitersdk.h"
+#include "Orbitersdk.h"
 #include "D3D7Client.h"
 
 class D3D7Config;

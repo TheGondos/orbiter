@@ -178,7 +178,7 @@ int calclon (double dj, const SeriesData *sd, double *dlo)
 // ==========================================================
 // Read perturbation terms
 
-void ReadData (char *fname, int res)
+void ReadData (const char *fname, int res)
 {
     SeriesData *sd = sdata;
 
@@ -190,6 +190,10 @@ void ReadData (char *fname, int res)
     static double radsdg = atan(1.) / 45.;
 
     FILE *f = fopen (fname, "rt");
+    if(f == NULL) {
+      fprintf(stderr, "Tass17::ReadData: cannot open %s\n", fname);
+      exit(-1);
+    }
     fscanf (f, "%lf", &gk);
     fscanf (f, "%lf", &tas);
     gk1 = pow (gk*365.25, 2.0) / tas;

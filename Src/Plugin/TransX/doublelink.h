@@ -20,6 +20,7 @@
 
 #ifndef __DBLLIST_H
 #define __DBLLIST_H
+#include <cstddef>
 
 class dbllist
 {
@@ -33,7 +34,7 @@ public:
 	class dblliter *getiterator();
 	void empty();//empties the list
 	~dbllist();//deletes all elements if list is classified as managed
-	dbllist(){first=last=NULL;firstiter=NULL;};
+	dbllist(){first=last=nullptr;firstiter=nullptr;};
 	friend class listelement;
 	friend class dblliter;
 };

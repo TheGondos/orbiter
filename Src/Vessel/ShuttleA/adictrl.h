@@ -12,7 +12,7 @@
 #ifndef __ADICTRL_H
 #define __ADICTRL_H
 
-#include "..\Common\Instrument.h"
+#include "../Common/Instrument.h"
 
 // ==============================================================
 
@@ -21,7 +21,7 @@ class ADICtrl: public PanelElement {
 
 public:
 	ADICtrl (ShuttleA *shuttlea);
-	void AddMeshData2D (MESHHANDLE hMesh, DWORD grpidx, DWORD grpidx_disp);
+	void AddMeshData2D (MESHHANDLE hMesh, int grpidx, int grpidx_disp);
 	bool Redraw2D (SURFHANDLE surf);
 	bool ProcessMouse2D (int event, int mx, int my);
 
@@ -40,7 +40,7 @@ private:
 	int refmode;
 	int tgtmode;
 	MESHGROUP *ctrlgrp, *dispgrp;
-	DWORD ctrlofs, dispofs;
+	int ctrlofs, dispofs;
 
 	struct {
 		int frmmode;

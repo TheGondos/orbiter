@@ -72,7 +72,7 @@ protected:
 
 public:
 	static Pen* SelectDefaultPen(Sketchpad *sketchpad, int value);
-	static Brush* TransXFunction::SelectBrush(Sketchpad *sketchpad, int value);
+	static Brush* SelectBrush(Sketchpad *sketchpad, int value);
 
 	MFDvarhandler* getvariablehandler();//Passes pointer to variable handler
 	TransXFunction(class transxstate *tstate, OBJHANDLE thmajor, OBJHANDLE thminor, OBJHANDLE thtarget, OBJHANDLE thcraft, OBJHANDLE thbase);//Constructor
@@ -104,7 +104,7 @@ public:
 	bool sethmajtarget(OBJHANDLE handle);
 	void sethcraft(OBJHANDLE handle);
 	void sethbase(OBJHANDLE handle);
-	void sethelp(char *help1,char *help2,char *help3,char *help4,char *help5);
+	void sethelp(const char *help1,const char *help2,const char *help3,const char *help4,const char *help5);
 	void gethelp(char *help1,char *help2,char *help3,char *help4,char *help5) const;
 };
 

@@ -13,7 +13,7 @@
 // Simple management of persistent mesh templates
 // ==============================================================
 
-#include "Meshmgr.h"
+#include "MeshMgr.h"
 
 using namespace oapi;
 

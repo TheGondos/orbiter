@@ -14,7 +14,7 @@
 #include "Dragonfly.h"
 #include <stdio.h>
 #include <math.h>
-#include "internal.h"
+#include "Internal.h"
 //#include "glstuff.cpp"
 HINSTANCE hDLL; 
 double Lsim;

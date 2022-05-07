@@ -5,14 +5,13 @@
 #include "Pane.h"
 #include "Psys.h"
 #include "Nav.h"
-
+#include <cmath>
 using namespace std;
 
 extern PlanetarySystem *g_psys;
 extern TimeData td;
 extern Pane *g_pane;
-extern InputBox *g_input;
-extern Select *g_select;
+extern Orbiter *g_pOrbiter;
 
 // =======================================================================
 // class Instrument_Docking
@@ -21,7 +20,7 @@ struct Instrument_Docking::SavePrm Instrument_Docking::saveprm = {
 	0,Instrument_Docking::NAV,0,0,-1
 };
 
-Instrument_Docking::Instrument_Docking (Pane *_pane, INT_PTR _id, const Spec &spec, Vessel *_vessel, bool restore)
+Instrument_Docking::Instrument_Docking (Pane *_pane, MfdId _id, const Spec &spec, Vessel *_vessel, bool restore)
 : Instrument (_pane, _id, spec, _vessel)
 {
 	int i;
@@ -37,7 +36,7 @@ Instrument_Docking::Instrument_Docking (Pane *_pane, INT_PTR _id, const Spec &sp
 		brush[0] = gc->clbkCreateBrush (col_green2);
 		brush[1] = gc->clbkCreateBrush (col_yellow1);
 		brush[2] = gc->clbkCreateBrush (col_red1);
-		brush[3] = gc->clbkCreateBrush (RGB(255,255,255));
+		brush[3] = gc->clbkCreateBrush (0x00ffffff);
 	} else {
 		for (i = 0; i < 4; i++) brush[i] = 0;
 	}
@@ -70,13 +69,6 @@ Instrument_Docking::~Instrument_Docking ()
 	}
 }
 
-HELPCONTEXT *Instrument_Docking::HelpTopic () const
-{
-	extern HELPCONTEXT DefHelpContext;
-	DefHelpContext.topic = "/mfd_dock.htm";
-	return &DefHelpContext;
-}
-
 void Instrument_Docking::SetupVessel ()
 {
 	if (vessel && vessel->ndock && refdock < vessel->ndock) {
@@ -86,7 +78,7 @@ void Instrument_Docking::SetupVessel ()
 	}
 }
 
-void Instrument_Docking::SetReference (Vessel *_vessel, DWORD dock)
+void Instrument_Docking::SetReference (Vessel *_vessel, int dock)
 {
 	vessel = _vessel;
 	refdock = dock;
@@ -98,7 +90,7 @@ int Instrument_Docking::ProcessMessage (int msg, void *data)
 {
 	struct REFTAG {
 		Vessel *v;
-		DWORD dock;
+		int dock;
 	} *ref;
 
 	switch (msg) {
@@ -172,18 +164,18 @@ void Instrument_Docking::UpdateDraw (oapi::Sketchpad *skp)
 	skp->SetTextColor(draw[2][0].col);
 	skp->SetTextAlign(oapi::Sketchpad::CENTER);
 
-	skp->Text(circx, circy - (circr * 116) / 100, "0º", 2);
+	skp->Text(circx, circy - (circr * 116) / 100, "0ï¿½", 2);
 	if (scale) {
-		skp->Text(circx + circr / 2, circy+1, "2º", 2);
-		skp->Text(circx + circr, circy+1, "4º", 2);
-		skp->Text(circx - (circr * 54) / 100, circy - (circr * 102) / 100, "3º", 2);
-		skp->Text(circx + (circr * 54) / 100, circy - (circr * 102) / 100, "3º", 2);
+		skp->Text(circx + circr / 2, circy+1, "2ï¿½", 2);
+		skp->Text(circx + circr, circy+1, "4ï¿½", 2);
+		skp->Text(circx - (circr * 54) / 100, circy - (circr * 102) / 100, "3ï¿½", 2);
+		skp->Text(circx + (circr * 54) / 100, circy - (circr * 102) / 100, "3ï¿½", 2);
 	}
 	else {
-		skp->Text(circx + circr / 2, circy+1, "10º", 3);
-		skp->Text(circx + circr, circy+1, "20º", 3);
-		skp->Text(circx - (circr*54)/100, circy - (circr*102)/100, "30º", 3);
-		skp->Text(circx + (circr*54)/100, circy - (circr*102)/100, "30º", 3);
+		skp->Text(circx + circr / 2, circy+1, "10ï¿½", 3);
+		skp->Text(circx + circr, circy+1, "20ï¿½", 3);
+		skp->Text(circx - (circr*54)/100, circy - (circr*102)/100, "30ï¿½", 3);
+		skp->Text(circx + (circr*54)/100, circy - (circr*102)/100, "30ï¿½", 3);
 	}
 
 	skp->SetTextAlign(oapi::Sketchpad::LEFT);
@@ -253,7 +245,7 @@ void Instrument_Docking::UpdateDraw (oapi::Sketchpad *skp)
 	case VIS: { // video acquisition
 
 		const Vessel *vtgt;
-		if (vtgt = vessel->DockMate (refdock)) {
+		if ((vtgt = vessel->DockMate (refdock))) {
 			ps = vtgt->GetDockParams (vessel->dock[refdock]->matedock);
 		} else if (vessel->closedock.dist < 100) {
 			vtgt = vessel->closedock.vessel;
@@ -348,7 +340,7 @@ void Instrument_Docking::UpdateDraw (oapi::Sketchpad *skp)
 		double s = (adockref.z - adpos.z) / addir.z;
 		Vector Z (adpos - adockref + addir*s);
 
-		double z = _hypot (Z.x, Z.y);
+		double z = std::hypot (Z.x, Z.y);
 		double lz = (log10(z)+1.0+scale) * 0.25;
 		if (lz < 0.0) {
 			x = y = 0;
@@ -395,7 +387,7 @@ void Instrument_Docking::UpdateDraw (oapi::Sketchpad *skp)
 		// Ship's relative velocity projected into ship's approach xy plane
 		double dvx = (adposold.x-adpos.x)/dt;
 		double dvy = (adposold.y-adpos.y)/dt;
-		r = _hypot(dvx, dvy);
+		r = std::hypot(dvx, dvy);
 
 		sprintf(cbuf, "hV %s", DistStr(fabs(dvx), 5));
 		x0 = cw / 2;
@@ -589,17 +581,17 @@ void Instrument_Docking::DrawArrow(int x0, int y0, int dir, oapi::Sketchpad *skp
 	}
 }
 
-bool Instrument_Docking::KeyBuffered (DWORD key)
+bool Instrument_Docking::KeyBuffered (int key)
 {
 	switch (key) {
-	case DIK_D:  // docking port
+	case OAPI_KEY_D:  // docking port
 		SetReference (vessel, (refdock+1)%ndock);
 		Refresh();
 		return true;
-	case DIK_H:  // copy reference to HUD
+	case OAPI_KEY_H:  // copy reference to HUD
 		CopyToHUD ();
 		return true;
-	case DIK_N:  // NAV receiver select
+	case OAPI_KEY_N:  // NAV receiver select
 		if (smode == NAV) {
 			if (vessel->nnav) nv = (nv+1) % vessel->nnav;
 		} else {
@@ -607,24 +599,27 @@ bool Instrument_Docking::KeyBuffered (DWORD key)
 		}
 		Refresh();
 		return true;
-	case DIK_V: // visual mode
+	case OAPI_KEY_V: // visual mode
 		smode = VIS;
 		Refresh();
 		return true;
-	case DIK_S: // scale resolution
+	case OAPI_KEY_S: // scale resolution
 		scale = 1 - scale;
 		Refresh();
 		return true;
-	case DIK_T:  // select target - OBSOLETE
-		g_select->Open ("Docking MFD: Target", ClbkSelection_Target, ClbkEnter_Target, (void*)this);
-		return true;
+	case OAPI_KEY_T:  // select target - OBSOLETE
+		{
+			Select *select = (Select *)g_pOrbiter->m_pGUIManager->GetCtrl<Select>();
+			select->Open ("Docking MFD: Target", ClbkSelection_Target, ClbkEnter_Target, (void*)this);
+			return true;
+		}
 	}
 	return false;
 }
 
 bool Instrument_Docking::ProcessButton (int bt, int event)
 {
-	static const DWORD btkey[6] = { DIK_D, DIK_N, DIK_V, DIK_T, DIK_S, DIK_H };
+	static const int btkey[6] = { OAPI_KEY_D, OAPI_KEY_N, OAPI_KEY_V, OAPI_KEY_T, OAPI_KEY_S, OAPI_KEY_H };
 	if (event & PANEL_MOUSE_LBDOWN) {
 		if (ndock > 1) {
 			if (bt < 6) return KeyBuffered (btkey[bt]);
@@ -656,9 +651,9 @@ int Instrument_Docking::BtnMenu (const MFDBUTTONMENU **menu) const
 	return (ndock > 1 ? 6 : 5);
 }
 
-bool Instrument_Docking::ClbkSelection_Target (Select *menu, int item, char *str, void *data)
+bool Instrument_Docking::ClbkSelection_Target (Select *menu, int item, const char *str, void *data)
 {
-	DWORD i;
+	int i;
 	Instrument_Docking *mfd = (Instrument_Docking*)data;
 	Vessel *vessel;
 
@@ -673,7 +668,7 @@ bool Instrument_Docking::ClbkSelection_Target (Select *menu, int item, char *str
 		return true;
 	} else { // submenu
 		char cbuf[256];
-		if (vessel = g_psys->GetVessel (str, true)) {
+		if ((vessel = g_psys->GetVessel (str, true))) {
 			for (i = 0; i < vessel->nDock(); i++) {
 				sprintf (cbuf, "%s, dock %d", vessel->Name(), i+1);
 				menu->Append (cbuf);
@@ -684,23 +679,24 @@ bool Instrument_Docking::ClbkSelection_Target (Select *menu, int item, char *str
 	}
 }
 
-bool Instrument_Docking::ClbkEnter_Target (Select *menu, int item, char *str, void *data)
+bool Instrument_Docking::ClbkEnter_Target (Select *menu, int item, const char *str, void *data)
 {
 	Instrument_Docking *mfd = (Instrument_Docking*)data;
 	if (!strcmp (str, "By name ...")) {
-		g_input->Open ("Docking MFD: Enter target (e.g. 'ISS' or 'ISS 1')", 0, 30, CallbackTarget, data);
+		InputBox *input = (InputBox *)g_pOrbiter->m_pGUIManager->GetCtrl<InputBox>();
+		input->Open ("Docking MFD: Enter target (e.g. 'ISS' or 'ISS 1')", 0, 30, CallbackTarget, data);
 		return true;
 	} else
 		return mfd->SetTarget (str);
 }
 
-bool Instrument_Docking::CallbackTarget (InputBox*, char *str, void *data)
+bool Instrument_Docking::CallbackTarget (InputBox*, const char *str, void *data)
 {
 	Instrument_Docking* instr = (Instrument_Docking*)data;
 	return instr->SetTarget (str);
 }
 
-bool Instrument_Docking::SetTarget (char *str)
+bool Instrument_Docking::SetTarget (const char *str)
 {
 	char name[256];
 	int dock;
@@ -712,7 +708,7 @@ bool Instrument_Docking::SetTarget (char *str)
 	}
 	Vessel *obj = g_psys->GetVessel (name, true);
 	if (!obj) return false;
-	if (bdock && (dock < 1 || (DWORD)dock > obj->nDock())) return false;
+	if (bdock && (dock < 1 || dock > obj->nDock())) return false;
 	Legacy_ref = obj;
 	Legacy_port = (bdock ? dock : 0) - 1;
 	smode = DIRECT;

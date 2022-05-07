@@ -47,9 +47,9 @@ vPlanet::vPlanet (OBJHANDLE _hObj, const Scene *scene): vObject (_hObj, scene)
 	render_rad = (float)(0.1*rad);
 	dist_scale = 1.0f;
 	max_centre_dist = 0.9*scene->GetCamera()->GetFarlimit();
-	maxdist = max (max_centre_dist, max_surf_dist + rad);
+	maxdist = std::max (max_centre_dist, max_surf_dist + rad);
 	max_patchres = *(DWORD*)oapiGetObjectParam (_hObj, OBJPRM_PLANET_SURFACEMAXLEVEL);
-	max_patchres = min (max_patchres, *(DWORD*)gc->GetConfigParam (CFGPRM_SURFACEMAXLEVEL));
+	max_patchres = std::min ((DWORD)max_patchres, *(DWORD*)gc->GetConfigParam (CFGPRM_SURFACEMAXLEVEL));
 	int tilever = *(int*)oapiGetObjectParam (_hObj, OBJPRM_PLANET_TILEENGINE);
 	if (tilever < 2) {
 		surfmgr = new SurfaceManager (gc, this);
@@ -61,12 +61,12 @@ vPlanet::vPlanet (OBJHANDLE _hObj, const Scene *scene): vObject (_hObj, scene)
 		prm.horizon_excess = *(double*)oapiGetObjectParam (_hObj, OBJPRM_PLANET_HORIZONEXCESS);
 		prm.tilebb_excess = *(double*)oapiGetObjectParam (_hObj, OBJPRM_PLANET_TILEBBEXCESS);
 	}
-	prm.horizon_minrad = min (1.0 + *(double*)oapiGetObjectParam (_hObj, OBJPRM_PLANET_MINELEVATION)/size, 1.0-1e-4);
+	prm.horizon_minrad = std::min (1.0 + *(double*)oapiGetObjectParam (_hObj, OBJPRM_PLANET_MINELEVATION)/size, 1.0-1e-4);
 	prm.bAtm = oapiPlanetHasAtmosphere (_hObj);
 	if (prm.bAtm) {
 		const ATMCONST *atmc = oapiGetPlanetAtmConstants(_hObj);
 		prm.atm_href = log(atmc->rho0)*2e4 + 2e4;
-		prm.atm_amb0 = min (0.7, log (atmc->rho0+1.0)*0.35);
+		prm.atm_amb0 = std::min (0.7, log (atmc->rho0+1.0)*0.35);
 		DWORD amb0 = *(DWORD*)gc->GetConfigParam (CFGPRM_AMBIENTLEVEL);
 		prm.amb0col = 0;
 		for (int i = 0; i < 4; i++) prm.amb0col |= amb0 << (i<<3);
@@ -109,7 +109,7 @@ vPlanet::vPlanet (OBJHANDLE _hObj, const Scene *scene): vObject (_hObj, scene)
 			}
 		} else { // v2 cloud engine
 			int maxlvl = *(int*)oapiGetObjectParam (_hObj, OBJPRM_PLANET_CLOUDMAXLEVEL);
-			maxlvl = min (maxlvl, *(DWORD*)gc->GetConfigParam (CFGPRM_SURFACEMAXLEVEL));
+			maxlvl = std::min ((DWORD)maxlvl, *(DWORD*)gc->GetConfigParam (CFGPRM_SURFACEMAXLEVEL));
 			cloudmgr2 = new TileManager2<CloudTile> (this, maxlvl, 32);
 		}
 	} else {
@@ -225,24 +225,25 @@ bool vPlanet::Update ()
 
 			// world matrix for cloud shadows on the surface
 			memcpy (&clouddata->mWorldC0, &mWorld, sizeof (D3DMATRIX));
+			/* FIXME: cloud shadows
 			if (prm.cloudrot) {
 				static D3DMATRIX crot (1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1);
 				crot._11 =   crot._33 = (float)cos(prm.cloudrot);
 				crot._13 = -(crot._31 = (float)sin(prm.cloudrot));
 				D3DMAT_MatrixMultiply (&clouddata->mWorldC0, &clouddata->mWorldC0, &crot);
-			}
+			}*/
 
 			// world matrix for cloud layer
 			memcpy (&clouddata->mWorldC, &clouddata->mWorldC0, sizeof (D3DMATRIX));
 			for (i = 0; i < 3; i++)
 				for (j = 0; j < 3; j++) {
-					clouddata->mWorldC.m[i][j] *= cloudscale;
+					clouddata->mWorldC(i,j) *= cloudscale;
 				}
 
 			// set microtexture intensity
 			double alt = cdist-rad;
 			double lvl = (clouddata->microalt1-alt)/(clouddata->microalt1-clouddata->microalt0);
-			clouddata->cloudmgr->SetMicrolevel (max (0, min (1, lvl)));
+			clouddata->cloudmgr->SetMicrolevel (std::max (0.0, std::min (1.0, lvl)));
 		}
 	}
 
@@ -277,7 +278,7 @@ bool vPlanet::Update ()
 
 void vPlanet::CheckResolution ()
 {
-	double alt = max (1.0, cdist-rad);
+	double alt = std::max (1.0, cdist-rad);
 	double apr = rad * scn->ViewH()*0.5 / (alt * scn->GetCamera()->GetTanAp());
 	// apparent planet radius in units of screen pixels
 
@@ -294,7 +295,7 @@ void vPlanet::CheckResolution ()
 
 		static const double scal2 = 1.0/log(2.0);
 		const double shift = (surfmgr2 ? 6.0 : 5.0); // reduce level for tile mgr v2, because of increased patch size
-		new_patchres = min (max ((int)(scal2*log(ntx)-shift),1), max_patchres);
+		new_patchres = std::min (std::max ((int)(scal2*log(ntx)-shift),1), max_patchres);
 	}
 	if (new_patchres != patchres) {
 		if (hashaze) {
@@ -317,9 +318,9 @@ void vPlanet::CheckResolution ()
 void vPlanet::RenderZRange (double *nplane, double *fplane)
 {
 	double d = dotp (*scn->GetCamera()->GetGDir(), cpos);
-	*fplane = max (1e3, d+rad*1.2);
-	*nplane = max (1e0, d-rad*1.2);
-	*fplane = min (*fplane, *nplane*1e5);
+	*fplane = std::max (1e3, d+rad*1.2);
+	*nplane = std::max (1e0, d-rad*1.2);
+	*fplane = std::min (*fplane, *nplane*1e5);
 }
 
 // ==============================================================
@@ -377,7 +378,7 @@ bool vPlanet::Render (LPDIRECT3DDEVICE7 dev)
 		}
 
 		if (prm.bFog) { // set up distance fog
-			double h = max (1.0, cdist-size);
+			double h = std::max (1.0, cdist-size);
 
 			VECTOR3 fogcol = fog.col;
 			double h_ref = fog.alt_ref;   // 3e3;
@@ -407,10 +408,10 @@ bool vPlanet::Render (LPDIRECT3DDEVICE7 dev)
 				VECTOR3 ppos;
 				oapiGetGlobalPos (hObj, &ppos);
 				double cosa = dotp (unit(ppos), unit(cpos));
-				double bright = 1.0 * max (0.0, min (1.0, cosa + 0.3));
-				float rfog = (float)(bright*(min(1.0,fogcol.x)+0.0)); // "whiten" the fog colour
-				float gfog = (float)(bright*(min(1.0,fogcol.y)+0.0));
-				float bfog = (float)(bright*(min(1.0,fogcol.z)+0.0));
+				double bright = 1.0 * std::max (0.0, std::min (1.0, cosa + 0.3));
+				float rfog = (float)(bright*(std::min(1.0,fogcol.x)+0.0)); // "whiten" the fog colour
+				float gfog = (float)(bright*(std::min(1.0,fogcol.y)+0.0));
+				float bfog = (float)(bright*(std::min(1.0,fogcol.z)+0.0));
 				dev->SetRenderState (D3DRENDERSTATE_FOGENABLE, TRUE);
 				dev->SetRenderState (D3DRENDERSTATE_FOGVERTEXMODE, D3DFOG_NONE);
 				dev->SetRenderState (D3DRENDERSTATE_FOGTABLEMODE, D3DFOG_EXP);
@@ -580,7 +581,7 @@ void vPlanet::RenderCloudLayer (LPDIRECT3DDEVICE7 dev, DWORD cullmode, const Ren
 	if (cloudmgr2)
 		cloudmgr2->Render (dmWorld, false, prm);
 	else
-		clouddata->cloudmgr->Render (dev, clouddata->mWorldC, dist_scale, min(patchres,8), clouddata->viewap); // clouds
+		clouddata->cloudmgr->Render (dev, clouddata->mWorldC, dist_scale, std::min(patchres,8), clouddata->viewap); // clouds
 	dev->SetRenderState (D3DRENDERSTATE_ALPHABLENDENABLE, FALSE);
 	if (cullmode != D3DCULL_CCW) dev->SetRenderState (D3DRENDERSTATE_CULLMODE, D3DCULL_CCW);
 }
@@ -608,7 +609,7 @@ void vPlanet::RenderCloudShadows (LPDIRECT3DDEVICE7 dev, const RenderPrm &prm)
 			dev->SetRenderState (D3DRENDERSTATE_ALPHABLENDENABLE, TRUE);
 		dev->SetTextureStageState (0, D3DTSS_ALPHAOP, D3DTOP_MODULATE);
 
-		clouddata->cloudmgr->Render (dev, clouddata->mWorldC0, min(patchres,8), (int)clouddata->viewap);
+		clouddata->cloudmgr->Render (dev, clouddata->mWorldC0, std::min(patchres,8), (int)clouddata->viewap);
 
 		dev->SetTextureStageState (0, D3DTSS_ALPHAOP, D3DTOP_SELECTARG1);
 		if (!ablend)
@@ -725,14 +726,14 @@ bool vPlanet::ModLighting (DWORD &ambient)
 	if (sunelev < -14.0*RAD) return false;  // total darkness
 
 	double rscale = (size-cdist)/prm.atm_href + 1.0;    // effect altitude scale (1 on ground, 0 at reference alt)
-	double amb = prm.atm_amb0 * min (1.0, (sunelev+14.0*RAD)/(20.0*RAD)); // effect magnitude (dependent on sun elevation)
+	double amb = prm.atm_amb0 * std::min (1.0, (sunelev+14.0*RAD)/(20.0*RAD)); // effect magnitude (dependent on sun elevation)
 	if (amb < 0.05) return false;
-	amb = max (0, amb-0.05);
+	amb = std::max (0.0, amb-0.05);
 
 	DWORD addamb = (DWORD)(amb*rscale*256.0);
 	DWORD newamb = *(DWORD*)gc->GetConfigParam (CFGPRM_AMBIENTLEVEL) + addamb;
 	ambient = 0;
 	for (int i = 0; i < 4; i++)
-		ambient |= min (255, newamb) << (i<<3);
+		ambient |= std::min ((DWORD)255, newamb) << (i<<3);
 	return true;
 }

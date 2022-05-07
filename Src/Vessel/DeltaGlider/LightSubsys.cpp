@@ -16,6 +16,9 @@
 #include "meshres_p1.h"
 #include "meshres_vc.h"
 #include "dg_vc_anim.h"
+#include <cstring>
+
+#define strnicmp strncasecmp
 
 // ==============================================================
 // Light control subsystem
@@ -47,7 +50,7 @@ InstrumentLight::InstrumentLight (LightCtrlSubsystem *_subsys)
 	ELID_DIAL = AddElement (dial = new InstrumentBrightnessDial (this));
 
 	// Instrument brightness dial animation
-	static UINT InstrBDialGrp = GRP_INSTR_BRIGHTNESS_VC;
+	static unsigned int InstrBDialGrp = GRP_INSTR_BRIGHTNESS_VC;
 	static MGROUP_ROTATE InstrBDialTransform (1, &InstrBDialGrp, 1,
 		VC_INSTR_BRIGHTNESS_ref, VC_INSTR_BRIGHTNESS_axis, (float)(-280*RAD));
 	anim_dial = DG()->CreateAnimation (0.5);
@@ -61,11 +64,9 @@ void InstrumentLight::SetLight (bool on, bool force)
 	if (on == light_on && !force) return; // nothing to do
 
 	if (on != light_on) {
-		extern void UpdateCtrlDialog (DeltaGlider *dg, HWND hWnd=0);
 		light_on = on;
 		sw->SetState (light_on ? DGSwitch1::UP : DGSwitch1::DOWN);
 		DG()->TriggerRedrawArea(1, 0, ELID_SWITCH);
-		UpdateCtrlDialog (DG());
 	}
 
 	if (DG()->vcmesh) {
@@ -76,7 +77,7 @@ void InstrumentLight::SetLight (bool on, bool force)
 			{{0,0,0,0},{0,0,0,0},{0,0,0,0},{0.6,0.6,1.0,1},0}};
 		static MATERIAL btn_glow = {{1,1,1,1},{1,1,1,1},{0.1,0.1,0.1,1},{0.6,0.6,0.6,1},5};
 		oapiSetMaterial (DG()->vcmesh, 0, on ? &btn_glow : &norm);
-		int idx = max(0, min(2, light_col));
+		int idx = std::max(0, std::min(2, light_col));
 		MATERIAL mat;
 		if (on) {
 			float scale = (float)(0.2 + brightness*0.8);
@@ -97,7 +98,7 @@ void InstrumentLight::ModBrightness (bool up)
 {
 	double dt = oapiGetSimStep();
 	double db = dt * (up ? 0.3 : -0.3);
-	brightness = max(0.0, min (1.0, brightness + db));
+	brightness = std::max(0.0, std::min (1.0, brightness + db));
 	DG()->SetAnimation (anim_dial, brightness);
 	if (light_on) SetLight (true, true);
 }
@@ -209,7 +210,7 @@ CockpitLight::CockpitLight (LightCtrlSubsystem *_subsys)
 	ELID_DIAL = AddElement (dial = new CockpitBrightnessDial (this));
 
 	// Floodlight brightness dial animation
-	static UINT FloodBDialGrp = GRP_FLOOD_BRIGHTNESS_VC;
+	static unsigned int FloodBDialGrp = GRP_FLOOD_BRIGHTNESS_VC;
 	static MGROUP_ROTATE FloodBDialTransform (1, &FloodBDialGrp, 1,
 		VC_FLOOD_BRIGHTNESS_ref, VC_FLOOD_BRIGHTNESS_axis, (float)(-280*RAD));
 	anim_dial = DG()->CreateAnimation (0.5);
@@ -223,11 +224,9 @@ void CockpitLight::SetLight (int mode, bool force)
 	if (mode == light_mode && !force) return; // nothing to do
 
 	if (mode != light_mode) {
-		extern void UpdateCtrlDialog (DeltaGlider *dg, HWND hWnd=0);
 		light_mode = mode;
 		sw->SetState (mode == 0 ? DGSwitch1::CENTER : mode == 1 ? DGSwitch1::UP : DGSwitch1::DOWN);
 		DG()->TriggerRedrawArea(1, 0, ELID_SWITCH);
-		UpdateCtrlDialog (DG());
 	}
 
 	if (light) {
@@ -253,7 +252,7 @@ void CockpitLight::ModBrightness (bool up)
 {
 	double dt = oapiGetSimStep();
 	double db = dt * (up ? 0.3 : -0.3);
-	brightness = max(0.0, min (1.0, brightness + db));
+	brightness = std::max(0.0, std::min (1.0, brightness + db));
 	DG()->SetAnimation (anim_dial, brightness);
 	if (light_mode) SetLight (light_mode, true);
 }
@@ -275,8 +274,8 @@ bool CockpitLight::clbkParseScenarioLine (const char *line)
 {
 	if (!strnicmp (line, "FLOODLIGHT", 10)) {
 		sscanf (line+10, "%d%lf", &light_mode, &brightness);
-		light_mode = max (0, min (2, light_mode));
-		brightness = max (0.0, min (1.0, brightness));
+		light_mode = std::max (0, std::min (2, light_mode));
+		brightness = std::max (0.0, std::min (1.0, brightness));
 		return true;
 	}
 	return false;
@@ -369,11 +368,9 @@ void LandDockLight::SetLight (int mode, bool force)
 	if (mode == light_mode && !force) return; // nothing to do
 
 	if (mode != light_mode) {
-		extern void UpdateCtrlDialog (DeltaGlider *dg, HWND hWnd=0);
 		light_mode = mode;
 		sw->SetState(mode == 0 ? DGSwitch1::CENTER : mode == 1 ? DGSwitch1::UP : DGSwitch1::DOWN);
 		DG()->TriggerRedrawArea(1, 0, ELID_SWITCH);
-		UpdateCtrlDialog (DG());
 	}
 		
 	if (light) {
@@ -407,7 +404,7 @@ bool LandDockLight::clbkParseScenarioLine (const char *line)
 {
 	if (!strnicmp (line, "LANDDOCKLIGHT", 13)) {
 		sscanf (line+13, "%d", &light_mode);
-		light_mode = max (0, min (2, light_mode));
+		light_mode = std::max (0, std::min (2, light_mode));
 		return true;
 	}
 	return false;
@@ -415,7 +412,7 @@ bool LandDockLight::clbkParseScenarioLine (const char *line)
 
 // --------------------------------------------------------------
 
-bool LandDockLight::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH)
+bool LandDockLight::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH)
 {
 	if (panelid != 1) return false;
 
@@ -510,14 +507,11 @@ StrobeLight::StrobeLight (LightCtrlSubsystem *_subsys)
 
 void StrobeLight::SetLight (bool on)
 {
-	extern void UpdateCtrlDialog (DeltaGlider *dg, HWND hWnd=0);
-
 	if (on != light_on) {
 		light_on = on;
 		for (int i = 3; i <= 6; i++) DG()->beacon[i].active = on;
 		sw->SetState(on ? DGSwitch1::UP : DGSwitch1::DOWN);
 		DG()->TriggerRedrawArea(1, 0, ELID_SWITCH);
-		UpdateCtrlDialog (DG());
 	}
 }
 
@@ -544,7 +538,7 @@ bool StrobeLight::clbkParseScenarioLine (const char *line)
 
 // --------------------------------------------------------------
 
-bool StrobeLight::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH)
+bool StrobeLight::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH)
 {
 	if (panelid != 1) return false;
 
@@ -639,14 +633,11 @@ NavLight::NavLight (LightCtrlSubsystem *_subsys)
 
 void NavLight::SetLight (bool on)
 {
-	extern void UpdateCtrlDialog (DeltaGlider *dg, HWND hWnd=0);
-
 	if (on != light_on) {
 		light_on = on;
 		for (int i = 0; i <= 2; i++) DG()->beacon[i].active = on;
 		sw->SetState(on ? DGSwitch1::UP : DGSwitch1::DOWN);
 		DG()->TriggerRedrawArea(1, 0, ELID_SWITCH);
-		UpdateCtrlDialog (DG());
 	}
 }
 
@@ -673,7 +664,7 @@ bool NavLight::clbkParseScenarioLine (const char *line)
 
 // --------------------------------------------------------------
 
-bool NavLight::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH)
+bool NavLight::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH)
 {
 	if (panelid != 1) return false;
 

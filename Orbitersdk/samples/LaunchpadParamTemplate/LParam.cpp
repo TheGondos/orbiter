@@ -31,7 +31,7 @@ class MyRootItem;
 class MyItem;
 
 struct {
-	HINSTANCE hInst;
+	DynamicModule *hInst;
 	MyRootItem *root_item;
 	MyItem *sub_item;
 	double my_param;
@@ -123,7 +123,7 @@ INT_PTR CALLBACK MyItem::DlgProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
 // The DLL entry point
 // ==============================================================
 
-DLLCLBK void InitModule (HINSTANCE hDLL)
+DLLCLBK void InitModule (DynamicModule *hDLL)
 {
 	gParams.hInst = hDLL;
 	gParams.my_param = 0;

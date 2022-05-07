@@ -3,7 +3,6 @@
 
 add_executable(Orbiter_ng
 	Orbiter_ng.cpp
-	Orbiter_ng.rc
 )
 
 set_target_properties(Orbiter_ng

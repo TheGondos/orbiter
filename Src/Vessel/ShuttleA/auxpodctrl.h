@@ -12,7 +12,7 @@
 #ifndef __AUXPODCTRL_H
 #define __AUXPODCTRL_H
 
-#include "..\Common\Instrument.h"
+#include "../Common/Instrument.h"
 
 // ==============================================================
 
@@ -21,14 +21,14 @@ class AuxPodCtrl: public PanelElement {
 
 public:
 	AuxPodCtrl (ShuttleA *shuttlea);
-	void AddMeshData2D (MESHHANDLE hMesh, DWORD grpidx, DWORD grpidx_disp);
+	void AddMeshData2D (MESHHANDLE hMesh, int grpidx, int grpidx_disp);
 	void Reset2D(int panelid);
 	bool Redraw2D (SURFHANDLE surf);
 	bool ProcessMouse2D (int event, int mx, int my);
 
 private:
 	ShuttleA *sh;
-	UINT mode, ctrl, preset;
+	unsigned int mode, ctrl, preset;
 	double pod_angle_cmd[2];    // commanded pod angles
 	double pod_angle_ind[2];    // indicated pod angles
 	double pod_preset_ind[2];   // indicated pod presets
@@ -36,7 +36,7 @@ private:
 	bool redraw_buttons;        // button redraw signal
 	double toggle_t;
 	MESHGROUP *ctrlgrp;
-	DWORD ctrlofs, needleofs;
+	int ctrlofs, needleofs;
 };
 
 #endif // !__AUXPODCTRL_H

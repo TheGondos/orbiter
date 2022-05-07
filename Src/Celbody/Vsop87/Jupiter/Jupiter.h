@@ -13,9 +13,9 @@
 class Jupiter: public VSOPOBJ {
 public:
 	Jupiter (OBJHANDLE hCBody);
-	void clbkInit (FILEHANDLE cfg);
-	int clbkEphemeris (double mjd, int req, double *ret);
-	int clbkFastEphemeris (double simt, int req, double *ret);
+	void clbkInit (FILEHANDLE cfg) override;
+	int clbkEphemeris (double mjd, int req, double *ret) override;
+	int clbkFastEphemeris (double simt, int req, double *ret) override;
 
 private:
 	Sample bsp[2]; // barycentre offset interpolation

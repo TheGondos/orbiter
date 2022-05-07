@@ -5,7 +5,7 @@
 // ORBITER vessel module: NASA Manned Manuveuring Unit (MMU)
 // ==============================================================
 
-#include "orbitersdk.h"
+#include "Orbitersdk.h"
 
 const double slThrust = 367455;
 const double vacThrust = 414340;
@@ -18,7 +18,7 @@ public:
 	MMU (OBJHANDLE hVessel, int fmodel): VESSEL2 (hVessel, fmodel) {}
 	void clbkSetClassCaps (FILEHANDLE cfg);
 	//int clbkConsumeDirectKey (char *kstate);
-	int clbkConsumeBufferedKey (DWORD key, bool down, char *kstate);
+	int clbkConsumeBufferedKey (int key, bool down, char *kstate);
 };
 
 
@@ -337,7 +337,7 @@ int MMU::clbkConsumeDirectKey (char *kstate)
 }
 #endif
 
-int MMU::clbkConsumeBufferedKey (DWORD key, bool down, char *kstate)
+int MMU::clbkConsumeBufferedKey (int key, bool down, char *kstate)
 {
 	if (!down) return 0; // only process keydown events
 

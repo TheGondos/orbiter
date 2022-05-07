@@ -125,7 +125,8 @@ static HRESULT WINAPI DeviceEnumCallback (TCHAR* strDesc, TCHAR* strName,
                 char idStr[4];
                 // this is the newest device name
                 strcat(cbuf, " #");
-                strcat(cbuf, _itoa(dupeIDCount, idStr, 10));
+                //FIXME
+				//strcat(cbuf, _itoa(dupeIDCount, idStr, 10));
             }
             // check whether we have a duplicate of this name
             UINT j;  // we need this outside the for loop

@@ -16,6 +16,9 @@
 #include "meshres_p1.h"
 #include "meshres_vc.h"
 #include "dg_vc_anim.h"
+#include <cstring>
+
+#define _stricmp strcasecmp
 
 // ==============================================================
 
@@ -146,8 +149,8 @@ void PressureSubsystem::clbkPostStep (double simt, double simdt, double mjd)
 		dvol = pdiff*cs*simdt*1e3;
 		dpc = dvol/v_cabin;
 		pc = p_cabin + dpc;
-		if (p_cabin > p_ext_hatch) pc = max(pc,p_ext_hatch);
-		else                       pc = min(pc,p_ext_hatch);
+		if (p_cabin > p_ext_hatch) pc = std::max(pc,p_ext_hatch);
+		else                       pc = std::min(pc,p_ext_hatch);
 		p_cabin = pc;
 	}
 
@@ -166,8 +169,8 @@ void PressureSubsystem::clbkPostStep (double simt, double simdt, double mjd)
 				pa = pc = (pa*v_airlock + pc*v_extdock)/(v_airlock+v_extdock);
 			p_ext_lock = pc;
 		} else {
-			if (p_airlock > p_ext_lock) pa = max(pa,p_ext_lock);
-			else                        pa = min(pa,p_ext_lock);
+			if (p_airlock > p_ext_lock) pa = std::max(pa,p_ext_lock);
+			else                        pa = std::min(pa,p_ext_lock);
 		}
 		p_airlock = pa;
 	}
@@ -195,7 +198,7 @@ void PressureSubsystem::clbkPostStep (double simt, double simdt, double mjd)
 		dvol = pdiff*cs*simdt*1e3;
 		dpc = dvol/v_cabin;
 		pc = p_cabin + dpc;
-		pc = min (pc, p_target);
+		pc = std::min (pc, p_target);
 		p_cabin = pc;
 	}
 
@@ -206,14 +209,14 @@ void PressureSubsystem::clbkPostStep (double simt, double simdt, double mjd)
 		dvol = pdiff*cs*simdt*1e3;
 		dpa = dvol/v_airlock;
 		pa = p_airlock + dpa;
-		pa = min (pa, p_target);
+		pa = std::min (pa, p_target);
 		p_airlock = pa;
 	}
 }
 
 // --------------------------------------------------------------
 
-bool PressureSubsystem::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH)
+bool PressureSubsystem::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH)
 {
 	bool res = DGSubsystem::clbkLoadPanel2D (panelid, hPanel, viewW, viewH);
 
@@ -283,10 +286,10 @@ AirlockCtrl::AirlockCtrl (PressureSubsystem *_subsys)
 	ELID_ISWITCH = AddElement (isw = new InnerLockSwitch (this));
 
 	// Outer airlock animation
-	static UINT OLockGrp[2] = {GRP_OLock1,GRP_OLock2};
+	static unsigned int OLockGrp[2] = {GRP_OLock1,GRP_OLock2};
 	static MGROUP_ROTATE OLock (0, OLockGrp, 2,
 		_V(0,-0.080,9.851), _V(1,0,0), (float)(110*RAD));
-	static UINT VCOLockGrp[1] = {13};
+	static unsigned int VCOLockGrp[1] = {13};
 	static MGROUP_ROTATE VCOLock (1, VCOLockGrp, 1,
 		_V(0,-0.080,9.851), _V(1,0,0), (float)(110*RAD));
 	anim_olock = DG()->CreateAnimation (0);
@@ -294,11 +297,11 @@ AirlockCtrl::AirlockCtrl (PressureSubsystem *_subsys)
 	DG()->AddAnimationComponent (anim_olock, 0, 1, &VCOLock);
 
 	// Inner airlock animation
-	static UINT ILockGrp[2] = {GRP_ILock1,GRP_ILock2};
+	static unsigned int ILockGrp[2] = {GRP_ILock1,GRP_ILock2};
 	static MGROUP_ROTATE ILock (0, ILockGrp, 2,
 		_V(0,-0.573,7.800), _V(1,0,0), (float)(85*RAD));
 	// virtual cockpit mesh animation (inner airlock visible from cockpit)
-	static UINT VCILockGrp[4] = {GRP_ILOCK1_VC,GRP_ILOCK2_VC,GRP_ILOCK3_VC,GRP_ILOCK_GLASS_VC};
+	static unsigned int VCILockGrp[4] = {GRP_ILOCK1_VC,GRP_ILOCK2_VC,GRP_ILOCK3_VC,GRP_ILOCK_GLASS_VC};
 	static MGROUP_ROTATE VCILock (1, VCILockGrp, 4,
 		_V(0,-0.573,7.800), _V(1,0,0), (float)(85*RAD));
 	anim_ilock = DG()->CreateAnimation (0);
@@ -310,13 +313,10 @@ AirlockCtrl::AirlockCtrl (PressureSubsystem *_subsys)
 
 void AirlockCtrl::OpenOuterLock ()
 {
-	extern void UpdateCtrlDialog (DeltaGlider *dg, HWND hWnd=0);
-
 	ostate.Open();
 	osw->SetState(DGSwitch1::UP);
 	DG()->TriggerRedrawArea(1, 0, ELID_OSWITCH);
 	DG()->UpdateStatusIndicators();
-	UpdateCtrlDialog (DG());
 	DG()->RecordEvent ("OLOCK", "OPEN");
 }
 
@@ -324,13 +324,10 @@ void AirlockCtrl::OpenOuterLock ()
 
 void AirlockCtrl::CloseOuterLock ()
 {
-	extern void UpdateCtrlDialog (DeltaGlider *dg, HWND hWnd=0);
-
 	ostate.Close();
 	osw->SetState(DGSwitch1::DOWN);
 	DG()->TriggerRedrawArea(1, 0, ELID_OSWITCH);
 	DG()->UpdateStatusIndicators();
-	UpdateCtrlDialog (DG());
 	DG()->RecordEvent ("OLOCK", "CLOSE");
 }
 
@@ -348,13 +345,10 @@ void AirlockCtrl::RevertOuterLock ()
 
 void AirlockCtrl::OpenInnerLock ()
 {
-	extern void UpdateCtrlDialog (DeltaGlider *dg, HWND hWnd=0);
-
 	istate.Open();
 	isw->SetState(DGSwitch1::UP);
 	DG()->TriggerRedrawArea(1, 0, ELID_ISWITCH);
 	DG()->UpdateStatusIndicators();
-	UpdateCtrlDialog (DG());
 	DG()->RecordEvent ("ILOCK", "OPEN");
 }
 
@@ -362,13 +356,10 @@ void AirlockCtrl::OpenInnerLock ()
 
 void AirlockCtrl::CloseInnerLock ()
 {
-	extern void UpdateCtrlDialog (DeltaGlider *dg, HWND hWnd=0);
-
 	istate.Close();
 	isw->SetState(DGSwitch1::DOWN);
 	DG()->TriggerRedrawArea(1, 0, ELID_ISWITCH);
 	DG()->UpdateStatusIndicators();
-	UpdateCtrlDialog (DG());
 	DG()->RecordEvent ("ILOCK", "CLOSE");
 }
 
@@ -425,7 +416,7 @@ void AirlockCtrl::clbkPostStep (double simt, double simdt, double mjd)
 
 // --------------------------------------------------------------
 
-bool AirlockCtrl::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH)
+bool AirlockCtrl::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH)
 {
 	if (panelid != 1) return false;
 
@@ -479,7 +470,7 @@ bool AirlockCtrl::clbkPlaybackEvent (double simt, double event_t, const char *ev
 
 // --------------------------------------------------------------
 
-int AirlockCtrl::clbkConsumeBufferedKey (DWORD key, bool down, char *kstate)
+int AirlockCtrl::clbkConsumeBufferedKey (int key, bool down, char *kstate)
 {
 	if (KEYMOD_ALT(kstate) || KEYMOD_SHIFT(kstate))
 		return 0;
@@ -604,20 +595,20 @@ TophatchCtrl::TophatchCtrl (PressureSubsystem *_subsys)
 	ELID_SWITCH = AddElement (sw = new HatchCtrlSwitch (this));
 
 	// Top hatch animation
-	static UINT HatchGrp[2] = {GRP_Hatch1,GRP_Hatch2};
+	static unsigned int HatchGrp[2] = {GRP_Hatch1,GRP_Hatch2};
 	static MGROUP_ROTATE Hatch (0, HatchGrp, 2,
 		_V(0,2.069,5.038), _V(1,0,0), (float)(110*RAD));
-	static UINT VCHatchGrp[1] = {GRP_HATCH_VC};
+	static unsigned int VCHatchGrp[1] = {GRP_HATCH_VC};
 	static MGROUP_ROTATE VCHatch (1, VCHatchGrp, 1,
 		_V(0,2.069,5.038), _V(1,0,0), (float)(110*RAD));
-	static UINT RearLadderGrp[2] = {GRP_RearLadder1,GRP_RearLadder2};
+	static unsigned int RearLadderGrp[2] = {GRP_RearLadder1,GRP_RearLadder2};
 	static MGROUP_ROTATE RearLadder1 (0, RearLadderGrp, 2,
 		_V(0,1.7621,4.0959), _V(1,0,0), (float)(-20*RAD));
 	static MGROUP_ROTATE RearLadder2 (0, RearLadderGrp+1, 1,
 		_V(0,1.1173,4.1894), _V(1,0,0), (float)(180*RAD));
 
 	// virtual cockpit ladder animation
-	static UINT VCRearLadderGrp[2] = {GRP_LADDER1_VC,GRP_LADDER2_VC};
+	static unsigned int VCRearLadderGrp[2] = {GRP_LADDER1_VC,GRP_LADDER2_VC};
 	static MGROUP_ROTATE VCRearLadder1 (1, VCRearLadderGrp, 2,
 		_V(0,1.7621,4.0959), _V(1,0,0), (float)(-20*RAD));
 	static MGROUP_ROTATE VCRearLadder2 (1, VCRearLadderGrp+1, 1,
@@ -643,8 +634,6 @@ TophatchCtrl::~TophatchCtrl ()
 
 void TophatchCtrl::OpenHatch ()
 {
-	extern void UpdateCtrlDialog (DeltaGlider *dg, HWND hWnd=0);
-
 	if (hatch_state.IsClosed() && !hatch_vent && DG()->GetAtmPressure() < 10e3) {
 		static PARTICLESTREAMSPEC airvent = {
 			0, 1.0, 15, 0.5, 0.3, 2, 0.3, 1.0, PARTICLESTREAMSPEC::EMISSIVE,
@@ -661,7 +650,6 @@ void TophatchCtrl::OpenHatch ()
 	sw->SetState(DGSwitch1::UP);
 	DG()->TriggerRedrawArea(1, 0, ELID_SWITCH);
 	DG()->UpdateStatusIndicators();
-	UpdateCtrlDialog (DG());
 	DG()->RecordEvent ("HATCH", "OPEN");
 }
 
@@ -669,13 +657,10 @@ void TophatchCtrl::OpenHatch ()
 
 void TophatchCtrl::CloseHatch ()
 {
-	extern void UpdateCtrlDialog (DeltaGlider *dg, HWND hWnd=0);
-
 	hatch_state.Close();
 	sw->SetState(DGSwitch1::DOWN);
 	DG()->TriggerRedrawArea(1, 0, ELID_SWITCH);
 	DG()->UpdateStatusIndicators();
-	UpdateCtrlDialog (DG());
 	DG()->RecordEvent ("HATCH", "CLOSE");
 }
 
@@ -733,7 +718,7 @@ void TophatchCtrl::clbkPostStep (double simt, double simdt, double mjd)
 				hatch_state.SetState (0.2, 0.0);
 				DG()->SetAnimation(anim_hatch, 0.2);
 			} else {                 // tear off hatch
-				static UINT HatchGrp[2] = {12,88};
+				static unsigned int HatchGrp[2] = {12,88};
 				GROUPEDITSPEC ges;
 				ges.flags = GRPEDIT_SETUSERFLAG;
 				ges.UsrFlag = 3;
@@ -746,7 +731,7 @@ void TophatchCtrl::clbkPostStep (double simt, double simdt, double mjd)
 
 // --------------------------------------------------------------
 
-bool TophatchCtrl::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH)
+bool TophatchCtrl::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH)
 {
 	if (panelid != 1) return false;
 
@@ -786,7 +771,7 @@ bool TophatchCtrl::clbkPlaybackEvent (double simt, double event_t, const char *e
 
 // --------------------------------------------------------------
 
-int TophatchCtrl::clbkConsumeBufferedKey(DWORD key, bool down, char *kstate)
+int TophatchCtrl::clbkConsumeBufferedKey(int key, bool down, char *kstate)
 {
 	if (KEYMOD_ALT(kstate) || KEYMOD_SHIFT(kstate))
 		return 0;
@@ -805,7 +790,7 @@ void TophatchCtrl::RepairDamage ()
 	if (hatchfail) {
 		hatch_state.SetState (0.0, 0.0);
 		DG()->SetAnimation (anim_hatch, 0.0);
-		static UINT HatchGrp[2] = {12,88};
+		static unsigned int HatchGrp[2] = {12,88};
 		GROUPEDITSPEC ges;
 		ges.flags = GRPEDIT_SETUSERFLAG;
 		ges.UsrFlag = 0;

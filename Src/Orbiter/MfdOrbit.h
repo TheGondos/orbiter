@@ -16,12 +16,11 @@ public:
 	enum FrameMode { FRM_ECL, FRM_EQU };
 	enum DistMode { DIST_RAD, DIST_ALT };
 	enum DisplayMode { DISP_LIST, DISP_GRAPH, DISP_BOTH };
-	Instrument_Orbit (Pane *_pane, INT_PTR id, const Spec &spec, Vessel *_vessel);
+	Instrument_Orbit (Pane *_pane, MfdId id, const Spec &spec, Vessel *_vessel);
 	virtual ~Instrument_Orbit ();
 	int Type () const { return MFD_ORBIT; }
 	char ModeSelKey () const { return 'O'; }
-	HELPCONTEXT *HelpTopic () const;
-	bool KeyBuffered (DWORD key);
+	bool KeyBuffered (int key);
 	bool ProcessButton (int bt, int event);
 	const char *BtnLabel (int bt) const;
 	int BtnMenu (const MFDBUTTONMENU **menu) const;
@@ -37,13 +36,13 @@ private:
 	void DisplayOrbit (oapi::Sketchpad *skp, int which, oapi::IVECTOR2 *p);
 	void DisplayElements (oapi::Sketchpad *skp, const Elements *el, int x, int y);
 	void SetRef (const CelestialBody *ref);
-	bool SelectRef (char *str);
+	bool SelectRef (const char *str);
 	void SelectAutoRef ();
-	bool SelectTarget (char *str);
+	bool SelectTarget (const char *str);
 	void UnselectTarget ();
 	void CopyToHUD () const;
-	static bool ClbkEnter_Tgt (Select*, int, char*, void*);
-	static bool ClbkEnter_Ref (Select *menu, int item, char *str, void *data);
+	static bool ClbkEnter_Tgt (Select*, int, const char*, void*);
+	static bool ClbkEnter_Ref (Select *menu, int item, const char *str, void *data);
 
 	int ICNTX, ICNTY; // instrument centre
 	char title_str[40], proj_str[20];

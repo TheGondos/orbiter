@@ -4,7 +4,7 @@
 #define ORBITER_MODULE
 
 #include "Saturn.h"
-#include "..\Satsat\Satsat.h"
+#include "../Satsat/Satsat.h"
 
 // ======================================================================
 // class Saturn: implementation
@@ -61,6 +61,7 @@ int Saturn::clbkFastEphemeris (double simt, int req, double *ret)
 
 	// Get barycentre offset interpolation from SATSAT
 	SaturnFastEphemeris (simt, r);
+//FIXME: ret[0-5] is garbage
 	for (i = 0; i < 6; i++) ret[i] = ret[i+6]+r[i];
 
 	return EPHEM_TRUEPOS | EPHEM_TRUEVEL | EPHEM_BARYPOS | EPHEM_BARYVEL;
@@ -71,11 +72,13 @@ int Saturn::clbkFastEphemeris (double simt, int req, double *ret)
 // API interface
 // ======================================================================
 
-DLLCLBK void InitModule (HINSTANCE hModule)
-{}
+DLLCLBK void InitModule (oapi::DynamicModule *hModule) 
+{
+}
 
-DLLCLBK void ExitModule (HINSTANCE hModule)
-{}
+DLLCLBK void ExitModule (oapi::DynamicModule *hModule)
+{
+}
 
 DLLCLBK CELBODY *InitInstance (OBJHANDLE hBody)
 {

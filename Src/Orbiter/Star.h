@@ -11,8 +11,6 @@
 class PlanetarySystem;
 
 class Star: public CelestialBody {
-	friend class VStar;
-
 public:
 	Star (double _mass, double _mean_radius);
 
@@ -36,8 +34,6 @@ public:
 
 	Vector Pos2Barycentre (Vector &pos);
 
-	D3DCOLORVALUE GetLightColor();
-
 	void InitDeviceObjects ();
 	void DestroyDeviceObjects ();
 
@@ -47,7 +43,7 @@ public:
 private:
 	const PlanetarySystem *psys;  // system the star belongs to
 	double upd_t;                 // system time of next update
-	LPDIRECTDRAWSURFACE7 tex;     // billboard star texture
+	SURFHANDLE tex;     // billboard star texture
 };
 
 #endif // !__STAR_H

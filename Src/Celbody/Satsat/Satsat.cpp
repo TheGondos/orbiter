@@ -16,7 +16,7 @@ using namespace std;
 static void SatEphem (int ksat, double mjd, double *ret);
 static void SampleEphem (int ksat, double simt, double *ret);
 
-static char *satname[NSAT] = {
+static const char *satname[NSAT] = {
 	"Mimas", "Enceladus", "Tethys", "Dione", "Rhea", "Titan", "Hyperion", "Iapetus"
 };
 
@@ -32,6 +32,7 @@ static double pInterpP[NSAT][6]; // last interpolated solution
 // Base class for Saturn moons controlled by
 // TASS17 solutions
 // ===========================================================
+DLLCLBK void InitModule (oapi::DynamicModule *hModule);
 
 SATOBJ::SATOBJ (OBJHANDLE hObj, int is, double dt): CELBODY2 (hObj)
 {
@@ -236,12 +237,11 @@ void SaturnFastEphemeris (double simt, double *ret)
 // API interface
 // ===========================================================
 
-DLLCLBK void InitModule (HINSTANCE hModule)
+DLLCLBK void InitModule (oapi::DynamicModule *hModule)
 {
 	// Load the data for the TASS 1.7 perturbation solutions
 	// into global data structures
-
-	ReadData ("Config\\Saturn\\Data\\tass17.dat", 0);
+	ReadData ("Config/Saturn/Data/tass17.dat", 0);
 
 	// invalidate all data structures
 	int i;

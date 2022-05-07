@@ -13,80 +13,75 @@
 #define __D3DMATH_CPP
 #define D3D_OVERLOADS
 #define STRICT
+#include "D3dmath.h"
 #include <math.h>
 #include <stdio.h>
-#include "D3DMath.h"
 
-VOID VMAT_rotx (D3DMATRIX &a, double r)
+void VMAT_rotx (glm::fmat4 &a, double r)
 {
 	double sinr = sin(r), cosr = cos(r);
-	ZeroMemory (&a, sizeof (D3DMATRIX));
-	a._22 = a._33 = (FLOAT)cosr;
-	a._23 = -(a._32 = (FLOAT)sinr);
-	a._11 = a._44 = 1.0f;
+	memset(&a, 0, sizeof (glm::fmat4));
+	a[1][1] = a[2][2] = (float)cosr;
+	a[1][2] = -(a[2][1] = (float)sinr);
+	a[0][0] = a[3][3] = 1.0f;
 }
 
-VOID VMAT_roty (D3DMATRIX &a, double r)
+void VMAT_roty (glm::fmat4 &a, double r)
 {
 	double sinr = sin(r), cosr = cos(r);
-	ZeroMemory (&a, sizeof (D3DMATRIX));
-	a._11 = a._33 = (FLOAT)cosr;
-	a._31 = -(a._13 = (FLOAT)sinr);
-	a._22 = a._44 = 1.0f;
+	memset (&a, 0, sizeof (glm::fmat4));
+	a[0][0] = a[2][2] = (float)cosr;
+	a[2][0] = -(a[0][2] = (float)sinr);
+	a[1][1] = a[3][3] = 1.0f;
 }
 
 // Create a rotation matrix from a rotation axis and angle
-VOID VMAT_rotation_from_axis (const D3DVECTOR &axis, D3DVALUE angle, D3DMATRIX &R)
+void VMAT_rotation_from_axis (const glm::fvec3 &axis, float angle, glm::fmat4 &R)
 {
 	// Calculate quaternion
 	angle *= 0.5f;
-	D3DVALUE w = cosf(angle), sina = sinf(angle);
-	D3DVALUE x = sina * axis.x;
-	D3DVALUE y = sina * axis.y;
-	D3DVALUE z = sina * axis.z;
+	float w = cosf(angle), sina = sinf(angle);
+	float x = sina * axis.x;
+	float y = sina * axis.y;
+	float z = sina * axis.z;
 
 	// Rotation matrix
-	D3DVALUE xx = x*x, yy = y*y, zz = z*z;
-	D3DVALUE xy = x*y, xz = x*z, yz = y*z;
-	D3DVALUE wx = w*x, wy = w*y, wz = w*z;
+	float xx = x*x, yy = y*y, zz = z*z;
+	float xy = x*y, xz = x*z, yz = y*z;
+	float wx = w*x, wy = w*y, wz = w*z;
 
-	R._11 = 1 - 2 * (yy+zz);
-	R._12 =     2 * (xy+wz);
-	R._13 =     2 * (xz-wy);
-	R._21 =     2 * (xy-wz);
-	R._22 = 1 - 2 * (xx+zz);
-	R._23 =     2 * (yz+wx);
-	R._31 =     2 * (xz+wy);
-	R._32 =     2 * (yz-wx);
-	R._33 = 1 - 2 * (xx+yy);
+	R[0][0] = 1 - 2 * (yy+zz);
+	R[0][1] =     2 * (xy+wz);
+	R[0][2] =     2 * (xz-wy);
+	R[1][0] =     2 * (xy-wz);
+	R[1][1] = 1 - 2 * (xx+zz);
+	R[1][2] =     2 * (yz+wx);
+	R[2][0] =     2 * (xz+wy);
+	R[2][1] =     2 * (yz-wx);
+	R[2][2] = 1 - 2 * (xx+yy);
 
-	R._14 = R._24 = R._34 = R._41 = R._42 = R._43 = 0.0f;
-	R._44 = 1.0f;
-}
-
-void D3DMathSetup ()
-{
-	VMAT_identity (Identity);
+	R[0][3] = R[1][3] = R[2][3] = R[3][0] = R[3][1] = R[3][2] = 0.0f;
+	R[3][2] = 1.0f;
 }
 
 //-----------------------------------------------------------------------------
 // Name: D3DMath_MatrixMultiply()
 // Desc: Does the matrix operation: [Q] = [A] * [B].
 //-----------------------------------------------------------------------------
-VOID D3DMath_MatrixMultiply( D3DMATRIX& q, D3DMATRIX& a, D3DMATRIX& b )
+void D3DMath_MatrixMultiply( glm::fmat4& q, glm::fmat4& a, glm::fmat4& b )
 {
-    FLOAT* pA = (FLOAT*)&a;
-    FLOAT* pB = (FLOAT*)&b;
-    FLOAT  pM[16];
+    float* pA = (float*)&a;
+    float* pB = (float*)&b;
+    float  pM[16];
 
-    ZeroMemory( pM, sizeof(D3DMATRIX) );
+    memset( pM, 0, sizeof(glm::fmat4) );
 
-    for( WORD i=0; i<4; i++ ) 
-        for( WORD j=0; j<4; j++ ) 
-            for( WORD k=0; k<4; k++ ) 
+    for( int i=0; i<4; i++ ) 
+        for( int j=0; j<4; j++ ) 
+            for( int k=0; k<4; k++ ) 
                 pM[4*i+j] += pA[4*k+j] * pB[4*i+k];
 
-    memcpy( &q, pM, sizeof(D3DMATRIX) );
+    memcpy( &q, pM, sizeof(glm::fmat4) );
 }
 
 
@@ -97,14 +92,16 @@ VOID D3DMath_MatrixMultiply( D3DMATRIX& q, D3DMATRIX& a, D3DMATRIX& b )
 // Desc: Does the matrix operation: [Q] = inv[A]. Note: this function only
 //       works for matrices with [0 0 0 1] for the 4th column.
 //-----------------------------------------------------------------------------
-HRESULT D3DMath_MatrixInvert( D3DMATRIX& q, D3DMATRIX& a )
+bool D3DMath_MatrixInvert( glm::fmat4& q, glm::fmat4& a )
 {
-    if( fabs(a._44 - 1.0f) > .001f)
-        return E_INVALIDARG;
-    if( fabs(a._14) > .001f || fabs(a._24) > .001f || fabs(a._34) > .001f )
-        return E_INVALIDARG;
 
-    FLOAT fDetInv = 1.0f / ( a._11 * ( a._22 * a._33 - a._23 * a._32 ) -
+    if( fabs(a[3][3] - 1.0f) > .001f)
+        return false;
+    if( fabs(a[0][3]) > .001f || fabs(a[1][3]) > .001f || fabs(a[2][3]) > .001f )
+        return false;
+    q = glm::inverse(a);
+/*
+    float fDetInv = 1.0f / ( a._11 * ( a._22 * a._33 - a._23 * a._32 ) -
                              a._12 * ( a._21 * a._33 - a._23 * a._31 ) +
                              a._13 * ( a._21 * a._32 - a._22 * a._31 ) );
 
@@ -127,8 +124,8 @@ HRESULT D3DMath_MatrixInvert( D3DMATRIX& q, D3DMATRIX& a )
     q._42 = -( a._41 * q._12 + a._42 * q._22 + a._43 * q._32 );
     q._43 = -( a._41 * q._13 + a._42 * q._23 + a._43 * q._33 );
     q._44 = 1.0f;
-
-    return S_OK;
+*/
+    return true;
 }
 
 
@@ -138,22 +135,22 @@ HRESULT D3DMath_MatrixInvert( D3DMATRIX& q, D3DMATRIX& a )
 // Name: D3DMath_VectorMatrixMultiply()
 // Desc: Multiplies a vector by a matrix
 //-----------------------------------------------------------------------------
-HRESULT D3DMath_VectorMatrixMultiply( D3DVECTOR& vDest, const D3DVECTOR& vSrc,
-                                      const D3DMATRIX& mat)
+bool D3DMath_VectorMatrixMultiply( glm::fvec3& vDest, const glm::fvec3& vSrc,
+                                      const glm::fmat4& mat)
 {
-    FLOAT x = vSrc.x*mat._11 + vSrc.y*mat._21 + vSrc.z* mat._31 + mat._41;
-    FLOAT y = vSrc.x*mat._12 + vSrc.y*mat._22 + vSrc.z* mat._32 + mat._42;
-    FLOAT z = vSrc.x*mat._13 + vSrc.y*mat._23 + vSrc.z* mat._33 + mat._43;
-    FLOAT w = vSrc.x*mat._14 + vSrc.y*mat._24 + vSrc.z* mat._34 + mat._44;
+    float x = vSrc.x*mat[0][0] + vSrc.y*mat[1][0] + vSrc.z* mat[2][0] + mat[3][0];
+    float y = vSrc.x*mat[0][1] + vSrc.y*mat[1][1] + vSrc.z* mat[2][1] + mat[3][1];
+    float z = vSrc.x*mat[0][2] + vSrc.y*mat[1][2] + vSrc.z* mat[2][2] + mat[3][2];
+    float w = vSrc.x*mat[0][3] + vSrc.y*mat[1][3] + vSrc.z* mat[2][3] + mat[3][3];
     
     if( fabs( w ) < g_EPSILON )
-        return E_INVALIDARG;
+        return false;
 
     vDest.x = x/w;
     vDest.y = y/w;
     vDest.z = z/w;
 
-    return S_OK;
+    return true;
 }
 
 
@@ -163,79 +160,49 @@ HRESULT D3DMath_VectorMatrixMultiply( D3DVECTOR& vDest, const D3DVECTOR& vSrc,
 // Name: D3DMath_VectorTMatrixMultiply()
 // Desc: Multiplies a vector by the transpose of a matrix
 //-----------------------------------------------------------------------------
-HRESULT D3DMath_VectorTMatrixMultiply( D3DVECTOR& vDest, const D3DVECTOR& vSrc,
-                                      const D3DMATRIX& mat)
+bool D3DMath_VectorTMatrixMultiply( glm::fvec3& vDest, const glm::fvec3& vSrc,
+                                      const glm::fmat4& mat)
 {
-    FLOAT x = vSrc.x*mat._11 + vSrc.y*mat._12 + vSrc.z* mat._13 + mat._14;
-    FLOAT y = vSrc.x*mat._21 + vSrc.y*mat._22 + vSrc.z* mat._23 + mat._24;
-    FLOAT z = vSrc.x*mat._31 + vSrc.y*mat._32 + vSrc.z* mat._33 + mat._34;
-    FLOAT w = vSrc.x*mat._41 + vSrc.y*mat._42 + vSrc.z* mat._43 + mat._44;
+    float x = vSrc.x*mat[0][0] + vSrc.y*mat[0][1] + vSrc.z* mat[0][2] + mat[0][3];
+    float y = vSrc.x*mat[1][0] + vSrc.y*mat[1][1] + vSrc.z* mat[1][2] + mat[1][3];
+    float z = vSrc.x*mat[2][0] + vSrc.y*mat[2][1] + vSrc.z* mat[2][2] + mat[2][3];
+    float w = vSrc.x*mat[3][0] + vSrc.y*mat[3][1] + vSrc.z* mat[3][2] + mat[3][3];
     
     if( fabs( w ) < g_EPSILON )
-        return E_INVALIDARG;
+        return false;
 
     vDest.x = x/w;
     vDest.y = y/w;
     vDest.z = z/w;
 
-    return S_OK;
+    return true;
 }
-
-
-
-
-//-----------------------------------------------------------------------------
-// Name: D3DMath_VertexMatrixMultiply()
-// Desc: Multiplies a vertex by a matrix
-//-----------------------------------------------------------------------------
-HRESULT D3DMath_VertexMatrixMultiply( D3DVERTEX& vDest, const D3DVERTEX& vSrc,
-                                      const D3DMATRIX& mat )
-{
-    HRESULT    hr;
-    D3DVECTOR* pSrcVec  = (D3DVECTOR*)&vSrc.x;
-    D3DVECTOR* pDestVec = (D3DVECTOR*)&vDest.x;
-
-    if( SUCCEEDED( hr = D3DMath_VectorMatrixMultiply( *pDestVec, *pSrcVec,
-                                                      mat ) ) )
-    {
-        pSrcVec  = (D3DVECTOR*)&vSrc.nx;
-        pDestVec = (D3DVECTOR*)&vDest.nx;
-        hr = D3DMath_VectorMatrixMultiply( *pDestVec, *pSrcVec, mat );
-    }
-    return hr;
-}
-
-
-
 
 //-----------------------------------------------------------------------------
 // Name: D3DMath_QuaternionFromRotation()
 // Desc: Converts a normalized axis and angle to a unit quaternion.
 //-----------------------------------------------------------------------------
-VOID D3DMath_QuaternionFromRotation( FLOAT& x, FLOAT& y, FLOAT& z, FLOAT& w,
-                                     D3DVECTOR& v, FLOAT fTheta )
+void D3DMath_QuaternionFromRotation( float& x, float& y, float& z, float& w,
+                                     glm::fvec3& v, float fTheta )
 {
-    x = (FLOAT)sin(fTheta/2) * v.x;
-    y = (FLOAT)sin(fTheta/2) * v.y;
-    z = (FLOAT)sin(fTheta/2) * v.z;
-    w = (FLOAT)cos(fTheta/2);
+    x = (float)sin(fTheta/2.0f) * v.x;
+    y = (float)sin(fTheta/2.0f) * v.y;
+    z = (float)sin(fTheta/2.0f) * v.z;
+    w = (float)cos(fTheta/2.0f);
 }
-
-
-
 
 //-----------------------------------------------------------------------------
 // Name: D3DMath_RotationFromQuaternion()
 // Desc: Converts a normalized axis and angle to a unit quaternion.
 //-----------------------------------------------------------------------------
-VOID D3DMath_RotationFromQuaternion( D3DVECTOR& v, FLOAT& fTheta,
-                                     FLOAT x, FLOAT y, FLOAT z, FLOAT w )
+void D3DMath_RotationFromQuaternion( glm::fvec3& v, float& fTheta,
+                                     float x, float y, float z, float w )
                                       
 {
-    fTheta = (FLOAT)( acos(w) * 2 );
-    v.x    = (FLOAT)( x / sin(fTheta/2) );
-    v.y    = (FLOAT)( y / sin(fTheta/2) );
-    v.z    = (FLOAT)( z / sin(fTheta/2) );
+    fTheta = (float)( acos(w) * 2.0f );
+    v.x    = (float)( x / sin(fTheta/2.0f) );
+    v.y    = (float)( y / sin(fTheta/2.0f) );
+    v.z    = (float)( z / sin(fTheta/2.0f) );
 }
 
 
@@ -245,16 +212,16 @@ VOID D3DMath_RotationFromQuaternion( D3DVECTOR& v, FLOAT& fTheta,
 // Name: D3DMath_QuaternionFromAngles()
 // Desc: Converts euler angles to a unit quaternion.
 //-----------------------------------------------------------------------------
-VOID D3DMath_QuaternionFromAngles( FLOAT& x, FLOAT& y, FLOAT& z, FLOAT& w,
-                                   FLOAT fYaw, FLOAT fPitch, FLOAT fRoll )
+void D3DMath_QuaternionFromAngles( float& x, float& y, float& z, float& w,
+                                   float fYaw, float fPitch, float fRoll )
                                         
 {
-    FLOAT fSinYaw   = (FLOAT)sin(fYaw/2);
-    FLOAT fSinPitch = (FLOAT)sin(fPitch/2);
-    FLOAT fSinRoll  = (FLOAT)sin(fRoll/2);
-    FLOAT fCosYaw   = (FLOAT)cos(fYaw/2);
-    FLOAT fCosPitch = (FLOAT)cos(fPitch/2);
-    FLOAT fCosRoll  = (FLOAT)cos(fRoll/2);
+    float fSinYaw   = (float)sin(fYaw/2);
+    float fSinPitch = (float)sin(fPitch/2);
+    float fSinRoll  = (float)sin(fRoll/2);
+    float fCosYaw   = (float)cos(fYaw/2);
+    float fCosPitch = (float)cos(fPitch/2);
+    float fCosRoll  = (float)cos(fRoll/2);
 
     x = fSinRoll * fCosPitch * fCosYaw - fCosRoll * fSinPitch * fSinYaw;
     y = fCosRoll * fSinPitch * fCosYaw + fSinRoll * fCosPitch * fSinYaw;
@@ -269,28 +236,28 @@ VOID D3DMath_QuaternionFromAngles( FLOAT& x, FLOAT& y, FLOAT& z, FLOAT& w,
 // Name: D3DMath_MatrixFromQuaternion()
 // Desc: Converts a unit quaternion into a rotation matrix.
 //-----------------------------------------------------------------------------
-VOID D3DMath_MatrixFromQuaternion( D3DMATRIX& mat, FLOAT x, FLOAT y, FLOAT z,
-                                   FLOAT w )
+void D3DMath_MatrixFromQuaternion( glm::fmat4& mat, float x, float y, float z,
+                                   float w )
 {
-    FLOAT xx = x*x; FLOAT yy = y*y; FLOAT zz = z*z;
-    FLOAT xy = x*y; FLOAT xz = x*z; FLOAT yz = y*z;
-    FLOAT wx = w*x; FLOAT wy = w*y; FLOAT wz = w*z;
+    float xx = x*x; float yy = y*y; float zz = z*z;
+    float xy = x*y; float xz = x*z; float yz = y*z;
+    float wx = w*x; float wy = w*y; float wz = w*z;
     
-    mat._11 = 1 - 2 * ( yy + zz ); 
-    mat._12 =     2 * ( xy - wz );
-    mat._13 =     2 * ( xz + wy );
+    mat[0][0] = 1 - 2 * ( yy + zz ); 
+    mat[0][1] =     2 * ( xy - wz );
+    mat[0][2] =     2 * ( xz + wy );
 
-    mat._21 =     2 * ( xy + wz );
-    mat._22 = 1 - 2 * ( xx + zz );
-    mat._23 =     2 * ( yz - wx );
+    mat[1][0] =     2 * ( xy + wz );
+    mat[1][1] = 1 - 2 * ( xx + zz );
+    mat[1][2] =     2 * ( yz - wx );
 
-    mat._31 =     2 * ( xz - wy );
-    mat._32 =     2 * ( yz + wx );
-    mat._33 = 1 - 2 * ( xx + yy );
+    mat[2][0] =     2 * ( xz - wy );
+    mat[2][1] =     2 * ( yz + wx );
+    mat[2][2] = 1 - 2 * ( xx + yy );
 
-    mat._14 = mat._24 = mat._34 = 0.0f;
-    mat._41 = mat._42 = mat._43 = 0.0f;
-    mat._44 = 1.0f;
+    mat[0][3] = mat[1][3] = mat[2][3] = 0.0f;
+    mat[3][0] = mat[3][1] = mat[3][2] = 0.0f;
+    mat[3][2] = 1.0f;
 }
 
 
@@ -300,16 +267,16 @@ VOID D3DMath_MatrixFromQuaternion( D3DMATRIX& mat, FLOAT x, FLOAT y, FLOAT z,
 // Name: D3DMath_QuaternionFromMatrix()
 // Desc: Converts a rotation matrix into a unit quaternion.
 //-----------------------------------------------------------------------------
-VOID D3DMath_QuaternionFromMatrix( FLOAT& x, FLOAT& y, FLOAT& z, FLOAT& w,
-                                   D3DMATRIX& mat )
+void D3DMath_QuaternionFromMatrix( float& x, float& y, float& z, float& w,
+                                   glm::fmat4& mat )
 {
-    if( mat._11 + mat._22 + mat._33 > 0.0f )
+    if( mat[0][0] + mat[1][1] + mat[2][2] > 0.0f )
     {
-        FLOAT s = (FLOAT)sqrt( mat._11 + mat._22 + mat._33 + mat._44 );
+        float s = (float)sqrt( mat[0][0] + mat[1][1] + mat[2][2] + mat[3][3] );
 
-        x = (mat._23-mat._32) / (2*s);
-        y = (mat._31-mat._13) / (2*s);
-        z = (mat._12-mat._21) / (2*s);
+        x = (mat[1][2]-mat[2][1]) / (2*s);
+        y = (mat[2][0]-mat[0][2]) / (2*s);
+        z = (mat[0][1]-mat[1][0]) / (2*s);
         w = 0.5f * s;
     }
     else
@@ -317,25 +284,25 @@ VOID D3DMath_QuaternionFromMatrix( FLOAT& x, FLOAT& y, FLOAT& z, FLOAT& w,
 
 
     }
-    FLOAT xx = x*x; FLOAT yy = y*y; FLOAT zz = z*z;
-    FLOAT xy = x*y; FLOAT xz = x*z; FLOAT yz = y*z;
-    FLOAT wx = w*x; FLOAT wy = w*y; FLOAT wz = w*z;
+    float xx = x*x; float yy = y*y; float zz = z*z;
+    float xy = x*y; float xz = x*z; float yz = y*z;
+    float wx = w*x; float wy = w*y; float wz = w*z;
     
-    mat._11 = 1 - 2 * ( yy + zz ); 
-    mat._12 =     2 * ( xy - wz );
-    mat._13 =     2 * ( xz + wy );
+    mat[0][0] = 1 - 2 * ( yy + zz ); 
+    mat[0][1] =     2 * ( xy - wz );
+    mat[0][2] =     2 * ( xz + wy );
 
-    mat._21 =     2 * ( xy + wz );
-    mat._22 = 1 - 2 * ( xx + zz );
-    mat._23 =     2 * ( yz - wx );
+    mat[1][0] =     2 * ( xy + wz );
+    mat[1][1] = 1 - 2 * ( xx + zz );
+    mat[1][2] =     2 * ( yz - wx );
 
-    mat._31 =     2 * ( xz - wy );
-    mat._32 =     2 * ( yz + wx );
-    mat._33 = 1 - 2 * ( xx + yy );
+    mat[2][0] =     2 * ( xz - wy );
+    mat[2][1] =     2 * ( yz + wx );
+    mat[2][2] = 1 - 2 * ( xx + yy );
 
-    mat._14 = mat._24 = mat._34 = 0.0f;
-    mat._41 = mat._42 = mat._43 = 0.0f;
-    mat._44 = 1.0f;
+    mat[0][3] = mat[1][3] = mat[2][3] = 0.0f;
+    mat[3][0] = mat[3][1] = mat[3][2] = 0.0f;
+    mat[3][3] = 1.0f;
 }
 
 
@@ -345,14 +312,14 @@ VOID D3DMath_QuaternionFromMatrix( FLOAT& x, FLOAT& y, FLOAT& z, FLOAT& w,
 // Name: D3DMath_QuaternionMultiply()
 // Desc: Mulitples two quaternions together as in {Q} = {A} * {B}.
 //-----------------------------------------------------------------------------
-VOID D3DMath_QuaternionMultiply( FLOAT& Qx, FLOAT& Qy, FLOAT& Qz, FLOAT& Qw,
-                                  FLOAT Ax, FLOAT Ay, FLOAT Az, FLOAT Aw,
-                                  FLOAT Bx, FLOAT By, FLOAT Bz, FLOAT Bw )
+void D3DMath_QuaternionMultiply( float& Qx, float& Qy, float& Qz, float& Qw,
+                                  float Ax, float Ay, float Az, float Aw,
+                                  float Bx, float By, float Bz, float Bw )
 {
-    FLOAT Dx = Bw*Ax + Bx*Aw + By*Az + Bz*Ay;
-    FLOAT Dy = Bw*Ay + By*Aw + Bz*Ax + Bx*Az;
-    FLOAT Dz = Bw*Az + Bz*Aw + Bx*Ay + By*Ax;
-    FLOAT Dw = Bw*Aw + Bx*Ax + By*Ay + Bz*Az;
+    float Dx = Bw*Ax + Bx*Aw + By*Az + Bz*Ay;
+    float Dy = Bw*Ay + By*Aw + Bz*Ax + Bx*Az;
+    float Dz = Bw*Az + Bz*Aw + Bx*Ay + By*Ax;
+    float Dw = Bw*Aw + Bx*Ax + By*Ay + Bz*Az;
 
     Qx = Dx; Qy = Dy; Qz = Dz; Qw = Dw;
 }
@@ -365,16 +332,16 @@ VOID D3DMath_QuaternionMultiply( FLOAT& Qx, FLOAT& Qy, FLOAT& Qz, FLOAT& Qw,
 // Desc: Compute a quaternion which is the spherical linear interpolation
 //       between two other quaternions by dvFraction.
 //-----------------------------------------------------------------------------
-VOID D3DMath_QuaternionSlerp( FLOAT& Qx, FLOAT& Qy, FLOAT& Qz, FLOAT& Qw,
-                              FLOAT Ax, FLOAT Ay, FLOAT Az, FLOAT Aw,
-                              FLOAT Bx, FLOAT By, FLOAT Bz, FLOAT Bw,
-                              FLOAT fAlpha )
+void D3DMath_QuaternionSlerp( float& Qx, float& Qy, float& Qz, float& Qw,
+                              float Ax, float Ay, float Az, float Aw,
+                              float Bx, float By, float Bz, float Bw,
+                              float fAlpha )
 {
-    FLOAT fScale1;
-    FLOAT fScale2;
+    float fScale1;
+    float fScale2;
 
     // Compute dot product, aka cos(theta):
-    FLOAT fCosTheta = Ax*Bx + Ay*By + Az*Bz + Aw*Bw;
+    float fCosTheta = Ax*Bx + Ay*By + Az*Bz + Aw*Bw;
 
     if( fCosTheta < 0.0f )
     {
@@ -393,11 +360,11 @@ VOID D3DMath_QuaternionSlerp( FLOAT& Qx, FLOAT& Qy, FLOAT& Qz, FLOAT& Qw,
         }
         else // Otherwise, do spherical interpolation
         {
-            FLOAT fTheta    = (FLOAT)acos( fCosTheta );
-            FLOAT fSinTheta = (FLOAT)sin( fTheta );
+            float fTheta    = (float)acos( fCosTheta );
+            float fSinTheta = (float)sin( fTheta );
             
-            fScale1 = (FLOAT)sin( fTheta * (1.0f-fAlpha) ) / fSinTheta;
-            fScale2 = (FLOAT)sin( fTheta * fAlpha ) / fSinTheta;
+            fScale1 = (float)sin( fTheta * (1.0f-fAlpha) ) / fSinTheta;
+            fScale2 = (float)sin( fTheta * fAlpha ) / fSinTheta;
         }
     }
     else
@@ -406,8 +373,8 @@ VOID D3DMath_QuaternionSlerp( FLOAT& Qx, FLOAT& Qy, FLOAT& Qz, FLOAT& Qw,
         By =  Ax;
         Bz = -Aw;
         Bw =  Az;
-        fScale1 = (FLOAT)sin( g_PI * (0.5f - fAlpha) );
-        fScale2 = (FLOAT)sin( g_PI * fAlpha );
+        fScale1 = (float)sin( g_PI * (0.5f - fAlpha) );
+        fScale2 = (float)sin( g_PI * fAlpha );
     }
 
     Qx = fScale1 * Ax + fScale2 * Bx;
@@ -415,6 +382,3 @@ VOID D3DMath_QuaternionSlerp( FLOAT& Qx, FLOAT& Qy, FLOAT& Qz, FLOAT& Qw,
     Qz = fScale1 * Az + fScale2 * Bz;
     Qw = fScale1 * Aw + fScale2 * Bw;
 }
-
-
-

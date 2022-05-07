@@ -24,13 +24,10 @@ public:
 	DefaultPanel (Pane *_pane, int cidx);
 	~DefaultPanel ();
 
-	// Restore all devices (e.g. after render window is re-openend
-	void RestoreDeviceObjects (LPDIRECT3D7 d3d, LPDIRECT3DDEVICE7 dev);
-
 	// Render the glass cockpit overlay on top of the target surface
 	void Render ();
 
-	bool ProcessMouse (UINT event, DWORD state, int x, int y);
+	bool ProcessMouse (oapi::MouseEvent event, int state, int x, int y);
 	void GetButtonState (int &state, int &mfd, int &btn);
 	inline void SetMouseState (int state) { mstate = state; }
 	inline void SetNavDisplayMode (int mode) { navdispmode = mode; }

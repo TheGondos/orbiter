@@ -19,6 +19,7 @@ double Radius (double *data);
 // Base class for Galilean Jupiter moons controlled by
 // GALSAT solutions
 // ===========================================================
+DLLCLBK void InitModule (oapi::DynamicModule *hModule);
 
 GALOBJ::GALOBJ (OBJHANDLE hObj): CELBODY2 (hObj)
 {
@@ -167,13 +168,15 @@ void SampleEphem (int ksat, double simt, double interval, double *ret, Sample *s
 // API interface
 // ===========================================================
 
-DLLCLBK void InitModule (HINSTANCE hModule)
+DLLCLBK void InitModule (oapi::DynamicModule *hModule)
 {
 	// Load the data for the Lieske perturbation solutions
 	// into global data structures
 
-	if (cd2com("Config\\Jupiter\\Data\\ephem_e15.dat")) {
-		oapiWriteLogError("Galsat: file not found: Config\\Jupiter\\Data\\ephem_e15.dat");
+	if (cd2com("Config/Jupiter/Data/ephem_e15.dat")) {
+		//oapiWriteLogError("Galsat: file not found: Config/Jupiter/Data/ephem_e15.dat");
+		fprintf(stderr, "Galsat: file not found: Config/Jupiter/Data/ephem_e15.dat\n");
+		exit(-1);
 	}
 	chkgal();
 }

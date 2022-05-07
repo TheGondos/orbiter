@@ -24,6 +24,13 @@
 class D3D7Mesh;
 class SurfTile;
 class CloudTile;
+class TileManager;
+class SurfaceManager;
+template<class T> class TileManager2;
+class CloudManager;
+class HazeManager;
+class RingManager;
+class vBase;
 
 class vPlanet: public vObject {
 	friend class TileManager;

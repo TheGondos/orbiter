@@ -6,9 +6,10 @@
 
 
 #include "panel.h"
-#include "hsystems.h"
-#include "esystems.h"
-#include "orbitersdk.h"
+#include "Hsystems.h"
+#include "Esystems.h"
+#include "Orbitersdk.h"
+#include "instruments.h"
 
 class ShipInternal
 { public:

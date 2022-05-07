@@ -19,9 +19,7 @@
 
 #include "ConfigFileParser.h"
 
-#include <Shlwapi.h>   // for PathFileExists
 #include <string.h>
-#include <atlstr.h>
 
 // Constructor
 // pDefaultFilename = path to default config file; may be relative to Orbiter root or absolute
@@ -37,9 +35,7 @@ ConfigFileParser::ConfigFileParser(const char *pDefaultFilename, const char *pLo
         m_pLogFile = fopen(pLogFilename, "a+t");
         if (m_pLogFile == nullptr)
         {
-            char temp[256];
-            sprintf(temp, "Error opening log file '%s' for writing; attempting to continue", pLogFilename);
-            MessageBox(nullptr, temp, "XR Framework Warning", MB_OK | MB_SETFOREGROUND);
+            fprintf(stderr, "Error opening log file '%s' for writing; attempting to continue", pLogFilename);
         }
     }
 }
@@ -64,9 +60,9 @@ bool ConfigFileParser::ParseFile(const char *pFilename)
     if (pFilename == nullptr)
         pFilename = GetDefaultFilename();
 
-    const bool bParsingOverrideFile = (_stricmp(pFilename, GetDefaultFilename()) != 0);  // true if we are parsing an override file
+    const bool bParsingOverrideFile = (strcasecmp(pFilename, GetDefaultFilename()) != 0);  // true if we are parsing an override file
 
-    static char temp[256]; // reused for messages
+    static char temp[2048]; // reused for messages
 
     // open the config file
     sprintf(temp, "Parsing config file '%s'", pFilename);
@@ -76,7 +72,7 @@ bool ConfigFileParser::ParseFile(const char *pFilename)
 
     if (pFile == nullptr)
     {
-        sprintf(temp, "ERROR: fopen failed for '%s'; GetLastError=0x%X", pFilename, GetLastError());
+        sprintf(temp, "ERROR: fopen failed for '%s'; errno=0x%X", pFilename, errno);
         WriteLog(temp);
         m_parseFailed = true;
         return false;       // could not open file
@@ -256,9 +252,11 @@ void ConfigFileParser::TrimString(char *pStr)
     }
 
     // final step: shift string left to delete trimmed whitespace
-    strcpy(pOrgStart, pStart);
+    //ASAN doesn't like this...
+    //strcpy(pOrgStart, pStart);
+    size_t len = strlen(pStart);
+    memmove(pOrgStart, pStart, len + 1);
 }
-
 
 // log a message
 void ConfigFileParser::WriteLog(const char *pMsg) const
@@ -266,23 +264,10 @@ void ConfigFileParser::WriteLog(const char *pMsg) const
     // nothing to do if msg is null or if logging disabled
     if ((pMsg == nullptr) || (m_pLogFile == nullptr)) 
         return;
-
-    CStringA csMsg;
-    // get and format the current time
-    SYSTEMTIME st;
-    GetLocalTime(&st);
-    CString csPrefix;
-    if (!GetLogPrefix().IsEmpty())
-        csPrefix.Format("[%s] ", static_cast<const char *>(GetLogPrefix()));
-
-    csMsg.Format("%02d.%02d.%04d %02d:%02d:%02d.%03d - %s%s\n", 
-        st.wMonth, st.wDay, st.wYear, 
-        st.wHour, st.wMinute, st.wSecond, st.wMilliseconds,
-        static_cast<const char *>(csPrefix), pMsg);
-
+ 
     // no point in checking for error here
-    OutputDebugString(csMsg);   // send to debug console
-    fwrite(csMsg, 1, csMsg.GetLength(), m_pLogFile);
+    fwrite(pMsg, 1, strlen(pMsg), m_pLogFile);
+    fwrite("\n", 1, 1, m_pLogFile);
 
     // flush to disk in case we crash or are terminated
     fflush(m_pLogFile);

@@ -18,13 +18,7 @@
 #define __D3D7CLIENT_H
 
 // must be defined before windows includes to fix warnins on VS 2003+
-#if defined(_MSC_VER) && (_MSC_VER >= 1300 ) // Microsoft Visual Studio Version 2003 and higher
-#define _CRT_SECURE_NO_DEPRECATE 
-#define _CRT_NONSTDC_NO_WARNINGS
 #include <fstream>
-#else  // older MSVC++ versions
-#include <fstream.h>
-#endif
 
 #include <d3d.h>
 #include "../GDIClient/GDIClient.h"
@@ -653,7 +647,8 @@ private:
 	DWORD viewW, viewH;     // dimensions of the render viewport
 	DWORD viewBPP;          // bit depth of render viewport
 
-	friend long ::clbkConfirmDevice (DDCAPS*, D3DDEVICEDESC7*);
+	
+	//friend long ::clbkConfirmDevice (DDCAPS*, D3DDEVICEDESC7*);
 	// device enumeration callback function
 	VideoTab *vtab;         // video selection user interface
 	Scene *scene;           // Scene description

@@ -409,7 +409,7 @@ VBMESH *Tile::CreateMesh_hemisphere (int grd, INT16 *elev, double globelev)
 		FLOAT tv = (D3DVALUE)(lat/PI);
 
         for (x = 0; x < x2; x++) {
-            lng = x*fDAng - PI;  // subtract Pi to wrap at +-180°
+            lng = x*fDAng - PI;  // subtract Pi to wrap at +-180ï¿½
 			if (ilng) lng += PI;
 			slng = sin(lng), clng = cos(lng);
 			eradius = radius + globelev; // radius including node elevation
@@ -722,7 +722,7 @@ TileManager2Base::TileManager2Base (const vPlanet *vplanet, int _maxres, int _gr
 : vp(vplanet)
 {
 	// set persistent parameters
-	prm.maxlvl = max (0, _maxres-4);
+	prm.maxlvl = std::max (0, _maxres-4);
 	gridRes = _gridres;
 
 	obj = vp->Object();
@@ -767,7 +767,7 @@ void TileManager2Base::GlobalExit ()
 
 void TileManager2Base::SetRenderPrm (MATRIX4 &dwmat, double prerot, bool use_zbuf, const vPlanet::RenderPrm &rprm)
 {
-	const double minalt = max(0.002,rprm.horizon_excess);
+	const double minalt = std::max(0.002,rprm.horizon_excess);
 	VECTOR3 obj_pos, cam_pos;
 	Camera *camera = gc->GetScene()->GetCamera();
 
@@ -793,7 +793,7 @@ void TileManager2Base::SetRenderPrm (MATRIX4 &dwmat, double prerot, bool use_zbu
 	normalise (prm.cdir);
 	prm.sdir = tmul (prm.grot, -obj_pos);  // sun's direction in planet frame
 	normalise (prm.sdir);
-	prm.viewap = acos (1.0/(max (prm.cdist, 1.0+minalt)));
+	prm.viewap = acos (1.0/(std::max (prm.cdist, 1.0+minalt)));
 	prm.scale = 1.0;
 	prm.fog = rprm.bFog;
 	prm.tint = rprm.bTint;
@@ -826,7 +826,7 @@ void TileManager2::Render (MATRIX4 &dwmat, bool use_zbuf, bool addfog)
 	normalise (prm.cdir);
 	prm.sdir = tmul (prm.grot, -obj_pos);  // sun's direction in planet frame
 	normalise (prm.sdir);
-	prm.viewap = acos (1.0/(max (prm.cdist, 1.0)));
+	prm.viewap = acos (1.0/(std::max (prm.cdist, 1.0)));
 	prm.scale = 1.0;
 	prm.fog = addfog;
 
@@ -892,7 +892,7 @@ MATRIX4 TileManager2Base::WorldMatrix (int ilng, int nlng, int ilat, int nlat)
 		return prm.dwmat;
 	}
 
-	double lat, lng = PI2 * (double)ilng/(double)nlng + PI; // add pi so texture wraps at +-180°
+	double lat, lng = PI2 * (double)ilng/(double)nlng + PI; // add pi so texture wraps at +-180ï¿½
 	double slng = sin(lng), clng = cos(lng);
 	MATRIX4 lrot = {clng,0,slng,0,  0,1.0,0,0,  -slng,0,clng,0,  0,0,0,1.0};
 

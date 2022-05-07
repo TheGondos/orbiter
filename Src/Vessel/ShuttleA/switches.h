@@ -13,7 +13,7 @@
 #define __SWITCHES_H
 
 #include "ShuttleA.h"
-#include "..\Common\Instrument.h"
+#include "../Common/Instrument.h"
 
 // ==============================================================
 // Switch type 1 (red vertical switch with 2 or 3 positions)
@@ -22,7 +22,7 @@ class PanelSwitch1: public PanelElement {
 public:
 	PanelSwitch1 (ShuttleA *v, bool threestate, MESHHANDLE hMesh, int meshgrp, int vofs);
 	PanelSwitch1 (ShuttleA *v, float tgt_x0, float tgt_y0, bool threestate); // obsolete
-	void AddMeshData2D (MESHHANDLE hMesh, DWORD grpidx); // obsolete
+	void AddMeshData2D (MESHHANDLE hMesh, int grpidx); // obsolete
 	void Reset2D (int panelid);
 	bool Redraw2D (SURFHANDLE surf);
 	bool ProcessMouse2D (int event, int mx, int my);
@@ -49,7 +49,7 @@ class PanelIndicator1: public PanelElement {
 public:
 	PanelIndicator1 (ShuttleA *v, MESHHANDLE hMesh, int meshgrp, int vofs);
 	PanelIndicator1 (ShuttleA *v, float tgt_x0, float tgt_y0); // obsolete
-	void AddMeshData2D (MESHHANDLE hMesh, DWORD grpidx); // obsolete
+	void AddMeshData2D (MESHHANDLE hMesh, int grpidx); // obsolete
 	void Reset2D (int panelid);
 	bool Redraw2D (SURFHANDLE surf);
 	virtual int GetTargetState() = 0;  // label index (>=0, 0=bottom label)

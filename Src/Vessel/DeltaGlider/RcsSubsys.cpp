@@ -51,7 +51,7 @@ void RcsSubsystem::SetProg (int prog, bool active)
 
 // --------------------------------------------------------------
 
-bool RcsSubsystem::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH)
+bool RcsSubsystem::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH)
 {
 	if (panelid != 0) return false;
 
@@ -71,9 +71,9 @@ bool RcsSubsystem::clbkLoadVC (int vcid)
 	oapiVCRegisterArea (ELID_PROGBUTTONS, PANEL_REDRAW_USER | PANEL_REDRAW_MOUSE, PANEL_MOUSE_LBDOWN | PANEL_MOUSE_LBUP);
 	oapiVCSetAreaClickmode_Quadrilateral (ELID_PROGBUTTONS, VC_NAV_BUTTONS_mousearea[0], VC_NAV_BUTTONS_mousearea[1], VC_NAV_BUTTONS_mousearea[2], VC_NAV_BUTTONS_mousearea[3]);
 	{
-		static DWORD navbtn_vofs[6] = {VC_BTN_NAVMODE_1_vofs, VC_BTN_NAVMODE_2_vofs, VC_BTN_NAVMODE_3_vofs,
+		static int navbtn_vofs[6] = {VC_BTN_NAVMODE_1_vofs, VC_BTN_NAVMODE_2_vofs, VC_BTN_NAVMODE_3_vofs,
 			                           VC_BTN_NAVMODE_4_vofs, VC_BTN_NAVMODE_5_vofs, VC_BTN_NAVMODE_6_vofs}; 
-		static DWORD navlbl_vofs[6] = {VC_BTN_NAVMODE_1_LABEL_vofs, VC_BTN_NAVMODE_2_LABEL_vofs, VC_BTN_NAVMODE_3_LABEL_vofs,
+		static int navlbl_vofs[6] = {VC_BTN_NAVMODE_1_LABEL_vofs, VC_BTN_NAVMODE_2_LABEL_vofs, VC_BTN_NAVMODE_3_LABEL_vofs,
 			                           VC_BTN_NAVMODE_4_LABEL_vofs, VC_BTN_NAVMODE_5_LABEL_vofs, VC_BTN_NAVMODE_6_LABEL_vofs};
 		progbuttons->DefineAnimationsVC (VC_BTN_NAVMODE_1_axis, GRP_BUTTON3_VC, GRP_LIT_SURF_VC, navbtn_vofs, navlbl_vofs);
 	}
@@ -132,7 +132,7 @@ bool RcsModeSelector::DecMode ()
 
 // --------------------------------------------------------------
 
-bool RcsModeSelector::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, DWORD viewW, DWORD viewH)
+bool RcsModeSelector::clbkLoadPanel2D (int panelid, PANELHANDLE hPanel, int viewW, int viewH)
 {
 	if (panelid != 0) return false;
 
@@ -180,7 +180,7 @@ void RcsModeDial::Reset2D (int panelid, MESHHANDLE hMesh)
 void RcsModeDial::ResetVC (DEVMESHHANDLE hMesh)
 {
 	DGDial1::ResetVC (hMesh);
-	DWORD mode = component->DG()->GetAttitudeMode();
+	int mode = component->DG()->GetAttitudeMode();
 	SetPosition (mode);
 }
 
@@ -266,8 +266,8 @@ void RcsProgButtons::SetMode (int mode, bool active)
 }
 // --------------------------------------------------------------
 
-void RcsProgButtons::DefineAnimationsVC (const VECTOR3 &axis, DWORD meshgrp, DWORD meshgrp_label,
-	DWORD vofs[6], DWORD vofs_label[6])
+void RcsProgButtons::DefineAnimationsVC (const VECTOR3 &axis, int meshgrp, int meshgrp_label,
+	int vofs[6], int vofs_label[6])
 {
 	for (int i = 0; i < 6; i++) 
 		btn[i]->DefineAnimationVC (axis, meshgrp, meshgrp_label, vofs[i], vofs_label[i]);
@@ -302,7 +302,7 @@ bool RcsProgButtons::Redraw2D (SURFHANDLE)
 	float tv0, tv1;
 	int vofs;
 
-	for (DWORD i = NAVMODE_KILLROT; i <= NAVMODE_ANTINORMAL; i++) {
+	for (int i = NAVMODE_KILLROT; i <= NAVMODE_ANTINORMAL; i++) {
 		if (subsys->DG()->GetNavmodeState (i)) tv0 = tv0_active, tv1 = tv1_active;
 		else                             tv0 = tv0_idle,   tv1 = tv1_idle;
 		vofs = vtxofs+(i-NAVMODE_KILLROT)*4;
