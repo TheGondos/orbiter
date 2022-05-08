@@ -91,6 +91,7 @@ float dz(float f) {
 
 void GamepadController::ProcessInput() {
     GLFWgamepadstate gpState;
+    bool gpStateValid = false;
     bool ButtonDown[GamepadController::NBUTTON];
     m_NavMode = 0;
     m_CameraRotX = 0;
@@ -107,7 +108,10 @@ void GamepadController::ProcessInput() {
 
     for(int i = 0; i < GLFW_JOYSTICK_LAST; i++) {
         if(m_js[i] && i!=0) {
-            glfwGetGamepadState(i, &gpState);
+            if(glfwGetGamepadState(i, &gpState) == GLFW_FALSE)
+                continue;
+
+            gpStateValid = true;
 
             m_Thrusters[THGROUP_MAIN] = dz((gpState.axes[GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER] + 1.0)/2.0);
             m_Thrusters[THGROUP_HOVER] = dz((gpState.axes[GLFW_GAMEPAD_AXIS_LEFT_TRIGGER] + 1.0)/2.0);
@@ -132,6 +136,8 @@ void GamepadController::ProcessInput() {
             }
         }
     }
+    if(!gpStateValid)
+        return;
 /*
 	if (keymap.IsLogicalKey (key, kstate, OAPI_LKEY_RCSEnable))      SetAttMode (attmode >= 1 ? 0 : 1);
 	if (keymap.IsLogicalKey (key, kstate, OAPI_LKEY_RCSMode))        ToggleAttMode ();
