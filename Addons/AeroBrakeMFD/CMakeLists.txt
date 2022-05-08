@@ -1,0 +1,29 @@
+file(GLOB ABMFD_SRC ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
+file(GLOB ABMFD_LD ${CMAKE_CURRENT_SOURCE_DIR}/*.ld)
+
+add_library(AeroBrakeMFD SHARED
+    ${ABMFD_SRC}
+)
+add_dependencies(AeroBrakeMFD
+	${OrbiterTgt}
+	Orbitersdk
+)
+
+set_target_properties(AeroBrakeMFD
+	PROPERTIES
+	RUNTIME_OUTPUT_DIRECTORY ${ORBITER_BINARY_PLUGIN_DIR}
+	OUTPUT_NAME AeroBrakeMFD
+)
+
+target_include_directories(AeroBrakeMFD PUBLIC
+	${ORBITER_SOURCE_SDK_INCLUDE_DIR}
+)
+
+install(TARGETS AeroBrakeMFD
+#	RUNTIME
+	DESTINATION ${ORBITER_INSTALL_PLUGIN_DIR}
+)
+
+install(FILES ${ABMFD_LD}
+    DESTINATION ${ORBITER_INSTALL_PLUGIN_DIR}
+)
