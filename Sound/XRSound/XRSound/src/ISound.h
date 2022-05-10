@@ -4,6 +4,7 @@
 #include <AL/al.h>
 #include <AL/alc.h>
 #include <unordered_map>
+#include <string>
 
 class ISound {
 public:
