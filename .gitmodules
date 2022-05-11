@@ -7,3 +7,6 @@
 [submodule "OVP/OGLClient/SOIL2"]
 	path = OVP/OGLClient/SOIL2
 	url = https://github.com/TheGondos/SOIL2.git
+[submodule "Addons/NASSP"]
+	path = Addons/NASSP
+	url = https://github.com/TheGondos/NASSP.git

@@ -842,9 +842,9 @@ static void (*prev_cursor_position_callback)(GLFWwindow* window, double xpos, do
 static void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
 {
 	ImGuiIO& io = ImGui::GetIO();
+	if(prev_cursor_position_callback) prev_cursor_position_callback(window, xpos, ypos);
 	if (io.WantCaptureMouse)
 		return;
-	if(prev_cursor_position_callback) prev_cursor_position_callback(window, xpos, ypos);
 	g_pOrbiter->MouseEvent(oapi::MOUSE_MOVE, 0, xpos, ypos);
 }
 
@@ -852,9 +852,9 @@ static void (*prev_mouse_button_callback)(GLFWwindow* window, int button, int ac
 static void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 {
 	ImGuiIO& io = ImGui::GetIO();
+	if(prev_mouse_button_callback) prev_mouse_button_callback(window, button, action, mods);
 	if (io.WantCaptureMouse)
 		return;
-	if(prev_mouse_button_callback) prev_mouse_button_callback(window, button, action, mods);
 
 	double xpos, ypos;
 	glfwGetCursorPos(window, &xpos, &ypos);
@@ -883,9 +883,9 @@ static void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 	io.MouseWheelH += (float)xoffset;
 	io.MouseWheel += (float)yoffset;
 
+	if(prev_scroll_callback) prev_scroll_callback(window, xoffset, yoffset);
 	if (io.WantCaptureMouse)
 		return;
-	if(prev_scroll_callback) prev_scroll_callback(window, xoffset, yoffset);
 
 	double xpos, ypos;
 	glfwGetCursorPos(window, &xpos, &ypos);
