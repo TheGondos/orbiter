@@ -1956,7 +1956,7 @@ void Vessel::ApplyUserAttitudeControls (int *ctrl)
 		if (ctrlsurfmode & 4) SetControlSurfaceLevel (AIRCTRL_AILERON,  0.001*ctrl[THGROUP_ATT_BANKRIGHT]-0.001*ctrl[THGROUP_ATT_BANKLEFT],true);
 	}
 
-	SetThrusterGroupLevel (THGROUP_MAIN, 0.001*ctrl[THGROUP_MAIN]);
+	OverrideMainLevel (0.001*ctrl[THGROUP_MAIN]);
 	SetThrusterGroupLevel (THGROUP_HOVER, 0.001*ctrl[THGROUP_HOVER]);
 	SetThrusterGroupLevel (THGROUP_RETRO, 0.001*ctrl[THGROUP_RETRO]);
 }
