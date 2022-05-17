@@ -1,6 +1,8 @@
 # Copyright (c) Martin Schweiger
 # Licensed under the MIT License
 
+#cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=$HOME/xxx ..
+
 cmake_minimum_required(VERSION 3.16)
 #add_compile_options(-fsanitize=address)
 #add_link_options(-fsanitize=address)

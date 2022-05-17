@@ -2441,6 +2441,7 @@ DLLEXPORT void sscan_state (char *str, AnimState &s)
 #include <sys/types.h>
 #include <arpa/inet.h>
 #include <fcntl.h>
+#include <sys/ioctl.h>
 #define SOCK2HANDLE(s) ((SOCKETHANDLE)(ptrdiff_t)(s))
 #define HANDLE2SOCK(h) ((int)(ptrdiff_t)(h))
 DLLEXPORT SOCKETHANDLE oapiSocketCreate() {
@@ -2448,6 +2449,14 @@ DLLEXPORT SOCKETHANDLE oapiSocketCreate() {
 	if(s != -1) {
 		fcntl (s, F_SETFL, O_NONBLOCK);
 	}
+	// Be nonblocking
+	int iMode = 1; // 0 = BLOCKING, 1 = NONBLOCKING
+	if (ioctl(s, FIONBIO, (u_long*) &iMode) != 0) {
+		printf("ioctl(FIONBIO) failed\n");
+		close(s);
+		return OAPI_INVALID_SOCKET;
+	}
+
 	return SOCK2HANDLE(s);
 }
 

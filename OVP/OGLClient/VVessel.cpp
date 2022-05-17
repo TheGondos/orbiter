@@ -55,8 +55,6 @@ void VVessel::clbkEvent (visevent msg, visevent_data content)
 		// todo
 		break;
 	case EVENT_VESSEL_MESHOFS: {
-		printf("EVENT_VESSEL_MESHOFS\n");
-		exit(-1);
     		int idx = content.meshidx;
 			VECTOR3 ofs;
 			mVessel->GetMeshOffset (idx, ofs);
@@ -160,7 +158,6 @@ void VVessel::InsertMesh (unsigned int idx)
         if (length(ofs)) {
             mMeshes[idx].trans = std::make_unique<glm::fmat4>(1.0f);
 			printf("VVessel::InsertMesh length(ofs)\n");
-exit(-1);
             glm::fmat4 *m = mMeshes[idx].trans.get();
             glm::fvec3 offset;
             offset.x = ofs.x;
