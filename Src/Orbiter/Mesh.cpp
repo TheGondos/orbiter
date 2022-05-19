@@ -763,7 +763,7 @@ istream &operator>> (istream &is, Mesh &mesh)
 
 	mesh.Clear();
 	if (!is.getline (cbuf, 256)) return is;
-//	if(cbuf[strlen(cbuf)] == '\r') cbuf[strlen(cbuf)] = '\0';
+	if(cbuf[strlen(cbuf)] == '\r') cbuf[strlen(cbuf)] = '\0';
 	if (strncmp (cbuf, "MSHX1", 5)) return is;
 
 	for (;;) {

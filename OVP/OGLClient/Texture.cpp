@@ -3,7 +3,8 @@
 //#include "load_dds.h"
 #include "OGLClient.h"
 #include "SOIL2/incs/SOIL2.h"
-#include "fcaseopen.h"
+#include <cstring>
+#include "bmp.h"
 
 static void CheckError(const char *s) {
 	GLenum err;
@@ -109,49 +110,29 @@ void OGLTexture::InitSize()
 
 TextureManager::TextureManager() {
 }
-#include <cstring>
-#include "bmp.h"
+
 static GLuint LoadTextureFromFile(const char *filename, int flags) {
     //printf("LoadTextureFromFile %s\n", filename);
     char fullpath[256];
-    sprintf(fullpath,"Textures2/%s", filename);
-    char *c = fullpath;
-    while (*c) {
-        if (*c=='\\')
-            *c='/';
-        c++;
-    }
 
-    std::string path = casepath(fullpath);
-    if(path==std::string({})) {
-        sprintf(fullpath,"Textures/%s", filename);
-        char *c = fullpath;
-        while (*c) {
-            if (*c=='\\')
-                *c='/';
-            c++;
-        }
-        path = casepath(fullpath);
-    }
-    if(path==std::string({})) {
-        sprintf(fullpath,"%s", filename);
-        char *c = fullpath;
-        while (*c) {
-            if (*c=='\\')
-                *c='/';
-            c++;
-        }
-        path = casepath(fullpath);
-    }
+    sprintf(fullpath,"Textures2/%s", filename);
+    std::string hitex = oapiGetFilePath(fullpath);
+
+    sprintf(fullpath,"Textures/%s", filename);
+    std::string lowtex = oapiGetFilePath(fullpath);
 
     unsigned int SOILFlags = SOIL_FLAG_MIPMAPS;// SOIL_FLAG_TEXTURE_REPEATS;
 
     //FIXME: bitmaps must not be power of 2 or XR2 panel is broken
+    GLuint tid;
     if(!strcmp(&filename[strlen(filename) - 4],".bmp")) {
-/*        GLuint tid = loadBMPTexture(filename);
-        CheckError("loadBMPTexture");
+        /*
+        std::string bmpPath = oapiGetFilePath(filename);
+        tid = loadBMPTexture(bmpPath.c_str());
+
         if(tid != 0)
-            return tid;*/
+            return tid;
+*/
         flags |=4;
     }
 
@@ -164,11 +145,18 @@ static GLuint LoadTextureFromFile(const char *filename, int flags) {
         //SOIL_LOAD_RGBA SOIL_LOAD_AUTO
     }
  
-    GLuint tid = SOIL_load_OGL_texture(path.c_str(), 	SOIL_LOAD_AUTO,
-    SOIL_CREATE_NEW_ID, SOILFlags);
-
-    if(tid==0) tid = loadBMPTexture(filename);
-
+    tid = SOIL_load_OGL_texture(hitex.c_str(), 	SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOILFlags);
+    if(tid==0) {
+        tid = SOIL_load_OGL_texture(lowtex.c_str(), 	SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOILFlags);
+    }
+    if(tid==0) {
+        std::string path = oapiGetFilePath(filename);
+        tid = SOIL_load_OGL_texture(path.c_str(), 	SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOILFlags);
+        if(tid==0) {
+            
+            tid = loadBMPTexture(path.c_str());
+        }
+    }
     if(tid==0) {
         printf("TextureManager::LoadTexture failed for %s\n", filename);
         //abort();

@@ -23,6 +23,9 @@
 #include "zlib.h"
 
 #include "Orbitersdk.h"
+#include <errno.h>
+#include <sstream>
+#include <filesystem>
 
 using namespace std;
 
@@ -2456,7 +2459,6 @@ DLLEXPORT SOCKETHANDLE oapiSocketCreate() {
 		close(s);
 		return OAPI_INVALID_SOCKET;
 	}
-
 	return SOCK2HANDLE(s);
 }
 
@@ -2473,7 +2475,8 @@ DLLEXPORT bool oapiSocketConnect (SOCKETHANDLE h, const char *addr, int port) {
 	sa.sin_family = AF_INET;
 	sa.sin_addr.s_addr = inet_addr(addr);
 	sa.sin_port = htons(port);
-	return connect(s, (struct sockaddr*)&sa, sizeof(sa)) == 0;
+	bool status = connect(s, (struct sockaddr*)&sa, sizeof(sa)) == 0;
+	return status;
 }
 
 DLLEXPORT bool oapiSocketBind (SOCKETHANDLE h, const char *addr, int port) {
@@ -2482,20 +2485,22 @@ DLLEXPORT bool oapiSocketBind (SOCKETHANDLE h, const char *addr, int port) {
 	sa.sin_family = AF_INET;
 	sa.sin_addr.s_addr = inet_addr(addr);
 	sa.sin_port = htons( port );
-
-	return bind( s, (struct sockaddr*)&sa, sizeof(sa) ) == 0;
+	bool status = bind( s, (struct sockaddr*)&sa, sizeof(sa) ) == 0;
+	return status;
 }
 
 DLLEXPORT bool oapiSocketListen (SOCKETHANDLE h, int backlog) {
 	int s = HANDLE2SOCK(h);
-	return listen( s, backlog ) == 0;
+	bool status = listen( s, backlog ) == 0;
+	return status;
 }
 
 DLLEXPORT SOCKETHANDLE oapiSocketAccept (SOCKETHANDLE h) {
 	int s = HANDLE2SOCK(h);
-	return SOCK2HANDLE(accept( s, NULL, NULL ));
+	int a = accept( s, NULL, NULL );
+	return SOCK2HANDLE(a);
 }
-#include <errno.h>
+
 DLLEXPORT ssize_t oapiSocketSend (SOCKETHANDLE h, const void *buf, size_t len) {
 	int s = HANDLE2SOCK(h);
 	ssize_t sent = send(s, buf, len, MSG_DONTWAIT );
@@ -2526,3 +2531,88 @@ DLLEXPORT ssize_t oapiSocketRecv (SOCKETHANDLE h, void *buf, size_t len) {
 	}
 	return received;
 }
+
+// Check "dir" for an entry named "name", ignoring case
+// If no entry is found, returns the queried name
+static std::string GetDirEntry(std::string &&dir, std::string name) {
+    std::error_code ec;
+
+    // if dir is empty, we want to look in the current directory
+    if(dir == "") dir = "./";
+
+    // if dir does not exist, bail out
+    if(!std::filesystem::exists(dir, ec)) {
+        return name;
+    }
+
+    // fast check if the file exists with the expected name
+    std::filesystem::path path(dir + name);
+    if(std::filesystem::exists(path, ec)) {
+        return name;
+    }
+
+    // slow way: we iterate over every entry in the directory
+    // and do a case insensitive comparison
+    for (auto const& dir_entry : std::filesystem::directory_iterator{dir}) 
+    {
+        if(!strcasecmp(name.c_str(), dir_entry.path().filename().c_str())) {
+            return dir_entry.path().filename();
+        }
+    }
+
+    // we found nothing -> returns the queried name
+    return name;
+}
+
+DLLEXPORT std::string oapiGetFilePath(const char *path) {
+    size_t pos_start = 0, pos_end;
+    std::string s(path);
+    std::stringstream ss;
+
+    while ((pos_end = s.find_first_of ("\\/", pos_start)) != std::string::npos) {
+        std::string token = s.substr (pos_start, pos_end - pos_start);
+        pos_start = pos_end + 1;
+
+        std::string entry = GetDirEntry(ss.str(), token);
+        ss<<entry<<"/";
+    }
+
+    std::string entry = GetDirEntry(ss.str(), s.substr(pos_start));
+    ss<<entry;
+
+    return ss.str();
+}
+
+DLLEXPORT std::istream& oapiGetLine(std::istream& is, std::string& line, char delim)
+{
+    line.clear();
+    std::istream::sentry sentry(is, true);
+    std::streambuf* sbuf = is.rdbuf();
+	std::stringstream ss;
+
+    for(;;) {
+        int chr = sbuf->sbumpc();
+        switch (chr) {
+        case '\r':
+            if(sbuf->sgetc() == '\n')
+                sbuf->sbumpc();
+			//fall through
+        case '\n':
+			goto done;
+        case std::streambuf::traits_type::eof():
+            is.setstate(std::ios::eofbit);
+            if(line.empty())
+                is.setstate(std::ios::failbit);
+			goto done;
+        default:
+			if((char)chr == delim)
+				goto done;
+			ss<<(char)chr;
+            break;
+        }
+    }
+done:
+	line = ss.str();
+	return is;
+}
+

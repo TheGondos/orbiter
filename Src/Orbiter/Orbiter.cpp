@@ -1601,6 +1601,7 @@ static char linebuf[2][70] = {"", ""};
 
 void Orbiter::OutputLoadStatus (const char *msg, int line)
 {
+	printf("%s\n", msg);
 	if (gclient) {
 		strncpy (linebuf[line], msg, 64); linebuf[line][63] = '\0';
 		gclient->clbkSplashLoadMsg (linebuf[line], line);

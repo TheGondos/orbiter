@@ -35,26 +35,26 @@ DynamicModule::~DynamicModule() noexcept {
         dlclose(m_Opaque);
 #endif
 }
-
+#include <unistd.h>
 bool DynamicModule::Load(const char *path) noexcept {
     if(m_Opaque) {
         fprintf(stderr, "DynamicModule::Load: cannot load %s over already loaded module\n", path);
         abort();
         exit(-1);
     }
+    m_Path = oapiGetFilePath(path);
 #ifdef WINDOWS_DL
     m_Opaque = LoadLibrary(path);
 #else
-    m_Opaque = dlopen(path, RTLD_NOW|RTLD_GLOBAL|RTLD_DEEPBIND);
+    m_Opaque = dlopen(m_Path.c_str(), RTLD_LAZY|RTLD_GLOBAL|RTLD_DEEPBIND);
 #endif
     if(!m_Opaque) {
         fprintf(stderr, "%s\n", dlerror());
-        fprintf(stderr, "DynamicModule::Load: cannot load %s\n", path);
+        fprintf(stderr, "DynamicModule::Load: cannot load %s\n", m_Path.c_str());
         abort();
 //        return false;
         exit(-1);
     }
-    m_Path = path;
     dlerror();
 
     void (*InitModule)(DynamicModule *) = (void(*)(DynamicModule *))(*this)["InitModule"];

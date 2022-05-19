@@ -6414,8 +6414,8 @@ OAPIFUNC SOCKETHANDLE oapiSocketAccept (SOCKETHANDLE);
 OAPIFUNC ssize_t oapiSocketSend (SOCKETHANDLE, const void *buf, size_t len);
 OAPIFUNC ssize_t oapiSocketRecv (SOCKETHANDLE, void *buf, size_t len);
 
-
-
+OAPIFUNC std::string oapiGetFilePath(const char *path);
+OAPIFUNC std::istream& oapiGetLine(std::istream& is, std::string& line, char delim = '\n');
 
 // ======================================================================
 /// \defgroup Obsolete Obsolete functions

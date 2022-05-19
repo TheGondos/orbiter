@@ -8,4 +8,7 @@ EchoAllParams = FALSE
 ACTIVE_MODULES
   OGLClient
   XRSound
+  ExtMFD
+  ApolloRTCCMFD
+  ProjectApolloMFD
 END_MODULES
