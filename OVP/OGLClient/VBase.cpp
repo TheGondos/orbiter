@@ -21,6 +21,7 @@
 #include "OGLClient.h"
 #include "Scene.h"
 #include "OGLCamera.h"
+#include "OGLMesh.h"
 
 VBase::VBase (OBJHANDLE _hObj): VObject (_hObj)
 {

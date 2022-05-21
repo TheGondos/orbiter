@@ -18,6 +18,7 @@
 #include "Texture.h"
 #include <stdio.h>
 #include "VertexBuffer.h"
+#include "OGLMesh.h"
 
 std::unique_ptr<VertexArray> OGLParticleStream::eVBA;
 std::unique_ptr<VertexBuffer> OGLParticleStream::eVBO;

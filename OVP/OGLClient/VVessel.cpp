@@ -1,9 +1,25 @@
+// Copyright (c) Martin Schweiger
+// Licensed under the MIT License
+
+// ==============================================================
+//   ORBITER VISUALISATION PROJECT (OVP)
+//   D3D7 Client module
+// ==============================================================
+
+// ==============================================================
+// VVessel.cpp
+// Vessel visualisation
+// ==============================================================
+
 #include "glad.h"
 #include "VVessel.h"
 #include "OGLClient.h"
 #include "OGLCamera.h"
+#include "OGLMesh.h"
 #include "Shader.h"
-#include <glm/gtc/matrix_transform.hpp> 
+#include "Scene.h"
+#include <glm/gtc/matrix_transform.hpp>
+#include <cstring>
 
 static void CheckError(const char *s) {
 	GLenum err;
@@ -16,18 +32,31 @@ static void CheckError(const char *s) {
 	}
 }
 
-OGLTexture *VVessel::defexhausttex = nullptr;
+// ==============================================================
+// Local prototypes
+
+void TransformPoint (VECTOR3 &p, const glm::mat4 &T);
+void TransformDirection (VECTOR3 &a, const glm::mat4 &T, bool normalise);
+
+// ==============================================================
+// class VVessel (implementation)
+//
+// A vVessel is the visual representation of a vessel object.
+// ==============================================================
 
 VVessel::VVessel (OBJHANDLE handle): VObject (handle)
 {
+	vessel = oapiGetVesselInterface (handle);
+	nmesh = 0;
 	nanim = 0;
-	mVessel = oapiGetVesselInterface (handle);
 	LoadMeshes ();
 	InitAnimations();
 }
 
 VVessel::~VVessel ()
 {
+	ClearAnimations();
+	ClearMeshes();
 }
 
 void VVessel::GlobalInit()
@@ -40,6 +69,19 @@ void VVessel::GlobalInit()
 */
 	if (defexhausttex) defexhausttex->Release();
 	defexhausttex = g_client->GetTexMgr()->LoadTexture ("Exhaust.dds", true, 0);
+}
+
+void VVessel::GlobalExit ()
+{
+/*
+	if (mfdsurf) {
+		mfdsurf->Release();
+		mfdsurf = 0;
+	}*/
+	if (defexhausttex) {
+		defexhausttex->Release();
+		defexhausttex = 0;
+	}
 }
 
 void VVessel::clbkEvent (visevent msg, visevent_data content)
@@ -55,25 +97,28 @@ void VVessel::clbkEvent (visevent msg, visevent_data content)
 		// todo
 		break;
 	case EVENT_VESSEL_MESHOFS: {
-    		int idx = content.meshidx;
+		int idx = content.meshidx;
+		if (idx < nmesh) {
 			VECTOR3 ofs;
-			mVessel->GetMeshOffset (idx, ofs);
+			vessel->GetMeshOffset (idx, ofs);
 			if (length(ofs)) {
-				if (!mMeshes[idx].trans)
-					mMeshes[idx].trans = std::make_unique<glm::fmat4>(1.0f);
+				if (!meshlist[idx].trans)
+					meshlist[idx].trans = new glm::fmat4(1.0f);
 
-                glm::fmat4 *m = mMeshes[idx].trans.get();
+                glm::fmat4 *m = meshlist[idx].trans;
                 glm::fvec3 offset;
                 offset.x = ofs.x;
                 offset.y = ofs.y;
                 offset.z = ofs.z;
                 *m = glm::translate(*m, offset);
 			} else {
-				if (mMeshes[idx].trans) {
-					mMeshes[idx].trans.reset(nullptr);
+				if (meshlist[idx].trans) {
+					delete meshlist[idx].trans;
+					meshlist[idx].trans = nullptr;
 				}
 			}
 		} break;
+	}
 	case EVENT_VESSEL_MODMESHGROUP:
 		//MessageBeep (-1);
 		break;
@@ -82,11 +127,7 @@ void VVessel::clbkEvent (visevent msg, visevent_data content)
 
 MESHHANDLE VVessel::GetMesh (unsigned int idx)
 {
-    const auto &it = mMeshes.find(idx);
-    if(it == mMeshes.end())
-        return nullptr;
-    
-    return (MESHHANDLE)mMeshes[idx].mesh;
+	return (idx < nmesh ? meshlist[idx].mesh : NULL);
 }
 
 bool VVessel::Update ()
@@ -100,37 +141,39 @@ bool VVessel::Update ()
 
 void VVessel::LoadMeshes ()
 {
-	mMeshes.clear();
+	if (nmesh) ClearMeshes();
+	MESHHANDLE hMesh;
+	const OGLMesh *mesh;
+	VECTOR3 ofs;
+	int idx;
 
     OGLMeshManager *mmgr = g_client->GetMeshManager();
-	int nmesh = mVessel->GetMeshCount();
+	nmesh = vessel->GetMeshCount();
+	meshlist = new MESHREC[nmesh];
+	memset (meshlist, 0, nmesh*sizeof(MESHREC));
 
-	for (int idx = 0; idx < nmesh; idx++) {
-        MESHHANDLE hMesh = mVessel->GetMeshTemplate (idx);
-        if(hMesh == nullptr) {
-            hMesh = mVessel->CopyMeshFromTemplate (idx);
-            mmgr->StoreMesh(hMesh);
-            oapiDeleteMesh (hMesh);
-        } else {
-            mmgr->StoreMesh(hMesh); //does nothing if already stored
-        }
-        OGLMesh *mesh = mmgr->GetMesh (hMesh);
-        mMeshes[idx].mesh = mesh;
-
-		if (mMeshes[idx].mesh) {
-			mMeshes[idx].vismode = mVessel->GetMeshVisibilityMode (idx);
-
-        	VECTOR3 ofs;
-			mVessel->GetMeshOffset (idx, ofs);
+	for (idx = 0; idx < nmesh; idx++) {
+		if ((hMesh = vessel->GetMeshTemplate (idx)) && (mesh = mmgr->GetMesh (hMesh))) {
+			// copy from preloaded template
+			meshlist[idx].mesh = new OGLMesh (*mesh);
+		} else if (hMesh = vessel->CopyMeshFromTemplate (idx)) {
+			// load on the fly and discard after copying
+			meshlist[idx].mesh = new OGLMesh (hMesh);
+			oapiDeleteMesh (hMesh);
+		}
+		if (meshlist[idx].mesh) {
+			meshlist[idx].vismode = vessel->GetMeshVisibilityMode (idx);
+			vessel->GetMeshOffset (idx, ofs);
 			if (length(ofs)) {
-				mMeshes[idx].trans = std::make_unique<glm::fmat4>(1.0f);
+				meshlist[idx].trans = new glm::fmat4(1.0f);
 
-                glm::fmat4 *m = mMeshes[idx].trans.get();
+                glm::fmat4 *m = meshlist[idx].trans;
                 glm::fvec3 offset;
                 offset.x = ofs.x;
                 offset.y = ofs.y;
                 offset.z = ofs.z;
                 *m = glm::translate(*m, offset);
+				// currently only mesh translations are supported
 			}
 		}
 	}
@@ -138,42 +181,112 @@ void VVessel::LoadMeshes ()
 
 void VVessel::InsertMesh (unsigned int idx)
 {
-    OGLMeshManager *mmgr = g_client->GetMeshManager();
-    MESHHANDLE hMesh = mVessel->GetMeshTemplate (idx);
-    if(hMesh == nullptr) {
-        hMesh = mVessel->CopyMeshFromTemplate (idx);
-        mmgr->StoreMesh(hMesh);
-        oapiDeleteMesh (hMesh);
-    } else {
-        mmgr->StoreMesh(hMesh); //does nothing if already stored
-    }
-    OGLMesh *mesh = mmgr->GetMesh (hMesh);
-    mMeshes[idx].mesh = mesh;
+	int i;
 
-    if (mMeshes[idx].mesh) {
-        mMeshes[idx].vismode = mVessel->GetMeshVisibilityMode (idx);
+	if (idx >= nmesh) { // append a new entry to the list
+		MESHREC *tmp = new MESHREC[idx+1];
+		if (nmesh) {
+			memcpy (tmp, meshlist, nmesh*sizeof(MESHREC));
+			delete []meshlist;
+		}
+		meshlist = tmp;
+		for (i = nmesh; i < idx; i++) { // zero any intervening entries
+			meshlist[i].mesh = 0;
+			meshlist[i].trans = 0;
+			meshlist[i].vismode = 0;
+		}
+		nmesh = idx+1;
+	} else if (meshlist[idx].mesh) { // replace existing entry
+		delete meshlist[idx].mesh;
+		if (meshlist[idx].trans) {
+			delete meshlist[idx].trans;
+			meshlist[idx].trans = nullptr;
+		}
+	}
 
-        VECTOR3 ofs;
-        mVessel->GetMeshOffset (idx, ofs);
-        if (length(ofs)) {
-            mMeshes[idx].trans = std::make_unique<glm::fmat4>(1.0f);
-			printf("VVessel::InsertMesh length(ofs)\n");
-            glm::fmat4 *m = mMeshes[idx].trans.get();
+	// now add the new mesh
+	MESHHANDLE hMesh;
+	const OGLMesh *mesh;
+	OGLMeshManager *mmgr = g_client->GetMeshManager();
+	VECTOR3 ofs;
+	if ((hMesh = vessel->GetMeshTemplate (idx)) && (mesh = mmgr->GetMesh (hMesh))) {
+		meshlist[idx].mesh = new OGLMesh (*mesh);
+	} else if (hMesh = vessel->CopyMeshFromTemplate (idx)) {
+		meshlist[idx].mesh = new OGLMesh (hMesh);
+		oapiDeleteMesh (hMesh);
+	} else {
+		meshlist[idx].mesh = 0;
+	}
+	if (meshlist[idx].mesh) {
+		meshlist[idx].vismode = vessel->GetMeshVisibilityMode (idx);
+		vessel->GetMeshOffset (idx, ofs);
+		if (length(ofs)) {
+            meshlist[idx].trans = new glm::fmat4(1.0f);
+            glm::fmat4 *m = meshlist[idx].trans;
             glm::fvec3 offset;
             offset.x = ofs.x;
             offset.y = ofs.y;
             offset.z = ofs.z;
             *m = glm::translate(*m, offset);
-        }
-    }
+			// currently only mesh translations are supported
+		} else {
+			meshlist[idx].trans = nullptr;
+		}
+	}
+}
+
+void VVessel::ClearMeshes ()
+{
+	if (nmesh) {
+		for (int i = 0; i < nmesh; i++) {
+			if (meshlist[i].mesh) delete meshlist[i].mesh;
+		}
+		delete []meshlist;
+		nmesh = 0;
+	}
 }
 
 void VVessel::DelMesh (unsigned int idx)
 {
-	if(idx == (unsigned int)-1) {
-		mMeshes.clear();
-	} else {
-	    mMeshes.erase(idx);
+	if (idx >= nmesh) return;
+	if (!meshlist[idx].mesh) return;
+	delete meshlist[idx].mesh;
+	meshlist[idx].mesh = 0;
+	if (meshlist[idx].trans) {
+		delete meshlist[idx].trans;
+		meshlist[idx].trans = nullptr;
+	}
+}
+
+void VVessel::InitAnimations ()
+{
+	if (nanim) ClearAnimations();
+	nanim = vessel->GetAnimPtr (&anim);
+	if (nanim) {
+		unsigned int i;
+		animstate = new double[nanim];
+		for (i = 0; i < nanim; i++)
+			animstate[i] = anim[i].defstate; // reset to default mesh states
+	}
+}
+
+void VVessel::ClearAnimations ()
+{
+	if (nanim) {
+		delete []animstate;
+		nanim = 0;
+	}
+}
+
+void VVessel::UpdateAnimations (unsigned int mshidx)
+{
+	double newstate;
+	for (unsigned int i = 0; i < nanim; i++) {
+		if (!anim[i].ncomp) continue;
+		if (animstate[i] != (newstate = anim[i].state)) {
+			Animate (i, newstate, mshidx);
+			animstate[i] = newstate;
+		}
 	}
 }
 
@@ -204,10 +317,10 @@ bool VVessel::Render (OGLCamera *c, bool internalpass)
 //	for (auto &kw : mMeshes) {
   //      auto &mr = kw.second;
 
-	for (int i=0;i<mMeshes.size();i++) {
-		auto &mr = mMeshes[i];
-//	for (auto &[i,mr]: mMeshes) {
-		// check if mesh should be rendered in this pass
+	for (int i = 0; i < nmesh; i++) {
+		if (!meshlist[i].mesh) continue;
+		auto &mr = meshlist[i];
+
 		uint16_t vismode = mr.vismode;
 /*
 #define MESHVIS_NEVER          0x00  ///< Mesh is never visible
@@ -237,7 +350,7 @@ bool VVessel::Render (OGLCamera *c, bool internalpass)
 		if (bVC) { // link MFD textures for rendering
 			for (mfd = 0; mfd < MAXMFD; mfd++) {
 				if (mfdspec[mfd] && mfdspec[mfd]->nmesh == (int)i) {
-					mr.mesh->GetGroup(mfdspec[mfd]->ngroup)->mTexIdx = TEXIDX_MFD0+mfd;
+					mr.mesh->GetGroup(mfdspec[mfd]->ngroup)->TexIdx = TEXIDX_MFD0+mfd;
 				}
 			}
 		}
@@ -250,11 +363,49 @@ bool VVessel::Render (OGLCamera *c, bool internalpass)
 
 			// render VC HUD
 			if (sHUD && hudspec->nmesh == (int)i) {
+
+				glDisable(GL_DEPTH_TEST);  
+				glEnable(GL_BLEND);
+
+				glm::vec3 sundir = *g_client->GetScene()->GetSunDir();
+
+				static Shader mShader("Mesh.vs", "Mesh.fs");
+
+				mShader.Bind();
+
+				auto vp = c->GetViewProjectionMatrix();
+				mShader.SetMat4("u_ViewProjection", *vp);
+				mShader.SetMat4("u_Model", mWorldTrans);
+				mShader.SetVec3("u_SunDir", sundir);
+				glBindTexture(GL_TEXTURE_2D,  ((OGLTexture *)sHUD)->m_TexId);
+				mShader.SetFloat("u_Textured", 1.0);
+				mShader.SetFloat("u_ModulateAlpha", 0.0);
+				OGLMesh::GROUPREC *g = mr.mesh->GetGroup(hudspec->ngroup);
+
+				static OGLMaterial defmat = {
+					{1,1,1,1},
+					{1,1,1,1},
+					{0,0,0,1},
+					{0,0,0,1},0
+				};
+
+				OGLMaterial *mat = (g->MtrlIdx != SPEC_DEFAULT ? mr.mesh->GetMaterial(g->MtrlIdx) : &defmat);
+				mShader.SetVec4("u_Material.ambient", mat->ambient);
+				mShader.SetVec4("u_Material.diffuse", mat->diffuse);
+				mShader.SetVec4("u_Material.specular", mat->specular);
+				mShader.SetVec4("u_Material.emissive", mat->emissive);
+				mShader.SetFloat("u_Material.specular_power", mat->specular_power);
+				mShader.SetFloat("u_MatAlpha", 1.0);
+
 				//dev->SetTexture (0, mfdsurf);
 				//dev->SetRenderState (D3DRENDERSTATE_LIGHTING, FALSE);
 				//dev->SetRenderState (D3DRENDERSTATE_ZENABLE, FALSE);
 				//dev->SetRenderState (D3DRENDERSTATE_DESTBLEND, D3DBLEND_ONE);
-				mr.mesh->RenderGroup (c, mWorldTrans, mr.mesh->GetGroup(hudspec->ngroup), (OGLTexture *)sHUD);
+				glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+//				mr.mesh->RenderGroup (c, mWorldTrans, mr.mesh->GetGroup(hudspec->ngroup), (OGLTexture *)sHUD);
+				mr.mesh->RenderGroup (mr.mesh->GetGroup(hudspec->ngroup));
+				mShader.UnBind();
+				glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 				//dev->SetRenderState (D3DRENDERSTATE_DESTBLEND, D3DBLEND_INVSRCALPHA);
 				//dev->SetRenderState (D3DRENDERSTATE_LIGHTING, TRUE);
 				//dev->SetRenderState (D3DRENDERSTATE_ZENABLE, TRUE);
@@ -268,7 +419,7 @@ bool VVessel::Render (OGLCamera *c, bool internalpass)
 bool VVessel::RenderExhaust (OGLCamera *c)
 {
 	if (!mVisible) return false;
-	uint32_t i, nexhaust = mVessel->GetExhaustCount();
+	uint32_t i, nexhaust = vessel->GetExhaustCount();
 	if (!nexhaust) return true; // nothing to do
 
 	bool need_setup = true;
@@ -345,12 +496,12 @@ bool VVessel::RenderExhaust (OGLCamera *c)
 	s.SetMat4("u_Model", mModel);
 
 	for (i = 0; i < nexhaust; i++) {
-		if (!(lvl = mVessel->GetExhaustLevel (i))) continue;
-		mVessel->GetExhaustSpec (i, &es);
+		if (!(lvl = vessel->GetExhaustLevel (i))) continue;
+		vessel->GetExhaustSpec (i, &es);
 
 		if (need_setup) { // initialise render state
 			MATRIX3 R;
-			mVessel->GetRotationMatrix (R);
+			vessel->GetRotationMatrix (R);
 			cdir = tmul (R, cpos);
 			/*
 			dev->SetRenderState (D3DRENDERSTATE_ZWRITEENABLE, FALSE);
@@ -439,44 +590,12 @@ void VVessel::SetExhaustVertices (const VECTOR3 &edir, const VECTOR3 &cdir, cons
 	ev[6].z = rz - sz - tz;   ev[7].z = rz + sz - tz;
 }
 
-void VVessel::InitAnimations ()
-{
-	if (nanim) ClearAnimations();
-	nanim = mVessel->GetAnimPtr (&anim);
-	if (nanim) {
-		unsigned int i;
-		animstate = new double[nanim];
-		for (i = 0; i < nanim; i++)
-			animstate[i] = anim[i].defstate; // reset to default mesh states
-	}
-}
-
-void VVessel::ClearAnimations ()
-{
-	if (nanim) {
-		delete []animstate;
-		nanim = 0;
-	}
-}
-
-void VVessel::UpdateAnimations (unsigned int mshidx)
-{
-	double newstate;
-	for (unsigned int i = 0; i < nanim; i++) {
-		if (!anim[i].ncomp) continue;
-		if (animstate[i] != (newstate = anim[i].state)) {
-			Animate (i, newstate, mshidx);
-			animstate[i] = newstate;
-		}
-	}
-}
-
 void VVessel::Animate (unsigned int an, double state, unsigned int mshidx)
 {
 	double s0, s1, ds;
 	unsigned int i, ii;
 	glm::mat4 T;
-	ANIMATION *A = &anim[an];
+	ANIMATION *A = anim+an;
 	for (ii = 0; ii < A->ncomp; ii++) {
 		i = (state > animstate[an] ? ii : A->ncomp-ii-1);
 		ANIMATIONCOMP *AC = A->comp[i];
@@ -558,9 +677,6 @@ void VVessel::Animate (unsigned int an, double state, unsigned int mshidx)
 	}
 }
 
-void TransformPoint (VECTOR3 &p, const glm::mat4 &T);
-void TransformDirection (VECTOR3 &a, const glm::mat4 &T, bool normalise);
-
 void VVessel::AnimateComponent (ANIMATIONCOMP *comp, const glm::mat4 &T)
 {
 	unsigned int i;
@@ -574,8 +690,8 @@ void VVessel::AnimateComponent (ANIMATIONCOMP *comp, const glm::mat4 &T)
 
 	} else {                              // transform mesh groups
 
-		if (trans->mesh >= mMeshes.size()) return; // mesh index out of range
-		OGLMesh *mesh = mMeshes[trans->mesh].mesh;
+		if (trans->mesh >= nmesh) return; // mesh index out of range
+		OGLMesh *mesh = meshlist[trans->mesh].mesh;
 		if (!mesh) return;
 
 		if (trans->grp) { // animate individual mesh groups
@@ -583,7 +699,6 @@ void VVessel::AnimateComponent (ANIMATIONCOMP *comp, const glm::mat4 &T)
 				mesh->TransformGroup (trans->grp[i], &T);
 		} else {          // animate complete mesh
 //			mesh->Transform (T);
-//printf("xxx\n");
 		}
 	}
 
@@ -611,6 +726,8 @@ void VVessel::AnimateComponent (ANIMATIONCOMP *comp, const glm::mat4 &T)
 		}
 	}
 }
+
+OGLTexture *VVessel::defexhausttex = nullptr;
 
 void TransformPoint (VECTOR3 &p, const glm::mat4 &T)
 {

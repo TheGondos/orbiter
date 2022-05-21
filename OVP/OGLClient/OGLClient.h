@@ -11,6 +11,7 @@
 using namespace oapi;
 
 class Scene;
+class OGLMeshManager;
 class OAPIFUNC OGLClient: public oapi::GraphicsClient {
 	friend class ::Orbiter; ///< Orbiter private class
 	friend class ::Scene;

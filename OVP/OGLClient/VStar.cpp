@@ -17,6 +17,7 @@
 #include "Texture.h"
 #include "VStar.h"
 #include "Scene.h"
+#include "OGLMesh.h"
 #include <cstring>
 
 OGLMesh *VStar::billboard = 0;
@@ -26,6 +27,7 @@ VStar::VStar (OBJHANDLE _hObj): VObject (_hObj)
 {
 	size = oapiGetSize (_hObj);
 	maxdist = 0.1*g_client->GetScene()->GetCamera()->GetFarlimit();
+
 }
 
 VStar::~VStar ()
@@ -35,12 +37,12 @@ VStar::~VStar ()
 void VStar::GlobalInit ()
 {
 	// create billboard mesh for sprite representation
-	
+	billboard = new OGLMesh ();
 	static uint16_t idx[6] = {0,1,2, 3,2,1};
 	MESHGROUPEX mg;
 	memset (&mg, 0, sizeof(MESHGROUPEX));
-//	mg.MtrlIdx = SPEC_INHERIT;
-//	mg.TexIdx = SPEC_INHERIT;
+	mg.MtrlIdx = 0;
+	mg.TexIdx = 0;
 	mg.nVtx = 4;
 	mg.nIdx = 6;
 	mg.Idx = idx;
@@ -56,27 +58,28 @@ void VStar::GlobalInit ()
 		mg.Vtx[i].tu = (i<2 ? 0:1.0f);
 		mg.Vtx[i].tv = (i%2 ? 1.0f:0);
 	}
+	billboard->AddGroup (&mg);
+	delete []mg.Vtx;
+
 	// load the default texture
 	deftex = g_client->GetTexMgr()->LoadTexture ("star.dds", true, 0);
-//	billboard->AddGroup (&mg);
+	billboard->SetTexture(1, deftex);
 
 
-	OGLMaterial mat;
-	mat.emissive = glm::vec4(1.0,1.0,1.0,1.0);
-	mat.ambient = glm::vec4(1.0,1.0,1.0,1.0);
-	mat.diffuse = glm::vec4(0.0,0.0,0.0,0.0);
-	mat.specular = glm::vec4(0.0,0.0,0.0,0.0);
-	mat.specular_power = 0;
+	// set material definition
+	OGLMaterial mtrl;
+    memset (&mtrl, 0, sizeof(OGLMaterial));
+    mtrl.emissive.r = 1.0f;
+    mtrl.emissive.g = 1.0f;
+    mtrl.emissive.b = 1.0f;
 
-	billboard = new OGLMesh (&mg, &mat, deftex);
-
-	delete []mg.Vtx;
+	*billboard->GetMaterial(0) = mtrl;
 }
 
 void VStar::GlobalExit ()
 {
 	if (billboard) delete billboard;
-	//if (deftex)    deftex->Release();
+	if (deftex)    deftex->Release();
 }
 
 bool VStar::Update ()

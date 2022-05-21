@@ -18,6 +18,7 @@
 #include "VertexBuffer.h"
 
 #define MAXPARTICLE 3000
+class OGLCamera;
 
 struct ParticleSpec {
 	VECTOR3 pos, vel;

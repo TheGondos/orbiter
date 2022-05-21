@@ -9,6 +9,7 @@ in vec3 Normal;
 uniform vec3 u_SunDir;
 uniform sampler2D ourTexture;
 uniform bool u_Textured;
+uniform bool u_ModulateAlpha;
 uniform float u_MatAlpha;
 
 struct Material {
@@ -24,7 +25,7 @@ uniform vec3 u_ViewPos;
 void main()
 {
 	// ambient
-    vec4 ambient = u_Material.ambient * 0.02;
+    vec4 ambient = u_Material.ambient * 0.1;
   	
     // diffuse 
     vec3 norm = normalize(Normal);
@@ -35,11 +36,12 @@ void main()
     vec3 viewDir = normalize( - FragPos);
     vec3 reflectDir = reflect(u_SunDir, norm);  
 
-    vec4 specular = vec4(0,0,0,0);  
+    vec4 specular = vec4(0,0,0,0);
     if (u_Material.specular_power != 0) {
         float spec = pow(max(dot(viewDir, reflectDir), 0.0), u_Material.specular_power);
         specular = (spec * u_Material.specular);  
     }
+
 	// emissive
 	vec4 emissive = u_Material.emissive;
 
@@ -53,11 +55,13 @@ void main()
         text=vec4(1,1,1,1);
 
     float alpha = u_MatAlpha;
-//    float alpha = u_Material.diffuse.a;
-//    if(u_Textured)
-  //      alpha=text.a;
+    //float alpha = u_Material.diffuse.a;
+    if(u_Textured)
+        alpha=text.a;
     //if(text.a==0)
       // text.a=0.1;
+    if(u_ModulateAlpha)
+        alpha = u_Material.diffuse.a;
     
     color = vec4(vec3(result),alpha) * text;
 //    color = vec4(vec3(result),u_Material.ambient.a) * text;

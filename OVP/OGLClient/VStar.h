@@ -17,8 +17,8 @@
 #define __VSTAR_H
 
 #include "VObject.h"
+#include "OGLMesh.h"
 
-class OGLMesh;
 class OGLTexture;
 class OGLCamera;
 class Scene;

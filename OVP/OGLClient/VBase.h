@@ -21,6 +21,7 @@
 
 #include "VObject.h"
 #include "MeshManager.h"
+#include "VertexBuffer.h"
 
 class OGLCamera;
 class Scene;

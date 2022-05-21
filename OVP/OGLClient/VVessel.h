@@ -17,6 +17,8 @@ public:
 	VVessel (OBJHANDLE handle);
 
 	~VVessel ();
+	static void GlobalInit();
+	static void GlobalExit();
 
 	void clbkEvent (visevent msg, visevent_data content) override;
 
@@ -44,21 +46,21 @@ public:
 	void ClearAnimations();
 	void Animate (unsigned int an, double state, unsigned int mshidx);
 	void AnimateComponent (ANIMATIONCOMP *comp, const glm::mat4 &T);
+	void LoadMeshes();
+	void ClearMeshes();
+
+private:
+	VESSEL *vessel;       // access instance for the vessel
+	struct MESHREC {
+		OGLMesh *mesh;   // DX7 mesh representation
+		glm::fmat4 *trans; // mesh transformation matrix (rel. to vessel frame)
+		uint16_t vismode;
+	} *meshlist;          // list of associated meshes
+	int nmesh;           // number of meshes
+
 	ANIMATION *anim;      // list of animations (defined in the vessel object)
 	double *animstate;    // list of visual animation states
 	size_t nanim;           // number of animations
-	static void GlobalInit();
 
-private:
-    void LoadMeshes();
-	struct MESHREC {
-		OGLMesh *mesh;
-		std::unique_ptr<glm::fmat4> trans;
-		uint16_t vismode;
-	};
-
-    std::unordered_map<uint32_t, MESHREC> mMeshes;
-
-    VESSEL *mVessel;
 	static OGLTexture *defexhausttex;
 };

@@ -17,10 +17,10 @@
 #include "VVessel.h"
 
 //extern Orbiter *g_pOrbiter;
-
+/*
 const uint32_t SPEC_DEFAULT = (uint32_t)(-1); // "default" material/texture flag
 const uint32_t SPEC_INHERIT = (uint32_t)(-2); // "inherit" material/texture flag
-
+*/
 static void CheckError(const char *s) {
 	GLenum err;
 	while((err = glGetError()) != GL_NO_ERROR)
@@ -789,7 +789,12 @@ bool OGLClient::clbkSetMeshTexture (DEVMESHHANDLE hMesh, int texidx, SURFHANDLE 
  */
 int OGLClient::clbkSetMeshMaterial (DEVMESHHANDLE hMesh, int matidx, const MATERIAL *mat)
 {
-	return ((OGLMesh*)hMesh)->SetMaterial (matidx, mat);
+	OGLMesh *mesh = (OGLMesh*)hMesh;
+	int nmat = mesh->MaterialCount();
+	if (matidx >= nmat) return 4; // "index out of range"
+	OGLMaterial *meshmat = mesh->GetMaterial (matidx);
+	memcpy (meshmat, mat, sizeof(OGLMaterial)); // relies on OGLMaterial and MATERIAL to be equivalent
+	return 0;
 }
 
 /**

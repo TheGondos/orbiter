@@ -16,6 +16,7 @@
 #include "Texture.h"
 #include "Shader.h"
 #include "Scene.h"
+#include "OGLMesh.h"
 #include <cstring>
 
 using namespace oapi;
@@ -110,14 +111,14 @@ bool RingManager::Render (glm::mat4 &mWorld, OGLCamera *c, bool front)
 	World[2][1] = z.y;
 	World[2][2] = z.z;
 
-static OGLMaterial defmat = {
-	{0,0,0,1},
-	{0,0,0,1},
-	{0,0,0,1},
-	{0.5,0.5,0.5,1},0
-};
+	static OGLMaterial defmat = {
+		{0,0,0,1},
+		{0,0,0,1},
+		{0,0,0,1},
+		{0.5,0.5,0.5,1},0
+	};
 
-static Shader s("Mesh.vs","Mesh.fs");
+	static Shader s("Mesh.vs","Mesh.fs");
 	s.Bind();
 
 
@@ -129,6 +130,7 @@ static Shader s("Mesh.vs","Mesh.fs");
 	s.SetVec3("u_SunDir", sundir);
     s.SetFloat("u_Textured", 1.0);
     s.SetFloat("u_MatAlpha", 1.0);
+	s.SetFloat("u_ModulateAlpha", 0.0);
 
 	s.SetVec4("u_Material.ambient", defmat.ambient);
 	s.SetVec4("u_Material.diffuse", defmat.diffuse);
