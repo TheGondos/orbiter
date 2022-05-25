@@ -10,3 +10,9 @@
 [submodule "Addons/NASSP"]
 	path = Addons/NASSP
 	url = https://github.com/TheGondos/NASSP.git
+[submodule "Addons/G42-200"]
+	path = Addons/G42-200
+	url = https://github.com/TheGondos/G42-200.git
+[submodule "Addons/UCSO"]
+	path = Addons/UCSO
+	url = https://github.com/TheGondos/UCSO.git
