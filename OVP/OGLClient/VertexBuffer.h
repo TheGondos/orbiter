@@ -27,10 +27,10 @@ public:
     void UnBind() const;
     void *Map() const;
     void UnMap() const;
-    index_type GetCount() const { return count; }
+    uint32_t GetCount() const { return count; }
 private:
     GLuint IBID;
-    index_type count;
+    uint32_t count;
 };
 
 class VertexArray {
