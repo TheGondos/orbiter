@@ -75,7 +75,7 @@ public:
 	void SetOrbitReference (CelestialBody *body);
 	// reset reference object for element calculation to "body"
 
-	const Elements *Els() const;
+	virtual const Elements *Els() const;
 	// Returns pointer to orbital elements (after updating them, if
 	// necessary), or NULL if not supported
 

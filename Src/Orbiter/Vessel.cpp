@@ -3741,10 +3741,14 @@ void Vessel::UpdateThrustForces ()
 		}
 		//const Vector *fullpmi = (supervessel ? supervessel->GetPMI() : &pmi);
 		double mam[6];
-		for (int i = 0; i < 6; i++) mam[i] = MaxAngularMoment(i) * 10.0;
+		bool invalid_mam = false;
+		for (int i = 0; i < 6; i++) {
+			mam[i] = MaxAngularMoment(i) * 10.0;
+			if(mam[i] == 0.0) invalid_mam = true;
+		}
 
 		// "kill rotation" navcomp mode
-		if (navmode_core & NAVBIT_KILLROT) {
+		if (navmode_core & NAVBIT_KILLROT && !invalid_mam) {
 
 			double arot_tot, level;
 			bool finished = true;
@@ -6046,6 +6050,20 @@ TOUCHDOWN_VTX *Vessel::HullvtxFirst ()
 TOUCHDOWN_VTX *Vessel::HullvtxNext ()
 {
 	return (next_hullvtx < ntouchdown_vtx ? touchdown_vtx + next_hullvtx++ : NULL);
+}
+
+const Elements *Vessel::Els() const
+{
+	if(!isAttached())
+		return RigidBody::Els();
+
+	const Vessel *els_obj = this;
+	while(els_obj->isAttached()) {
+		AttachmentSpec *as = const_cast<Vessel *>(els_obj)->GetAttachmentFromIndex (true, 0);
+		els_obj = as->mate;
+		assert(els_obj != nullptr);
+	}
+	return els_obj->Els();
 }
 
 Vessel::LeanCam Vessel::camfwd;

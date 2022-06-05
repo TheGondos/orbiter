@@ -253,6 +253,8 @@ public:
 	bool GetStateEx (void *status);               // generic (interface version >= 2)
 	// fills a VESSELSTATUSx status definition with the current vessel status
 
+	virtual const Elements *Els() const override;
+
 	//void BeginStateUpdate ();
 	void EndStateUpdate ();
 
