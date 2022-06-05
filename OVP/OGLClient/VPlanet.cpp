@@ -89,6 +89,9 @@ VPlanet::VPlanet (OBJHANDLE handle):VObject(handle)
 				clouddata->cloudmgr->SetMicrotexture ("cloud1.dds");
 				clouddata->microalt0 = *(double*)oapiGetObjectParam (handle, OBJPRM_PLANET_CLOUDMICROALTMIN);
 				clouddata->microalt1 = *(double*)oapiGetObjectParam (handle, OBJPRM_PLANET_CLOUDMICROALTMAX);
+			} else {
+				clouddata->microalt0 = 0;
+				clouddata->microalt1 = 0;
 			}
 			cloudmgr2 = nullptr;
 		} else { // v2 cloud engine
@@ -202,9 +205,11 @@ bool VPlanet::Update ()
 				}
 
 			// set microtexture intensity
-			double alt = cdist-mSize;
-			double lvl = (clouddata->microalt1-alt)/(clouddata->microalt1-clouddata->microalt0);
-			clouddata->cloudmgr->SetMicrolevel (std::max (0.0, std::min (1.0, lvl)));
+			if(clouddata->microalt0 != 0 &&	clouddata->microalt1 != 0) {
+				double alt = cdist-mSize;
+				double lvl = (clouddata->microalt1-alt)/(clouddata->microalt1-clouddata->microalt0);
+				clouddata->cloudmgr->SetMicrolevel (std::max (0.0, std::min (1.0, lvl)));
+			}
 		}
 	}
 
