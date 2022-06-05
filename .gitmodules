@@ -16,3 +16,6 @@
 [submodule "Addons/UCSO"]
 	path = Addons/UCSO
 	url = https://github.com/TheGondos/UCSO.git
+[submodule "Addons/Deepstar"]
+	path = Addons/Deepstar
+	url = https://github.com/TheGondos/Deepstar.git
