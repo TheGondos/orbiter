@@ -101,7 +101,7 @@ CFG_VISUALPRM CfgVisualPrm_default = {
 	"<none>",	// CSphereBgImage (no celestial sphere background image)
 	"",			// CSphereBgPath (path to celestial background images)
 	0.2,		// CSphereBgIntens (intensity of celestial sphere background image)
-	2			// ElevMode (cubic spline)
+	1			// ElevMode (linear)
 };
 
 CFG_CAPTUREPRM CfgCapturePrm_default = {
