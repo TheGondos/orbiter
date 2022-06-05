@@ -456,7 +456,7 @@ void Elements::Calculate (const Vector &R, const Vector &V, double simt)
 
 	// true anomaly
 	if (e > E_CIRCLE_LIMIT) {
-		priv_tra = acos (dotp (priv_E, R)/(e*priv_r));
+		priv_tra = acos (std::clamp(dotp (priv_E, R)/(e*priv_r), -1.0, 1.0));
 		if (rv < 0.0) priv_tra = Pi2-priv_tra;
 	} else {
 		if (i > I_NOINC_LIMIT) {

@@ -119,7 +119,7 @@ void HazeManager::GlobalInit ()
 
 void HazeManager::Render (OGLCamera *c, glm::mat4 &wmat, bool dual)
 {
-	glm::mat4 imat, transm;
+	glm::mat4 imat(0);
 
 	VECTOR3 psun;
 	int i, j;
@@ -169,7 +169,7 @@ glDisable(GL_DEPTH_TEST);
 					  0,          0,    0,         1};
 
 	//D3DMAT_MatrixMultiply (&transm, &wmat, &rmat);
-	transm = wmat * rmat;
+	glm::mat4 transm = wmat * rmat;
 
 	MATRIX3 rrmat = {cost*cosp, -sint, cost*sinp,
 		             sint*cosp,  cost, sint*sinp,

@@ -164,7 +164,8 @@ Planet::Planet (char *fname)
 	cmgr2        = NULL;
 	emgr         = NULL;
 	elev_res     = 1.0;
-	fog.dens_0 = fog.dens_ref = fog.alt_ref = 0.0;
+	fog.dens_0   = fog.dens_ref = fog.alt_ref = 0.0;
+	fog.col      = _V(0,0,0);
 	vislimit     = spotlimit = 2e-5;
 	horizon_excess = 0.002;
 	bb_excess    = 0.0;
