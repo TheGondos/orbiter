@@ -21,7 +21,7 @@ protected:
 	
 private:
 	Orbiter *orbiter;
-	oapi::DynamicModule *hLib;
+	MODULEHANDLE hLib;
 };
 
 #endif // !__INTERPRETER_H

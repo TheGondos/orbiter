@@ -28,7 +28,7 @@ typedef pair<std::string, ModuleXRSoundEngine *> CString_XRSoundEnginePtr_Pair;
 class XRSoundDLL : public oapi::Module
 {
 public:
-    XRSoundDLL(oapi::DynamicModule *hDLL);
+    XRSoundDLL(MODULEHANDLE hDLL);
     virtual ~XRSoundDLL();
 
     static XRSoundDLL *s_pInstance;  // our singleton DLL object

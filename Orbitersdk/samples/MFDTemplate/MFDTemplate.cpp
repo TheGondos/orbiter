@@ -27,7 +27,7 @@ int g_MFDmode; // identifier for new MFD mode
 // ==============================================================
 // API interface
 
-DLLCLBK void InitModule (DynamicModule *hDLL)
+DLLCLBK void InitModule (MODULEHANDLE hDLL)
 {
 	static char *name = "MFD Template";   // MFD mode name
 	MFDMODESPECEX spec;
@@ -40,7 +40,7 @@ DLLCLBK void InitModule (DynamicModule *hDLL)
 	g_MFDmode = oapiRegisterMFDMode (spec);
 }
 
-DLLCLBK void ExitModule (HINSTANCE hDLL)
+DLLCLBK void ExitModule (MODULEHANDLE hDLL)
 {
 	// Unregister the custom MFD mode when the module is unloaded
 	oapiUnregisterMFDMode (g_MFDmode);

@@ -290,14 +290,14 @@ void ShuttleA_PL::clbkPostStep(double simt,double simdt,double mjd)
 // --------------------------------------------------------------
 // Module initialisation
 // --------------------------------------------------------------
-DLLCLBK void InitModule (oapi::DynamicModule *hModule)
+DLLCLBK void InitModule (MODULEHANDLE hModule)
 {
 }
 
 // --------------------------------------------------------------
 // Module cleanup
 // --------------------------------------------------------------
-DLLCLBK void ExitModule (oapi::DynamicModule *hModule)
+DLLCLBK void ExitModule (MODULEHANDLE hModule)
 {
 	 int d=0;
 }

@@ -12,40 +12,7 @@
 #define __MODULEAPI_H
 
 #include "OrbiterAPI.h"
-//class DynamicModule;
-#include <map>
-#include <string>
-#include <utility>
 namespace oapi {
-
-	class OAPIFUNC DynamicModule final {
-		public:
-		DynamicModule() noexcept;
-		DynamicModule(const char *path) noexcept;
-		DynamicModule(const DynamicModule&) = delete;
-		DynamicModule& operator=(DynamicModule const&) = delete;
-		DynamicModule(DynamicModule&&from) {
-			m_Opaque = from.m_Opaque;
-			m_Path = std::move(from.m_Path);
-			from.m_Opaque = nullptr;
-			from.m_Path = "moved from";
-		}
-		~DynamicModule() noexcept;
-		bool Load(const char *module) noexcept;
-		bool Loaded() {return m_Opaque != nullptr;}
-		void Unload() noexcept;
-		void *operator[](const char *func) noexcept;
-		std::string m_Path;
-		void * m_Opaque;
-	};
-
-	class OAPIFUNC ModuleLoader final {
-		static std::map<std::string, std::pair<DynamicModule, int>> m_Modules;
-		public:
-		static DynamicModule *Load(const char *path);
-		static void Unload(DynamicModule *);
-	};
-
 	enum MouseEvent {
 		MOUSE_LBUTTONDOWN,
 		MOUSE_LBUTTONUP,
@@ -80,7 +47,7 @@ namespace oapi {
 		 * \brief Creates a new ModuleNV instance.
 		 * \param hDLL DLL library instance handle (see \ref InitModule)
 		 */
-		ModuleNV (oapi::DynamicModule *hDLL);
+		ModuleNV (MODULEHANDLE hDLL);
 
 		/**
 		 * \brief Module interface version
@@ -123,7 +90,7 @@ namespace oapi {
 
 	protected:
 		int version;
-		DynamicModule *hModule;
+		MODULEHANDLE hModule;
 	}; // class ModuleNV
 
 	/**
@@ -140,7 +107,7 @@ namespace oapi {
 		 * \brief Creates a new Module instance.
 		 * \param hDLL DLL library instance handle (see \ref InitModule)
 		 */
-		Module (DynamicModule *);
+		Module (MODULEHANDLE);
 		virtual ~Module();
 
 		/**
@@ -364,5 +331,9 @@ namespace oapi {
 	}; // class Module
 
 }; // namespace oapi
+
+OAPIFUNC MODULEHANDLE oapiModuleLoad (const char *name);
+OAPIFUNC void oapiModuleUnload (MODULEHANDLE);
+OAPIFUNC void *oapiModuleGetProcAddress (MODULEHANDLE, const char *func);
 
 #endif // !__MODULEAPI_H

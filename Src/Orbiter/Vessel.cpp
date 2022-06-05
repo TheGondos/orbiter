@@ -76,6 +76,7 @@ static Vector DefAttExhaustDir[12] = {
 Vessel::Vessel (const PlanetarySystem *psys, const char *_name, const char *_classname, const VESSELSTATUS &status)
 : VesselBase()
 {
+	hMod = nullptr;
 	dock = nullptr;
 	name = new char[strlen(_name)+1]; TRACENEW
 	strcpy (name, _name);
@@ -112,6 +113,7 @@ Vessel::Vessel (const PlanetarySystem *psys, const char *_name, const char *_cla
 Vessel::Vessel (const PlanetarySystem *psys, const char *_name, const char *_classname, const void *status)
 : VesselBase()
 {
+	hMod = nullptr;
 	dock = nullptr;
 	name = new char[strlen(_name)+1]; TRACENEW
 	strcpy (name, _name);
@@ -151,6 +153,7 @@ Vessel::Vessel (const PlanetarySystem *psys, const char *_name, const char *_cla
 Vessel::Vessel (const PlanetarySystem *psys, const char *_name, const char *_classname, ifstream &ifs)
 : VesselBase()
 {
+	hMod = nullptr;
 	dock = nullptr;
 	char cbuf[256];
 
@@ -5809,24 +5812,28 @@ bool Vessel::RegisterModule (const char *dllname)
 
 
 	sprintf (cbuf2, "Modules/%s/lib%s.so", dn, bn);
-	if(!hMod.Load(cbuf2)) {
+	hMod = oapiModuleLoad(cbuf2);
+	if(!hMod) {
 		fprintf(stderr, "Vessel::RegisterModule failed\n");
 		exit(-1);
 		return false;
 	}
 
 	// retrieve module version
-	int (*fversion)() = (int(*)())hMod["GetModuleVersion"];
+	int (*fversion)() = (int(*)())oapiModuleGetProcAddress(hMod, "GetModuleVersion");
 	modIntf.version = (fversion ? fversion() : 0);
 
-	modIntf.ovcInit = (VESSEL_Init)hMod["ovcInit"];
-	modIntf.ovcExit = (VESSEL_Exit)hMod["ovcExit"];
+	modIntf.ovcInit = (VESSEL_Init)oapiModuleGetProcAddress(hMod, "ovcInit");
+	modIntf.ovcExit = (VESSEL_Exit)oapiModuleGetProcAddress(hMod, "ovcExit");
 	return true;
 }
 
 void Vessel::ClearModule ()
 {
-	hMod.Unload();
+	if(hMod) {
+		oapiModuleUnload(hMod);
+		hMod = nullptr;
+	}
 	memset (&modIntf, 0, sizeof (modIntf));
 }
 

@@ -2235,7 +2235,7 @@ int Atlantis::clbkConsumeBufferedKey (int key, bool down, char *kstate)
 // --------------------------------------------------------------
 // Module initialisation
 // --------------------------------------------------------------
-DLLCLBK void InitModule (oapi::DynamicModule *hModule)
+DLLCLBK void InitModule (MODULEHANDLE hModule)
 {
 	g_Param.hDLL = hModule;
 	//oapiRegisterCustomControls (hModule);
@@ -2245,7 +2245,7 @@ DLLCLBK void InitModule (oapi::DynamicModule *hModule)
 	g_Param.font[0] = oapiCreateFont (-11, true, "Arial");
 }
 
-DLLCLBK void ExitModule (oapi::DynamicModule *hModule)
+DLLCLBK void ExitModule (MODULEHANDLE hModule)
 {
 	//oapiUnregisterCustomControls (hModule);
 	oapiDestroySurface (g_Param.tkbk_label);

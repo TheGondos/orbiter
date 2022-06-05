@@ -111,7 +111,7 @@ void MFDErr(const char *c){
    error_flag=true;
 }
 
-DLLCLBK void opcDLLInit (oapi::DynamicModule *hDLL){
+DLLCLBK void opcDLLInit (MODULEHANDLE hDLL){
 		int i;
 
 		// Setup Classes
@@ -199,7 +199,7 @@ DLLCLBK void opcDLLInit (oapi::DynamicModule *hDLL){
 }
 
 
-DLLCLBK void opcDLLExit (oapi::DynamicModule *hDLL)
+DLLCLBK void opcDLLExit (MODULEHANDLE hDLL)
 {
 	Refer=NULL;
 

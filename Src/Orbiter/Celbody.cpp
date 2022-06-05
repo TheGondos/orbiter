@@ -647,7 +647,8 @@ void CelestialBody::RegisterModule (char *dllname)
 	char cbuf[256];
 	module = 0;                              // reset new interface
 	sprintf (cbuf, "Modules/Celbody/lib%s.so", dllname); // try new module location
-	if(!hMod.Load(cbuf)) {
+	hMod = oapiModuleLoad(cbuf);
+	if(!hMod) {
 		fprintf(stderr, "CelestialBody::RegisterModule %s failed\n", dllname);
 		exit(0);
 		return;
@@ -655,7 +656,7 @@ void CelestialBody::RegisterModule (char *dllname)
 
 	// Check if the module provides instance initialisation
 	typedef CELBODY* (*INITPROC)(OBJHANDLE);
-	INITPROC init_proc = (INITPROC)hMod["InitInstance"];
+	INITPROC init_proc = (INITPROC)oapiModuleGetProcAddress(hMod, "InitInstance");
 	module = init_proc ((OBJHANDLE)this);
 }
 
@@ -663,14 +664,15 @@ void CelestialBody::ClearModule ()
 {
 	if (module) { // new interface
 		typedef void (*EXITPROC)(CELBODY*);
-		EXITPROC exit_proc = (EXITPROC)hMod["ExitInstance"];
+		EXITPROC exit_proc = (EXITPROC)oapiModuleGetProcAddress(hMod, "ExitInstance");
 		if (exit_proc) { // allow module to clean up
 			exit_proc (module);
 		} else {         // no cleanup - we delete the interface class here
 			delete module;
 		}
 		module = 0;
-		hMod.Unload();
+		oapiModuleUnload(hMod);
+		hMod = nullptr;
 	}
 }
 
@@ -785,7 +787,7 @@ CELBODY2::CELBODY2 (OBJHANDLE hCBody): CELBODY ()
 	version++;
 	hBody = hCBody;
 	atm = NULL;
-//	hAtmModule = NULL;
+	hAtmModule = nullptr;
 }
 
 CELBODY2::~CELBODY2 ()
@@ -798,7 +800,7 @@ void CELBODY2::clbkInit (FILEHANDLE cfg)
 	CELBODY::clbkInit (cfg);
 
 	// Load external atmosphere modules
-	if (!hAtmModule.Loaded()) {
+	if (!hAtmModule) {
 		// 1: try Config\<Name>\Atmosphere.cfg for interactive setting
 		char fname[256], name[256];
 		oapiGetObjectName (hBody, name, 256);
@@ -846,10 +848,12 @@ bool CELBODY2::LoadAtmosphereModule (const char *fname)
 	oapiGetObjectName (hBody, name, 256);
 	sprintf (path, "Modules/Celbody/%s/Atmosphere/lib%s.so", name, fname);
 	//if (!(hAtmModule = g_pOrbiter->LoadModule (path, fname))) return false;
-	if (!hAtmModule.Load(path)) return false;
-	ATMOSPHERE *(*func)(CELBODY2*) = (ATMOSPHERE*(*)(CELBODY2*))hAtmModule["CreateAtmosphere"];
+	hAtmModule = oapiModuleLoad(path);
+//	if (!hAtmModule.Load(path)) return false;
+	ATMOSPHERE *(*func)(CELBODY2*) = (ATMOSPHERE*(*)(CELBODY2*))oapiModuleGetProcAddress(hAtmModule, "CreateAtmosphere");
 	if (!func) {
-		hAtmModule.Unload();
+		oapiModuleUnload(hAtmModule);
+		hAtmModule = nullptr;
 		return false;
 	}
 	atm = func(this);
@@ -858,9 +862,9 @@ bool CELBODY2::LoadAtmosphereModule (const char *fname)
 
 bool CELBODY2::FreeAtmosphereModule ()
 {
-	if (!hAtmModule.Loaded()) return false;
+	if (!hAtmModule) return false;
 	if (atm) {
-		void (*func)(ATMOSPHERE*) = (void(*)(ATMOSPHERE*))hAtmModule["DeleteAtmosphere"];
+		void (*func)(ATMOSPHERE*) = (void(*)(ATMOSPHERE*))oapiModuleGetProcAddress(hAtmModule, "DeleteAtmosphere");
 		if (func) {
 			func (atm);
 		} else {
@@ -869,7 +873,8 @@ bool CELBODY2::FreeAtmosphereModule ()
 		}
 		atm = 0;
 	}
-	hAtmModule.Unload();
+	oapiModuleUnload(hAtmModule);
+	hAtmModule = nullptr;
 	return true;
 }
 

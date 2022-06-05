@@ -8,6 +8,10 @@ add_library(Orbitersdk STATIC
 	Orbitersdk.cpp
 )
 
+target_include_directories(Orbitersdk PUBLIC
+	${ORBITER_SOURCE_SDK_INCLUDE_DIR}
+)
+
 set_target_properties(Orbitersdk
 	PROPERTIES
 	FOLDER Core

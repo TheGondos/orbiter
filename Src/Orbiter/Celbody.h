@@ -180,7 +180,7 @@ protected:
 	// (i.e. using a 2-body approximation)
 
 private:
-	oapi::DynamicModule hMod;      // module handle, if available
+	MODULEHANDLE hMod;      // module handle, if available
 	
 	double eps_ref;          // precession reference axis: obliquity against ecliptic normal
 	double lan_ref;          // precession reference axis: longitude of ascending node in ecliptic

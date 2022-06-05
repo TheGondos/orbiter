@@ -252,7 +252,7 @@ private:
 };
 
 typedef struct {
-	oapi::DynamicModule *hDLL;
+	MODULEHANDLE hDLL;
 	oapi::Font *hFont[1];
 	oapi::Pen *hPen[3];
 	oapi::Brush *hBrush[2];

@@ -32,7 +32,7 @@ static double pInterpP[NSAT][6]; // last interpolated solution
 // Base class for Saturn moons controlled by
 // TASS17 solutions
 // ===========================================================
-DLLCLBK void InitModule (oapi::DynamicModule *hModule);
+DLLCLBK void InitModule (MODULEHANDLE hModule);
 
 SATOBJ::SATOBJ (OBJHANDLE hObj, int is, double dt): CELBODY2 (hObj)
 {
@@ -237,7 +237,7 @@ void SaturnFastEphemeris (double simt, double *ret)
 // API interface
 // ===========================================================
 
-DLLCLBK void InitModule (oapi::DynamicModule *hModule)
+DLLCLBK void InitModule (MODULEHANDLE hModule)
 {
 	// Load the data for the TASS 1.7 perturbation solutions
 	// into global data structures

@@ -380,7 +380,7 @@ int SolarSail::sail_ntri = 0;
 // Global initialisation
 // --------------------------------------------------------------
 
-DLLCLBK void InitModule (oapi::DynamicModule *hModule)
+DLLCLBK void InitModule (MODULEHANDLE hModule)
 {
 	SolarSail::GlobalSetup();
 }

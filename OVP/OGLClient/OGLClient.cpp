@@ -42,7 +42,7 @@ OGLClient *g_client = 0;
 
 // ==============================================================
 // Initialise module
-DLLCLBK void InitModule (DynamicModule *hDLL)
+DLLCLBK void InitModule (MODULEHANDLE hDLL)
 {
 	g_client = new OGLClient (hDLL);
 	if (!oapiRegisterGraphicsClient (g_client)) {
@@ -54,7 +54,7 @@ DLLCLBK void InitModule (DynamicModule *hDLL)
 // ==============================================================
 // Clean up module
 
-DLLCLBK void ExitModule (DynamicModule *hDLL)
+DLLCLBK void ExitModule (MODULEHANDLE hDLL)
 {
 	if (g_client) {
 		oapiUnregisterGraphicsClient (g_client);
@@ -63,7 +63,7 @@ DLLCLBK void ExitModule (DynamicModule *hDLL)
 	}
 }
 
-OGLClient::OGLClient (DynamicModule *hInstance):GraphicsClient(hInstance)
+OGLClient::OGLClient (MODULEHANDLE hInstance):GraphicsClient(hInstance)
 {
 }
 

@@ -17,7 +17,7 @@ static char *hires_enabled = "Textures2/DG";
 static char *hires_disabled = "Textures2/~DG";
 
 struct {
-	oapi::DynamicModule *hInst;
+	MODULEHANDLEhInst;
 	DGConfig *item;
 } gParams;
 

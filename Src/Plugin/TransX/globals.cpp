@@ -34,7 +34,7 @@ using namespace std;
 // ==============================================================
 // API interface
 
-DLLCLBK void InitModule (DynamicModule *hDLL)
+DLLCLBK void InitModule (MODULEHANDLE hDLL)
 {
 	static char name[] = "TransX";
 	MFDMODESPECEX spec;

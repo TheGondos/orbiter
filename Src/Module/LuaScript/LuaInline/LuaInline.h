@@ -43,7 +43,7 @@ public:
 		static unsigned int InterpreterThreadProc (Environment *);
 	};
 
-	InterpreterList (oapi::DynamicModule *hDLL);
+	InterpreterList (MODULEHANDLE hDLL);
 	~InterpreterList ();
 
 	void clbkSimulationEnd () override;

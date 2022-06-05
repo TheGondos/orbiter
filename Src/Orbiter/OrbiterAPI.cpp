@@ -2360,9 +2360,9 @@ DLLEXPORT int oapiInflate (const uint8_t *inp, int ninp, uint8_t *outp, int nout
 // Undocumented interface functions
 // ------------------------------------------------------------------------------
 
-DLLEXPORT void InitLib (oapi::DynamicModule *hModule)
+DLLEXPORT void InitLib (MODULEHANDLE hModule)
 {
-	typedef void (*OPC_DLLInit)(oapi::DynamicModule *hDLL);
+	typedef void (*OPC_DLLInit)(MODULEHANDLE hDLL);
 	OPC_DLLInit DLLInit;
 	char cbuf[280], mname[256]="xxxmodule", *mp;
 	int i, len;
@@ -2379,7 +2379,7 @@ DLLEXPORT void InitLib (oapi::DynamicModule *hModule)
 			cbuf[i] = '\0';
 		}
 
-		char *(*mdate)() = (char*(*)())(*hModule)["ModuleDate"];
+		char *(*mdate)() = (char*(*)())oapiModuleGetProcAddress(hModule, "ModuleDate");
 		if (mdate) {
 			int Date2Int (const char *date);
 			sprintf (cbuf+strlen(cbuf), " [Build %06d", Date2Int(mdate()));
@@ -2387,7 +2387,7 @@ DLLEXPORT void InitLib (oapi::DynamicModule *hModule)
 			strcat (cbuf, " [Build ******");
 		}
 
-		int (*fversion)() = (int(*)())(*hModule)["GetModuleVersion"];
+		int (*fversion)() = (int(*)())oapiModuleGetProcAddress(hModule, "GetModuleVersion");
 		if (fversion) {
 			sprintf (cbuf+strlen(cbuf), ", API %06d]", fversion());
 		} else {
@@ -2397,17 +2397,17 @@ DLLEXPORT void InitLib (oapi::DynamicModule *hModule)
 		LOGOUT (cbuf);
 	}
 
-	DLLInit = (OPC_DLLInit)(*hModule)["InitModule"];
-	if (!DLLInit) DLLInit = (OPC_DLLInit)(*hModule)["opcDLLInit"];
+	DLLInit = (OPC_DLLInit)oapiModuleGetProcAddress(hModule, "InitModule");
+	if (!DLLInit) DLLInit = (OPC_DLLInit)oapiModuleGetProcAddress(hModule, "opcDLLInit");
 	if (DLLInit) (*DLLInit)(hModule);
 }
 
-DLLEXPORT void ExitLib (oapi::DynamicModule *hModule)
+DLLEXPORT void ExitLib (MODULEHANDLE hModule)
 {
-	typedef void (*OPC_DLLExit)(oapi::DynamicModule *hDLL);
+	typedef void (*OPC_DLLExit)(MODULEHANDLE hDLL);
 	OPC_DLLExit DLLExit;
-	DLLExit = (OPC_DLLExit)(*hModule)["ExitModule"];
-	if (!DLLExit) DLLExit = (OPC_DLLExit)(*hModule)["opcDLLExit"];
+	DLLExit = (OPC_DLLExit)oapiModuleGetProcAddress(hModule, "ExitModule");
+	if (!DLLExit) DLLExit = (OPC_DLLExit)oapiModuleGetProcAddress(hModule, "opcDLLExit");
 	if (DLLExit) (*DLLExit)(hModule);
 }
 

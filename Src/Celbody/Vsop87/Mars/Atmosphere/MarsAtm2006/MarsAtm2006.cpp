@@ -83,11 +83,11 @@ bool MarsAtmosphere_2006::clbkParams (const PRM_IN *prm_in, PRM_OUT *prm)
 // API interface
 // ======================================================================
 
-DLLCLBK void InitModule (oapi::DynamicModule *hModule)
+DLLCLBK void InitModule (MODULEHANDLE hModule)
 {
 }
 
-DLLCLBK void ExitModule (oapi::DynamicModule *hModule)
+DLLCLBK void ExitModule (MODULEHANDLE hModule)
 {}
 
 DLLCLBK ATMOSPHERE *CreateAtmosphere (CELBODY2 *cbody)

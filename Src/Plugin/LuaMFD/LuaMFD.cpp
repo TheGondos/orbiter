@@ -203,7 +203,7 @@ OAPI_MSGTYPE ScriptMFD::MsgProc (MFD_msg msg, MfdId mfd,  MFDMODEOPENSPEC *param
 // ==============================================================
 // API interface
 
-DLLCLBK void InitModule (oapi::DynamicModule *hDLL)
+DLLCLBK void InitModule (MODULEHANDLE hDLL)
 {
 	static const char *name = "Terminal MFD";
 	MFDMODESPECEX spec;

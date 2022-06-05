@@ -31,7 +31,7 @@ class MyRootItem;
 class MyItem;
 
 struct {
-	DynamicModule *hInst;
+	MODULEHANDLE hInst;
 	MyRootItem *root_item;
 	MyItem *sub_item;
 	double my_param;
@@ -123,7 +123,7 @@ INT_PTR CALLBACK MyItem::DlgProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
 // The DLL entry point
 // ==============================================================
 
-DLLCLBK void InitModule (DynamicModule *hDLL)
+DLLCLBK void InitModule (MODULEHANDLE hDLL)
 {
 	gParams.hInst = hDLL;
 	gParams.my_param = 0;
@@ -141,7 +141,7 @@ DLLCLBK void InitModule (DynamicModule *hDLL)
 // The DLL exit point
 // ==============================================================
 
-DLLCLBK void ExitModule (HINSTANCE hDLL)
+DLLCLBK void ExitModule (MODULEHANDLE hDLL)
 {
 	// Unregister the launchpad items
 	oapiUnregisterLaunchpadItem (gParams.sub_item);

@@ -140,7 +140,7 @@ ModuleXRSoundEngine *XRSoundDLL::GetXRSoundEngineInstance(const char *pUniqueMod
 // This function is called when Orbiter starts or when the module
 // is activated.
 //==============================================================
-DLLCLBK void InitModule(oapi::DynamicModule *hDLL)
+DLLCLBK void InitModule(MODULEHANDLE hDLL)
 {
 #ifdef _DEBUG
     // Enable Visual Studio's runtime heap checking for debug builds
@@ -175,7 +175,7 @@ void XRSoundDLL::ParseGlobalConfigFile()
 // This function is called when Orbiter shuts down or when the
 // module is deactivated.
 //==============================================================
-DLLCLBK void ExitModule(void *hDLL)
+DLLCLBK void ExitModule(MODULEHANDLE hDLL)
 {
     // Note: do not delete XRSoundDLL::s_pInstance here; per the Orbiter docs, the Orbiter core automatically
     // destroys all modules when required.
@@ -185,7 +185,7 @@ DLLCLBK void ExitModule(void *hDLL)
 XRSoundDLL *XRSoundDLL::s_pInstance;
 
 // Constructor
-XRSoundDLL::XRSoundDLL(oapi::DynamicModule *hDLL) :
+XRSoundDLL::XRSoundDLL(MODULEHANDLE hDLL) :
     Module(hDLL), m_nextSoundEnginesRefreshSimt(0), m_absoluteSimTime(0)
 {
 }

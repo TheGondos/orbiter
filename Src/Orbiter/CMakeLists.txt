@@ -83,7 +83,6 @@ set(common_src
 	MFDAPI.cpp
 	ModuleAPI.cpp
 	OrbiterAPI.cpp
-	DynamicModule.cpp
 # Graphics utils
 	D3dmath.cpp
 # Utils

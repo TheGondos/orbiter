@@ -176,9 +176,9 @@ public:
 	void UpdateDeallocationProgress();
 
 	// plugin module loading/unloading
-	oapi::DynamicModule *LoadModule (const char *path, const char *name);   // load a plugin
+	MODULEHANDLE LoadModule (const char *path, const char *name);   // load a plugin
 	void UnloadModule (const char *name); // unload a plugin
-	void UnloadModule (oapi::DynamicModule *hi);
+	void UnloadModule (MODULEHANDLE hi);
 
 	Vessel *SetFocusObject (Vessel *vessel, bool setview = true);
 	// Select a new user-controlled vessel
@@ -450,7 +450,7 @@ private:
 	// === The plugin module interface ===
 	struct DLLModule {               // list of plugin modules
 		oapi::Module *module;
-		oapi::DynamicModule *hMod;
+		MODULEHANDLE hMod;
 		//OPC_Interface *intf;
 		char *name;
 	} *module;

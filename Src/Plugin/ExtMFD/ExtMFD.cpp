@@ -43,7 +43,7 @@ extern LRESULT FAR PASCAL MFD_BtnProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
 // This function is called when Orbiter starts or when the module
 // is activated.
 
-DLLCLBK void InitModule (oapi::DynamicModule *hDLL)
+DLLCLBK void InitModule (MODULEHANDLE hDLL)
 {
 	//g_hInst = hDLL; // remember the instance handle
 

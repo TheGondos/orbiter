@@ -19,7 +19,7 @@ double Radius (double *data);
 // Base class for Galilean Jupiter moons controlled by
 // GALSAT solutions
 // ===========================================================
-DLLCLBK void InitModule (oapi::DynamicModule *hModule);
+DLLCLBK void InitModule (MODULEHANDLE hModule);
 
 GALOBJ::GALOBJ (OBJHANDLE hObj): CELBODY2 (hObj)
 {
@@ -168,7 +168,7 @@ void SampleEphem (int ksat, double simt, double interval, double *ret, Sample *s
 // API interface
 // ===========================================================
 
-DLLCLBK void InitModule (oapi::DynamicModule *hModule)
+DLLCLBK void InitModule (MODULEHANDLE hModule)
 {
 	// Load the data for the Lieske perturbation solutions
 	// into global data structures

@@ -309,7 +309,7 @@ public:
 	 * with the Orbiter core via the oapiRegisterGraphicsClient function.
 	 * \param hInstance module instance handle (as passed to InitModule)
 	 */
-	GraphicsClient (DynamicModule *hInstance);
+	GraphicsClient (MODULEHANDLE hInstance);
 
 	/**
 	 * \brief Destroy the graphics object.

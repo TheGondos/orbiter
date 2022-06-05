@@ -89,7 +89,7 @@ unsigned int InterpreterList::Environment::InterpreterThreadProc (InterpreterLis
 // ==============================================================
 // class InterpreterList: implementation
 
-InterpreterList::InterpreterList (oapi::DynamicModule *hDLL): Module (hDLL)
+InterpreterList::InterpreterList (MODULEHANDLE hDLL): Module (hDLL)
 {
 	nlist = nbuf = 0;
 }
@@ -154,13 +154,13 @@ int InterpreterList::DelInterpreter (InterpreterList::Environment *env)
 
 static InterpreterList *g_IList = NULL;
 
-DLLCLBK void InitModule (oapi::DynamicModule *hDLL)
+DLLCLBK void InitModule (MODULEHANDLE hDLL)
 {
 	g_IList = new InterpreterList (hDLL);
 	oapiRegisterModule (g_IList);
 }
 
-DLLCLBK void ExitModule (oapi::DynamicModule *hDLL)
+DLLCLBK void ExitModule (MODULEHANDLE hDLL)
 {
 	// note g_IList has already been deleted by Orbiter
 }

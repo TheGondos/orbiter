@@ -419,13 +419,13 @@ void Orbiter::LoadFixedModules ()
 // Name: LoadModule()
 // Desc: Load a named plugin DLL
 //-----------------------------------------------------------------------------
-DynamicModule *Orbiter::LoadModule (const char *path, const char *name)
+MODULEHANDLE Orbiter::LoadModule (const char *path, const char *name)
 {
 	char cbuf[256];
 	sprintf (cbuf, "%s/lib%s.so", path, name);
 
 	register_module = NULL; // clear the module
-	DynamicModule *hi = ModuleLoader::Load(cbuf);
+	MODULEHANDLE hi = oapiModuleLoad(cbuf);
 	if (hi) {
 		struct DLLModule *tmp = new struct DLLModule[nmodule+1]; TRACENEW
 		if (nmodule) {
@@ -438,7 +438,7 @@ DynamicModule *Orbiter::LoadModule (const char *path, const char *name)
 		if(InitModule)
 			InitModule(hi);
 */
-		void (*opcDLLInit)(DynamicModule *) = (void(*)(DynamicModule *))(*hi)["opcDLLInit"];
+		void (*opcDLLInit)(MODULEHANDLE) = (void(*)(MODULEHANDLE))oapiModuleGetProcAddress(hi, "opcDLLInit");
 		if(opcDLLInit)
 			opcDLLInit(hi);
 
@@ -485,7 +485,7 @@ void Orbiter::UnloadModule (const char *name)
 // Name: UnloadModule()
 // Desc: Unload a module by its instance
 //-----------------------------------------------------------------------------
-void Orbiter::UnloadModule (DynamicModule *hi)
+void Orbiter::UnloadModule (MODULEHANDLE hi)
 {
 	int i, j, k;
 	struct DLLModule *tmp;
@@ -511,7 +511,7 @@ void Orbiter::UnloadModule (DynamicModule *hi)
 //-----------------------------------------------------------------------------
 OPC_Proc Orbiter::FindModuleProc (int nmod, const char *procname)
 {
-	return (OPC_Proc)(*module[nmod].hMod)[procname];
+	return (OPC_Proc)oapiModuleGetProcAddress(module[nmod].hMod, procname);
 }
 
 //-----------------------------------------------------------------------------

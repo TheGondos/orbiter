@@ -1690,7 +1690,7 @@ int DeltaGlider::clbkGeneric (int msgid, int prm, void *context)
 // --------------------------------------------------------------
 // Module initialisation
 // --------------------------------------------------------------
-DLLCLBK void InitModule (oapi::DynamicModule *hModule)
+DLLCLBK void InitModule (MODULEHANDLE hModule)
 {
 	g_Param.hDLL = hModule;
 
@@ -1703,7 +1703,7 @@ DLLCLBK void InitModule (oapi::DynamicModule *hModule)
 // --------------------------------------------------------------
 // Module cleanup
 // --------------------------------------------------------------
-DLLCLBK void ExitModule (oapi::DynamicModule *hModule)
+DLLCLBK void ExitModule (MODULEHANDLE hModule)
 {
 	int i;
 

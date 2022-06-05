@@ -4,6 +4,7 @@
 #include "Orbiter.h"
 #include "Camera.h"
 #include <imgui/imgui.h>
+#include <map>
 
 extern Camera *g_camera;
 extern PlanetarySystem *g_psys;

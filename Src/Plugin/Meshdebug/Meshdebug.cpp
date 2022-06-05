@@ -23,7 +23,7 @@
 // Global variables
 // ==============================================================
 
-DynamicModule *g_hInst;    // module instance handle
+MODULEHANDLE g_hInst;    // module instance handle
 HWND g_hDlg = 0;      // dialog window handle
 DWORD g_dwCmd;        // custom function identifier
 VESSEL *g_vessel;     // focus vessel interface

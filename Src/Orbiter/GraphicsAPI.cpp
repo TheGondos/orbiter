@@ -22,7 +22,7 @@ using namespace oapi;
 // ======================================================================
 // class GraphicsClient
 
-GraphicsClient::GraphicsClient (DynamicModule *hInstance): Module (hInstance)
+GraphicsClient::GraphicsClient (MODULEHANDLE hInstance): Module (hInstance)
 {
 	VideoData.fullscreen = false;
 	VideoData.forceenum = true;

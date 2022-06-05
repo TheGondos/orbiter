@@ -15,11 +15,11 @@ using namespace std;
 
 class AtmConfig;
 
-const char *CelbodyDir = "Modules\\Celbody";
+const char *CelbodyDir = "Modules/Celbody";
 char *ModuleItem = "MODULE_ATM";
 
 struct {
-	DynamicModule *hInst;
+	MODULEHANDLE hInst;
 	AtmConfig *item;
 } gParams;
 

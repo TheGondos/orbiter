@@ -23,7 +23,6 @@
 #ifndef __CELBODYAPI_H
 #define __CELBODYAPI_H
 
-//#include "DynamicModule.h"
 #include "ModuleAPI.h"
 
 // ===========================================================================
@@ -86,12 +85,12 @@ struct Sample {
 	*  #include "OrbiterAPI.h"
 	*  #include "CelbodyAPI.h"
 	*
-	*  DLLCLBK void InitModule (DynamicModule *hModule)
+	*  DLLCLBK void InitModule (MODULEHANDLE hModule)
 	*  {
 	*     // module initialisation
 	*  }
 	*
-	*  DLLCLBK void ExitModule (DynamicModule *hModule)
+	*  DLLCLBK void ExitModule (MODULEHANDLE hModule)
 	*  {
 	*     // module cleanup
 	*  }
@@ -526,7 +525,7 @@ protected:
 
 	OBJHANDLE hBody;      ///< handle for the associated celestial body
 	ATMOSPHERE *atm;      ///< pointer to atmosphere object
-	oapi::DynamicModule hAtmModule; ///< library handle for external atmosphere module
+	MODULEHANDLE hAtmModule; ///< library handle for external atmosphere module
 };
 
 

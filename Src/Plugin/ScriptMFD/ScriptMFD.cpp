@@ -57,7 +57,7 @@ static void ClearVinterpList()
 // ==============================================================
 // API interface
 
-DLLCLBK void InitModule (oapi::DynamicModule *hDLL)
+DLLCLBK void InitModule (MODULEHANDLE hDLL)
 {
 	int i;
 	char cbuf[256], name[256], script[256], key[256], persist[256];
@@ -105,7 +105,7 @@ DLLCLBK void InitModule (oapi::DynamicModule *hDLL)
 	nvinterp = 0;
 }
 
-DLLCLBK void ExitModule (oapi::DynamicModule *hDLL)
+DLLCLBK void ExitModule (MODULEHANDLE hDLL)
 {
 	int i;
 

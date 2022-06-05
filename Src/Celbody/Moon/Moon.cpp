@@ -136,12 +136,12 @@ void Interpolate (double t, double *data, const Sample *s0, const Sample *s1)
 // DLL entry point
 // ===========================================================
 
-DLLCLBK void InitModule (oapi::DynamicModule *hModule)
+DLLCLBK void InitModule (MODULEHANDLE hModule)
 {
 	ELP82_init();
 }
 
-DLLCLBK void ExitModule (oapi::DynamicModule *hModule)
+DLLCLBK void ExitModule (MODULEHANDLE hModule)
 {
 	ELP82_exit();
 }

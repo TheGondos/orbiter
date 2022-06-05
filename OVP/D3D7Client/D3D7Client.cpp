@@ -36,7 +36,7 @@
 
 using namespace oapi;
 
-DynamicModule *g_hInst = 0;
+MODULEHANDLE g_hInst = 0;
 D3D7Client *g_client = 0;
 
 // ==============================================================
@@ -45,7 +45,7 @@ D3D7Client *g_client = 0;
 
 // ==============================================================
 // Initialise module
-DLLCLBK void InitModule (DynamicModule *hDLL)
+DLLCLBK void InitModule (MODULEHANDLE hDLL)
 {
 	g_hInst = hDLL;
 	g_client = new D3D7Client (hDLL);
@@ -55,21 +55,10 @@ DLLCLBK void InitModule (DynamicModule *hDLL)
 	}
 }
 
-HMODULE GetCurrentModule()
-{ // NB: XP+ solution!
-  HMODULE hModule = NULL;
-  GetModuleHandleEx(
-    GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS,
-    (LPCTSTR)GetCurrentModule,
-    &hModule);
-
-  return hModule;
-}
-
 // ==============================================================
 // Clean up module
 
-DLLCLBK void ExitModule (HINSTANCE hDLL)
+DLLCLBK void ExitModule (MODULEHANDLE hDLL)
 {
 	if (g_client) {
 		oapiUnregisterGraphicsClient (g_client);

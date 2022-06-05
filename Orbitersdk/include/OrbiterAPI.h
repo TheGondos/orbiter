@@ -210,6 +210,9 @@ namespace oapi {
 /// \brief Handle for objects (vessels, stations, planets)
 typedef void *OBJHANDLE;
 
+/// \brief Handle for modules
+typedef void *MODULEHANDLE;
+
 /// \brief Handle for vessel superstructures
 typedef void *SUPERVESSELHANDLE;
 
@@ -221,13 +224,6 @@ typedef void *MESHHANDLE;
 
 /// \brief Handle for graphics-client-specific meshes
 typedef int *DEVMESHHANDLE;
-//struct DEVMESHHANDLE {
-//	DEVMESHHANDLE() { hMesh = NULL; }
-//	DEVMESHHANDLE(MESHHANDLE h) { hMesh = h; }
-//	int id;
-//	MESHHANDLE hMesh;
-//	operator int() { return (int)hMesh; }
-//};
 
 /// \brief Handle for bitmap surfaces and textures (panels and panel items)
 typedef void *SURFHANDLE;

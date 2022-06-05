@@ -815,9 +815,9 @@ double molweight_fit (double Z, double Tinf)
 // API interface
 // ======================================================================
 
-DLLCLBK void InitModule (oapi::DynamicModule *hModule){}
+DLLCLBK void InitModule (MODULEHANDLE hModule){}
 
-DLLCLBK void ExitModule (oapi::DynamicModule *hModule){}
+DLLCLBK void ExitModule (MODULEHANDLE hModule){}
 
 DLLCLBK ATMOSPHERE *CreateAtmosphere (CELBODY2 *cbody)
 {

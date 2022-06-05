@@ -1302,7 +1302,7 @@ protected:
 	void ClearModule ();
 	// clear interface pointers and unload module
 
-	oapi::DynamicModule hMod;        // module handle
+	MODULEHANDLE hMod;        // module handle
 	struct {               // module interface
 		VESSEL *v;
 		int version;

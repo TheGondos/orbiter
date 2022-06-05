@@ -218,7 +218,7 @@ const VECTOR3 ORBITER_DOCKPOS      = { 0.0, 2.40, 10.15};
 #define AID_R13L_MAX     120
 
 typedef struct {
-	oapi::DynamicModule *hDLL;
+	MODULEHANDLE hDLL;
 	SURFHANDLE tkbk_label;
 	oapi::Font *font[1];
 } GDIParams;

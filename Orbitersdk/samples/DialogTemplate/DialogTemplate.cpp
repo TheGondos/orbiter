@@ -23,7 +23,7 @@
 // Global variables
 // ==============================================================
 
-DynamicModule *g_hInst;  // module instance handle
+MODULEHANDLE g_hInst;  // module instance handle
 DWORD g_dwCmd;      // custom function identifier
 int myprm = 0;
 
@@ -42,7 +42,7 @@ INT_PTR CALLBACK MsgProc (HWND, UINT, WPARAM, LPARAM);
 // This function is called when Orbiter starts or when the module
 // is activated.
 
-DLLCLBK void InitModule (DynamicModule *hDLL)
+DLLCLBK void InitModule (MODULEHANDLE hDLL)
 {
 	g_hInst = hDLL; // remember the instance handle
 
@@ -58,7 +58,7 @@ DLLCLBK void InitModule (DynamicModule *hDLL)
 // This function is called when Orbiter shuts down or when the
 // module is deactivated
 
-DLLCLBK void ExitModule (HINSTANCE hDLL)
+DLLCLBK void ExitModule (MODULEHANDLE hDLL)
 {
 	// Unregister the custom function in Orbiter
 	oapiUnregisterCustomCmd (g_dwCmd);

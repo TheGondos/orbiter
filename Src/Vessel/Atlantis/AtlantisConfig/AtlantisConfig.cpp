@@ -21,7 +21,7 @@ static const char *msh_hires_bkup = "Meshes/Atlantis/~AtlantisVC_hi.msh";
 static const char *msh_lores_bkup = "Meshes/Atlantis/~AtlantisVC_lo.msh";
 
 struct {
-	oapi::DynamicModule *hInst;
+	MODULEHANDLEhInst;
 	AtlantisConfig *item;
 } gParams;
 
@@ -138,7 +138,7 @@ INT_PTR CALLBACK AtlantisConfig::DlgProc (HWND hWnd, UINT uMsg, WPARAM wParam, L
 // The DLL entry point
 // ==============================================================
 
-DLLCLBK void InitModule (oapi::DynamicModule *hDLL)
+DLLCLBK void InitModule (MODULEHANDLEhDLL)
 {
 	gParams.hInst = hDLL;
 	gParams.item = new AtlantisConfig;
@@ -153,7 +153,7 @@ DLLCLBK void InitModule (oapi::DynamicModule *hDLL)
 // The DLL exit point
 // ==============================================================
 
-DLLCLBK void ExitModule (oapi::DynamicModule *hDLL)
+DLLCLBK void ExitModule (MODULEHANDLEhDLL)
 {
 	// Unregister the launchpad items
 	//oapiUnregisterLaunchpadItem (gParams.item);

@@ -72,11 +72,11 @@ int Saturn::clbkFastEphemeris (double simt, int req, double *ret)
 // API interface
 // ======================================================================
 
-DLLCLBK void InitModule (oapi::DynamicModule *hModule) 
+DLLCLBK void InitModule (MODULEHANDLE hModule) 
 {
 }
 
-DLLCLBK void ExitModule (oapi::DynamicModule *hModule)
+DLLCLBK void ExitModule (MODULEHANDLE hModule)
 {
 }
 
