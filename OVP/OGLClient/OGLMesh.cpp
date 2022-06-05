@@ -425,7 +425,6 @@ void OGLMesh::RenderGroup (GROUPREC *grp)
 {
 	if (grp->nVtx && grp->nIdx) {
         grp->VBA->Bind();
-        grp->IBO->GetCount();
         glDrawElements(GL_TRIANGLES, grp->IBO->GetCount(), GL_UNSIGNED_SHORT, 0);
         grp->VBA->UnBind();
 	}
