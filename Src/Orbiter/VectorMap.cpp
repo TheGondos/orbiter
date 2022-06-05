@@ -1271,6 +1271,10 @@ void VectorMap::DrawGroundtrack_future (oapi::Sketchpad *skp, Groundtrack &gt, i
 
 void VectorMap::DrawHorizon (oapi::Sketchpad *skp, double lng, double lat, double rad, bool focus)
 {
+	// If the vessel is below ground, we need to bail out to prevent NaN issues further down the line
+	if(rad < 1.0) {
+		return;
+	}
 	oapi::Pen *old = skp->SetPen(focus ? penFocusHorizon:penTargetHorizon);
 	double dst = 1.0/rad;
 	VPoint *vp = SmallCircle (lng, lat, dst);
