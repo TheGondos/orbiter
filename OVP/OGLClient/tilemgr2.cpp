@@ -131,8 +131,11 @@ bool Tile::InView (const MATRIX4 &transform)
 
 VECTOR3 Tile::Centre () const
 {
-	int nlat = 1 << lvl;
-	int nlng = 2 << lvl;
+	int xxx = lvl;
+	if(xxx >= -3 && xxx < 0) xxx = xxx+3;
+
+	int nlat = 1 << xxx;
+	int nlng = 2 << xxx;
 	double cntlat = PI05 - PI * ((double)ilat+0.5)/(double)nlat, slat = sin(cntlat), clat = cos(cntlat);
 	double cntlng = PI2  * ((double)ilng+0.5)/(double)nlng + PI, slng = sin(cntlng), clng = cos(cntlng);
 	return _V(clat*clng,  slat,  clat*slng);
@@ -156,11 +159,14 @@ void Tile::Extents (double *latmin, double *latmax, double *lngmin, double *lngm
 VBMESH_TS *Tile::CreateMesh_quadpatch (int grdlat, int grdlng, int16_t *elev, double elev_scale, double globelev,
 	const TEXCRDRANGE2 *range, bool shift_origin, VECTOR3 *shift, double bb_excess)
 {
+	int xxx = lvl;
+	if(xxx >= -3 && xxx < 0) xxx = xxx+3;
+
 	const float TEX2_MULTIPLIER = 4.0f; // was: 16.0f
 	const float c1 = 1.0f, c2 = 0.0f;   // -1.0f/512.0f; // assumes 256x256 texture patches
 	int i, j, n, nofs0, nofs1;
-	int nlng = 2 << lvl;
-	int nlat = 1 << lvl;
+	int nlng = 2 << xxx;
+	int nlat = 1 << xxx;
 	bool north = (ilat < nlat/2);
 
 	double lat, slat, clat, lng, slng, clng, eradius, dx, dy;
