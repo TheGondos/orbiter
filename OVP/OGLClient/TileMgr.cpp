@@ -458,7 +458,7 @@ void TileManager::LoadSpecularMasks ()
 void TileManager::Render (glm::mat4 &wmat, double scale, int level, double viewap, bool bfog)
 {
 	VECTOR3 gpos;
-	glm::mat4 imat;
+	glm::mat4 imat(0);
 
 	level = std::max(1, std::min (level, maxlvl));
 
@@ -466,7 +466,6 @@ void TileManager::Render (glm::mat4 &wmat, double scale, int level, double viewa
 	RenderParam.wmat_tmp = wmat;
 	imat = glm::inverse(wmat);
 	RenderParam.cdir = _V(imat[3][0], imat[3][1], imat[3][2]); // camera position in local coordinates (units of planet radii)
-	RenderParam.cdir = _V(imat[0][3], imat[1][3], imat[2][3]); // camera position in local coordinates (units of planet radii)
 	RenderParam.cpos = vp->PosFromCamera() * scale;
 	normalise (RenderParam.cdir);                        // camera direction
 	RenderParam.bfog = bfog;
@@ -482,7 +481,7 @@ void TileManager::Render (glm::mat4 &wmat, double scale, int level, double viewa
 	normalise (RenderParam.sdir); // sun direction in planet frame
 
 	// limit resolution for fast camera movements
-	double limitstep, cstep = acos (dotp (RenderParam.cdir, pcdir));
+	double limitstep, cstep = acos (std::min (1.0, dotp (RenderParam.cdir, pcdir)));
 	int maxlevel = SURF_MAX_PATCHLEVEL;
 	static double limitstep0 = 5.12 * pow(2.0, -(double)SURF_MAX_PATCHLEVEL);
 	for (limitstep = limitstep0; cstep > limitstep && maxlevel > 5; limitstep *= 2.0)
@@ -804,7 +803,7 @@ bool TileManager::TileInView (int lvl, int ilat)
 void TileManager::SetWorldMatrix (int ilng, int nlng, int ilat, int nlat)
 {
 	// set up world transformation matrix
-	glm::mat4 rtile;
+	glm::mat4 rtile(0);
 	double lng = PI*2.0 * (double)ilng/(double)nlng + PI; // add pi so texture wraps at +-180�
 
 	double sinr = sin(lng), cosr = cos(lng);
@@ -1001,7 +1000,7 @@ bool TileManager::bGlobalRipple = false;
 bool TileManager::bGlobalLights = false;
 
 TileBuffer *TileManager::tilebuf = NULL;
-glm::mat4   TileManager::Rsouth;
+glm::mat4   TileManager::Rsouth(0);
 int TileManager::vbMemCaps = 0;
 
 VBMESH TileManager::PATCH_TPL_1;
