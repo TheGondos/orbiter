@@ -246,9 +246,13 @@ bool VBase::RenderSurface (OGLCamera *c)
 	if (nstructure_bs) {
 		//dev->SetRenderState (D3DRENDERSTATE_ZENABLE, TRUE);
 		//dev->SetRenderState (D3DRENDERSTATE_ZWRITEENABLE, TRUE);
+		glEnable(GL_DEPTH_TEST);
+		glDepthMask(GL_TRUE);
 		for (i = 0; i < nstructure_bs; i++) {
 			structure_bs[i]->Render (c, mModel);
 		}
+		glDepthMask(GL_FALSE);
+		glDisable(GL_DEPTH_TEST);
 		//dev->SetRenderState (D3DRENDERSTATE_ZENABLE, FALSE);
 		//dev->SetRenderState (D3DRENDERSTATE_ZWRITEENABLE, FALSE);
 	}

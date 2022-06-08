@@ -232,7 +232,7 @@ void Scene::Render ()
 
 	int distcomp (const void *arg1, const void *arg2);
 	qsort ((void*)plist, np, sizeof(PList), distcomp);
-
+	glDepthMask(GL_FALSE);
 //	glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
 	glEnable(GL_CULL_FACE);
 	CheckError("Scene: glEnable(GL_CULL_FACE)");
@@ -244,6 +244,7 @@ void Scene::Render ()
 		plist[i].obj->Render(c);
 	}
 
+	glDepthMask(GL_TRUE);
 	glEnable(GL_DEPTH_TEST);
 	CheckError("Scene: glEnable(GL_DEPTH_TEST)");
 

@@ -263,14 +263,18 @@ void VPlanet::RenderBaseSurfaces (OGLCamera *c)
 void VPlanet::RenderBaseStructures (OGLCamera *c)
 {
 	bool zmod = false, zcheck = false;
-	int bz = false, bzw = false;
+	GLboolean bz = 0, bzw = 0;
 
 	for (uint32_t i = 0; i < nbase; i++) {
 		if (vbase[i]) {
 			if (!zcheck) { // enable zbuffer
+				glGetBooleanv(GL_DEPTH_TEST, &bz);
+				glGetBooleanv(GL_DEPTH_WRITEMASK, &bzw);
 				//dev->GetRenderState (D3DRENDERSTATE_ZENABLE, &bz);
 				//dev->GetRenderState (D3DRENDERSTATE_ZWRITEENABLE, &bzw);
 				if (!bz || !bzw) {
+					glEnable(GL_DEPTH_TEST);
+					glDepthMask(GL_TRUE);
 					//dev->SetRenderState (D3DRENDERSTATE_ZENABLE, TRUE);
 					//dev->SetRenderState (D3DRENDERSTATE_ZWRITEENABLE, TRUE);
 					//scn->GetCamera()->SetFustrumLimits (1, 1e5);
@@ -282,6 +286,11 @@ void VPlanet::RenderBaseStructures (OGLCamera *c)
 		}
 	}
 	if (zmod) {
+		if(bz)
+			glEnable(GL_DEPTH_TEST);
+		else
+			glDisable(GL_DEPTH_TEST);
+		glDepthMask(bzw);
 		//dev->SetRenderState (D3DRENDERSTATE_ZENABLE, bz);
 		//dev->SetRenderState (D3DRENDERSTATE_ZWRITEENABLE, bzw);
 		//scn->GetCamera()->SetFustrumLimits (10, 1e6);
@@ -614,7 +623,9 @@ void VPlanet::RenderSphere ()
 			surfmgr2->Render (dmWorld, false, prm);
 		} else {
 			glEnable(GL_DEPTH_TEST);
+			glDepthMask(GL_TRUE);
 			surfmgr2->Render (dmWorld, true, prm);
+			glDepthMask(GL_FALSE);
 			glDisable(GL_DEPTH_TEST);
 		}
 	} else {
