@@ -16,6 +16,14 @@
 #include "Particle.h"
 #include "VVessel.h"
 
+#define STB_TRUETYPE_IMPLEMENTATION
+#define STB_RECT_PACK_IMPLEMENTATION
+
+#include "stb_rect_pack.h"
+#include "stb_truetype.h"
+#define BITMAP_W 1024
+#define BITMAP_H 1024
+
 //extern Orbiter *g_pOrbiter;
 /*
 const uint32_t SPEC_DEFAULT = (uint32_t)(-1); // "default" material/texture flag
@@ -587,10 +595,7 @@ GLFWwindow *OGLClient::clbkCreateRenderWindow ()
 	VVessel::GlobalInit();
 	mBlitShader = std::make_unique<Shader>("Blit.vs","Blit.fs");
 	glEnable( GL_LINE_SMOOTH );
-	glEnable( GL_POLYGON_SMOOTH );
 	glHint( GL_LINE_SMOOTH_HINT, GL_NICEST );
-	glHint( GL_POLYGON_SMOOTH_HINT, GL_NICEST );
-
 
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
@@ -2343,6 +2348,7 @@ int OGLPad::GetCharSize ()
  * \return width of the string, drawn in the currently selected font [pixel]
  * \sa SetFont
  */
+
 int OGLPad::GetTextWidth (const char *str, int len)
 {
 	OGLFont *font = (OGLFont *)cfont;
@@ -2352,7 +2358,7 @@ int OGLPad::GetTextWidth (const char *str, int len)
 	for(int i=0;i<len;i++) {
 		unsigned int c = (unsigned char)str[i];
 		stbtt_aligned_quad q;
-		stbtt_GetPackedQuad(font->m_CharData, 512, 512, c, &xpos, &ypos, &q, 1);
+		stbtt_GetPackedQuad(font->m_CharData, BITMAP_W, BITMAP_H, c, &xpos, &ypos, &q, 1);
 	}
 
 	return xpos;
@@ -2373,7 +2379,7 @@ bool OGLPad::GetTextWidthAndHeight (const char *str, int len, int *width, int *t
 	for(int i=0;i<len;i++) {
 		unsigned int c = (unsigned char)str[i];
 		stbtt_aligned_quad q;
-		stbtt_GetPackedQuad(font->m_CharData, 512, 512, c, &xpos, &ypos, &q, 1);
+		stbtt_GetPackedQuad(font->m_CharData, BITMAP_W, BITMAP_H, c, &xpos, &ypos, &q, 1);
 		if(q.y1 > ymax)
 			ymax = q.y1;
 		if(q.y0 < ymin)
@@ -2518,7 +2524,7 @@ bool OGLPad::Text (int x, int y, const char *str, int len)
 	for(int i=0;i<len;i++) {
 		unsigned int c = (unsigned char)str[i];
 		stbtt_aligned_quad q;
-		stbtt_GetPackedQuad(font->m_CharData, 512, 512, c, &xpos, &ypos, &q, 1);
+		stbtt_GetPackedQuad(font->m_CharData, BITMAP_W, BITMAP_H, c, &xpos, &ypos, &q, 1);
 
 		const GLfloat vertex[] = {
 			q.s0, q.t0, q.x0, q.y0,
@@ -3019,13 +3025,6 @@ void OGLPad::PolyPolyline (const oapi::IVECTOR2 *pt, const int *npt, const int n
 }
 
 
-#define STB_TRUETYPE_IMPLEMENTATION
-#define STB_RECT_PACK_IMPLEMENTATION
-
-#include "stb_rect_pack.h"
-#include "stb_truetype.h"
-#define BITMAP_W 512
-#define BITMAP_H 512
 /*
 	enum Style {
 		NORMAL=0,    ///< no decoration
