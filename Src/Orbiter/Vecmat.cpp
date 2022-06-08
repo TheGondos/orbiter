@@ -50,7 +50,7 @@ double xangle (const Vector &a, const Vector &b)
 
 Matrix::Matrix ()
 {
-	memset (data, 0, 9*sizeof(double));
+	*this = IMatrix();
 }
 
 Matrix::Matrix (const Matrix &A)
@@ -651,7 +651,7 @@ void Quaternion::interp (const Quaternion &A, const Quaternion &B, double u)
 		dotAB = -dotAB;
 		sign = -1.0;
 	}
-	double omega = acos(dotAB);
+	double omega = acos(std::min(1.0,dotAB));
 
 	double sino = sin(omega);
 	double fa, fb;

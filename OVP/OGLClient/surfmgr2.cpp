@@ -1084,7 +1084,7 @@ void TileManager2<SurfTile>::Render (MATRIX4 &dwmat, bool use_zbuf, const VPlane
 
 	//loader->ReleaseMutex ();
 
-	if (np)
+	if (!use_zbuf)
 		camera->SetFrustumLimits(np,fp);
 }
 

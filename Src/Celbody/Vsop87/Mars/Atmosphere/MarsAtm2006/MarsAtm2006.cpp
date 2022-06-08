@@ -28,6 +28,8 @@ const char *MarsAtmosphere_2006::clbkName () const
 bool MarsAtmosphere_2006::clbkParams (const PRM_IN *prm_in, PRM_OUT *prm)
 {
 	double alt = (prm_in->flag & PRM_ALT ? prm_in->alt : 0.0);
+	// alt can be negative if the camera is clipped below the surface
+	if(alt < 0.0) alt = 0.0;
 
 	const double g0R = 0.0197275;
 	// g0/R, where g0 is gravitational acceleration at sea level,

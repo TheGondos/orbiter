@@ -213,9 +213,35 @@ void Instrument_OPlaneAlign::UpdateDraw (oapi::Sketchpad *skp)
 	double tra = normangle(trs + Aan);
 	double trd = normangle(trs + Adn);
 	// mean anomalies
+
 	double mas = shpel->MeanAnm();
-	double maa = shpel->MeanAnomaly_from_TrueAnomaly(tra);
-	double mad = shpel->MeanAnomaly_from_TrueAnomaly(trd);
+
+	bool tra_valid = true;
+	bool trd_valid = true;
+
+	// Test if the nodes have valid hyperbolic positions
+	if(shpel->e > 1.0) {
+		double ca = cos(tra);
+		double tt = (shpel->e + ca)/(shpel->e*ca + 1.0);
+		if(tt < 1.0) tra_valid = false;
+
+		double cd = cos(trd);
+		tt = (shpel->e + cd)/(shpel->e*cd + 1.0);
+		if(tt < 1.0) trd_valid = false;
+	}
+
+	double maa;
+	double mad;
+
+	if(!tra_valid) {
+		maa = shpel->MeanAnomaly_from_TrueAnomaly(trd);
+		mad = shpel->MeanAnomaly_from_TrueAnomaly(trd);
+	}
+	if(!trd_valid) {
+		maa = shpel->MeanAnomaly_from_TrueAnomaly(tra);
+		mad = shpel->MeanAnomaly_from_TrueAnomaly(tra);
+	}
+
 	// mean anomaly differences
 	double dmaa = posangle(maa - mas);
 	double dmad = posangle(mad - mas);
@@ -247,8 +273,14 @@ void Instrument_OPlaneAlign::UpdateDraw (oapi::Sketchpad *skp)
 	// burn times
 	double Th_main = vessel->GetThrusterGroupMaxth(THGROUP_MAIN);
 	double acc = Th_main / vessel->Mass();
-	double burnTan = dVan / acc;
-	double burnTdn = dVdn / acc;
+	double burnTan = 0.0;
+	double burnTdn = 0.0;
+
+	if(acc != 0.0) {
+		burnTan = dVan / acc;
+		burnTdn = dVdn / acc;
+	}
+
 	double burnT = (an_is_closest ? burnTan : burnTdn);
 	if (!engage) {
 		engage = (mode == SURFACE ? T0 < burnT*0.5 && T0 > 0 : (T0 < burnT*0.5 && T0 > -burnT*0.5));
@@ -288,11 +320,17 @@ void Instrument_OPlaneAlign::UpdateDraw (oapi::Sketchpad *skp)
 	skp->Line(x + cw * 9, y, x + cw * 15, y); y += 1;
 	// ascending node
 	if (have_intersection) {
-		sprintf(cbuf, "AN%6.1f%s", Aan*DEG, FloatStr(Tan, 3));
-		skp->Text(x, an_is_next ? y : y + ch, cbuf, strlen(cbuf)); y += ch;
+		if(tra_valid) {
+			sprintf(cbuf, "AN%6.1f%s", Aan*DEG, FloatStr(Tan, 3));
+			skp->Text(x, an_is_next ? y : y + ch, cbuf, strlen(cbuf));
+		}
+		y += ch;
 		// descending node
-		sprintf(cbuf, "DN%6.1f%s", Adn*DEG, FloatStr(Tdn, 3));
-		skp->Text(x, an_is_next ? y : y - ch, cbuf, strlen(cbuf)); y += 2 * ch;
+		if(trd_valid) {
+			sprintf(cbuf, "DN%6.1f%s", Adn*DEG, FloatStr(Tdn, 3));
+			skp->Text(x, an_is_next ? y : y - ch, cbuf, strlen(cbuf));
+		}
+		y += 2 * ch;
 	}
 	else {
 		sprintf(cbuf, "CE%6.1f%s", Aan*DEG, FloatStr(Tan, 3));
@@ -387,11 +425,15 @@ void Instrument_OPlaneAlign::UpdateDraw (oapi::Sketchpad *skp)
 	skp->SetTextColor(draw[1][0].col);
 	skp->SetTextAlign(oapi::Sketchpad::CENTER);
 	if (have_intersection) {
-		skp->Line(CX + xa, CY + ya, CX + xd, CY + yd); // node line
+		if(tra_valid && trd_valid) {
+			skp->Line(CX + xa, CY + ya, CX + xd, CY + yd); // node line
+		}
 		xa = (xa * 10) / 9;  ya = (ya * 10) / 9;
 		xd = (xd * 10) / 9;  yd = (yd * 10) / 9;
-		skp->Text(CX + xa, CY + ya - ch / 2, "AN", 2);
-		skp->Text(CX + xd, CY + yd - ch / 2, "DN", 2);
+		if(tra_valid)
+			skp->Text(CX + xa, CY + ya - ch / 2, "AN", 2);
+		if(trd_valid)
+			skp->Text(CX + xd, CY + yd - ch / 2, "DN", 2);
 	}
 	else {
 		skp->Line(CX + xa - cw / 2, CY + ya, CX + xa + cw / 2, CY + ya);

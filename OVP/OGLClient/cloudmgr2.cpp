@@ -157,7 +157,7 @@ bCloudShadowPass = false;
 			zmax = sqrt(D*D-Rc*Rc);
 			zmin = D-Rc;
 		} else {
-			zmax = sqrt(D*D-R*R) + sqrt(Rc*Rc-R*R);
+			zmax = sqrt(std::fabs(D*D-R*R)) + sqrt(Rc*Rc-R*R);
 			zmin = Rc-D;
 		}
 		zmin = std::max (2.0, std::min (zmax*1e-4, zmin));
@@ -221,7 +221,7 @@ bCloudShadowPass = false;
 	//if (rprm.bCloudBrighten)
 	//	TileManager2Base::Dev()->SetTextureStageState (0, D3DTSS_COLOROP, D3DTOP_MODULATE);
 
-	if (np)
+	if (!use_zbuf)
 		camera->SetFrustumLimits(np,fp);
 }
 

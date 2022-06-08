@@ -93,9 +93,9 @@ Camera::Camera (double _nearplane, double _farplane)
 	mmoveT = -1000.0;
 	ap_int = ap_ext = RAD*25.0;
 	ap = &ap_ext;
-	SetAperture (*ap, true, true);
 	nearplane = (float)_nearplane;
 	farplane = (float)_farplane;
+	SetAperture (*ap, true, true);
 	aspect = 1.0; // arbitrary default - reset with ResizeViewport
 	w05 = h05 = 100;
 	mbdown[0] = mbdown[1] = false;
@@ -1224,7 +1224,7 @@ void Camera::Update ()
 		Vector gd(grot.m13,grot.m23,grot.m33);
 		Vector cp(planet_proxy->GPos()-gpos);
 		double alt = cp.length()-planet_proxy->Size();
-		double az = acos (dotp (gd, cp.unit()));
+		double az = acos (std::clamp(dotp (gd, cp.unit()), -1.0, 1.0));
 		double a = atan (tan_ap*std::hypot(w05,h05)/h05);
 		double tht = az-a;
 		if (tht < Pi05)

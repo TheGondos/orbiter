@@ -217,8 +217,6 @@ public:
 
 	void orthogonalise (int axis);
 
-	/*friend*/ Matrix IMatrix();		 // returns identity matrix
-
 	friend Vector mul (const Matrix &A, const Vector &b);  // returns A * b
 	friend Vector tmul (const Matrix &A, const Vector &b); // returns A^T * b
 	friend Matrix inv (const Matrix &A);  // inverse of A
