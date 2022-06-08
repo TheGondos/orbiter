@@ -307,7 +307,7 @@ int OGLMesh::GetGroup (int grp, GROUPREQUESTSPEC *grs)
 	if (grp >= nGrp) return 1;
 	GROUPREC *g = Grp[grp];
 	int nv = g->nVtx;
-	uint16_t ni = g->nIdx;
+	uint32_t ni = g->nIdx;
 	int i, vi;
 	int ret = 0;
 
@@ -548,6 +548,13 @@ void OGLMesh::Render (OGLCamera *c, glm::fmat4 &model)
 		if (!(uflag & 0x4) != lighting)
 			dev->SetRenderState (D3DRENDERSTATE_LIGHTING, lighting = !lighting);
 */
+/*
+		if(Grp[g]->zBias) {
+			glEnable( GL_POLYGON_OFFSET_FILL );
+			printf("%f\n", Grp[g]->zBias);
+			glPolygonOffset( Grp[g]->zBias, Grp[g]->zBias );
+		}
+*/
 		if (uflag & 0x8) { // brighten
             glEnable(GL_BLEND);
             glBlendFunc(GL_SRC_ALPHA, GL_ONE);
@@ -560,6 +567,10 @@ void OGLMesh::Render (OGLCamera *c, glm::fmat4 &model)
 		}
 
 		RenderGroup (Grp[g]);
+		/*
+		if(Grp[g]->zBias) {
+			glDisable( GL_POLYGON_OFFSET_FILL );
+		}*/
 
 		if (uflag & 0x8) { // reset brighten
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -605,7 +616,12 @@ void OGLMesh::TransformGroup (int n, const glm::fmat4 *mm)
 		x = v.nx*m[0][0] + v.ny*m[1][0] + v.nz* m[2][0];
 		y = v.nx*m[0][1] + v.ny*m[1][1] + v.nz* m[2][1];
 		z = v.nx*m[0][2] + v.ny*m[1][2] + v.nz* m[2][2];
-		w = 1.0f/(float)sqrt (x*x + y*y + z*z);
+		float len = (float)sqrt (x*x + y*y + z*z);
+		if(len != 0.0)
+			w = 1.0f/len;
+		else
+			w = 1.0;
+
 		v.nx = x*w;
 		v.ny = y*w;
 		v.nz = z*w;

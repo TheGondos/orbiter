@@ -45,7 +45,7 @@ public:
 	struct GROUPREC {  // mesh group definition
 		int nVtx;           // number of vertices
         NTVERTEX *Vtx;
-		uint16_t nIdx;           // number of indices
+		uint32_t nIdx;           // number of indices
 		uint16_t *Idx;            // vertex index list
         std::unique_ptr<VertexBuffer> VBO;
         std::unique_ptr<IndexBuffer> IBO;
