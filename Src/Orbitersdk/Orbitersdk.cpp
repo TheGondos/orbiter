@@ -18,6 +18,9 @@
 #define DLLCLBK extern "C" __declspec(dllexport)
 #define OAPIFUNC __declspec(dllimport)
 */
+static MODULEHANDLE myModule;
+static void (*myExit)(MODULEHANDLE);
+
 static void __attribute__ ((constructor)) setup(void) {
 	static bool need_init = true;
 	if(!need_init) {
@@ -31,17 +34,19 @@ static void __attribute__ ((constructor)) setup(void) {
 		assert(false);
 	}
 
-	MODULEHANDLE mod = oapiModuleLoad(info.dli_fname);
+	myModule = oapiModuleLoad(info.dli_fname);
 
-	void (*InitModule)(MODULEHANDLE) = (void(*)(MODULEHANDLE))oapiModuleGetProcAddress(mod, "InitModule");
+	void (*InitModule)(MODULEHANDLE) = (void(*)(MODULEHANDLE))oapiModuleGetProcAddress(myModule, "InitModule");
 	if(InitModule)
-		InitModule(mod);
+		InitModule(myModule);
 
-	oapiModuleUnload(mod);
+	myExit = (void(*)(MODULEHANDLE))oapiModuleGetProcAddress(myModule, "ExitModule");
+
+	oapiModuleUnload(myModule);
 }
 
 static void __attribute__ ((destructor)) destroy(void) {
-	//TODO: call ExitModule
+	myExit(myModule);
 }
 
 
