@@ -127,89 +127,6 @@ float XRSoundImpl::GetVersion() const
 //   playbackType: denotes how sound will be faded
 //
 // Returns true on success, false if file not found or XRSound.dll not present.
-
-#include <dirent.h>
-#include <errno.h>
-#include <unistd.h>
-#include <cstring>
-// r must have strlen(path) + 2 bytes
-std::string casepath(const char *path)
-{
-    char r[260];
-    size_t l = strlen(path);
-    if(l+2>=sizeof(r)) {
-        return {};
-    }
-    char *p = (char *)alloca(l + 1);
-    strcpy(p, path);
-    size_t rl = 0;
-    
-    DIR *d;
-    if (p[0] == '/')
-    {
-        d = opendir("/");
-        p = p + 1;
-    }
-    else
-    {
-        d = opendir(".");
-        r[0] = '.';
-        r[1] = 0;
-        rl = 1;
-    }
-    
-    int last = 0;
-    char *c = strsep(&p, "/");
-    while (c)
-    {
-        if (!d)
-        {
-            return {};
-        }
-        
-        if (last)
-        {
-            closedir(d);
-            return {};
-        }
-        
-        r[rl] = '/';
-        rl += 1;
-        r[rl] = 0;
-        
-        struct dirent *e = readdir(d);
-        while (e)
-        {
-            if (strcasecmp(c, e->d_name) == 0)
-            {
-                strcpy(r + rl, e->d_name);
-                rl += strlen(e->d_name);
-
-                closedir(d);
-                d = opendir(r);
-                
-                break;
-            }
-            
-            e = readdir(d);
-        }
-        
-        if (!e)
-        {
-            strcpy(r + rl, c);
-            rl += strlen(c);
-            last = 1;
-            closedir(d);
-            return {};
-        }
-        
-        c = strsep(&p, "/");
-    }
-    
-    if (d) closedir(d);
-    return std::string(r);
-}
-
 bool XRSoundImpl::LoadWav(const int soundID, const char *pSoundFilename, const PlaybackType playbackType)
 {
     if (!IsPresent())
@@ -224,7 +141,7 @@ bool XRSoundImpl::LoadWav(const int soundID, const char *pSoundFilename, const P
     if (!pSoundFilename || !*pSoundFilename)
         return false;
 
-    std::string path = casepath(pSoundFilename);
+    std::string path = oapiGetFilePath(pSoundFilename);
 
     return m_pEngine->LoadWav(soundID, path.c_str(), playbackType);
 //    return m_pEngine->LoadWav(soundID, pSoundFilename, playbackType);
