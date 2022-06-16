@@ -30,11 +30,14 @@ OGLCamera::OGLCamera (uint32_t w, uint32_t h)
 {
 	width = w, height = h;
 	aspect = (double)w/(double)h;
-	SetAperture (RAD*50.0);
+
+	nearplane = 2.5f;
+	farplane = 5e8f;
 
 	mView = glm::fmat4(1.0f);
+	SetAperture (RAD*50.0);
 
-	SetFrustumLimits (2.5f, 5e8f); // initial limits
+//	SetFrustumLimits (2.5f, 5e8f); // initial limits
 //	SetFrustumLimits (2.5f, 5e9f); // initial limits
 }
 

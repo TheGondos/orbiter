@@ -684,7 +684,7 @@ double angle (const Quaternion &A, const Quaternion &B)
 	double blen = sqrt (B.qvx*B.qvx + B.qvy*B.qvy + B.qvz*B.qvz);
 	if (alen && blen) {
 		double cosa = (A.qvx*B.qvx + A.qvy*B.qvy + A.qvz*B.qvz) / (alen*blen);
-		return acos (cosa);
+		return acos (std::clamp(cosa, -1.0, 1.0));
 	} else
 		return 0.0; // problems!
 }
