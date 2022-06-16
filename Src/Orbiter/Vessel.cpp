@@ -232,11 +232,14 @@ bool Vessel::OpenConfigFile (ifstream &cfgfile) const
 	strcpy (cbuf, "Vessels/");
 	strcat (cbuf, classname ? classname : name);
 	// first search in $CONFIGDIR\Vessels
-	cfgfile.open (g_pOrbiter->ConfigPath (cbuf));
+	std::string cpath = oapiGetFilePath(g_pOrbiter->ConfigPath (cbuf));
+	cfgfile.open (cpath.c_str());
 	if (cfgfile.good()) return true;
 	else cfgfile.clear();
 	// next search in $CONFIGDIR
-	cfgfile.open (g_pOrbiter->ConfigPath (cbuf+8));
+
+	cpath = oapiGetFilePath(g_pOrbiter->ConfigPath (cbuf+8));
+	cfgfile.open (cpath.c_str());
 	if (cfgfile.good()) return true;
 	else {
 		cfgfile.clear();
