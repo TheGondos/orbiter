@@ -46,7 +46,8 @@ static void __attribute__ ((constructor)) setup(void) {
 }
 
 static void __attribute__ ((destructor)) destroy(void) {
-	myExit(myModule);
+	if(myExit)
+		myExit(myModule);
 }
 
 
