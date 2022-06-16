@@ -240,6 +240,7 @@ void VVessel::ClearMeshes ()
 	if (nmesh) {
 		for (int i = 0; i < nmesh; i++) {
 			if (meshlist[i].mesh) delete meshlist[i].mesh;
+			if (meshlist[i].trans) delete meshlist[i].trans;
 		}
 		delete []meshlist;
 		nmesh = 0;
@@ -343,8 +344,6 @@ bool VVessel::Render (OGLCamera *c, bool internalpass)
 		// transform mesh
 		if (mr.trans) {
             mWorldTrans = mModel * *(mr.trans);
-			//printf("VVessel::Render mr.trans\n");
-            //exit(-1);
         }
 
 		if (bVC) { // link MFD textures for rendering
