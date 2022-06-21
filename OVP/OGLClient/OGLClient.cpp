@@ -9,6 +9,7 @@
 #include "TileMgr.h"
 #include "HazeMgr.h"
 #include <glm/gtc/matrix_transform.hpp>
+#include <fontconfig/fontconfig.h>
 #include <imgui.h>
 #include "imgui_impl_opengl3.h"
 #include "imgui_impl_glfw.h"
@@ -52,6 +53,7 @@ OGLClient *g_client = 0;
 // Initialise module
 DLLCLBK void InitModule (MODULEHANDLE hDLL)
 {
+	FcInit();
 	g_client = new OGLClient (hDLL);
 	if (!oapiRegisterGraphicsClient (g_client)) {
 		delete g_client;
@@ -64,6 +66,7 @@ DLLCLBK void InitModule (MODULEHANDLE hDLL)
 
 DLLCLBK void ExitModule (MODULEHANDLE hDLL)
 {
+	FcFini();
 	if (g_client) {
 		oapiUnregisterGraphicsClient (g_client);
 		delete g_client;
@@ -327,8 +330,17 @@ void OGLClient::clbkRender2DPanel (SURFHANDLE *hSurf, MESHHANDLE hMesh, MATRIX3 
 		float tu, tv;
 		float x, y;
 	} *hvtx = new HVTX[1];
-glDisable(GL_DEPTH_TEST);
-	static glm::mat4 ortho_proj = glm::ortho(0.0f, (float)g_client->GetScene()->GetCamera()->GetWidth(), (float)g_client->GetScene()->GetCamera()->GetHeight(), 0.0f);
+	glDisable(GL_DEPTH_TEST);
+
+	auto camera = g_client->GetScene()->GetCamera();
+
+	static glm::mat4 ortho_proj = glm::ortho(
+		0.0f, 
+		(float)camera->GetWidth(),
+		(float)camera->GetHeight(),
+	 	0.0f
+	);
+
 	static Shader s("Overlay.vs","Overlay.fs");
 //	static glm::vec3 vecTextColor = glm::vec3(1,1,1);
 
@@ -3043,26 +3055,26 @@ static const char *GetFont(Font::Style style, bool prop)
 {
 	if(prop) {
 		if((style & Font::BOLD) && (style & Font::ITALIC)) {
-			return "LiberationSans-BoldItalic.ttf";
+			return "LiberationMono:bold:italic";
 		}
 		if(style & Font::BOLD) {
-			return "LiberationSans-Bold.ttf";
+			return "LiberationMono:bold";
 		}
 		if(style & Font::ITALIC) {
-			return "LiberationSans-Italic.ttf";
+			return "LiberationSans:italic";
 		}
-		return "LiberationSans-Regular.ttf";
+		return "LiberationSans";
  	} else {
 		if((style & Font::BOLD) && (style & Font::ITALIC)) {
-			return "LiberationMono-BoldItalic.ttf";
+			return "LiberationMono:bold:italic";
 		}
 		if(style & Font::BOLD) {
-			return "LiberationMono-Bold.ttf";
+			return "LiberationMono:bold";
 		}
 		if(style & Font::ITALIC) {
-			return "LiberationMono-Italic.ttf";
+			return "LiberationMono:italic";
 		}
-		return "LiberationMono-Regular.ttf";
+		return "LiberationMono";
 	}
 }
 
@@ -3074,16 +3086,42 @@ OGLFont::OGLFont (int height, bool prop, const char *face, Style style, int orie
 	m_Height = abs(height);
 
 	const char *f = GetFont(style, prop);
+	FcConfig* config = FcInitLoadConfigAndFonts();
+	FcPattern* pat = FcNameParse((const FcChar8*)f);
+	FcConfigSubstitute(config, pat, FcMatchPattern);
+	FcDefaultSubstitute(pat);
 
-	char tmp[255];
-	sprintf(tmp,"/usr/share/fonts/truetype/liberation/%s", f);
+	char* fontFile;
+	FcResult result;
+
+	FcPattern* font = FcFontMatch(config, pat, &result);
+
+	if (font) {
+		FcChar8* file = NULL; 
+
+		if (FcPatternGetString(font, FC_FILE, 0, &file) == FcResultMatch)
+		{
+			fontFile = (char*)file;
+			printf("%s\n",fontFile);
+		}
+
+
+	} else {
+		abort();
+        exit(-1);
+        return;
+	}
 
 	FILE *file;
-	if((file = fopen(tmp, "rb")) == NULL){
-		printf("Cannot open font file '%s'\n", tmp);
+	if((file = fopen(fontFile, "rb")) == NULL){
+		printf("Cannot open font file '%s'\n", fontFile);
 		exit(-1);
 	}
 
+	FcPatternDestroy(font);
+	FcPatternDestroy(pat);
+	FcConfigDestroy(config);
+	
 	fseek(file, 0, SEEK_END);
 	long size = ftell(file);
 	fseek(file, 0, SEEK_SET);
