@@ -3055,10 +3055,10 @@ static const char *GetFont(Font::Style style, bool prop)
 {
 	if(prop) {
 		if((style & Font::BOLD) && (style & Font::ITALIC)) {
-			return "LiberationMono:bold:italic";
+			return "LiberationSans:bold:italic";
 		}
 		if(style & Font::BOLD) {
-			return "LiberationMono:bold";
+			return "LiberationSans:bold";
 		}
 		if(style & Font::ITALIC) {
 			return "LiberationSans:italic";
