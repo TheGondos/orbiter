@@ -1,6 +1,7 @@
 # Copyright (c) Gondos
 # Licensed under the MIT License
 find_package(OpenGL REQUIRED)
+find_package(Fontconfig)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${ORBITER_BINARY_PLUGIN_DIR})
 file(GLOB OGL_SHADERS ${CMAKE_CURRENT_SOURCE_DIR}/*.vs ${CMAKE_CURRENT_SOURCE_DIR}/*.fs)
 
@@ -26,6 +27,7 @@ target_link_libraries(OGLClient
 #	${ORBITER_LIB}
 	${ORBITER_SDK_LIB}
 	imgui
+    Fontconfig::Fontconfig
 	GL
 #    ${OPENGL_LIBRARY}
 )
