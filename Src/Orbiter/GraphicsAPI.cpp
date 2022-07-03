@@ -148,14 +148,18 @@ bool GraphicsClient::TexturePath (const char *fname, char *path) const
 	// first try htex directory
 	strcpy (path, g_pOrbiter->Cfg()->CfgDirPrm.HightexDir);
 	strcat (path, fname);
-	if (access( path, F_OK ) != -1) {
+	std::string hres = oapiGetFilePath(path);
+	if (access( hres.c_str(), F_OK ) != -1) {
+		strcpy(path, hres.c_str());
 		return true;
 	}
 
 	// try tex directory
 	strcpy (path, g_pOrbiter->Cfg()->CfgDirPrm.TextureDir);
 	strcat (path, fname);
-	if (access( path, F_OK ) != -1) {
+	std::string lres = oapiGetFilePath(path);
+	if (access( lres.c_str(), F_OK ) != -1) {
+		strcpy(path, lres.c_str());
 		return true;
 	}
 	return false;

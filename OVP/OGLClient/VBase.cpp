@@ -3,34 +3,37 @@
 
 // ==============================================================
 //   ORBITER VISUALISATION PROJECT (OVP)
-//   OpenGL Client module
+//   D3D7 Client module
 // ==============================================================
 
 // ==============================================================
 // VBase.cpp
-// class VBase (implementation)
+// class vBase (implementation)
 //
-// A VBase is the visual representation of a surface base
+// A vBase is the visual representation of a surface base
 // object (a "spaceport" on the surface of a planet or moon,
 // usually with runways or landing pads where vessels can
 // land and take off.
 // ==============================================================
 
+#include "glad.h"
 #include "VBase.h"
 #include "TileMgr.h"
 #include "OGLClient.h"
-#include "Scene.h"
 #include "OGLCamera.h"
-#include "OGLMesh.h"
+#include <cstring>
 
-VBase::VBase (OBJHANDLE _hObj): VObject (_hObj)
+struct VERTEX_XYZ   { float x, y, z; };
+
+vBase::vBase (OBJHANDLE _hObj, const Scene *scene): vObject (_hObj, scene)
 {
 	int i;
+
 	// load surface tiles
 	ntile = g_client->GetBaseTileList (_hObj, &tspec);
 	if (ntile) {
 		tile = new SurfTile[ntile];
-		for (i = 0; i < (int)ntile; i++) {
+		for (i = 0; i < ntile; i++) {
 			tile[i].mesh = new OGLMesh (tspec[i].mesh);
 		}
 	}
@@ -39,11 +42,11 @@ VBase::VBase (OBJHANDLE _hObj): VObject (_hObj)
 	MESHHANDLE *sbs, *sas;
 	int nsbs, nsas;
 	g_client->GetBaseStructures (_hObj, &sbs, &nsbs, &sas, &nsas);
-	if ((nstructure_bs = nsbs)) {
+	if (nstructure_bs = nsbs) {
 		structure_bs = new OGLMesh*[nsbs];
 		for (i = 0; i < nsbs; i++) structure_bs[i] = new OGLMesh (sbs[i]);
 	}
-	if ((nstructure_as = nsas)) {
+	if (nstructure_as = nsas) {
 		structure_as = new OGLMesh*[nsas];
 		for (i = 0; i < nsas; i++) structure_as[i] = new OGLMesh (sas[i]);
 	}
@@ -54,9 +57,9 @@ VBase::VBase (OBJHANDLE _hObj): VObject (_hObj)
 	Tchk = Tlghtchk = oapiGetSimTime()-1.0;
 }
 
-VBase::~VBase ()
+vBase::~vBase ()
 {
-	size_t i;
+	int i;
 
 	if (ntile) {
 		for (i = 0; i < ntile; i++)
@@ -74,23 +77,33 @@ VBase::~VBase ()
 		delete []structure_as;
 	}
 	if (nshmesh) {
-		//for (i = 0; i < nshmesh; i++) {
-			//shmesh[i].vbuf->Release();
-			//delete []shmesh[i].idx;
-		//}
+		for (i = 0; i < nshmesh; i++) {
+			delete shmesh[i].vbuf;
+			delete shmesh[i].idx;
+		}
 		delete []shmesh;
 	}
 }
+static void CheckError(const char *s) {
+	GLenum err;
+	while((err = glGetError()) != GL_NO_ERROR)
+	{
+	// Process/log the error.
+		printf("GLError: %s - 0x%04X\n", s, err);
+        abort();
+        exit(-1);
+	}
+}
 
-void VBase::SetupShadowMeshes ()
+void vBase::SetupShadowMeshes ()
 {
 	nshmesh = 0;
-/*
+
 	// Get mesh geometries for all base structures
 	int i, j, k, m, nmesh, ngrp, nssh;
 	MESHHANDLE *ssh;
 	double *ecorr;
-	g_client->GetBaseShadowGeometry (mHandle, &ssh, &ecorr, &nssh);
+	g_client->GetBaseShadowGeometry (hObj, &ssh, &ecorr, &nssh);
 	if (!nssh) return;
 
 	// Re-assemble meshes according to surface elevation correction heights.
@@ -140,16 +153,24 @@ void VBase::SetupShadowMeshes ()
 	}
 
 	shmesh = new ShadowMesh[nshmesh];
-	LPDIRECT3D7 d3d = gc->GetDirect3D7();
-	D3DVERTEXBUFFERDESC vbd;
-	g_client->SetDefault (vbd);
-	vbd.dwFVF = D3DFVF_XYZ;
 	VERTEX_XYZ *vtx;
 	for (i = 0; i < nshmesh; i++) {
-		vbd.dwNumVertices = eg[i].nvtx;
-		d3d->CreateVertexBuffer (&vbd, &shmesh[i].vbuf, 0);
-		shmesh[i].vbuf->Lock (DDLOCK_WAIT | DDLOCK_WRITEONLY | DDLOCK_DISCARDCONTENTS, (LPVOID*)&vtx, NULL);
-		shmesh[i].idx = new uint16_t[eg[i].nidx];
+		shmesh[i].va = new VertexArray();
+		shmesh[i].va->Bind();
+		shmesh[i].vbuf = new VertexBuffer(nullptr, eg[i].nvtx * sizeof(VERTEX_XYZ));
+		shmesh[i].vbuf->Bind();
+		glVertexAttribPointer(
+		0,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
+		3,                  // size
+		GL_FLOAT,           // type
+		GL_FALSE,           // normalized?
+		0,                  // stride
+		(void*)0            // array buffer offset
+		);
+		glEnableVertexAttribArray(0);
+
+		vtx = (VERTEX_XYZ *)shmesh[i].vbuf->Map();
+		uint16_t *idx = new uint16_t[eg[i].nidx];
 		shmesh[i].nvtx = 0;
 		shmesh[i].nidx = 0;
 		shmesh[i].ecorr = (eg[i].bin-0.5)*d_ecorr;
@@ -160,7 +181,7 @@ void VBase::SetupShadowMeshes ()
 				MESHGROUP *grp = oapiMeshGroup (mesh, k);
 				if (grp->UsrFlag & 1) continue; // "no shadows" flag
 				VERTEX_XYZ *vtgt = vtx + shmesh[i].nvtx;
-				uint16_t *itgt = shmesh[i].idx + shmesh[i].nidx;
+				uint16_t *itgt = idx + shmesh[i].nidx;
 				NTVERTEX *vsrc = grp->Vtx;
 				uint16_t *isrc = grp->Idx;
 				uint16_t iofs = (uint16_t)shmesh[i].nvtx;
@@ -175,33 +196,37 @@ void VBase::SetupShadowMeshes ()
 				shmesh[i].nidx += grp->nIdx;
 			}
 		}
-		shmesh[i].vbuf->Unlock();
+		shmesh[i].vbuf->UnMap();
+		shmesh[i].vbuf->Bind();
+		shmesh[i].idx = new IndexBuffer(idx, eg[i].nidx);
+		shmesh[i].idx->Bind();
+		delete []idx;
+		shmesh[i].va->UnBind();
 	}
 
 	for (i = 0; i < nshmesh; i++)
 		delete []eg[i].mesh;
 	delete []eg;
-	*/
 }
 
-bool VBase::Update ()
+bool vBase::Update ()
 {
-	if (!VObject::Update()) return false;
+	if (!vObject::Update()) return false;
 
-	//static const double csun_lights = RAD*1.0; // sun elevation at which lights are switched on
+	static const double csun_lights = RAD*1.0; // sun elevation at which lights are switched on
 	double simt = oapiGetSimTime();
 
 	if (simt > Tlghtchk) {
-//		double intv;
+		double intv;
 		//bLocalLight = ModLighting (&localLight, intv);
-//		Tlghtchk = simt+intv;
+		Tlghtchk = simt+intv;
 	}
-/*
+
 	if (simt > Tchk) {
 		VECTOR3 pos, sdir;
 		MATRIX3 rot;
-		oapiGetGlobalPos (mHandle, &pos); normalise(pos);
-		oapiGetRotationMatrix (mHandle, &rot);
+		oapiGetGlobalPos (hObj, &pos); normalise(pos);
+		oapiGetRotationMatrix (hObj, &rot);
 		sdir = tmul (rot, -pos);
 		double csun = sdir.y;
 		bool night = csun < csun_lights;
@@ -213,91 +238,86 @@ bool VBase::Update ()
 				structure_as[i]->SetTexMixture (1, night ? 1.0f:0.0f);
 			lights = night;
 		}
-	}*/
+	}
 	return true;
 }
 
-bool VBase::RenderSurface (OGLCamera *c)
+bool vBase::RenderSurface ()
 {
 	// note: assumes z-buffer disabled
 
-	//if (!active) return false;
+	if (!active) return false;
 
-	size_t i;
-	//bool modlight = false;
-
-	//dev->SetTransform (D3DTRANSFORMSTATE_WORLD, &mWorld);
+	int i;
+	bool modlight = false;
 
 	// render tiles
 	if (ntile) {
-		//if (bLocalLight && !modlight) {
-		//	dev->SetLight (0, &localLight);
-		//	modlight = true;
-		//}
+		if (bLocalLight && !modlight) {
+			//dev->SetLight (0, &localLight);
+			modlight = true;
+		}
 		//dev->SetTextureStageState (0, D3DTSS_ADDRESS, D3DTADDRESS_CLAMP);
 		for (i = 0; i < ntile; i++) {
-			//dev->SetTexture (0, (LPDIRECTDRAWSURFACE7)tspec[i].tex);
-			tile[i].mesh->Render (c, mModel);
+			glBindTexture(GL_TEXTURE_2D, ((OGLTexture *)tspec[i].tex)->m_TexId);
+			tile[i].mesh->Render (scn->GetCamera(), mWorld);
 		}
 		//dev->SetTextureStageState (0, D3DTSS_ADDRESS, D3DTADDRESS_WRAP);
 	}
 
 	// render generic objects under shadows
 	if (nstructure_bs) {
-		//dev->SetRenderState (D3DRENDERSTATE_ZENABLE, TRUE);
-		//dev->SetRenderState (D3DRENDERSTATE_ZWRITEENABLE, TRUE);
 		glEnable(GL_DEPTH_TEST);
 		glDepthMask(GL_TRUE);
 		for (i = 0; i < nstructure_bs; i++) {
-			structure_bs[i]->Render (c, mModel);
+			structure_bs[i]->Render (scn->GetCamera(), mWorld);
 		}
-		glDepthMask(GL_FALSE);
 		glDisable(GL_DEPTH_TEST);
-		//dev->SetRenderState (D3DRENDERSTATE_ZENABLE, FALSE);
-		//dev->SetRenderState (D3DRENDERSTATE_ZWRITEENABLE, FALSE);
+		glDepthMask(GL_FALSE);
 	}
 
 	// render surface shadows (TODO)
-
-	//if (modlight) // restore lighting
-	//	dev->SetLight (0, (LPD3DLIGHT7)scn->GetLight());
-
+/*
+	if (modlight) // restore lighting
+		dev->SetLight (0, (LPD3DLIGHT7)scn->GetLight());
+*/
 	return true;
 }
 
-bool VBase::RenderStructures (OGLCamera *c)
+bool vBase::RenderStructures ()
 {
 	// note: assumes z-buffer enabled
 
-	//if (!active) return false;
-
-	size_t i;
-	//dev->SetTransform (D3DTRANSFORMSTATE_WORLD, &mWorld);
+	if (!active) return false;
 
 	//if (bLocalLight) // modify lighting
 	//	dev->SetLight (0, &localLight);
 
 	// render generic objects above shadows
-	for (i = 0; i < nstructure_as; i++)
-		structure_as[i]->Render (c, mModel);
-
-	//if (bLocalLight) { // restore lighting
-	//	dev->SetLight (0, (LPD3DLIGHT7)scn->GetLight());
-	//}
+	for (int i = 0; i < nstructure_as; i++)
+		structure_as[i]->Render (scn->GetCamera(), mWorld);
+/*
+	if (bLocalLight) { // restore lighting
+		dev->SetLight (0, (LPD3DLIGHT7)scn->GetLight());
+	}*/
 
 	return true;
 }
 
-void VBase::RenderGroundShadow (OGLCamera *c)
+void vBase::RenderGroundShadow (float depth)
 {
 	if (!nshmesh) return; // nothing to do
-/*
+
+	static Shader s("GroundShadow.vs","GroundShadow.fs");
+	s.Bind();
+	s.SetMat4("u_ViewProjection", *scn->GetCamera()->GetViewProjectionMatrix());
+
 	static const double shadow_elev_limit = 0.07;
 	double d, csun, nr0;
 	VECTOR3 pp, sd, pvr;
-	OBJHANDLE hPlanet = oapiGetBasePlanet (mHandle); // planet handle
+	OBJHANDLE hPlanet = oapiGetBasePlanet (hObj); // planet handle
 	oapiGetGlobalPos (hPlanet, &pp);              // planet global pos
-	oapiGetGlobalPos (mHandle, &sd);                 // base global pos
+	oapiGetGlobalPos (hObj, &sd);                 // base global pos
 	pvr = sd-pp;                                  // planet-relative base position
 	d = length (pvr);                             // planet radius at base location
 	normalise (sd);                               // shadow projection direction
@@ -310,7 +330,7 @@ void VBase::RenderGroundShadow (OGLCamera *c)
 		return;
 
 	MATRIX3 vR;
-	oapiGetRotationMatrix (mHandle, &vR);
+	oapiGetRotationMatrix (hObj, &vR);
 	VECTOR3 sdv = tmul (vR, sd);     // projection direction in base frame
 	VECTOR3 hnp = pvr; normalise(hnp);
 	VECTOR3 hn = tmul (vR, hnp);     // horizon normal in vessel frame
@@ -320,58 +340,59 @@ void VBase::RenderGroundShadow (OGLCamera *c)
 	VECTOR3 sdvs = sdv / nd;
 	if (!sdvs.y) return; // required for plane offset correction
 
-	int i;
-
 	// build shadow projection matrix
-	D3DMATRIX mProj, mProjWorld, mProjWorldShift;
-	mProj._11 = (float)(1.0 - sdvs.x*hn.x);
-	mProj._12 = (float)(    - sdvs.y*hn.x);
-	mProj._13 = (float)(    - sdvs.z*hn.x);
-	mProj._14 = 0;
-	mProj._21 = (float)(    - sdvs.x*hn.y);
-	mProj._22 = (float)(1.0 - sdvs.y*hn.y);
-	mProj._23 = (float)(    - sdvs.z*hn.y);
-	mProj._24 = 0;
-	mProj._31 = (float)(    - sdvs.x*hn.z);
-	mProj._32 = (float)(    - sdvs.y*hn.z);
-	mProj._33 = (float)(1.0 - sdvs.z*hn.z);
-	mProj._34 = 0;
-	mProj._41 = 0;
-	mProj._42 = 0;
-	mProj._43 = 0;
-	mProj._44 = 1.0f;
-	D3DMAT_MatrixMultiply (&mProjWorld, &mWorld, &mProj);
-	memcpy (&mProjWorldShift, &mProjWorld, sizeof(D3DMATRIX));
+	glm::mat4 mProj, mProjWorld, mProjWorldShift;
+	mProj[0][0] = (float)(1.0 - sdvs.x*hn.x);
+	mProj[0][1] = (float)(    - sdvs.y*hn.x);
+	mProj[0][2] = (float)(    - sdvs.z*hn.x);
+	mProj[0][3] = 0;
+	mProj[1][0] = (float)(    - sdvs.x*hn.y);
+	mProj[1][1] = (float)(1.0 - sdvs.y*hn.y);
+	mProj[1][2] = (float)(    - sdvs.z*hn.y);
+	mProj[1][3] = 0;
+	mProj[2][0] = (float)(    - sdvs.x*hn.z);
+	mProj[2][1] = (float)(    - sdvs.y*hn.z);
+	mProj[2][2] = (float)(1.0 - sdvs.z*hn.z);
+	mProj[2][3] = 0;
+	mProj[3][0] = 0;
+	mProj[3][1] = 0;
+	mProj[3][2] = 0;
+	mProj[3][3] = 1.0f;
+	mProjWorld = mWorld * mProj;
+	mProjWorldShift = mProjWorld;
 
 	// modify depth of shadows at dawn/dusk
-	int tfactor;
-	bool resetalpha = false;
-	if (gc->UseStencilBuffer()) {
+//	if (g_client->UseStencilBuffer()) {
 		double scale = std::min (1.0, (csun-0.07)/0.015);
 		if (scale < 1) {
-			dev->GetRenderState (D3DRENDERSTATE_TEXTUREFACTOR, &tfactor);
-			float modalpha = (float)(scale*RGBA_GETALPHA(tfactor)/256.0);
-			dev->SetRenderState (D3DRENDERSTATE_TEXTUREFACTOR, D3DRGBA(0,0,0,modalpha));
-			resetalpha = true;
+			depth = scale * depth;
 		}
-	}
+//	}
 
-	dev->SetTransform (D3DTRANSFORMSTATE_WORLD, &mProjWorld);
-	for (i = 0; i < nshmesh; i++) {
+	s.SetFloat("u_ShadowDepth", depth);
+
+	for (int i = 0; i < nshmesh; i++) {
 
 		// add shadow plane offset to transformation
 		nr0 = shmesh[i].ecorr/sdvs.y;
-		mProjWorldShift._41 = mProjWorld._41 + (float)(nr0*(sdvs.x*mWorld._11 + sdvs.y*mWorld._21 + sdvs.z*mWorld._31));
-		mProjWorldShift._42 = mProjWorld._42 + (float)(nr0*(sdvs.x*mWorld._12 + sdvs.y*mWorld._22 + sdvs.z*mWorld._32));
-		mProjWorldShift._43 = mProjWorld._43 + (float)(nr0*(sdvs.x*mWorld._13 + sdvs.y*mWorld._23 + sdvs.z*mWorld._33));
-		dev->SetTransform (D3DTRANSFORMSTATE_WORLD, &mProjWorldShift);
+		mProjWorldShift[3][0] = mProjWorld[3][0] + (float)(nr0*(sdvs.x*mWorld[0][0] + sdvs.y*mWorld[1][0] + sdvs.z*mWorld[2][0]));
+		mProjWorldShift[3][1] = mProjWorld[3][1] + (float)(nr0*(sdvs.x*mWorld[0][1] + sdvs.y*mWorld[1][1] + sdvs.z*mWorld[2][1]));
+		mProjWorldShift[3][2] = mProjWorld[3][2] + (float)(nr0*(sdvs.x*mWorld[0][2] + sdvs.y*mWorld[1][2] + sdvs.z*mWorld[2][2]));
 
-		dev->DrawIndexedPrimitiveVB (D3DPT_TRIANGLELIST, shmesh[i].vbuf, 0, shmesh[i].nvtx, shmesh[i].idx, shmesh[i].nidx, 0);
+		s.SetMat4("u_Model", mProjWorldShift);
+
+		shmesh[i].va->Bind();
+
+        glDrawElements(GL_TRIANGLES, shmesh[i].idx->GetCount(), GL_UNSIGNED_SHORT, 0);
+
+		shmesh[i].va->UnBind();
 	}
-	*/
+
+	s.UnBind();
 }
+
 /*
-bool VBase::ModLighting (LPD3DLIGHT7 light, double &nextcheck)
+bool vBase::ModLighting (LPD3DLIGHT7 light, double &nextcheck)
 {
 	VECTOR3 GB, GS, GP, S, P;
 	VECTOR3 lcol = {1,1,1};

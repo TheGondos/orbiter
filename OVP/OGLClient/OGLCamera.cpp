@@ -93,6 +93,32 @@ void OGLCamera::Update ()
 	grot = glm::make_mat3((double *)&mat);
 	mView = glm::mat4(grot);
 	mViewProj = mProj * mView;
+
+	// note: in render space, the camera is always placed at the origin,
+	// so that render coordinates are precise in the vicinity of the
+	// observer (before they are translated into D3D single-precision
+	// format). However, the orientation of the render space is the same
+	// as orbiter's global coordinate system. Therefore there is a
+	// translational transformation between orbiter global coordinates
+	// and render coordinates.
+
+	// find the planet closest to the current camera position
+	double d, r, alt, ralt, ralt_proxy = 1e100;
+	int i, n = oapiGetGbodyCount();
+	VECTOR3 ppos;
+	for (i = 0; i < n; i++) {
+		OBJHANDLE hObj = oapiGetGbodyByIndex (i);
+		oapiGetGlobalPos (hObj, &ppos);
+		r = oapiGetSize(hObj);
+		d = dist(gpos, ppos);
+		alt = d - r;
+		ralt = alt/r;
+		if (ralt < ralt_proxy) {
+			ralt_proxy = ralt;
+			alt_proxy = alt;
+			hObj_proxy = hObj;
+		}
+	}
 }
 
 bool OGLCamera::Direction2Viewport(const VECTOR3 &dir, int &x, int &y)

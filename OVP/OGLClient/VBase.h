@@ -8,33 +8,32 @@
 
 // ==============================================================
 // VBase.h
-// class VBase (interface)
+// class vBase (interface)
 //
-// A VBase is the visual representation of a surface base
+// A vBase is the visual representation of a surface base
 // object (a "spaceport" on the surface of a planet or moon,
 // usually with runways or landing pads where vessels can
 // land and take off.
 // ==============================================================
 
-#ifndef __VBASE_H
-#define __VBASE_H
+#ifndef __vBase_H
+#define __vBase_H
 
 #include "VObject.h"
-#include "MeshManager.h"
-#include "VertexBuffer.h"
+#include "OGLMesh.h"
 
-class OGLCamera;
-class Scene;
-class VBase: public VObject {
+class vBase: public vObject {
+	friend class vPlanet;
+
 public:
-	VBase (OBJHANDLE _hObj);
-	~VBase();
+	vBase (OBJHANDLE _hObj, const Scene *scene);
+	~vBase();
 
 	bool Update ();
 
-	bool RenderSurface (OGLCamera *);
-	bool RenderStructures (OGLCamera *);
-	void RenderGroundShadow (OGLCamera *);
+	bool RenderSurface ();
+	bool RenderStructures ();
+	void RenderGroundShadow (float depth);
 
 private:
 	void SetupShadowMeshes ();
@@ -51,26 +50,26 @@ private:
 
 	double Tchk;               // next update
 	double Tlghtchk;           // next lighting update
-	size_t ntile;               // number of surface tiles
+	int ntile;               // number of surface tiles
 	const SurftileSpec *tspec; // list of tile specs
 	struct SurfTile {
 		OGLMesh *mesh;
 	} *tile;
 	OGLMesh **structure_bs;
 	OGLMesh **structure_as;
-	size_t nstructure_bs, nstructure_as;
+	int nstructure_bs, nstructure_as;
 	bool lights;               // use nighttextures for base objects
 	bool bLocalLight;          // true if lighting is modified
 	//D3DLIGHT7 localLight;      // current local lighting parameters
 
 	struct ShadowMesh {
-		std::unique_ptr<VertexBuffer> VBO;
-		std::unique_ptr<IndexBuffer> IBO;
-		std::unique_ptr<VertexArray> VBA;
-		int nvtx;
+		VertexBuffer *vbuf;
+		IndexBuffer *idx;
+		VertexArray *va;
+		int nvtx, nidx;
 		double ecorr;
 	} *shmesh;
-	size_t nshmesh;
+	int nshmesh;
 };
 
-#endif // !__VBASE_H
+#endif // !__vBase_H

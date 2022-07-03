@@ -56,7 +56,7 @@ void CloudTile::Load ()
 		uint8_t *buf;
 		int ndata = cmgr->ZTreeManager(0)->ReadData(lvl+4, ilat, ilng, &buf);
 		if (ndata) {
-			ok = (g_client->GetTexMgr()->ReadTextureFromMemory ((const char *)buf, ndata, &tex, flag) != 0);
+			ok = (g_client->GetTexMgr()->ReadTextureFromMemory (buf, ndata, &tex, flag) != 0);
 			cmgr->ZTreeManager(0)->ReleaseData(buf);
 		}
 	}
@@ -94,7 +94,7 @@ void CloudTile::Render ()
 		} else
 			return;
 	}
-
+//	if(!tex) return;
 //	LPDIRECT3DVERTEXBUFFER7 vb = mesh->vb;        // processed vertex buffer
 //	TileManager2<CloudTile>::Dev()->DrawIndexedPrimitiveVB (D3DPT_TRIANGLELIST, vb, 0,
 //		mesh->nv, mesh->idx, mesh->ni, 0);
@@ -106,7 +106,11 @@ void CloudTile::Render ()
 	auto *vp = c->GetViewProjectionMatrix();
 	s.SetMat4("u_ViewProjection",*vp);
 	s.SetMat4("u_Model",cmgr->wtrans);
-    glm::vec3 sundir = *g_client->GetScene()->GetSunDir();
+	const VECTOR3 &sd = g_client->GetScene()->GetSunDir();
+	glm::vec3 sundir;
+	sundir.x = sd.x;
+	sundir.y = sd.y;
+	sundir.z = sd.z;
 	s.SetVec3("u_SunDir", sundir);
 	s.SetFloat("u_ShadowPass", bCloudShadowPass?1.0:0.0);
 	
@@ -124,7 +128,7 @@ void CloudTile::Render ()
 // =======================================================================
 
 template<>
-void TileManager2<CloudTile>::SetRenderPrm(MATRIX4 &dwmat, double prerot, bool use_zbuf, const VPlanet::RenderPrm &rprm)
+void TileManager2<CloudTile>::SetRenderPrm(MATRIX4 &dwmat, double prerot, bool use_zbuf, const vPlanet::RenderPrm &rprm)
 {
 	TileManager2Base::SetRenderPrm(dwmat, prerot, use_zbuf, rprm);
 	double cloudrad = 1.0 + rprm.cloudalt / obj_size;
@@ -134,7 +138,7 @@ void TileManager2<CloudTile>::SetRenderPrm(MATRIX4 &dwmat, double prerot, bool u
 }
 
 template<>
-void TileManager2<CloudTile>::Render (MATRIX4 &dwmat, bool use_zbuf, const VPlanet::RenderPrm &rprm)
+void TileManager2<CloudTile>::Render (MATRIX4 &dwmat, bool use_zbuf, const vPlanet::RenderPrm &rprm)
 {
 	// set generic parameters
 	SetRenderPrm (dwmat, rprm.cloudrot, use_zbuf, rprm);
@@ -228,7 +232,7 @@ bCloudShadowPass = false;
 // -----------------------------------------------------------------------
 
 template<>
-void TileManager2<CloudTile>::RenderFlatCloudShadows (MATRIX4 &dwmat, const VPlanet::RenderPrm &rprm)
+void TileManager2<CloudTile>::RenderFlatCloudShadows (MATRIX4 &dwmat, const vPlanet::RenderPrm &rprm)
 {
 	double scale = obj_size/(obj_size+GetPlanet()->prm.cloudalt);
 	MATRIX4 dwmat_scaled = {

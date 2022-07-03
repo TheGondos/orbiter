@@ -22,11 +22,11 @@
 
 #define HORIZON_NSEG 128  // number of mesh segments
 
-class VPlanet;
+class vPlanet;
 class OGLCamera;
 class HazeManager {
 public:
-	HazeManager (const VPlanet *vplanet);
+	HazeManager (const vPlanet *vplanet);
 
 	static void GlobalInit ();
 
@@ -34,7 +34,7 @@ public:
 
 private:
 	OBJHANDLE obj;
-	const VPlanet *vp;
+	const vPlanet *vp;
 	VECTOR3 basecol;
 	double rad;    // planet radius
 	float  hralt;  // relative horizon altitude

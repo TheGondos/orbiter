@@ -123,7 +123,7 @@ void SurfTile::Load ()
 		uint8_t *buf;
 		int ndata = smgr->ZTreeManager(0)->ReadData(lvl+4, ilat, ilng, &buf);
 		if (ndata) {
-			ok = g_client->GetTexMgr()->ReadTextureFromMemory ((const char *)buf, ndata, &tex, flag);
+			ok = g_client->GetTexMgr()->ReadTextureFromMemory (buf, ndata, &tex, flag);
 			smgr->ZTreeManager(0)->ReleaseData(buf);
 		}
 	}
@@ -149,7 +149,7 @@ void SurfTile::Load ()
 				uint8_t *buf;
 				int ndata = smgr->ZTreeManager(1)->ReadData(lvl+4, ilat, ilng, &buf);
 				if (ndata) {
-					g_client->GetTexMgr()->ReadTextureFromMemory ((const char *)buf, ndata, &ltex, flag);
+					g_client->GetTexMgr()->ReadTextureFromMemory (buf, ndata, &ltex, flag);
 					smgr->ZTreeManager(1)->ReleaseData(buf);
 				}
 			}
@@ -509,7 +509,7 @@ void SurfTile::Render ()
 		} else
 			return;
 	}
-
+//	if(!tex) return;
 //	TileManager2Base::Dev()->SetTexture (0, tex);
 
 /*
@@ -538,15 +538,23 @@ void SurfTile::Render ()
 	auto *vp = c->GetViewProjectionMatrix();
 	s.SetMat4("u_ViewProjection",*vp);
 	s.SetMat4("u_Model",smgr->wtrans);
-    glm::vec3 sundir = *g_client->GetScene()->GetSunDir();
+	const VECTOR3 &sd = g_client->GetScene()->GetSunDir();
+	glm::vec3 sundir;
+	sundir.x = sd.x;
+	sundir.y = sd.y;
+	sundir.z = sd.z;
 	s.SetVec3("u_SunDir", sundir);
 
 	auto *view = c->GetViewMatrix();
 
 	s.SetMat4("u_View", *view);
-	if(mgr->prm.fog) {
-		s.SetVec4("u_FogColor", mgr->prm.fogColor);
-		s.SetFloat("u_FogDensity", mgr->prm.fogDensity);
+	if(mgr->prm.fog && g_client->mRenderContext.bFog) {
+		glm::vec4 fogColor;
+		fogColor.x = g_client->mRenderContext.fogColor.x;
+		fogColor.y = g_client->mRenderContext.fogColor.y;
+		fogColor.z = g_client->mRenderContext.fogColor.z;
+		s.SetVec4("u_FogColor", fogColor);
+		s.SetFloat("u_FogDensity", g_client->mRenderContext.fogDensity);
 	} else {
 		s.SetFloat("u_FogDensity", 0);
 	}
@@ -998,7 +1006,7 @@ void SurfTile::RenderLabels (oapi::Sketchpad *skp, oapi::Font **labelfont, int *
 // =======================================================================
 
 template<>
-void TileManager2<SurfTile>::Render (MATRIX4 &dwmat, bool use_zbuf, const VPlanet::RenderPrm &rprm)
+void TileManager2<SurfTile>::Render (MATRIX4 &dwmat, bool use_zbuf, const vPlanet::RenderPrm &rprm)
 {
 	// set generic parameters
 	SetRenderPrm (dwmat, 0, use_zbuf, rprm);

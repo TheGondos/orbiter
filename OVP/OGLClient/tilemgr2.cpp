@@ -780,14 +780,14 @@ bool TileManager2Base::bTileLoadThread = false;
 
 // -----------------------------------------------------------------------
 
-TileManager2Base::TileManager2Base (const VPlanet *vplanet, int _maxres, int _gridres)
+TileManager2Base::TileManager2Base (const vPlanet *vplanet, int _maxres, int _gridres)
 : vp(vplanet)
 {
 	// set persistent parameters
 	prm.maxlvl = std::max (0, _maxres-4);
 	gridRes = _gridres;
 
-	obj = vp->GetObject();
+	obj = vp->Object();
 	obj_size = oapiGetSize (obj);
 	oapiGetObjectName (obj, cbody_name, 256);
 	camera = g_client->GetScene()->GetCamera();
@@ -822,7 +822,7 @@ void TileManager2Base::GlobalExit ()
 
 // -----------------------------------------------------------------------
 
-void TileManager2Base::SetRenderPrm (MATRIX4 &dwmat, double prerot, bool use_zbuf, const VPlanet::RenderPrm &rprm)
+void TileManager2Base::SetRenderPrm (MATRIX4 &dwmat, double prerot, bool use_zbuf, const vPlanet::RenderPrm &rprm)
 {
 	const double minalt = std::max(0.002,rprm.horizon_excess);
 	VECTOR3 obj_pos, cam_pos;
@@ -854,8 +854,6 @@ void TileManager2Base::SetRenderPrm (MATRIX4 &dwmat, double prerot, bool use_zbu
 	prm.scale = 1.0;
 	prm.fog = rprm.bFog;
 	prm.tint = rprm.bTint;
-	prm.fogColor = rprm.mFogColor;
-	prm.fogDensity = rprm.mFogDensity;
 
 	if (prm.tint)
 		prm.atm_tint = rprm.rgbTint;

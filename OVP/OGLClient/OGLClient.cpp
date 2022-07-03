@@ -12,17 +12,11 @@
 #include <imgui.h>
 #include "imgui_impl_opengl3.h"
 #include "imgui_impl_glfw.h"
-//#include "Orbiter.h"
 #include "Particle.h"
 #include "VVessel.h"
-
-#define STB_TRUETYPE_IMPLEMENTATION
-#define STB_RECT_PACK_IMPLEMENTATION
-
-#include "stb_rect_pack.h"
-#include "stb_truetype.h"
-#define BITMAP_W 1024
-#define BITMAP_H 1024
+#include "OGLPad.h"
+#include "OGLCamera.h"
+#include <fontconfig/fontconfig.h>
 
 //extern Orbiter *g_pOrbiter;
 /*
@@ -40,6 +34,26 @@ static void CheckError(const char *s) {
 	}
 }
 
+GLboolean glEnableEx(GLenum e) {
+	GLboolean ret;
+	glGetBooleanv(e, &ret);
+	glEnable(e);
+	return ret; 
+}
+GLboolean glDisableEx(GLenum e) {
+	GLboolean ret;
+	glGetBooleanv(e, &ret);
+	glDisable(e);
+	return ret; 
+}
+
+void glRestoreEx(GLenum e, GLboolean v) {
+	if(v)
+		glEnable(e);
+	else
+		glDisable(e);
+}
+
 // ==============================================================
 // API interface
 // ==============================================================
@@ -52,6 +66,7 @@ OGLClient *g_client = 0;
 // Initialise module
 DLLCLBK void InitModule (MODULEHANDLE hDLL)
 {
+	FcInit();
 	g_client = new OGLClient (hDLL);
 	if (!oapiRegisterGraphicsClient (g_client)) {
 		delete g_client;
@@ -69,6 +84,7 @@ DLLCLBK void ExitModule (MODULEHANDLE hDLL)
 		delete g_client;
 		g_client = 0;
 	}
+	FcFini();
 }
 
 OGLClient::OGLClient (MODULEHANDLE hInstance):GraphicsClient(hInstance)
@@ -214,7 +230,7 @@ bool OGLClient::clbkInitialise()
  */
 int OGLClient::clbkVisEvent (OBJHANDLE hObj, VISHANDLE vis, visevent msg, visevent_data context)
 {
-    VObject *vo = (VObject*)vis;
+    vObject *vo = (vObject*)vis;
 	vo->clbkEvent (msg, context);
 	return 1;
 }
@@ -299,7 +315,7 @@ bool OGLClient::clbkGetRenderParam (int prm, int *value) const
 		*value = 1;
 		return true;
 	case RP_REQUIRETEXPOW2:
-		*value = 1;
+		*value = 0;
 		return true;
 	}
 	return false;
@@ -327,7 +343,12 @@ void OGLClient::clbkRender2DPanel (SURFHANDLE *hSurf, MESHHANDLE hMesh, MATRIX3 
 		float tu, tv;
 		float x, y;
 	} *hvtx = new HVTX[1];
-glDisable(GL_DEPTH_TEST);
+
+	GLboolean oldDepth = glDisableEx(GL_DEPTH_TEST);
+	GLboolean oldBlend = glEnableEx(GL_BLEND);
+	GLboolean oldCull = glDisableEx(GL_CULL_FACE);
+
+
 	static glm::mat4 ortho_proj = glm::ortho(0.0f, (float)g_client->GetScene()->GetCamera()->GetWidth(), (float)g_client->GetScene()->GetCamera()->GetHeight(), 0.0f);
 	static Shader s("Overlay.vs","Overlay.fs");
 //	static glm::vec3 vecTextColor = glm::vec3(1,1,1);
@@ -368,6 +389,10 @@ glDisable(GL_DEPTH_TEST);
 		pd3dDevice->SetRenderState (D3DRENDERSTATE_DESTBLEND, D3DBLEND_ONE);
 	float rhw = 1;
 	*/
+
+	//if (transparent)
+	//	glBlendFunc(GL_DST_ALPHA, GL_ONE);
+
 	int i, j, nvtx, ngrp = oapiMeshGroupCount (hMesh);
 	SURFHANDLE surf = 0, newsurf = 0;
 
@@ -386,6 +411,8 @@ glDisable(GL_DEPTH_TEST);
 			int mfdidx = grp->TexIdx-TEXIDX_MFD0;
 			newsurf = GetMFDSurface (mfdidx);
 			if (!newsurf) continue;
+			//OGLTexture *ttt = (OGLTexture *)newsurf;
+			//printf("MFD surface w=%d h=%d\n", ttt->m_Width, ttt->m_Height);
 		} else if (hSurf) {
 			newsurf = hSurf[grp->TexIdx];
 		} else {
@@ -441,13 +468,13 @@ glDisable(GL_DEPTH_TEST);
 	}
 	s.UnBind();
 	glBindTexture(GL_TEXTURE_2D, 0);
-	/*
-	pd3dDevice->SetTextureStageState (0, D3DTSS_ADDRESS, D3DTADDRESS_WRAP);
-	if (transparent)
-		pd3dDevice->SetRenderState (D3DRENDERSTATE_DESTBLEND, D3DBLEND_INVSRCALPHA);
-	if (dAlpha != TRUE)
-		pd3dDevice->SetRenderState (D3DRENDERSTATE_ALPHABLENDENABLE, dAlpha);
-*/
+
+	//if (transparent)
+	//	glBlendFunc(GL_DST_ALPHA, GL_ONE_MINUS_DST_ALPHA);
+
+	glRestoreEx(GL_DEPTH_TEST, oldDepth);
+	glRestoreEx(GL_BLEND, oldBlend);
+	glRestoreEx(GL_CULL_FACE, oldCull);
 }
 
 /**
@@ -590,9 +617,10 @@ GLFWwindow *OGLClient::clbkCreateRenderWindow ()
 	HazeManager::GlobalInit();
 
 	TileManager2Base::GlobalInit();
-	VStar::GlobalInit ();
+	vStar::GlobalInit ();
 	OGLParticleStream::GlobalInit();
-	VVessel::GlobalInit();
+	vVessel::GlobalInit();
+	OGLPad::OGLPad::GlobalInit();
 	mBlitShader = std::make_unique<Shader>("Blit.vs","Blit.fs");
 	glEnable( GL_LINE_SMOOTH );
 	glHint( GL_LINE_SMOOTH_HINT, GL_NICEST );
@@ -705,10 +733,15 @@ void OGLClient::clbkRenderScene ()
  */
 SURFHANDLE OGLClient::clbkLoadTexture (const char *fname, int flags)
 {
+	if (!mTextureManager) return NULL;
+	OGLTexture *tex = NULL;
+
 	if (flags & 8) // load managed
-		return (SURFHANDLE)mTextureManager->LoadTexture(fname, true, flags);
+		mTextureManager->GetTexture (fname, &tex, flags);
 	else           // load individual
-		return (SURFHANDLE)mTextureManager->LoadTexture(fname, false, flags);
+		mTextureManager->LoadTexture (fname, &tex, flags);
+
+	return (SURFHANDLE)tex;
 }
 
 /**
@@ -722,7 +755,10 @@ SURFHANDLE OGLClient::clbkLoadTexture (const char *fname, int flags)
  */
 void OGLClient::clbkReleaseTexture (SURFHANDLE hTex)
 {
-	mTextureManager->ReleaseTexture((OGLTexture *)hTex);
+	// We ignore the request for texture deallocation at this point,
+	// and leave it to the texture manager to perform cleanup operations.
+	// But it would be a good idea to decrement a reference count at
+	// this point.
 }
 
 /**
@@ -895,7 +931,7 @@ bool OGLClient::clbkSetMeshProperty (DEVMESHHANDLE hMesh, int property, int valu
  */
 MESHHANDLE OGLClient::clbkGetMesh (VISHANDLE vis, unsigned int idx)
 {
-	return (vis ? ((VObject*)vis)->GetMesh (idx) : NULL);
+	return (vis ? ((vObject*)vis)->GetMesh (idx) : NULL);
 }
 
 /**
@@ -939,7 +975,6 @@ int OGLClient::clbkEditMeshGroup (DEVMESHHANDLE hMesh, int grpidx, GROUPEDITSPEC
 void OGLClient::clbkIncrSurfaceRef (SURFHANDLE surf)
 {
 	((OGLTexture *)surf)->m_RefCnt++;
-	//((LPDIRECTDRAWSURFACE7)surf)->AddRef();
 }
 
 /**
@@ -1004,7 +1039,7 @@ Font *OGLClient::clbkCreateFont (int height, bool prop, const char *face, Font::
  */
 SURFHANDLE OGLClient::clbkCreateSurfaceEx (int w, int h, int attrib)
 {
-	return mTextureManager->GetTextureForRendering(w, h);
+	return mTextureManager->GetTextureForRendering(w, h, attrib);
     /*
 	HRESULT hr;
 	LPDIRECTDRAWSURFACE7 surf;
@@ -1052,7 +1087,7 @@ SURFHANDLE OGLClient::clbkCreateSurfaceEx (int w, int h, int attrib)
  */
 SURFHANDLE OGLClient::clbkCreateSurface (int w, int h, SURFHANDLE hTemplate)
 {
-	return mTextureManager->GetTextureForRendering(w, h);
+	return mTextureManager->GetTextureForRendering(w, h, 0); //FIXME: get NOALPHA flag from somewhereS
 
 /*
 	HRESULT hr;
@@ -1097,7 +1132,7 @@ SURFHANDLE OGLClient::clbkCreateSurface (int w, int h, SURFHANDLE hTemplate)
  */
 SURFHANDLE OGLClient::clbkCreateTexture (int w, int h)
 {
-	return mTextureManager->GetTextureForRendering(w, h);
+	return mTextureManager->GetTextureForRendering(w, h, 0);
 /*
 	LPDIRECTDRAWSURFACE7 surf;
 	DDSURFACEDESC2 ddsd;
@@ -1153,7 +1188,7 @@ void OGLClient::clbkReleaseSketchpad (oapi::Sketchpad *sp)
  */
 void OGLClient::clbkReleaseFont (Font *font) const
 {
-	delete (OGLFont *)font;
+	delete font;
 }
 
 /**
@@ -1262,13 +1297,6 @@ void OGLClient::clbkRenderGUI ()
 	CheckError("ImGui_ImplGlfw_NewFrame");
 	ImGui::NewFrame();
 	CheckError("ImGui::NewFrame");
-
-//	for(auto &ctrl: g_pOrbiter->m_pGUIManager->m_GUICtrls) {
-//		if(ctrl->show) {
-//			ctrl->Show();
-//		}
-//	}
-//	CheckError("after ctrl->Show");
 
 	oapiDrawDialogs();
 	CheckError("after oapiDrawDialogs");
@@ -1420,18 +1448,18 @@ bool OGLClient::clbkFillSurface (SURFHANDLE surf, int tgtx, int tgty, int w, int
 	if(!init) {
 		init=true;
 		glGenVertexArrays(1, &m_VAO);
-		CheckError("clbkRender2DPanel glGenVertexArrays");
+		CheckError("glGenVertexArrays");
 		glBindVertexArray(m_VAO);
-		CheckError("clbkRender2DPanel glBindVertexArray");
+		CheckError("glBindVertexArray");
 
 		glGenBuffers(1, &m_Buffer);
-		CheckError("clbkRender2DPanel glGenBuffers");
+		CheckError("glGenBuffers");
 		glBindBuffer(GL_ARRAY_BUFFER, m_Buffer);
-		CheckError("clbkRender2DPanel glBindBuffer");
+		CheckError("glBindBuffer");
 		glBufferData(GL_ARRAY_BUFFER, 6 * 4 * sizeof(GLfloat), NULL, GL_DYNAMIC_DRAW);
-		CheckError("clbkRender2DPanel glBufferSubData");
+		CheckError("glBufferSubData");
 		glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, NULL);
-		CheckError("clbkRender2DPanel glVertexAttribPointer");
+		CheckError("glVertexAttribPointer");
 		glEnableVertexAttribArray(0);
 		CheckError("glEnableVertexAttribArray");
 
@@ -1460,11 +1488,11 @@ bool OGLClient::clbkFillSurface (SURFHANDLE surf, int tgtx, int tgty, int w, int
 
 	glBindBuffer(GL_ARRAY_BUFFER, m_Buffer);
 	glBindVertexArray(m_VAO);
-	CheckError("OGLPad::Text glBindBuffer");
+	CheckError("glBindBuffer");
 	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertex), vertex);
-	CheckError("OGLPad::Text glBufferSubData");
+	CheckError("glBufferSubData");
 	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, NULL);
-	CheckError("OGLPad::Text glVertexAttribPointer");
+	CheckError("glVertexAttribPointer");
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	
 	glEnableVertexAttribArray(0);
@@ -1479,10 +1507,10 @@ bool OGLClient::clbkFillSurface (SURFHANDLE surf, int tgtx, int tgty, int w, int
 	s.SetVec3("quad_color", color);
 
 	glBindVertexArray(m_VAO);
-	CheckError("clbkRender2DPanel glBindVertexArray");
+	CheckError("glBindVertexArray");
 
 	glDrawArrays(GL_TRIANGLES, 0, 6);
-	CheckError("clbkRender2DPanel glDrawArrays");
+	CheckError("glDrawArrays");
 
 	glBindVertexArray(0);
 
@@ -1521,7 +1549,7 @@ bool OGLClient::clbkScaleBlt (SURFHANDLE tgt, int tgtx, int tgty, int tgtw, int 
 {
     printf("OGLClient::clbkScaleBlt tgtx=%d tgty=%d tgtw=%d tgth=%d\n", tgtx,tgty,tgtw,tgth);
     printf("OGLClient::clbkScaleBlt srcx=%d srcy=%d srcw=%d srch=%d\n", srcx,srcy,srcw,srch);
-	glDisable(GL_BLEND);
+	GLboolean oldBlend = glDisableEx(GL_BLEND);
 	GLint oldFB;
 	glGetIntegerv(GL_FRAMEBUFFER_BINDING, &oldFB);
 	GLint oldViewport[4];
@@ -1538,18 +1566,18 @@ bool OGLClient::clbkScaleBlt (SURFHANDLE tgt, int tgtx, int tgty, int tgtw, int 
 	if(!init) {
 		init=true;
 		glGenVertexArrays(1, &m_VAO);
-		CheckError("clbkRender2DPanel glGenVertexArrays");
+		CheckError("glGenVertexArrays");
 		glBindVertexArray(m_VAO);
-		CheckError("clbkRender2DPanel glBindVertexArray");
+		CheckError("glBindVertexArray");
 
 		glGenBuffers(1, &m_Buffer);
-		CheckError("clbkRender2DPanel glGenBuffers");
+		CheckError("glGenBuffers");
 		glBindBuffer(GL_ARRAY_BUFFER, m_Buffer);
-		CheckError("clbkRender2DPanel glBindBuffer");
+		CheckError("glBindBuffer");
 		glBufferData(GL_ARRAY_BUFFER, 6 * 4 * sizeof(GLfloat), NULL, GL_DYNAMIC_DRAW);
-		CheckError("clbkRender2DPanel glBufferSubData");
+		CheckError("glBufferSubData");
 		glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, NULL);
-		CheckError("clbkRender2DPanel glVertexAttribPointer");
+		CheckError("glVertexAttribPointer");
 		glEnableVertexAttribArray(0);
 		CheckError("glEnableVertexAttribArray");
 
@@ -1576,7 +1604,7 @@ bool OGLClient::clbkScaleBlt (SURFHANDLE tgt, int tgtx, int tgty, int tgtw, int 
 		s0, t0, (float)tgtx, (float)tgty,
 		s1, t1, (float)tgtx+tgt_w, (float)tgty+tgt_h,
 	};
-	glDisable(GL_CULL_FACE);
+	GLboolean oldCull = glDisableEx(GL_CULL_FACE);
 	glBindBuffer(GL_ARRAY_BUFFER, m_Buffer);
 	glBindVertexArray(m_VAO);
 	CheckError("OGLPad::Text glBindBuffer");
@@ -1625,10 +1653,10 @@ bool OGLClient::clbkScaleBlt (SURFHANDLE tgt, int tgtx, int tgty, int tgtw, int 
 	CheckError("glBindTexture");
 
 	glBindVertexArray(m_VAO);
-	CheckError("clbkRender2DPanel glBindVertexArray");
+	CheckError("glBindVertexArray");
 
 	glDrawArrays(GL_TRIANGLES, 0, 6);
-	CheckError("clbkRender2DPanel glDrawArrays");
+	CheckError("glDrawArrays");
 
 	glBindVertexArray(0);
 	glBindTexture(GL_TEXTURE_2D, 0);
@@ -1669,9 +1697,11 @@ bool OGLClient::clbkScaleBlt (SURFHANDLE tgt, int tgtx, int tgty, int tgtw, int 
 	CheckError("OGLClient::clbkBlt glGenerateMipmap");
 	glBindTexture(GL_TEXTURE_2D, 0);
 */
-	glEnable(GL_BLEND);
+	glRestoreEx(GL_BLEND, oldBlend);
+	glRestoreEx(GL_CULL_FACE, oldCull);
 
-	return true;}
+	return true;
+}
 
 /**
  * \brief Copy one surface into an area of another one.
@@ -1694,7 +1724,8 @@ bool OGLClient::clbkScaleBlt (SURFHANDLE tgt, int tgtx, int tgty, int tgtw, int 
  */
 bool OGLClient::clbkBlt (SURFHANDLE tgt, int tgtx, int tgty, SURFHANDLE src, int flag) const
 {
-	glDisable(GL_BLEND);
+	GLboolean oldBlend = glDisableEx(GL_BLEND);
+	GLboolean oldCull = glDisableEx(GL_CULL_FACE);
 	GLint oldFB;
 	glGetIntegerv(GL_FRAMEBUFFER_BINDING, &oldFB);
 	GLint oldViewport[4];
@@ -1720,18 +1751,18 @@ bool OGLClient::clbkBlt (SURFHANDLE tgt, int tgtx, int tgty, SURFHANDLE src, int
 	if(!init) {
 		init=true;
 		glGenVertexArrays(1, &m_VAO);
-		CheckError("clbkRender2DPanel glGenVertexArrays");
+		CheckError("glGenVertexArrays");
 		glBindVertexArray(m_VAO);
-		CheckError("clbkRender2DPanel glBindVertexArray");
+		CheckError("glBindVertexArray");
 
 		glGenBuffers(1, &m_Buffer);
-		CheckError("clbkRender2DPanel glGenBuffers");
+		CheckError("glGenBuffers");
 		glBindBuffer(GL_ARRAY_BUFFER, m_Buffer);
-		CheckError("clbkRender2DPanel glBindBuffer");
+		CheckError("glBindBuffer");
 		glBufferData(GL_ARRAY_BUFFER, 6 * 4 * sizeof(GLfloat), NULL, GL_DYNAMIC_DRAW);
-		CheckError("clbkRender2DPanel glBufferSubData");
+		CheckError("glBufferSubData");
 		glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, NULL);
-		CheckError("clbkRender2DPanel glVertexAttribPointer");
+		CheckError("glVertexAttribPointer");
 		glEnableVertexAttribArray(0);
 		CheckError("glEnableVertexAttribArray");
 
@@ -1758,7 +1789,6 @@ bool OGLClient::clbkBlt (SURFHANDLE tgt, int tgtx, int tgty, SURFHANDLE src, int
 		s0, t0, (float)tgtx, (float)tgty,
 		s1, t1, (float)tgtx+src_w, (float)tgty+src_h,
 	};
-	glDisable(GL_CULL_FACE);
 	glBindBuffer(GL_ARRAY_BUFFER, m_Buffer);
 	glBindVertexArray(m_VAO);
 	CheckError("OGLPad::Text glBindBuffer");
@@ -1807,10 +1837,10 @@ bool OGLClient::clbkBlt (SURFHANDLE tgt, int tgtx, int tgty, SURFHANDLE src, int
 	CheckError("glBindTexture");
 
 	glBindVertexArray(m_VAO);
-	CheckError("clbkRender2DPanel glBindVertexArray");
+	CheckError("glBindVertexArray");
 
 	glDrawArrays(GL_TRIANGLES, 0, 6);
-	CheckError("clbkRender2DPanel glDrawArrays");
+	CheckError("glDrawArrays");
 
 	glBindVertexArray(0);
 	glBindTexture(GL_TEXTURE_2D, 0);
@@ -1852,7 +1882,8 @@ bool OGLClient::clbkBlt (SURFHANDLE tgt, int tgtx, int tgty, SURFHANDLE src, int
 	CheckError("OGLClient::clbkBlt glGenerateMipmap");
 	glBindTexture(GL_TEXTURE_2D, 0);
 */
-	glEnable(GL_BLEND);
+	glRestoreEx(GL_BLEND, oldBlend);
+	glRestoreEx(GL_CULL_FACE, oldCull);
 
 	return true;
 }
@@ -1882,7 +1913,9 @@ bool OGLClient::clbkBlt (SURFHANDLE tgt, int tgtx, int tgty, SURFHANDLE src, int
  */
 bool OGLClient::clbkBlt (SURFHANDLE tgt, int tgtx, int tgty, SURFHANDLE src, int srcx, int srcy, int w, int h, int flag) const
 {
-	glDisable(GL_BLEND);
+	GLboolean oldBlend = glDisableEx(GL_BLEND);
+	GLboolean oldCull = glDisableEx(GL_CULL_FACE);
+	glDisable(GL_DEPTH_TEST);
 	static int done = 0;
 	//static unsigned int VAO;
 	static GLuint fbo;
@@ -1894,9 +1927,9 @@ bool OGLClient::clbkBlt (SURFHANDLE tgt, int tgtx, int tgty, SURFHANDLE src, int
 	if(tgt) {
 		GLint oldFB;
 		glGetIntegerv(GL_FRAMEBUFFER_BINDING, &oldFB);
-	GLint oldViewport[4];
-	glGetIntegerv(GL_VIEWPORT, oldViewport);
-OGLTexture *m_tex = (OGLTexture *)tgt;
+		GLint oldViewport[4];
+		glGetIntegerv(GL_VIEWPORT, oldViewport);
+		OGLTexture *m_tex = (OGLTexture *)tgt;
 		//ortho_proj = glm::ortho(0.0f, (float)m_tex->m_Width, (float)m_tex->m_Height, 0.0f); //y-flipped
 		glm::mat4 ortho_proj = glm::ortho(0.0f, (float)m_tex->m_Width, 0.0f, (float)m_tex->m_Height);
 		m_tex->SetAsTarget();
@@ -1915,19 +1948,20 @@ OGLTexture *m_tex = (OGLTexture *)tgt;
 		static bool init = false;
 		if(!init) {
 			init=true;
+			CheckError("pre glGenVertexArrays");
 			glGenVertexArrays(1, &m_VAO);
-			CheckError("clbkRender2DPanel glGenVertexArrays");
+			CheckError("glGenVertexArrays");
 			glBindVertexArray(m_VAO);
-			CheckError("clbkRender2DPanel glBindVertexArray");
+			CheckError("glBindVertexArray");
 
 			glGenBuffers(1, &m_Buffer);
-			CheckError("clbkRender2DPanel glGenBuffers");
+			CheckError("glGenBuffers");
 			glBindBuffer(GL_ARRAY_BUFFER, m_Buffer);
-			CheckError("clbkRender2DPanel glBindBuffer");
+			CheckError("glBindBuffer");
 			glBufferData(GL_ARRAY_BUFFER, 6 * 4 * sizeof(GLfloat), NULL, GL_DYNAMIC_DRAW);
-			CheckError("clbkRender2DPanel glBufferSubData");
+			CheckError("glBufferSubData");
 			glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, NULL);
-			CheckError("clbkRender2DPanel glVertexAttribPointer");
+			CheckError("glVertexAttribPointer");
 			glEnableVertexAttribArray(0);
 			CheckError("glEnableVertexAttribArray");
 
@@ -1954,7 +1988,7 @@ OGLTexture *m_tex = (OGLTexture *)tgt;
 			s0, t0, (float)tgtx, (float)tgty,
 			s1, t1, (float)tgtx+w, (float)tgty+h,
 		};
-glDisable(GL_CULL_FACE);
+
 		glBindBuffer(GL_ARRAY_BUFFER, m_Buffer);
 		glBindVertexArray(m_VAO);
 		CheckError("OGLPad::Text glBindBuffer");
@@ -2003,17 +2037,17 @@ key_tex = (OGLTexture *)src;
 		CheckError("glBindTexture");
 
 		glBindVertexArray(m_VAO);
-		CheckError("clbkRender2DPanel glBindVertexArray");
+		CheckError("glBindVertexArray");
 
 		glDrawArrays(GL_TRIANGLES, 0, 6);
-		CheckError("clbkRender2DPanel glDrawArrays");
+		CheckError("glDrawArrays");
 
 		glBindVertexArray(0);
-glBindTexture(GL_TEXTURE_2D, 0);
+		glBindTexture(GL_TEXTURE_2D, 0);
 		s.UnBind();
 
-glBindFramebuffer(GL_FRAMEBUFFER, oldFB);
-	glViewport(oldViewport[0],oldViewport[1],oldViewport[2],oldViewport[3]);
+		glBindFramebuffer(GL_FRAMEBUFFER, oldFB);
+		glViewport(oldViewport[0],oldViewport[1],oldViewport[2],oldViewport[3]);
 		/*
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 		CheckError("OGLClient::clbkBlt glBindFramebuffer(GL_FRAMEBUFFER, fbo)");
@@ -2048,18 +2082,18 @@ glBindFramebuffer(GL_FRAMEBUFFER, oldFB);
 		if(!init) {
 			init=true;
 			glGenVertexArrays(1, &m_VAO);
-			CheckError("clbkRender2DPanel glGenVertexArrays");
+			CheckError("glGenVertexArrays");
 			glBindVertexArray(m_VAO);
-			CheckError("clbkRender2DPanel glBindVertexArray");
+			CheckError("glBindVertexArray");
 
 			glGenBuffers(1, &m_Buffer);
-			CheckError("clbkRender2DPanel glGenBuffers");
+			CheckError("glGenBuffers");
 			glBindBuffer(GL_ARRAY_BUFFER, m_Buffer);
-			CheckError("clbkRender2DPanel glBindBuffer");
+			CheckError("glBindBuffer");
 			glBufferData(GL_ARRAY_BUFFER, 6 * 4 * sizeof(GLfloat), NULL, GL_DYNAMIC_DRAW);
-			CheckError("clbkRender2DPanel glBufferSubData");
+			CheckError("glBufferSubData");
 			glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, NULL);
-			CheckError("clbkRender2DPanel glVertexAttribPointer");
+			CheckError("glVertexAttribPointer");
 			glEnableVertexAttribArray(0);
 			CheckError("glEnableVertexAttribArray");
 
@@ -2086,7 +2120,6 @@ glBindFramebuffer(GL_FRAMEBUFFER, oldFB);
 			s0, t0, (float)tgtx, (float)tgty,
 			s1, t1, (float)tgtx+w, (float)tgty+h,
 		};
-glDisable(GL_CULL_FACE);
 		glBindBuffer(GL_ARRAY_BUFFER, m_Buffer);
 		glBindVertexArray(m_VAO);
 		CheckError("OGLPad::Text glBindBuffer");
@@ -2112,7 +2145,7 @@ glDisable(GL_CULL_FACE);
 		} else {
 			s.SetFloat("color_keyed", 0.0);
 		}
-key_tex = (OGLTexture *)src;
+		key_tex = (OGLTexture *)src;
 
 		if(key_tex) {
 			uint32_t ck = key_tex->m_colorkey;
@@ -2135,1009 +2168,32 @@ key_tex = (OGLTexture *)src;
 		CheckError("glBindTexture");
 
 		glBindVertexArray(m_VAO);
-		CheckError("clbkRender2DPanel glBindVertexArray");
+		CheckError("glBindVertexArray");
 
 		glDrawArrays(GL_TRIANGLES, 0, 6);
-		CheckError("clbkRender2DPanel glDrawArrays");
+		CheckError("glDrawArrays");
 
 		glBindVertexArray(0);
-glBindTexture(GL_TEXTURE_2D, 0);
+		glBindTexture(GL_TEXTURE_2D, 0);
 		s.UnBind();
 
 
 	}
-	glEnable(GL_BLEND);
+	glRestoreEx(GL_BLEND, oldBlend);
+	glRestoreEx(GL_CULL_FACE, oldCull);
 
 	return true;
 }
-#define MAX_POLYS 4096
-/////////////////// SKETCHPAD STUFF ////////////////////////////
-OGLPad::OGLPad (SURFHANDLE s):oapi::Sketchpad(s)
+
+// ======================================================================
+// ======================================================================
+// class VisObject
+
+VisObject::VisObject (OBJHANDLE hObj)
 {
-	cfont = nullptr;
-	cpen = nullptr;
-	cbrush = nullptr;
-	m_xOrigin = 0;
-	m_yOrigin = 0;
-	/**
-	 * \brief Vertical text alignment modes.
-	 * \sa SetTextAlign
-	 */
-	enum TAlign_vertical {
-		TOP,         ///< align top of text line
-		BASELINE,    ///< align base line of text line
-		BOTTOM       ///< align bottom of text line
-	};
-
-	m_TextAlignH = oapi::Sketchpad::TAlign_horizontal::LEFT;
-	m_TextAlignV = oapi::Sketchpad::TAlign_vertical::BOTTOM;
-
-	m_tex = (OGLTexture *)s;
-
-	if(s)
-	{
-		GLint result;
-		glGetIntegerv(GL_FRAMEBUFFER_BINDING, &result);
-		assert(result == 0);
-		//ortho_proj = glm::ortho(0.0f, (float)m_tex->m_Width, (float)m_tex->m_Height, 0.0f); //y-flipped
-		ortho_proj = glm::ortho(0.0f, (float)m_tex->m_Width, 0.0f, (float)m_tex->m_Height);
-		m_tex->SetAsTarget();
-		height = m_tex->m_Height;
-
-		glBindTexture(GL_TEXTURE_2D, m_tex->m_TexId);
-		CheckError("OGLPad glBindTexture");
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		CheckError("OGLPad glTexParameteri");
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-		CheckError("OGLPad glTexParameteri2");
-		glGenerateMipmap(GL_TEXTURE_2D);
-		CheckError("OGLPad glGenerateMipmap");
-	}
-	else
-	{
-		ortho_proj = glm::ortho(0.0f, (float)g_client->GetScene()->GetCamera()->GetWidth(), (float)g_client->GetScene()->GetCamera()->GetHeight(), 0.0f);
-		height = g_client->GetScene()->GetCamera()->GetHeight();
-		glDisable(GL_CULL_FACE);
-	}
-	glGenVertexArrays(1, &m_VAO);
-	CheckError("OGLPad glGenVertexArrays");
-	glBindVertexArray(m_VAO);
-	CheckError("OGLPad glBindVertexArray");
-
-	glGenBuffers(1, &m_Buffer);
-	CheckError("OGLPad glGenBuffers");
-	glBindBuffer(GL_ARRAY_BUFFER, m_Buffer);
-	CheckError("OGLPad glBindBuffer");
-	glBufferData(GL_ARRAY_BUFFER, MAX_POLYS * 3 * sizeof(GLfloat), NULL, GL_DYNAMIC_DRAW);
-	CheckError("OGLPad glBufferData");
-
-	glBindVertexArray(0);
-	CheckError("OGLPad glBindVertexArray0");
-}
-OGLPad::~OGLPad ()
-{
-	if(m_tex) {
-		glBindTexture(GL_TEXTURE_2D, m_tex->m_TexId);
-		glGenerateMipmap(GL_TEXTURE_2D);
-	} else {
-		glEnable(GL_CULL_FACE);
-	}
-
-	glDeleteVertexArrays(1, &m_VAO);
-	glDeleteBuffers(1, &m_Buffer);
-	CheckError("OGLPad glDeleteBuffer");
-
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	hObject = hObj;
 }
 
-/**
- * \brief Selects a new font to use.
- * \param font pointer to font resource
- * \return Previously selected font.
- * \sa OGLFont, OGLClient::clbkCreateFont
- */
-oapi::Font *OGLPad::SetFont (oapi::Font *font) const
+VisObject::~VisObject ()
 {
-	oapi::Font *ret = cfont;
-	cfont = font;
-	return ret;
-}
-
-/**
- * \brief Selects a new pen to use.
- * \param pen pointer to pen resource, or NULL to disable outlines
- * \return Previously selected pen.
- * \sa OGLPen, OGLClient::clbkCreatePen
- */
-oapi::Pen *OGLPad::SetPen (oapi::Pen *pen) const
-{
-	oapi::Pen *ret = cpen;
-	cpen = pen;
-	return ret;
-}
-
-/**
- * \brief Selects a new brush to use.
- * \param brush pointer to brush resource, or NULL to disable fill mode
- * \return Previously selected brush.
- * \sa OGLBrush, OGLClient::clbkCreateBrush
- */
-oapi::Brush *OGLPad::SetBrush (oapi::Brush *brush) const
-{
-	oapi::Brush *ret = cbrush;
-	cbrush = brush;
-	return ret;
-}
-
-/**
- * \brief Set horizontal and vertical text alignment.
- * \param tah horizontal alignment
- * \param tav vertical alignment
- */
-void OGLPad::SetTextAlign (TAlign_horizontal tah, TAlign_vertical tav)
-{
-	m_TextAlignH = tah;
-	m_TextAlignV = tav;
-}
-
-/**
- * \brief Set the foreground colour for text output.
- * \param col colour description (format: 0xBBGGRR)
- * \return Previous colour setting.
- */
-uint32_t OGLPad::SetTextColor (uint32_t col)
-{
-	uint32_t oldColor = textColor;
-	textColor = col;
-	float r = (col&0xff)/255.0;
-	float g = ((col>>8)&0xff)/255.0;
-	float b = ((col>>16)&0xff)/255.0;
-	vecTextColor = glm::vec3(r, g, b);
-	return oldColor;
-}
-
-/**
- * \brief Set the background colour for text output.
- * \param col background colour description (format: 0xBBGGRR)
- * \return Previous colour setting
- * \note The background colour is only used if the background mode
- *   is set to BK_OPAQUE.
- * \sa SetBackgroundMode
- */
-uint32_t OGLPad::SetBackgroundColor (uint32_t col)
-{
-	return 0;
-}
-
-/**
- * \brief Set the background mode for text and drawing operations.
- * \param mode background mode (see \ref BkgMode)
- * \note This function affects text output and dashed line drawing.
- * \note In opaque background mode, text background and the gaps
- *   between dashed lines are drawn in the current background colour
- *   (see SetBackgroundColor). In transparent mode, text background
- *   and line gaps are not modified.
- * \note The default background mode (before the first call of
- *   SetBackgroundMode) is transparent.
- * \sa SetBackgroundColor, Text, OGLClient::clbkCreatePen
- */
-void OGLPad::SetBackgroundMode (BkgMode mode)
-{
-}
-
-/** brief Returns height and (average) width of a character in the currently
- *   selected font.
- * \return Height of character cell [pixel] in the lower 16 bit of the return value,
- *   and (average) width of character cell [pixel] in the upper 16 bit.
- * \note The height value is given by tmHeight-tmInternalLeading from the
- *   TEXTMETRIC structure returned by the OGL GetTextMetrics function.
- * \note The width value is given by tmAveCharWidth from the
- *   TEXTMETRIC structure returned by the OGL GetTextMetrics function.
- */
-int OGLPad::GetCharSize ()
-{
-	OGLFont *f = (OGLFont *)cfont;
-	return (f->m_Height-1 + (f->m_Height*11/16<<16));// FIXME: empirical values, should be computed from ttf file...
-//	return 11 + (7<<16); 
-}
-
-/**
- * \brief Returns the width of a text string in the currently selected font.
- * \param str text string
- * \param len string length, or 0 for auto (0-terminated string)
- * \return width of the string, drawn in the currently selected font [pixel]
- * \sa SetFont
- */
-
-int OGLPad::GetTextWidth (const char *str, int len)
-{
-	OGLFont *font = (OGLFont *)cfont;
-
-	float xpos = 0;
-	float ypos = 0;
-	for(int i=0;i<len;i++) {
-		unsigned int c = (unsigned char)str[i];
-		stbtt_aligned_quad q;
-		stbtt_GetPackedQuad(font->m_CharData, BITMAP_W, BITMAP_H, c, &xpos, &ypos, &q, 1);
-	}
-
-	return xpos;
-}
-
-bool OGLPad::GetTextWidthAndHeight (const char *str, int len, int *width, int *top, int *bottom)
-{
-	OGLFont *font = (OGLFont *)cfont;
-
-	float xpos = 0.0f;
-	float ypos = 0.0f;
-	float ymax = 0.0f;
-	float ymin = 0.0f;
-	/*
-   float x0,y0,s0,t0; // top-left
-   float x1,y1,s1,t1; // bottom-right
-   */
-	for(int i=0;i<len;i++) {
-		unsigned int c = (unsigned char)str[i];
-		stbtt_aligned_quad q;
-		stbtt_GetPackedQuad(font->m_CharData, BITMAP_W, BITMAP_H, c, &xpos, &ypos, &q, 1);
-		if(q.y1 > ymax)
-			ymax = q.y1;
-		if(q.y0 < ymin)
-			ymin = q.y0;
-	}
-
-	*width  = (int)xpos;
-	*top    = (int)ymax;
-	*bottom = (int)ymin;
-	return true;
-}
-
-
-/**
- * \brief Set the position in the surface bitmap which is mapped to the
- *   origin of the coordinate system for all drawing functions.
- * \param x horizontal position of the origin [pixel]
- * \param y vertical position of the origin [pixel]
- * \note By default, the reference point for drawing function coordinates is
- *   the top left corner of the bitmap, with positive x-axis to the right,
- *   and positive y-axis down.
- * \note SetOrigin can be used to shift the logical reference point to a
- *   different position in the surface bitmap (but not to change the
- *   orientation of the axes).
- */
-void OGLPad::SetOrigin (int x, int y)
-{
-	m_xOrigin = x;
-	m_yOrigin = y;
-}
-
-/**
- * \brief Returns the position in the surface bitmap which is mapped to
- *   the origin of the coordinate system for all drawing functions.
- * \param [out] x pointer to integer receiving horizontal position of the origin [pixel]
- * \param [out] y pointer to integer receiving vertical position of the origin [pixel]
- * \default Returns (0,0)
- * \sa SetOrigin
- */
-void OGLPad::GetOrigin (int *x, int *y) const
-{
-	*x=m_xOrigin;
-	*y=m_yOrigin;
-}
-
-/**
- * \brief Draws a text string.
- * \param x reference x position [pixel]
- * \param y reference y position [pixel]
- * \param str text string
- * \param len string length for output
- * \return \e true on success, \e false on failure.
- */
-
-
-
-/*
-	enum TAlign_horizontal {
-		LEFT,        ///< align left
-		CENTER,      ///< align center
-		RIGHT        ///< align right
-	};
-
-	enum TAlign_vertical {
-		TOP,         ///< align top of text line
-		BASELINE,    ///< align base line of text line
-		BOTTOM       ///< align bottom of text line
-	};
-
-	m_TextAlignH = oapi::Sketchpad::TAlign_horizontal::LEFT;
-	m_TextAlignV = oapi::Sketchpad::TAlign_vertical::BOTTOM;
-*/
-
-
-bool OGLPad::Text (int x, int y, const char *str, int len)
-{
-	if(len<0)
-		abort();
-	//y +=16; //FIXME
-
-	int xoffset = 0;
-	int yoffset = 0;
-
-	int width;
-	int top;
-	int bottom;
-	GetTextWidthAndHeight (str, len, &width, &top, &bottom);
-//if(strcmp(str,"DG-01"))
-//exit(-1);
-//y-=(bottom-top);
-	y-=bottom;
-	switch(m_TextAlignH) {
-		case oapi::Sketchpad::TAlign_horizontal::LEFT:
-			break;
-		case oapi::Sketchpad::TAlign_horizontal::CENTER:
-			xoffset = -(width / 2);
-			break;
-		case oapi::Sketchpad::TAlign_horizontal::RIGHT:
-			xoffset = -width;
-			break;
-	}
-
-	switch(m_TextAlignV) {
-		case oapi::Sketchpad::TAlign_vertical::TOP:
-			//yoffset = -bottom;
-			//yoffset = top;
-			break;
-		case oapi::Sketchpad::TAlign_vertical::BASELINE:
-			break;
-		case oapi::Sketchpad::TAlign_vertical::BOTTOM:
-			//yoffset = bottom;
-			//yoffset = top;
-			break;
-	}
-
-	x+=xoffset;
-	y+=yoffset;
-
-	x+=m_xOrigin;
-	y+=m_yOrigin;
-
-	char tmp[len + 1];
-	memcpy(tmp, str, len);
-	tmp[len]=0;
-	OGLFont *font = (OGLFont *)cfont;
-//	y +=font->m_Height+1;
-
-	//glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
-	//CheckError("glClearColor");
-	//glClear(GL_COLOR_BUFFER_BIT);
-	//CheckError("glClearColor");
-
-	static Shader s("OGLFont.vs","OGLFont.fs");
-	s.Bind();
-	s.SetMat4("projection", ortho_proj);
-	s.SetVec3("font_color", vecTextColor);
-	glBindTexture(GL_TEXTURE_2D, font->m_Atlas);
-	CheckError("OGLPad::Text glBindTexture");
-	
-	float xpos = x;
-	float ypos = y;
-	for(int i=0;i<len;i++) {
-		unsigned int c = (unsigned char)str[i];
-		stbtt_aligned_quad q;
-		stbtt_GetPackedQuad(font->m_CharData, BITMAP_W, BITMAP_H, c, &xpos, &ypos, &q, 1);
-
-		const GLfloat vertex[] = {
-			q.s0, q.t0, q.x0, q.y0,
-			q.s1, q.t1, q.x1, q.y1,
-			q.s1, q.t0, q.x1, q.y0,
-
-			q.s0, q.t0, q.x0, q.y0,
-			q.s0, q.t1, q.x0, q.y1,
-			q.s1, q.t1, q.x1, q.y1,
-		};
-
-		glBindBuffer(GL_ARRAY_BUFFER, font->m_Buffer);
-/*
-		void *map = glMapBuffer(GL_ARRAY_BUFFER, GL_READ_WRITE);
-		memcpy(map, vertex, sizeof(vertex));
-		glUnmapBuffer(GL_ARRAY_BUFFER);
-	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, NULL);
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-		glBindVertexArray(font->m_VAO);
-*/
-		glBindVertexArray(font->m_VAO);
-		CheckError("OGLPad::Text glBindBuffer");
-		glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertex), vertex);
-		CheckError("OGLPad::Text glBufferSubData");
-		glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, NULL);
-		CheckError("OGLPad::Text glVertexAttribPointer");
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-		
-//	CheckError("OGLPad::Text glBindBuffer0");
-		glEnableVertexAttribArray(0);
-	//CheckError("OGLPad::Text glEnableVertexAttribArray0");
-
-		glDrawArrays(GL_TRIANGLES, 0, 6);
-	
-		CheckError("OGLPad::Text glDrawArrays");
-		glBindVertexArray(0);
-	}
-
-//	glDisable(GL_BLEND);
-	
-	CheckError("OGLPad::Text glBindVertexArray0");
-
-	glBindTexture(GL_TEXTURE_2D, 0);
-	s.UnBind();
-	return true;
-}
-
-bool OGLPad::TextW (int x, int y, const wchar_t *str, int len)
-{
-	printf("OGLPad::TextW\n");
-	exit(-1);
-	return true;
-}
-
-
-/**
- * \brief Draws a single pixel in a specified colour.
- * \param x x-coordinate of point [pixel]
- * \param y y-coordinate of point [pixel]
- * \param col pixel colour (format: 0xBBGGRR)
- */
-void OGLPad::Pixel (int x, int y, uint32_t col)
-{
-	x+=m_xOrigin;
-	y+=m_yOrigin;
-	float r = (col&0xff)/255.0;
-	float g = ((col>>8)&0xff)/255.0;
-	float b = ((col>>16)&0xff)/255.0;
-	glm::vec4 pixelColor = glm::vec4(r, g, b, 1.0f);
-
-	static Shader s("OGLLine.vs", "OGLLine.fs");
-	s.Bind();
-	s.SetMat4("projection", ortho_proj);
-	s.SetVec4("line_color", pixelColor);
-
-	const GLfloat vertex[] = {
-		(GLfloat)x, (GLfloat)y, 0.0f,
-	};
-
-	glBindBuffer(GL_ARRAY_BUFFER, m_Buffer);
-/*
-		void *map = glMapBuffer(GL_ARRAY_BUFFER, GL_READ_WRITE);
-		memcpy(map, vertex, sizeof(vertex));
-		glUnmapBuffer(GL_ARRAY_BUFFER);
-	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, NULL);
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-		glBindVertexArray(font->m_VAO);
-*/
-	glBindVertexArray(m_VAO);
-	CheckError("OGLPad::Line glBindBuffer");
-	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertex), vertex);
-	CheckError("OGLPad::Line glBufferSubData");
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-	CheckError("OGLPad::Line glVertexAttribPointer");
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-//	CheckError("OGLPad::Line glBindBuffer0");
-	glEnableVertexAttribArray(0);
-	//CheckError("OGLPad::Line glEnableVertexAttribArray0");
-
-	glDrawArrays(GL_POINTS, 0, 1);
-	
-	CheckError("OGLPad::Line glDrawArrays");
-	glBindVertexArray(0);
-	
-
-//	glDisable(GL_BLEND);
-	
-	CheckError("OGLPad::Line glBindVertexArray0");
-
-	//glGenerateMipmap(GL_TEXTURE_2D);
-
-	glBindTexture(GL_TEXTURE_2D, 0);
-
-	s.UnBind();
-}
-
-/**
- * \brief Moves the drawing reference to a new point.
- * \param x x-coordinate of new reference point [pixel]
- * \param y y-coordinate of new reference point [pixel]
- * \note Some methods use the drawing reference point for
- *   drawing operations, e.g. \ref LineTo.
- * \sa LineTo
- */
-void OGLPad::MoveTo (int x, int y)
-{
-	m_curX = x;
-	m_curY = y;
-}
-
-/**
- * \brief Draws a line to a specified point.
- * \param x x-coordinate of line end point [pixel]
- * \param y y-coordinate of line end point [pixel]
- * \note The line starts at the current drawing reference
- *   point.
- * \sa MoveTo
- */
-void OGLPad::LineTo (int x, int y)
-{
-	Line(m_curX, m_curY, x, y);
-	m_curX = x;
-	m_curY = y;
-}
-
-/**
- * \brief Draws a line between two points.
- * \param x0 x-coordinate of first point [pixel]
- * \param y0 y-coordinate of first point [pixel]
- * \param x1 x-coordinate of second point [pixel]
- * \param y1 y-coordinate of second point [pixel]
- * \note The line is drawn with the currently selected pen.
- * \sa SetPen
- */
-void OGLPad::Line (int x0, int y0, int x1, int y1)
-{
-	x0+=m_xOrigin;
-	y0+=m_yOrigin;
-	x1+=m_xOrigin;
-	y1+=m_yOrigin;
-
-	m_curX = x1;
-	m_curY = y1;
-
-	OGLPen *p = (OGLPen *)cpen;
-	uint32_t col = 0xff0000;
-	if(p)
-		col = p->m_Color;
-
-	float r = (col&0xff)/255.0;
-	float g = ((col>>8)&0xff)/255.0;
-	float b = ((col>>16)&0xff)/255.0;
-	glm::vec4 lineColor = glm::vec4(r, g, b, 1.0f);
-
-	float dist = 0.0f;
-	if(p && p->m_Style == 2) //dashed line
-		dist = sqrt((x0-x1)*(x0-x1) + (y0-y1)*(y0-y1))/10.0f;
-
-	static Shader s("OGLLine.vs", "OGLLine.fs");
-	s.Bind();
-	s.SetMat4("projection", ortho_proj);
-	s.SetVec4("line_color", lineColor);
-
-	const GLfloat vertex[] = {
-		(GLfloat)x0, (GLfloat)y0, 0.0f,
-		(GLfloat)x1, (GLfloat)y1, dist,
-	};
-
-	glBindBuffer(GL_ARRAY_BUFFER, m_Buffer);
-/*
-		void *map = glMapBuffer(GL_ARRAY_BUFFER, GL_READ_WRITE);
-		memcpy(map, vertex, sizeof(vertex));
-		glUnmapBuffer(GL_ARRAY_BUFFER);
-	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, NULL);
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-		glBindVertexArray(font->m_VAO);
-*/
-	glBindVertexArray(m_VAO);
-	CheckError("OGLPad::Line glBindBuffer");
-	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertex), vertex);
-	CheckError("OGLPad::Line glBufferSubData");
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-	CheckError("OGLPad::Line glVertexAttribPointer");
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-//	CheckError("OGLPad::Line glBindBuffer0");
-	glEnableVertexAttribArray(0);
-	//CheckError("OGLPad::Line glEnableVertexAttribArray0");
-
-	glDrawArrays(GL_LINES, 0, 2);
-	
-	CheckError("OGLPad::Line glDrawArrays");
-	glBindVertexArray(0);
-	
-
-//	glDisable(GL_BLEND);
-	
-	CheckError("OGLPad::Line glBindVertexArray0");
-
-	//glGenerateMipmap(GL_TEXTURE_2D);
-
-	glBindTexture(GL_TEXTURE_2D, 0);
-
-	s.UnBind();
-}
-
-/**
- * \brief Draw a rectangle (filled or outline).
- * \param x0 left edge of rectangle [pixel]
- * \param y0 top edge of rectangle [pixel]
- * \param x1 right edge of rectangle [pixel]
- * \param y1 bottom edge of rectangle [pixel]
- * \note The rectangle is filled with the currently selected
- *   brush resource.
- * \sa Ellipse
- */
-void OGLPad::Rectangle (int x0, int y0, int x1, int y1)
-{
-	MoveTo (x0, y0);
-	LineTo (x1, y0);
-	LineTo (x1, y1);
-	LineTo (x0, y1);
-	LineTo (x0, y0);
-}
-
-/**
- * \brief Draw an ellipse from its bounding box.
- * \param x0 left edge of bounding box [pixel]
- * \param y0 top edge of bounding box [pixel]
- * \param x1 right edge of bounding box [pixel]
- * \param y1 bottom edge of bounding box [pixel]
- * \note The ellipse is filled with the currently selected
- *   brush resource.
- * \sa Rectangle
- */
-void OGLPad::Ellipse (int x0, int y0, int x1, int y1)
-{
-	x0+=m_xOrigin;
-	y0+=m_yOrigin;
-	x1+=m_xOrigin;
-	y1+=m_yOrigin;
-
-	OGLPen *p = (OGLPen *)cpen;
-	uint32_t col = p->m_Color;
-	float r = (col&0xff)/255.0;
-	float g = ((col>>8)&0xff)/255.0;
-	float b = ((col>>16)&0xff)/255.0;
-	float a = 1.0f;
-	glm::vec4 lineColor = glm::vec4(r, g, b, a);
-	OGLBrush *br = (OGLBrush *)cbrush;
-	if(br) {
-		col = br->m_Color;
-		r = (col&0xff)/255.0;
-		g = ((col>>8)&0xff)/255.0;
-		b = ((col>>16)&0xff)/255.0;
-		a = 1.0f;
-	} else {
-		r=g=b=a=0.0f;
-	}
-	glm::vec4 brushColor = glm::vec4(r, g, b, a);
-#define NSIDE 64
-
-	GLfloat vertex[3 + NSIDE * 3 + 3]; //x, y, dist
-
-	float xcenter = (x1 + x0) / 2.0f;
-	float ycenter = (y1 + y0) / 2.0f;
-	float xsize = abs(x1 - x0) / 2.0f;
-	float ysize = abs(y1 - y0) / 2.0f;
-
-	float circ = 2.0f*3.14159265f*sqrt(xsize*xsize+ysize*ysize); //2π√a2+b22
-
-	vertex[0] = xcenter;
-	vertex[1] = ycenter;
-	vertex[2] = 0;
-
-	for(int i=1;i<NSIDE + 2;i++) {
-		vertex[i * 3 + 0] = xcenter + xsize * cos(2 * 3.14159265 * (float)i / (float)NSIDE);
-		vertex[i * 3 + 1] = ycenter + ysize * sin(2 * 3.14159265 * (float)i / (float)NSIDE);
-		if(p->m_Style == 2) //dashed line
-			vertex[i * 3 + 2] = circ * (float)i / (float)NSIDE / 10.0f;
-		else
-			vertex[i * 3 + 2] = 0.0f;
-	}
-
-	static Shader s("OGLLine.vs", "OGLLine.fs");
-	s.Bind();
-	s.SetMat4("projection", ortho_proj);
-	s.SetVec4("line_color", lineColor);
-
-	glBindBuffer(GL_ARRAY_BUFFER, m_Buffer);
-	glBindVertexArray(m_VAO);
-	CheckError("OGLPad::Ellipse glBindBuffer");
-	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertex), vertex);
-	CheckError("OGLPad::Ellipse glBufferSubData");
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-	CheckError("OGLPad::Ellipse glVertexAttribPointer");
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-//	CheckError("OGLPad::Ellipse glBindBuffer0");
-	glEnableVertexAttribArray(0);
-	//CheckError("OGLPad::Ellipse glEnableVertexAttribArray0");
-
-	s.SetVec4("line_color", brushColor);
-	glFrontFace(GL_CCW);
-	glDrawArrays(GL_TRIANGLE_FAN, 0, NSIDE+2);
-	glFrontFace(GL_CW);
-	CheckError("OGLPad::Ellipse GL_TRIANGLE_FAN");
-	s.SetVec4("line_color", lineColor);
-	glDrawArrays(GL_LINE_LOOP, 1, NSIDE);
-	CheckError("OGLPad::Ellipse GL_LINE_LOOP");
-	
-	CheckError("OGLPad::Ellipse glDrawArrays");
-	glBindVertexArray(0);
-
-//	glDisable(GL_BLEND);
-	
-	CheckError("OGLPad::Ellipse glBindVertexArray0");
-
-	//glGenerateMipmap(GL_TEXTURE_2D);
-
-	glBindTexture(GL_TEXTURE_2D, 0);
-
-	s.UnBind();
-	//exit(-1);
-}
-
-/**
- * \brief Draw a closed polygon given by vertex points.
- * \param pt list of vertex points
- * \param npt number of points in the list
- * \note The polygon is outlined with the current pen, and
- *   filled with the current brush.
- * \note The polygon is closed, i.e. the last point is
- *   joined with the first one.
- * \sa Polyline, PolyPolygon, Rectangle, Ellipse
- */
-void OGLPad::Polygon (const oapi::IVECTOR2 *pt, int npt)
-{
-	//FIXME : fill polygon
-	//if(cbrush==nullptr) {
-		MoveTo(pt->x, pt->y);
-		for(int i=1;i<npt;i++) {
-			LineTo(pt[i].x,pt[i].y);
-		}
-		LineTo(pt->x, pt->y);
-	//} else {
-	//	printf("Filled polygon not implemented col=0x%08x npt=%d\n", ((OGLBrush *)cbrush)->m_Color, npt);
-	//}
-}
-
-/**
- * \brief Draw a line of piecewise straight segments.
- * \param pt list of vertex points
- * \param npt number of points in the list
- * \note The line is drawn with the currently selected pen.
- * \note Polylines are open figures: the end points are
- *   not connected, and no fill operation is performed.
- * \sa Polygon, PolyPolyline Rectangle, Ellipse
- */
-void OGLPad::Polyline (const oapi::IVECTOR2 *pt, int npt)
-{
-/*	
-	MoveTo(pt->x, pt->y);
-	for(int i=1;i<npt;i++) {
-		LineTo(pt[i].x,pt[i].y);
-	}
-return;*/
-/*
-	x0+=m_xOrigin;
-	y0+=m_yOrigin;
-	x1+=m_xOrigin;
-	y1+=m_yOrigin;
-*/
-
-//	m_curX = x1;
-//	m_curY = y1;
-
-	OGLPen *p = (OGLPen *)cpen;
-	uint32_t col = 0xff0000;
-	if(p)
-		col = p->m_Color;
-
-	float r = (col&0xff)/255.0;
-	float g = ((col>>8)&0xff)/255.0;
-	float b = ((col>>16)&0xff)/255.0;
-	glm::vec4 lineColor = glm::vec4(r, g, b, 1.0f);
-
-	//float dist = 0.0f;
-	//if(p && p->m_Style == 2) //dashed line
-	//	dist = sqrt((x0-x1)*(x0-x1) + (y0-y1)*(y0-y1))/10.0f;
-
-	static Shader s("OGLLine.vs", "OGLLine.fs");
-	s.Bind();
-	s.SetMat4("projection", ortho_proj);
-	s.SetVec4("line_color", lineColor);
-
-	static GLfloat vertex[3*102400];
-	for(int i=0;i<npt;i++) {
-		vertex[3*i+0] = (GLfloat)pt[i].x + m_xOrigin;
-		vertex[3*i+1] = (GLfloat)pt[i].y + m_yOrigin;
-		vertex[3*i+2] = 0.0f;
-
-		m_curX = pt[i].x;
-		m_curY = pt[i].y;
-	}
-
-	glBindBuffer(GL_ARRAY_BUFFER, m_Buffer);
-	glBindVertexArray(m_VAO);
-	CheckError("OGLPad::Polyline glBindBuffer");
-	glBufferSubData(GL_ARRAY_BUFFER, 0, 3 * sizeof(GLfloat) * npt, vertex);
-	CheckError("OGLPad::Polyline glBufferSubData");
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-	CheckError("OGLPad::Polyline glVertexAttribPointer");
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-//	CheckError("OGLPad::Polyline glBindBuffer0");
-	glEnableVertexAttribArray(0);
-	//CheckError("OGLPad::Polyline glEnableVertexAttribArray0");
-
-	glDrawArrays(GL_LINE_STRIP, 0, npt);
-
-	
-	CheckError("OGLPad::Polyline glDrawArrays");
-	glBindVertexArray(0);
-	
-
-//	glDisable(GL_BLEND);
-	
-	CheckError("OGLPad::Polyline glBindVertexArray0");
-
-	//glGenerateMipmap(GL_TEXTURE_2D);
-
-	glBindTexture(GL_TEXTURE_2D, 0);
-
-	s.UnBind();
-
-
-
-}
-
-/**
- * \brief Draw a set of polygons.
- * \param pt list of vertex points for all polygons
- * \param npt list of number of points for each polygon
- * \param nline number of polygons
- * \note The number of entries in npt must be >= nline, and
- *   the number of points in pt must be at least the sum of
- *   the values in npt.
- * \sa Polygon, Polyline, PolyPolyline
- */
-void OGLPad::PolyPolygon (const oapi::IVECTOR2 *pt, const int *npt, const int nline)
-{
-	int offset = 0;
-	for(int i=0;i<nline;i++) {
-		Polygon (&pt[offset], npt[i]);
-		offset+=npt[i];
-	}
-}
-
-/**
- * \brief Draw a set of polylines.
- * \param pt list of vertex points for all lines
- * \param npt list of number of points for each line
- * \param nline number of lines
- * \note The number of entries in npt must be >= nline, and
- *   the number of points in pt must be at least the sum of
- *   the values in npt.
- * \sa Polyline, Polygon, PolyPolygon
- */
-void OGLPad::PolyPolyline (const oapi::IVECTOR2 *pt, const int *npt, const int nline)
-{
-	int offset = 0;
-	for(int i=0;i<nline;i++) {
-		Polyline (&pt[offset], npt[i]);
-		offset+=npt[i];
-	}
-}
-
-
-/*
-	enum Style {
-		NORMAL=0,    ///< no decoration
-		BOLD=1,      ///< boldface
-		ITALIC=2,    ///< italic
-		UNDERLINE=4  ///< underlined
-	};
-*/
-/*
-LiberationMono-BoldItalic.ttf  LiberationMono-Regular.ttf     LiberationSans-Italic.ttf            LiberationSansNarrow-Italic.ttf   LiberationSerif-BoldItalic.ttf  LiberationSerif-Regular.ttf
-LiberationMono-Bold.ttf        LiberationSans-BoldItalic.ttf  LiberationSansNarrow-BoldItalic.ttf  LiberationSansNarrow-Regular.ttf  LiberationSerif-Bold.ttf
-LiberationMono-Italic.ttf      LiberationSans-Bold.ttf        LiberationSansNarrow-Bold.ttf        LiberationSans-Regular.ttf        LiberationSerif-Italic.ttf
-*/
-
-static const char *GetFont(Font::Style style, bool prop)
-{
-	if(prop) {
-		if((style & Font::BOLD) && (style & Font::ITALIC)) {
-			return "LiberationSans-BoldItalic.ttf";
-		}
-		if(style & Font::BOLD) {
-			return "LiberationSans-Bold.ttf";
-		}
-		if(style & Font::ITALIC) {
-			return "LiberationSans-Italic.ttf";
-		}
-		return "LiberationSans-Regular.ttf";
- 	} else {
-		if((style & Font::BOLD) && (style & Font::ITALIC)) {
-			return "LiberationMono-BoldItalic.ttf";
-		}
-		if(style & Font::BOLD) {
-			return "LiberationMono-Bold.ttf";
-		}
-		if(style & Font::ITALIC) {
-			return "LiberationMono-Italic.ttf";
-		}
-		return "LiberationMono-Regular.ttf";
-	}
-}
-
-
-OGLFont::OGLFont (int height, bool prop, const char *face, Style style, int orientation): oapi::Font (height, prop, face, style, orientation)
-{
-	stbtt_pack_context pc;
-
-	m_Height = abs(height);
-
-	const char *f = GetFont(style, prop);
-
-	char tmp[255];
-	sprintf(tmp,"/usr/share/fonts/truetype/liberation/%s", f);
-
-	FILE *file;
-	if((file = fopen(tmp, "rb")) == NULL){
-		printf("Cannot open font file '%s'\n", tmp);
-		exit(-1);
-	}
-
-	fseek(file, 0, SEEK_END);
-	long size = ftell(file);
-	fseek(file, 0, SEEK_SET);
-
-	unsigned char* ttf_buffer = new unsigned char[size];
-	unsigned char* temp_bitmap = new unsigned char[BITMAP_W * BITMAP_H];
-
-	size_t ret = fread(ttf_buffer, 1, size, file);
-	if(ret != (size_t)size) {
-		printf("Error reading font\n");
-		exit(EXIT_FAILURE);
-	}
-	fclose(file);
-
-	stbtt_PackBegin(&pc, temp_bitmap, BITMAP_W, BITMAP_H, 0, 1, NULL);
-	stbtt_PackSetOversampling(&pc, 2, 2);
-	stbtt_PackFontRange(&pc, ttf_buffer, 0, height, 0, 256, m_CharData);
-	stbtt_PackEnd(&pc);
-
-	glGenTextures(1, &m_Atlas);
-	CheckError("OGLFont glGenTextures");
-	glBindTexture(GL_TEXTURE_2D, m_Atlas);
-	CheckError("OGLFont glBindTexture");
-//	glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, BITMAP_W, BITMAP_H, 0, GL_ALPHA, GL_UNSIGNED_BYTE, temp_bitmap);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, BITMAP_W, BITMAP_H, 0, GL_RED, GL_UNSIGNED_BYTE, temp_bitmap);
-	CheckError("OGLFont glTexImage2D");
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	CheckError("OGLFont glTexParameteri");
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	CheckError("OGLFont glTexParameteri2");
-	glBindTexture(GL_TEXTURE_2D, 0);
-
-	delete[]ttf_buffer;
-	delete[]temp_bitmap;
-
-
-	glGenVertexArrays(1, &m_VAO);
-	CheckError("OGLFont glGenVertexArrays");
-	glBindVertexArray(m_VAO);
-	CheckError("OGLFont glBindVertexArray");
-
-	glGenBuffers(1, &m_Buffer);
-	CheckError("OGLFont glGenBuffers");
-	glBindBuffer(GL_ARRAY_BUFFER, m_Buffer);
-	CheckError("OGLFont glBindBuffer");
-	glBufferData(GL_ARRAY_BUFFER, 6 * 4 * sizeof(GLfloat), NULL, GL_DYNAMIC_DRAW);
-	CheckError("OGLFont glBufferData");
-
-	glBindVertexArray(0);
-}
-
-OGLFont::~OGLFont ()
-{
-	glDeleteTextures(1, &m_Atlas);
-	glDeleteBuffers(1, &m_Buffer);
-	glDeleteVertexArrays(1, &m_VAO);
 }

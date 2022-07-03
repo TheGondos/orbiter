@@ -14,9 +14,7 @@
 #include "glad.h"
 #include "RingMgr.h"
 #include "Texture.h"
-#include "Shader.h"
-#include "Scene.h"
-#include "OGLMesh.h"
+#include "OGLCamera.h"
 #include <cstring>
 
 using namespace oapi;
@@ -27,90 +25,73 @@ static void CheckError(const char *s) {
 	{
 	// Process/log the error.
 		printf("GLError: %s - 0x%04X\n", s, err);
+        abort();
 	}
 }
 
-RingManager::RingManager (const VPlanet *vplanet, double inner_rad, double outer_rad)
+RingManager::RingManager (const vPlanet *vplanet, double inner_rad, double outer_rad)
 {
 	vp = vplanet;
 	irad = inner_rad;
 	orad = outer_rad;
-	rres = -1;
+	rres = (unsigned int)-1;
 	tres = 0;
 	ntex = 0;
-	
-	ntex = LoadTextures(tex);
-	tres=ntex - 1;
-	for (uint32_t res = 0; res < ntex; res++) {
-		CreateRing (mesh[res], irad, orad, 8+res*4, tex[res]);
+	for (unsigned int i = 0; i < MAXRINGRES; i++) {
+		mesh[i] = 0;
+		tex[i] = 0;
 	}
 }
 
 RingManager::~RingManager ()
 {
-	for (uint32_t i = 0; i < ntex; i++)
+	unsigned int i;
+	for (i = 0; i < 3; i++)
+		if (mesh[i]) delete mesh[i];
+	for (i = 0; i < ntex; i++)
 		tex[i]->Release();
 }
 
-void RingManager::SetMeshRes (int res)
+void RingManager::GlobalInit ()
 {
-	if ((uint32_t)res != rres) {
+}
+
+void RingManager::SetMeshRes (unsigned int res)
+{
+	if (res != rres) {
 		rres = res;
+		if (!mesh[res])
+			mesh[res] = CreateRing (irad, orad, 8+res*4);
+		if (!ntex)
+			ntex = LoadTextures();
 		tres = std::min (rres, ntex-1);
 	}
 }
 
-uint32_t RingManager::LoadTextures (OGLTexture **tex)
+unsigned int RingManager::LoadTextures ()
 {
 	char fname[256];
-	oapiGetObjectName (vp->GetObject(), fname, 256);
+	oapiGetObjectName (vp->Object(), fname, 256);
 	strcat (fname, "_ring.tex");
 	return g_client->GetTexMgr()->LoadTextures (fname, tex, 0, MAXRINGRES);
 }
 
-bool RingManager::Render (glm::mat4 &mWorld, OGLCamera *c, bool front)
+bool RingManager::Render (OGLCamera *c, glm::mat4 &mWorld)
 {
-	tres=1;
 	MATRIX3 grot;
-	//static glm::mat4 imat;
-	glm::vec3 q(mWorld[0][0], mWorld[1][0], mWorld[2][0]);
-	float scale = glm::length(q);
-	
-	oapiGetRotationMatrix(vp->GetObject(), &grot);
-	
-	VECTOR3 gdir; oapiCameraGlobalDir(&gdir);
-
-	VECTOR3 yaxis =  mul(grot, _V(0,1,0));
-	VECTOR3 xaxis = unit(crossp(gdir, yaxis));
-	VECTOR3 zaxis = unit(crossp(xaxis, yaxis));
-
-	if (!front) {
-		xaxis = -xaxis;
-		zaxis = -zaxis;
+	static glm::mat4 imat, *ringmat;
+	oapiGetRotationMatrix (vp->Object(), &grot);
+	VECTOR3 ppos = tmul(grot, -vp->cpos);
+	if (ppos.y >= 0) { // camera above equator
+		ringmat = &mWorld;
+	} else {           // flip rings
+		int i;
+		for (i = 0; i < 4; i++) imat[0][i] =  mWorld[0][i];
+		for (i = 0; i < 4; i++) imat[1][i] = -mWorld[1][i];
+		for (i = 0; i < 4; i++) imat[2][i] = -mWorld[2][i];
+		for (i = 0; i < 4; i++) imat[3][i] =  mWorld[3][i];
+		ringmat = &imat;
 	}
-
-	glm::vec3 x(float(xaxis.x), float(xaxis.y), float(xaxis.z)); 
-	glm::vec3 y(float(yaxis.x), float(yaxis.y), float(yaxis.z)); 
-	glm::vec3 z(float(zaxis.x), float(zaxis.y), float(zaxis.z)); 
-
-	glm::mat4 World = mWorld;
-
-	x*=scale; y*=scale;	z*=scale;
-
-//	D3DMAT_FromAxisT(&World, &x, &y, &z);
-
-	World[0][0] = x.x;
-	World[0][1] = x.y;
-	World[0][2] = x.z;
-
-	World[1][0] = y.x;
-	World[1][1] = y.y;
-	World[1][2] = y.z;
-
-	World[2][0] = z.x;
-	World[2][1] = z.y;
-	World[2][2] = z.z;
-
 	static OGLMaterial defmat = {
 		{0,0,0,1},
 		{0,0,0,1},
@@ -121,12 +102,15 @@ bool RingManager::Render (glm::mat4 &mWorld, OGLCamera *c, bool front)
 	static Shader s("Mesh.vs","Mesh.fs");
 	s.Bind();
 
-
-    glm::vec3 sundir = *g_client->GetScene()->GetSunDir();
+	const VECTOR3 &sd = g_client->GetScene()->GetSunDir();
+	glm::vec3 sundir;
+	sundir.x = sd.x;
+	sundir.y = sd.y;
+	sundir.z = sd.z;
 
 	auto *vp = c->GetViewProjectionMatrix();
 	s.SetMat4("u_ViewProjection",*vp);
-	s.SetMat4("u_Model",World);
+	s.SetMat4("u_Model",*ringmat);
 	s.SetVec3("u_SunDir", sundir);
     s.SetFloat("u_Textured", 1.0);
     s.SetFloat("u_MatAlpha", 1.0);
@@ -138,15 +122,18 @@ bool RingManager::Render (glm::mat4 &mWorld, OGLCamera *c, bool front)
 	s.SetVec4("u_Material.emissive", defmat.emissive);
 	s.SetFloat("u_Material.specular_power", defmat.specular_power);
 
-	glBindTexture(GL_TEXTURE_2D, mesh[tres].texture->m_TexId);
-	CheckError("RingManager::Render glBindTexture");
-	mesh[tres].VAO->Bind();
-	glDrawElements(GL_TRIANGLES, mesh[tres].IBO->GetCount(), GL_UNSIGNED_SHORT, 0);
-	CheckError("RingManager::Render glDrawElements");
-	mesh[tres].VAO->UnBind();
-	glBindTexture(GL_TEXTURE_2D,  0);
-	CheckError("RingManager::Render glBindTexture0");
-	s.UnBind();
+	glBindTexture(GL_TEXTURE_2D, tex[tres]->m_TexId);
+    
+	GLboolean ablend;
+	glGetBooleanv(GL_BLEND, &ablend);
+	if (!ablend)
+		glEnable(GL_BLEND);
+
+	mesh[rres]->RenderGroup (mesh[rres]->GetGroup(0));
+
+	if (!ablend)
+		glDisable(GL_BLEND);
+
 	return true;
 }
 
@@ -159,16 +146,19 @@ bool RingManager::Render (glm::mat4 &mWorld, OGLCamera *c, bool front)
 // a ring of inner radius irad (>=1) and outer radius orad (>irad)
 // can be rendered on it.
 
-void RingManager::CreateRing (RINGMESH &mesh, double irad, double orad, int nsect, OGLTexture *tex)
+OGLMesh *RingManager::CreateRing (double irad, double orad, int nsect)
 {
-	uint32_t i, j;
+	int i, j;
 	uint32_t count = nsect/2 + 1;
+	OGLMesh::GROUPREC *grp = new OGLMesh::GROUPREC;
+	grp->nVtx = 2*count;
+	grp->nIdx = 6*(count - 1);
+	grp->Idx = new uint16_t[grp->nIdx+12];
 
-	uint32_t nVtx = 2*count;
-	uint32_t nIdx = 6*(count - 1);
-	uint16_t *Idx = new uint16_t[nIdx+12];
-	NTVERTEX *Vtx = new NTVERTEX[nVtx+4];
-	 
+	NTVERTEX *Vtx;
+	Vtx = grp->Vtx = new NTVERTEX[grp->nVtx+4];
+	uint16_t *Idx = grp->Idx;
+
 	double alpha = PI/(double)nsect;
 	float nrad = (float)(orad/cos(alpha)); // distance for outer nodes
 	float ir = (float)irad;
@@ -187,7 +177,7 @@ void RingManager::CreateRing (RINGMESH &mesh, double irad, double orad, int nsec
 		else        Vtx[i*2].tu = 1.0f-fo,  Vtx[i*2+1].tu = 1.0f-fi; //1.0f-fac;
 		Vtx[i*2].tv = 0.0f, Vtx[i*2+1].tv = 1.0f;
 
-		if (j<=nIdx-6) {
+		if (j<=grp->nIdx-6) {
 			Idx[j++] = i*2;
 			Idx[j++] = i*2+1;
 			Idx[j++] = i*2+2;
@@ -196,52 +186,51 @@ void RingManager::CreateRing (RINGMESH &mesh, double irad, double orad, int nsec
 			Idx[j++] = i*2+1;
 		}
 	}
-	mesh.VAO = std::make_unique<VertexArray>();
-	mesh.VAO->Bind();
-	mesh.VBO = std::make_unique<VertexBuffer>(Vtx, (nVtx+4)*sizeof(NTVERTEX));
-	mesh.VBO->Bind();
-	mesh.texture = tex;
 
-	glVertexAttribPointer(
-	0,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
-	3,                  // size
-	GL_FLOAT,           // type
-	GL_FALSE,           // normalized?
-	sizeof(NTVERTEX),                  // stride
-	(void*)0            // array buffer offset
-	);
-	CheckError("glVertexAttribPointer0");
-	glEnableVertexAttribArray(0);
+    grp->VBA = std::make_unique<VertexArray>();
+    grp->VBA->Bind();
+    grp->VBO = std::make_unique<VertexBuffer>(grp->Vtx, (grp->nVtx+4) * sizeof(NTVERTEX));
+    grp->VBO->Bind();
 
-	glVertexAttribPointer(
-	1,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
-	3,                  // size
-	GL_FLOAT,           // type
-	GL_FALSE,           // normalized?
-	sizeof(NTVERTEX),                  // stride
-	(void*)12            // array buffer offset
-	);
-	CheckError("glVertexAttribPointer");
-	glEnableVertexAttribArray(1);
-	CheckError("glEnableVertexAttribArray1");
+    glVertexAttribPointer(
+    0,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
+    3,                  // size
+    GL_FLOAT,           // type
+    GL_FALSE,           // normalized?
+    sizeof(NTVERTEX),                  // stride
+    (void*)0            // array buffer offset
+    );
+    CheckError("glVertexAttribPointer0");
+    glEnableVertexAttribArray(0);
 
-	glVertexAttribPointer(
-	2,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
-	2,                  // size
-	GL_FLOAT,           // type
-	GL_FALSE,           // normalized?
-	sizeof(NTVERTEX),                  // stride
-	(void*)24            // array buffer offset
-	);
-	CheckError("glVertexAttribPointer");
-	glEnableVertexAttribArray(2);
-	CheckError("glEnableVertexAttribArray2");
+    glVertexAttribPointer(
+    1,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
+    3,                  // size
+    GL_FLOAT,           // type
+    GL_FALSE,           // normalized?
+    sizeof(NTVERTEX),                  // stride
+    (void*)12            // array buffer offset
+    );
+    CheckError("glVertexAttribPointer");
+    glEnableVertexAttribArray(1);
+    CheckError("glEnableVertexAttribArray1");
 
-	mesh.IBO = std::make_unique<IndexBuffer>(Idx, nIdx +12);
-	mesh.IBO->Bind();
+    glVertexAttribPointer(
+    2,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
+    2,                  // size
+    GL_FLOAT,           // type
+    GL_FALSE,           // normalized?
+    sizeof(NTVERTEX),                  // stride
+    (void*)24            // array buffer offset
+    );
+    CheckError("glVertexAttribPointer");
+    glEnableVertexAttribArray(2);
+    CheckError("glEnableVertexAttribArray2");
 
-	mesh.VAO->UnBind();
+    grp->IBO = std::make_unique<IndexBuffer>(grp->Idx, grp->nIdx + 12);
+    grp->IBO->Bind();
+    grp->VBA->UnBind();
 
-	delete []Vtx;
-	delete []Idx;
+
+	return new OGLMesh (grp, false);
 }

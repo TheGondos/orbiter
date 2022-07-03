@@ -19,6 +19,7 @@
 #include "OGLMesh.h"
 #include "OGLClient.h"
 #include "Scene.h"
+#include "OGLCamera.h"
 #include <cstring>
 
 static void CheckError(const char *s) {
@@ -47,10 +48,22 @@ OGLMesh::OGLMesh ()
 	bTemplate = false;
 	bModulateMatAlpha = false;
 	nGrp = 0;
-	nTex = 2;
+	nTex = 1;
 	Tex = new OGLTexture *[nTex];
 	Tex[0] = 0;
-	nMtrl = 1;
+	nMtrl = 0;
+	Mtrl = new OGLMaterial[nMtrl];
+}
+
+OGLMesh::OGLMesh (int nt, int nm)
+{
+	bTemplate = false;
+	bModulateMatAlpha = false;
+	nGrp = 0;
+	nTex = nt;
+	Tex = new OGLTexture *[nTex];
+	Tex[0] = 0;
+	nMtrl = nm;
 	Mtrl = new OGLMaterial[nMtrl];
 }
 
@@ -426,19 +439,28 @@ void OGLMesh::RenderGroup (GROUPREC *grp)
 	if (grp->nVtx && grp->nIdx) {
         grp->VBA->Bind();
         glDrawElements(GL_TRIANGLES, grp->IBO->GetCount(), GL_UNSIGNED_SHORT, 0);
+	    CheckError("glDrawElements");
         grp->VBA->UnBind();
 	}
 }
 
 void OGLMesh::Render (OGLCamera *c, glm::fmat4 &model)
 {
-    glEnable(GL_DEPTH_TEST);  
+    glEnable(GL_BLEND);
+    glFrontFace(GL_CW);
+    glEnable(GL_CULL_FACE);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	/*
+    glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
     glFrontFace(GL_CW);
-    glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-    glm::vec3 sundir = *g_client->GetScene()->GetSunDir();
+*/
+	const VECTOR3 &sd = g_client->GetScene()->GetSunDir();
+    glm::vec3 sundir;
+	sundir.x = sd.x;
+	sundir.y = sd.y;
+	sundir.z = sd.z;
 
     static Shader mShader("Mesh.vs", "Mesh.fs");
 
@@ -449,9 +471,6 @@ void OGLMesh::Render (OGLCamera *c, glm::fmat4 &model)
 	mShader.SetMat4("u_Model", model);
 	mShader.SetVec3("u_SunDir", sundir);
 
-//	dev->SetRenderState (D3DRENDERSTATE_ALPHABLENDENABLE, TRUE);
-//	if (bModulateMatAlpha)
-//		dev->SetTextureStageState (0, D3DTSS_ALPHAOP, D3DTOP_MODULATE);
 	if (bModulateMatAlpha) {
 		mShader.SetFloat("u_ModulateAlpha", 1.0);
 	} else {
@@ -504,9 +523,9 @@ void OGLMesh::Render (OGLCamera *c, glm::fmat4 &model)
 		if ((ti = Grp[g]->TexIdx) == SPEC_INHERIT && skipped) // find last valid texture
 			for (j = g-1; j >= 0; j--)
 				if ((ti = Grp[j]->TexIdx) != SPEC_INHERIT) break;
-		if (ti != SPEC_INHERIT && (!g || (ti != pti))) {
+		if ((uint32_t)ti != SPEC_INHERIT && (!g || (ti != pti))) {
 			OGLTexture * tx = nullptr;
-			if (ti != SPEC_DEFAULT) {
+			if ((uint32_t)ti != SPEC_DEFAULT) {
 				tx = (ti < TEXIDX_MFD0 ? Tex[ti] : (OGLTexture *)g_client->GetMFDSurface(ti-TEXIDX_MFD0));
 			} else tx = nullptr;
             if(tx == nullptr) {
@@ -514,6 +533,7 @@ void OGLMesh::Render (OGLCamera *c, glm::fmat4 &model)
                 mShader.SetFloat("u_Textured", 0.0);
             } else {
                 glBindTexture(GL_TEXTURE_2D,  tx->m_TexId);
+				CheckError("glBindTexture");
                 mShader.SetFloat("u_Textured", 1.0);
                 mShader.SetFloat("u_MatAlpha", 1.0);
             }
@@ -556,7 +576,7 @@ void OGLMesh::Render (OGLCamera *c, glm::fmat4 &model)
 		}
 */
 		if (uflag & 0x8) { // brighten
-            glEnable(GL_BLEND);
+            //glEnable(GL_BLEND);
             glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 		}
 

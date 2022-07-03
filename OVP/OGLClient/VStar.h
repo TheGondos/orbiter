@@ -20,19 +20,18 @@
 #include "OGLMesh.h"
 
 class OGLTexture;
-class OGLCamera;
 class Scene;
 
-class VStar: public VObject {
+class vStar: public vObject {
 public:
-	VStar (OBJHANDLE _hObj);
-	~VStar ();
+	vStar (OBJHANDLE _hObj, const Scene *scene);
+	~vStar ();
 
 	static void GlobalInit ();
 	static void GlobalExit ();
 
 	bool Update () override;
-	bool Render (OGLCamera *c) override;
+	bool Render () override;
 
 private:
 	double size;       ///< physical size of central body

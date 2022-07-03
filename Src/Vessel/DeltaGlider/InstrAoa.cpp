@@ -275,7 +275,7 @@ bool InstrAOA::Redraw2D (SURFHANDLE surf)
 		// tape response delay
 		static double tapespeed = 20.0*RAD;
 		double daoa = aoa-paoa;
-		if (fabs(daoa)/oapiGetSimStep() > tapespeed) {
+		if (oapiGetSimStep() == 0.0 || fabs(daoa)/oapiGetSimStep() > tapespeed) {
 			aoa = paoa + oapiGetSimStep()*(daoa>0 ? tapespeed:-tapespeed);
 			aoa_abs = fabs(aoa);
 		}

@@ -3,7 +3,7 @@
 
 // ==============================================================
 //   ORBITER VISUALISATION PROJECT (OVP)
-//   OpenGL Client module
+//   D3D7 Client module
 // ==============================================================
 
 // ==============================================================
@@ -17,13 +17,10 @@
 #ifndef __TILEMGR_H
 #define __TILEMGR_H
 
-#include "MeshManager.h"
-#include "SphereMesh.h"
-#include <glm/glm.hpp>
-
+#include "OGLMesh.h"
+#include "spherepatch.h"
 #include <mutex>
 #include <thread>
-#include <condition_variable>
 
 #define MAXQUEUE 10
 
@@ -56,9 +53,9 @@ struct TILEDESC {
 		uint32_t idx;
 		OGLTexture *obj;     // landmask texture, if applicable
 	} ltex;
-	int flag;
+	uint32_t flag;
 	struct TILEDESC *subtile[4];   // sub-tiles for the next resolution level
-	int ofs;                     // refers back to the master list entry for the tile
+	uint32_t ofs;                     // refers back to the master list entry for the tile
 };
 
 typedef struct {
@@ -66,14 +63,17 @@ typedef struct {
 	float tvmin, tvmax;
 } TEXCRDRANGE;
 
-class VPlanet;
+//class D3D7Config;
+class vPlanet;
 class TileBuffer;
+class CSphereManager;
 
 class TileManager {
 	friend class TileBuffer;
+	friend class CSphereManager;
 
 public:
-	TileManager (const VPlanet *vplanet);
+	TileManager (const vPlanet *vplanet);
 	virtual ~TileManager ();
 
 	static void GlobalInit ();
@@ -91,11 +91,11 @@ protected:
 	void RenderSimple (int level, TILEDESC *tile);
 
 	void ProcessTile (int lvl, int hemisp, int ilat, int nlat, int ilng, int nlng, TILEDESC *tile,
-		const TEXCRDRANGE &range, OGLTexture *tex, OGLTexture *ltex, int flag,
-		const TEXCRDRANGE &bkp_range, OGLTexture *bkp_tex, OGLTexture *bkp_ltex, int bkp_flag);
+		const TEXCRDRANGE &range, OGLTexture *tex, OGLTexture *ltex, uint32_t flag,
+		const TEXCRDRANGE &bkp_range, OGLTexture *bkp_tex, OGLTexture *bkp_ltex, uint32_t bkp_flag);
 
 	virtual void RenderTile (int lvl, int hemisp, int ilat, int nlat, int ilng, int nlng, double sdist, TILEDESC *tile,
-		const TEXCRDRANGE &range, OGLTexture *tex, OGLTexture *ltex, int flag) = 0;
+		const TEXCRDRANGE &range, OGLTexture *tex, OGLTexture *ltex, uint32_t flag) = 0;
 
 	bool LoadPatchData ();
 	// load binary definition file for LOD levels 1-8
@@ -103,16 +103,16 @@ protected:
 	bool LoadTileData ();
 	// load binary definition file for LOD levels > 8
 
-	bool AddSubtileData (TILEDESC &td, TILEFILESPEC *tfs, int idx, int sub, int lvl);
+	bool AddSubtileData (TILEDESC &td, TILEFILESPEC *tfs, uint32_t idx, uint32_t sub, uint32_t lvl);
 	// add a high-resolution subtile specification to the tree
 
 	void LoadTextures (char *modstr = 0);
 	// load patch textures for all LOD levels
 
-	void PreloadTileTextures (TILEDESC *tile8, int ntex, int nmask);
+	void PreloadTileTextures (TILEDESC *tile8, uint32_t ntex, uint32_t nmask);
 	// Pre-load high-resolution tile textures for the planet (level >= 9)
 
-	void AddSubtileTextures (TILEDESC *td, OGLTexture **tbuf, int nt, OGLTexture **mbuf, int nm);
+	void AddSubtileTextures (TILEDESC *td, OGLTexture **tbuf, uint32_t nt, OGLTexture **mbuf, uint32_t nm);
 	// add a high-resolution subtile texture to the tree
 
 	void LoadSpecularMasks ();
@@ -132,18 +132,18 @@ protected:
 	bool SpecularColour (glm::vec4 *col);
 	// adjust specular reflection through atmosphere
 
-	const VPlanet *vp;               // the planet visual
+	const vPlanet *vp;               // the planet visual
 	OBJHANDLE obj;                   // the planet object
 	char *objname;                   // the name of the planet (for identifying texture files)
-	int tilever;                   // file version for tile textures
+	uint32_t tilever;                   // file version for tile textures
 	int maxlvl;                      // max LOD level
 	int maxbaselvl;                  // max LOD level, capped at 8
-	int ntex;                      // total number of loaded textures for levels <= 8
-	int nhitex;                    // number of textures for levels > 8
-	int nhispec;                   // number of specular reflection masks (level > 8)
+	uint32_t ntex;                      // total number of loaded textures for levels <= 8
+	uint32_t nhitex;                    // number of textures for levels > 8
+	uint32_t nhispec;                   // number of specular reflection masks (level > 8)
 	double lightfac;                 // city light intensity factor
 	double microlvl;                 // intensity of microtexture
-	int nmask;                     // number of specular reflection masks/light maps (level <= 8)
+	uint32_t nmask;                     // number of specular reflection masks/light maps (level <= 8)
 	VECTOR3 pcdir;                   // previous camera direction
 	static glm::mat4 Rsouth;         // rotation matrix for mapping tiles to southern hemisphere
 	float spec_base;                 // base intensity for specular reflections
@@ -153,11 +153,12 @@ protected:
 	TILEDESC *tiledesc;              // tile descriptors for levels 1-8
 	static TileBuffer *tilebuf;      // subtile manager
 
-	OGLTexture **texbuf;     // texture buffer for surface textures (level <= 8)
-	OGLTexture **specbuf;    // texture buffer for specular masks (level <= 8);
-	OGLTexture *microtex;    // microtexture overlay
+	OGLTexture **texbuf;    // texture buffer for surface textures (level <= 8)
+	OGLTexture **specbuf;   // texture buffer for specular masks (level <= 8);
+	OGLTexture *microtex;   // microtexture overlay
 
 	// object-independent configuration data
+//	static const D3D7Config *cfg;    // configuration parameters
 	static bool bGlobalSpecular;     // user wants specular reflections
 	static bool bGlobalRipple;       // user wants specular microtextures
 	static bool bGlobalLights;       // user wants planet city lights
@@ -181,9 +182,7 @@ protected:
 	static int patchidx[9];          // texture offsets for different LOD levels
 	static int NLAT[9];
 	static int NLNG5[1], NLNG6[2], NLNG7[4], NLNG8[8], *NLNG[9];
-	static int vpX0, vpX1, vpY0, vpY1; // viewport boundaries
-
-	static int vbMemCaps;          // video/system memory flag for vertex buffers
+	static uint32_t vpX0, vpX1, vpY0, vpY1; // viewport boundaries
 
 	struct RENDERPARAM {
 		glm::mat4 wmat;              // world matrix
@@ -200,7 +199,7 @@ protected:
 		bool bfog;                   // distance fog flag
 	} RenderParam;
 
-	friend void ApplyPatchTextureCoordinates (VBMESH &mesh, VertexBuffer *vtx, const TEXCRDRANGE &range);
+	friend void ApplyPatchTextureCoordinates (VBMESH &mesh, VertexBuffer* vtx, const TEXCRDRANGE &range);
 };
 void ApplyPatchTextureCoordinates (VBMESH &mesh, VertexBuffer *vtx, const TEXCRDRANGE &range);
 
@@ -227,21 +226,20 @@ public:
 	// already present)
 
 	static std::mutex hQueueMutex;
-	static std::condition_variable hCV;
 
 private:
 	bool DeleteTile (TILEDESC *tile);
 
-	static int LoadTile_ThreadProc (TileBuffer *);
+	static uint32_t LoadTile_ThreadProc (TileBuffer *);
 	// the thread function loading tile textures on demand
 
 	bool bLoadMip;  // load mipmaps for tiles if available
 	std::thread hLoadThread;
 	static bool bRunThread;
 	static int nqueue, queue_in, queue_out;
-	int nbuf;     // buffer size;
-	int nused;    // number of active entries
-	int last;     // index of last activated entry
+	uint32_t nbuf;     // buffer size;
+	uint32_t nused;    // number of active entries
+	uint32_t last;     // index of last activated entry
 	TILEDESC **buf; // tile buffer
 
 	static struct QUEUEDESC {

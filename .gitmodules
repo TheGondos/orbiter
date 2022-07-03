@@ -19,3 +19,10 @@
 [submodule "Addons/Deepstar"]
 	path = Addons/Deepstar
 	url = https://github.com/TheGondos/Deepstar.git
+[submodule "Extern/libnsbmp"]
+	path = Extern/libnsbmp
+	url = https://github.com/TheGondos/libnsbmp.git
+[submodule "OVP/OGLClient/nanovg"]
+	path = OVP/OGLClient/nanovg
+	url = https://github.com/TheGondos/nanovg.git
+

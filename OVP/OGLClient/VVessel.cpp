@@ -13,11 +13,9 @@
 
 #include "glad.h"
 #include "VVessel.h"
-#include "OGLClient.h"
-#include "OGLCamera.h"
 #include "OGLMesh.h"
-#include "Shader.h"
-#include "Scene.h"
+#include "OGLCamera.h"
+#include "Texture.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <cstring>
 
@@ -32,6 +30,8 @@ static void CheckError(const char *s) {
 	}
 }
 
+using namespace oapi;
+
 // ==============================================================
 // Local prototypes
 
@@ -39,52 +39,44 @@ void TransformPoint (VECTOR3 &p, const glm::mat4 &T);
 void TransformDirection (VECTOR3 &a, const glm::mat4 &T, bool normalise);
 
 // ==============================================================
-// class VVessel (implementation)
+// class vVessel (implementation)
 //
 // A vVessel is the visual representation of a vessel object.
 // ==============================================================
 
-VVessel::VVessel (OBJHANDLE handle): VObject (handle)
+vVessel::vVessel (OBJHANDLE _hObj, const Scene *scene): vObject (_hObj, scene)
 {
-	vessel = oapiGetVesselInterface (handle);
+	vessel = oapiGetVesselInterface (_hObj);
 	nmesh = 0;
 	nanim = 0;
+	bLocalLight = false;
+	//localLight = *scene->GetLight();
+	tCheckLight = oapiGetSimTime()-1.0;
 	LoadMeshes ();
-	InitAnimations();
+	InitAnimations ();
 }
 
-VVessel::~VVessel ()
+vVessel::~vVessel ()
 {
 	ClearAnimations();
 	ClearMeshes();
 }
 
-void VVessel::GlobalInit()
+void vVessel::GlobalInit ()
 {
-	/*
-	const DWORD texsize = *(int*)gc->GetConfigParam (CFGPRM_PANELMFDHUDSIZE);
-
-	if (mfdsurf) mfdsurf->Release();
-	mfdsurf = (LPDIRECTDRAWSURFACE7)gc->clbkCreateTexture (texsize, texsize);
-*/
 	if (defexhausttex) defexhausttex->Release();
-	defexhausttex = g_client->GetTexMgr()->LoadTexture ("Exhaust.dds", true, 0);
+	g_client->GetTexMgr()->LoadTexture ("Exhaust.dds", &defexhausttex, 0);
 }
 
-void VVessel::GlobalExit ()
+void vVessel::GlobalExit ()
 {
-/*
-	if (mfdsurf) {
-		mfdsurf->Release();
-		mfdsurf = 0;
-	}*/
 	if (defexhausttex) {
 		defexhausttex->Release();
 		defexhausttex = 0;
 	}
 }
 
-void VVessel::clbkEvent (visevent msg, visevent_data content)
+void vVessel::clbkEvent (visevent msg, visevent_data content)
 {
 	switch (msg) {
 	case EVENT_VESSEL_INSMESH:
@@ -104,7 +96,8 @@ void VVessel::clbkEvent (visevent msg, visevent_data content)
 			if (length(ofs)) {
 				if (!meshlist[idx].trans)
 					meshlist[idx].trans = new glm::fmat4(1.0f);
-
+				else
+					*meshlist[idx].trans = glm::fmat4(1.0f);
                 glm::fmat4 *m = meshlist[idx].trans;
                 glm::fvec3 offset;
                 offset.x = ofs.x;
@@ -125,29 +118,33 @@ void VVessel::clbkEvent (visevent msg, visevent_data content)
 	}
 }
 
-MESHHANDLE VVessel::GetMesh (unsigned int idx)
+MESHHANDLE vVessel::GetMesh (UINT idx)
 {
 	return (idx < nmesh ? meshlist[idx].mesh : NULL);
 }
 
-bool VVessel::Update ()
+bool vVessel::Update ()
 {
-	VObject::Update ();
-	if (!mVisible) return false;
+	if (!active) return false;
+
+	vObject::Update ();
 	UpdateAnimations ();
+
+//	if (oapiGetSimTime() > tCheckLight)
+//		bLocalLight = ModLighting (&localLight);
 
 	return true;
 }
 
-void VVessel::LoadMeshes ()
+void vVessel::LoadMeshes ()
 {
 	if (nmesh) ClearMeshes();
 	MESHHANDLE hMesh;
 	const OGLMesh *mesh;
 	VECTOR3 ofs;
-	int idx;
+	UINT idx;
+	OGLMeshManager *mmgr = g_client->GetMeshManager();
 
-    OGLMeshManager *mmgr = g_client->GetMeshManager();
 	nmesh = vessel->GetMeshCount();
 	meshlist = new MESHREC[nmesh];
 	memset (meshlist, 0, nmesh*sizeof(MESHREC));
@@ -179,9 +176,9 @@ void VVessel::LoadMeshes ()
 	}
 }
 
-void VVessel::InsertMesh (unsigned int idx)
+void vVessel::InsertMesh (UINT idx)
 {
-	int i;
+	UINT i;
 
 	if (idx >= nmesh) { // append a new entry to the list
 		MESHREC *tmp = new MESHREC[idx+1];
@@ -200,7 +197,7 @@ void VVessel::InsertMesh (unsigned int idx)
 		delete meshlist[idx].mesh;
 		if (meshlist[idx].trans) {
 			delete meshlist[idx].trans;
-			meshlist[idx].trans = nullptr;
+			meshlist[idx].trans = 0;
 		}
 	}
 
@@ -235,10 +232,10 @@ void VVessel::InsertMesh (unsigned int idx)
 	}
 }
 
-void VVessel::ClearMeshes ()
+void vVessel::ClearMeshes ()
 {
 	if (nmesh) {
-		for (int i = 0; i < nmesh; i++) {
+		for (UINT i = 0; i < nmesh; i++) {
 			if (meshlist[i].mesh) delete meshlist[i].mesh;
 			if (meshlist[i].trans) delete meshlist[i].trans;
 		}
@@ -247,7 +244,7 @@ void VVessel::ClearMeshes ()
 	}
 }
 
-void VVessel::DelMesh (unsigned int idx)
+void vVessel::DelMesh (UINT idx)
 {
 	if (idx >= nmesh) return;
 	if (!meshlist[idx].mesh) return;
@@ -255,23 +252,23 @@ void VVessel::DelMesh (unsigned int idx)
 	meshlist[idx].mesh = 0;
 	if (meshlist[idx].trans) {
 		delete meshlist[idx].trans;
-		meshlist[idx].trans = nullptr;
+		meshlist[idx].trans = 0;
 	}
 }
 
-void VVessel::InitAnimations ()
+void vVessel::InitAnimations ()
 {
 	if (nanim) ClearAnimations();
 	nanim = vessel->GetAnimPtr (&anim);
 	if (nanim) {
-		unsigned int i;
+		UINT i;
 		animstate = new double[nanim];
 		for (i = 0; i < nanim; i++)
 			animstate[i] = anim[i].defstate; // reset to default mesh states
 	}
 }
 
-void VVessel::ClearAnimations ()
+void vVessel::ClearAnimations ()
 {
 	if (nanim) {
 		delete []animstate;
@@ -279,10 +276,10 @@ void VVessel::ClearAnimations ()
 	}
 }
 
-void VVessel::UpdateAnimations (unsigned int mshidx)
+void vVessel::UpdateAnimations (UINT mshidx)
 {
 	double newstate;
-	for (unsigned int i = 0; i < nanim; i++) {
+	for (UINT i = 0; i < nanim; i++) {
 		if (!anim[i].ncomp) continue;
 		if (animstate[i] != (newstate = anim[i].state)) {
 			Animate (i, newstate, mshidx);
@@ -291,46 +288,47 @@ void VVessel::UpdateAnimations (unsigned int mshidx)
 	}
 }
 
-bool VVessel::Render (OGLCamera *c, bool internalpass)
+bool vVessel::Render ()
 {
-	if (!mVisible) return false;
-	unsigned int mfd;
-	//bool bWorldValid = false;
+	if (!active) return false;
+	Render (false);
+	return true;
+}
 
-	bool bCockpit = (oapiCameraInternal() && mHandle == oapiGetFocusObject());
+bool vVessel::Render (bool internalpass)
+{
+	if (!active) return false;
+	UINT i, mfd;
+
+	bool bCockpit = (oapiCameraInternal() && hObj == oapiGetFocusObject());
 	// render cockpit view
 
 	bool bVC = (bCockpit && oapiCockpitMode() == COCKPIT_VIRTUAL);
 	// render virtual cockpit
+
 	const VCHUDSPEC *hudspec;
 	const VCMFDSPEC *mfdspec[MAXMFD];
-	SURFHANDLE sHUD = nullptr;//, sMFD[MAXMFD];
+	SURFHANDLE sHUD;//, sMFD[MAXMFD];
+/*
+	D3DLIGHT7 globalLight;
 
+	if (bLocalLight) {
+		dev->GetLight (0, &globalLight);
+		dev->SetLight (0, &localLight);
+	}
+*/
 	if (bVC) {
 		sHUD = g_client->GetVCHUDSurface (&hudspec);
-		
-		for (mfd = 0; mfd < MAXMFD; mfd++) {
-//			sMFD[mfd] = g_client->GetVCMFDSurface (mfd, &mfdspec[mfd]);
+		for (mfd = 0; mfd < MAXMFD; mfd++)
 			g_client->GetVCMFDSurface (mfd, &mfdspec[mfd]);
-		}		
 	}
 
-//	for (auto &kw : mMeshes) {
-  //      auto &mr = kw.second;
+	for (i = 0; i < nmesh; i++) {
 
-	for (int i = 0; i < nmesh; i++) {
 		if (!meshlist[i].mesh) continue;
-		auto &mr = meshlist[i];
 
-		uint16_t vismode = mr.vismode;
-/*
-#define MESHVIS_NEVER          0x00  ///< Mesh is never visible
-#define MESHVIS_EXTERNAL       0x01  ///< Mesh is visible in external views
-#define MESHVIS_COCKPIT        0x02  ///< Mesh is visible in all internal (cockpit) views
-#define MESHVIS_ALWAYS         (MESHVIS_EXTERNAL|MESHVIS_COCKPIT) ///< Mesh is always visible
-#define MESHVIS_VC             0x04  ///< Mesh is only visible in virtual cockpit internal views
-#define MESHVIS_EXTPASS        0x10  ///< Visibility modifier: render mesh during external pass, even for internal views*/
-
+		// check if mesh should be rendered in this pass
+		uint16_t vismode = meshlist[i].vismode;
 		if (bCockpit) {
 			if (internalpass && (vismode & MESHVIS_EXTPASS)) continue;
 			if (!(vismode & MESHVIS_COCKPIT)) {
@@ -340,84 +338,55 @@ bool VVessel::Render (OGLCamera *c, bool internalpass)
 			if (!(vismode & MESHVIS_EXTERNAL)) continue;
 		}
 
-		glm::fmat4 mWorldTrans = mModel;
 		// transform mesh
-		if (mr.trans) {
-            mWorldTrans = mModel * *(mr.trans);
-        }
+		glm::fmat4 mWorldTrans;
+		if (meshlist[i].trans) {
+			mWorldTrans = mWorld * *(meshlist[i].trans);
+		} else {
+			mWorldTrans = mWorld;
+		}
 
 		if (bVC) { // link MFD textures for rendering
 			for (mfd = 0; mfd < MAXMFD; mfd++) {
-				if (mfdspec[mfd] && mfdspec[mfd]->nmesh == (int)i) {
-					mr.mesh->GetGroup(mfdspec[mfd]->ngroup)->TexIdx = TEXIDX_MFD0+mfd;
+				if (mfdspec[mfd] && mfdspec[mfd]->nmesh == i) {
+					meshlist[i].mesh->GetGroup(mfdspec[mfd]->ngroup)->TexIdx = TEXIDX_MFD0+mfd;
 				}
 			}
 		}
 
 		// render mesh
-		mr.mesh->Render (c, mWorldTrans);
+		meshlist[i].mesh->Render (scn->GetCamera(), mWorldTrans);
 
 		// render VC HUD and MFDs
 		if (bVC) {
 
 			// render VC HUD
-			if (sHUD && hudspec->nmesh == (int)i) {
+			if (sHUD && hudspec->nmesh == i) {
+				static Shader s("MeshUnlit.vs", "MeshUnlit.fs");
+				s.Bind();
+				auto vp = scn->GetCamera()->GetViewProjectionMatrix();
+				s.SetMat4("u_ViewProjection", *vp);
+				s.SetMat4("u_Model", mWorldTrans);
 
-				glDisable(GL_DEPTH_TEST);  
-				glEnable(GL_BLEND);
-
-				glm::vec3 sundir = *g_client->GetScene()->GetSunDir();
-
-				static Shader mShader("Mesh.vs", "Mesh.fs");
-
-				mShader.Bind();
-
-				auto vp = c->GetViewProjectionMatrix();
-				mShader.SetMat4("u_ViewProjection", *vp);
-				mShader.SetMat4("u_Model", mWorldTrans);
-				mShader.SetVec3("u_SunDir", sundir);
 				glBindTexture(GL_TEXTURE_2D,  ((OGLTexture *)sHUD)->m_TexId);
-				mShader.SetFloat("u_Textured", 1.0);
-				mShader.SetFloat("u_ModulateAlpha", 0.0);
-				OGLMesh::GROUPREC *g = mr.mesh->GetGroup(hudspec->ngroup);
-
-				static OGLMaterial defmat = {
-					{1,1,1,1},
-					{1,1,1,1},
-					{0,0,0,1},
-					{0,0,0,1},0
-				};
-
-				OGLMaterial *mat = (g->MtrlIdx != SPEC_DEFAULT ? mr.mesh->GetMaterial(g->MtrlIdx) : &defmat);
-				mShader.SetVec4("u_Material.ambient", mat->ambient);
-				mShader.SetVec4("u_Material.diffuse", mat->diffuse);
-				mShader.SetVec4("u_Material.specular", mat->specular);
-				mShader.SetVec4("u_Material.emissive", mat->emissive);
-				mShader.SetFloat("u_Material.specular_power", mat->specular_power);
-				mShader.SetFloat("u_MatAlpha", 1.0);
-
-				//dev->SetTexture (0, mfdsurf);
-				//dev->SetRenderState (D3DRENDERSTATE_LIGHTING, FALSE);
-				//dev->SetRenderState (D3DRENDERSTATE_ZENABLE, FALSE);
-				//dev->SetRenderState (D3DRENDERSTATE_DESTBLEND, D3DBLEND_ONE);
+				glDisable(GL_DEPTH_TEST);
 				glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-//				mr.mesh->RenderGroup (c, mWorldTrans, mr.mesh->GetGroup(hudspec->ngroup), (OGLTexture *)sHUD);
-				mr.mesh->RenderGroup (mr.mesh->GetGroup(hudspec->ngroup));
-				mShader.UnBind();
+				meshlist[i].mesh->RenderGroup (meshlist[i].mesh->GetGroup(hudspec->ngroup));
 				glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-				//dev->SetRenderState (D3DRENDERSTATE_DESTBLEND, D3DBLEND_INVSRCALPHA);
-				//dev->SetRenderState (D3DRENDERSTATE_LIGHTING, TRUE);
-				//dev->SetRenderState (D3DRENDERSTATE_ZENABLE, TRUE);
+				glEnable(GL_DEPTH_TEST);
 			}
 		}
 	}
-
+/*
+	if (bLocalLight)
+		dev->SetLight (0, &globalLight);
+*/
 	return true;
 }
 
-bool VVessel::RenderExhaust (OGLCamera *c)
+bool vVessel::RenderExhaust ()
 {
-	if (!mVisible) return false;
+	if (!active) return false;
 	uint32_t i, nexhaust = vessel->GetExhaustCount();
 	if (!nexhaust) return true; // nothing to do
 
@@ -427,7 +396,7 @@ bool VVessel::RenderExhaust (OGLCamera *c)
 	OGLTexture *tex, *ptex = 0;
 	EXHAUSTSPEC es;
 
-	static TVERTEX ExhaustVtx[8] = {
+	static VERTEX_XYZ_TEX ExhaustVtx[8] = {
 		{0,0,0, 0.24f,0},
 		{0,0,0, 0.24f,1},
 		{0,0,0, 0.01f,0},
@@ -449,7 +418,7 @@ bool VVessel::RenderExhaust (OGLCamera *c)
 		VBA = new VertexArray();
 		VBA->Bind();
 
-		VBO = new VertexBuffer(ExhaustVtx, 8*sizeof(TVERTEX));
+		VBO = new VertexBuffer(ExhaustVtx, 8*sizeof(VERTEX_XYZ_TEX));
 		VBO->Bind();
 
 		IBO = new IndexBuffer(ExhaustIdx, 12);
@@ -461,7 +430,7 @@ bool VVessel::RenderExhaust (OGLCamera *c)
 		3,                  // size
 		GL_FLOAT,           // type
 		GL_FALSE,           // normalized?
-		sizeof(TVERTEX),                  // stride
+		sizeof(VERTEX_XYZ_TEX),                  // stride
 		(void*)0            // array buffer offset
 		);
 		CheckError("glVertexAttribPointer0");
@@ -473,7 +442,7 @@ bool VVessel::RenderExhaust (OGLCamera *c)
 		2,                  // size
 		GL_FLOAT,           // type
 		GL_FALSE,           // normalized?
-		sizeof(TVERTEX),                  // stride
+		sizeof(VERTEX_XYZ_TEX),                  // stride
 		(void*)12            // array buffer offset
 		);
 		CheckError("glVertexAttribPointer");
@@ -482,17 +451,18 @@ bool VVessel::RenderExhaust (OGLCamera *c)
 
 		VBA->UnBind();
 	}
+	/*
 	glDepthMask(GL_FALSE);
 	glEnable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
+*/
 	static Shader s("Exhaust.vs","Exhaust.fs");
 
 	s.Bind();
-	auto vp = c->GetViewProjectionMatrix();
+	auto vp = scn->GetCamera()->GetViewProjectionMatrix();
 	s.SetMat4("u_ViewProjection", *vp);
-	s.SetMat4("u_Model", mModel);
+	s.SetMat4("u_Model", mWorld);
 
 	for (i = 0; i < nexhaust; i++) {
 		if (!(lvl = vessel->GetExhaustLevel (i))) continue;
@@ -502,8 +472,9 @@ bool VVessel::RenderExhaust (OGLCamera *c)
 			MATRIX3 R;
 			vessel->GetRotationMatrix (R);
 			cdir = tmul (R, cpos);
+			glDepthMask(GL_FALSE);
+
 			/*
-			dev->SetRenderState (D3DRENDERSTATE_ZWRITEENABLE, FALSE);
 			dev->SetMaterial (&engmat);
 			dev->SetTransform (D3DTRANSFORMSTATE_WORLD, &mWorld);
 			dev->SetTextureStageState (0, D3DTSS_ALPHAOP, D3DTOP_MODULATE);
@@ -526,7 +497,7 @@ bool VVessel::RenderExhaust (OGLCamera *c)
 		SetExhaustVertices (-(*es.ldir), cdir, *es.lpos, zsize*es.lsize, xsize*es.wsize, ExhaustVtx);
 
 		VBO->Bind();
-		VBO->Update(ExhaustVtx, 8 * sizeof(TVERTEX));
+		VBO->Update(ExhaustVtx, 8 * sizeof(VERTEX_XYZ_TEX));
 		VBO->UnBind();
 		VBA->Bind();
 		glBindTexture(GL_TEXTURE_2D, tex->m_TexId);
@@ -545,20 +516,156 @@ bool VVessel::RenderExhaust (OGLCamera *c)
 	}
 
 	s.UnBind();
+	/*
 	glDepthMask(GL_TRUE);
 	glDisable(GL_DEPTH_TEST);
 	glBindTexture(GL_TEXTURE_2D, 0);
-	/*
+	*/
 	if (!need_setup) { // reset render state
-		dev->SetTextureStageState (0, D3DTSS_ALPHAOP, D3DTOP_SELECTARG1);
-		dev->SetTextureStageState (0, D3DTSS_ALPHAARG2, D3DTA_CURRENT);
-		dev->SetRenderState (D3DRENDERSTATE_ZWRITEENABLE, TRUE);
-	}*/
+		//dev->SetTextureStageState (0, D3DTSS_ALPHAOP, D3DTOP_SELECTARG1);
+		//dev->SetTextureStageState (0, D3DTSS_ALPHAARG2, D3DTA_CURRENT);
+		glDepthMask(GL_TRUE);
+	}
 	return true;
 }
 
-void VVessel::SetExhaustVertices (const VECTOR3 &edir, const VECTOR3 &cdir, const VECTOR3 &ref,
-	double lscale, double wscale, TVERTEX *ev)
+void vVessel::RenderBeacons ()
+{
+	/*
+	int idx = 0;
+	const BEACONLIGHTSPEC *bls = vessel->GetBeacon(idx);
+	if (!bls) return; // nothing to do
+	bool need_setup = true;
+	double simt = oapiGetSimTime();
+	DWORD doalpha;
+	dev->GetRenderState (D3DRENDERSTATE_ALPHABLENDENABLE, &doalpha);
+	for (; bls; bls = vessel->GetBeacon (++idx)) {
+		if (bls->active) {
+			if (bls->period && (fmod(simt+bls->tofs, bls->period) > bls->duration))
+				continue;
+			double size = bls->size;
+			if (cdist > 50.0)
+				size *= pow (cdist/50.0, bls->falloff);
+			if (need_setup) {
+				dev->SetRenderState (D3DRENDERSTATE_ALPHABLENDENABLE, TRUE);
+				dev->SetRenderState (D3DRENDERSTATE_ZWRITEENABLE, FALSE);
+				dev->SetRenderState (D3DRENDERSTATE_ZBIAS, 5);
+				need_setup = false;
+			}
+			RenderSpot (dev, bls->pos, (float)size, *bls->col, false, bls->shape);
+		}
+	}
+	// undo device modifications
+	if (!need_setup) {
+		if (!doalpha) dev->SetRenderState (D3DRENDERSTATE_ALPHABLENDENABLE, FALSE);
+		dev->SetRenderState (D3DRENDERSTATE_ZWRITEENABLE, TRUE);
+		dev->SetRenderState (D3DRENDERSTATE_ZBIAS, 0);
+	}
+	*/
+}
+
+void vVessel::RenderGroundShadow (OBJHANDLE hPlanet, float depth)
+{
+	static const double eps = 1e-2;
+	static const double shadow_elev_limit = 0.07;
+	double d, alt, R;
+	VECTOR3 pp, sd, pvr;
+	oapiGetGlobalPos (hPlanet, &pp); // planet global pos
+	vessel->GetGlobalPos (sd);       // vessel global pos
+	pvr = sd-pp;                     // planet-relative vessel position
+	d = length(pvr);                 // vessel-planet distance
+	R = oapiGetSize (hPlanet);       // planet mean radius
+	R += vessel->GetSurfaceElevation();  // Note: this only works at low vessel altitudes (shadow close to vessel position)
+	alt = d-R;                       // altitude above surface
+	if (alt*eps > vessel->GetSize()) // too high to cast a shadow
+		return;
+	normalise (sd);                  // shadow projection direction
+
+	// calculate the intersection of the vessel's shadow with the planet surface
+	double fac1 = dotp (sd, pvr);
+	if (fac1 > 0.0)                  // shadow doesn't intersect planet surface
+		return;
+	double csun = -fac1/d;           // sun elevation above horizon
+	if (csun < shadow_elev_limit)    // sun too low to cast shadow
+		return;
+	double arg  = fac1*fac1 - (dotp (pvr, pvr) - R*R);
+	if (arg <= 0.0)                  // shadow doesn't intersect with planet surface
+		return;
+	double a = -fac1 - sqrt(arg);
+
+	MATRIX3 vR;
+	vessel->GetRotationMatrix (vR);
+	VECTOR3 sdv = tmul (vR, sd);     // projection direction in vessel frame
+	VECTOR3 shp = sdv*a;             // projection point
+	VECTOR3 hn, hnp = vessel->GetSurfaceNormal();
+	vessel->HorizonInvRot (hnp, hn);
+
+	// perform projections
+	double nr0 = dotp (hn, shp);
+	double nd  = dotp (hn, sdv);
+	VECTOR3 sdvs = sdv / nd;
+
+	// build shadow projection matrix
+	glm::mat4 mProj, mProjWorld, mProjWorldShift;
+	mProj[0][0] = 1.0f - (float)(sdvs.x*hn.x);
+	mProj[0][1] =      - (float)(sdvs.y*hn.x);
+	mProj[0][2] =      - (float)(sdvs.z*hn.x);
+	mProj[0][3] = 0;
+	mProj[1][0] =      - (float)(sdvs.x*hn.y);
+	mProj[1][1] = 1.0f - (float)(sdvs.y*hn.y);
+	mProj[1][2] =      - (float)(sdvs.z*hn.y);
+	mProj[1][3] = 0;
+	mProj[2][0] =      - (float)(sdvs.x*hn.z);
+	mProj[2][1] =      - (float)(sdvs.y*hn.z);
+	mProj[2][2] = 1.0f - (float)(sdvs.z*hn.z);
+	mProj[2][3] = 0;
+	mProj[3][0] =        (float)(sdvs.x*nr0);
+	mProj[3][1] =        (float)(sdvs.y*nr0);
+	mProj[3][2] =        (float)(sdvs.z*nr0);
+	mProj[3][3] = 1;
+	mProjWorld = mWorld * mProj;
+	
+	bool isProjWorld = false;
+
+	// modify depth of shadows at dawn/dusk
+	bool resetalpha = false;
+	//if (g_client->UseStencilBuffer()) {
+		double scale = std::min (1.0, (csun-0.07)/0.015);
+		if (scale < 1) {
+			depth = scale * depth;
+		}
+	//}
+
+	static Shader s("VesselShadow.vs","VesselShadow.fs");
+	s.Bind();
+	s.SetMat4("u_ViewProjection", *scn->GetCamera()->GetViewProjectionMatrix());
+	s.SetFloat("u_ShadowDepth", depth);
+
+	// project all vessel meshes. This should be replaced by a dedicated shadow mesh
+	for (unsigned int i = 0; i < nmesh; i++) {
+		if (!meshlist[i].mesh) continue;
+		if (!(meshlist[i].vismode & MESHVIS_EXTERNAL)) continue; // only render shadows for externally visible meshes
+		OGLMesh *mesh = meshlist[i].mesh;
+		if (meshlist[i].trans) {
+			// add mesh offset to transformation
+			mProjWorldShift = mProjWorld * *(meshlist[i].trans);
+			s.SetMat4("u_Model", mProjWorldShift);
+		} else {
+			s.SetMat4("u_Model", mProjWorld);
+		}
+
+		for (int j = 0; j < mesh->GroupCount(); j++) {
+			OGLMesh::GROUPREC *grp = mesh->GetGroup(j);
+			if (grp->UsrFlag & 1) continue; // "no shadow" flag
+			mesh->RenderGroup (grp);	
+		}
+	}
+
+	s.UnBind();
+}
+
+void vVessel::SetExhaustVertices (const VECTOR3 &edir, const VECTOR3 &cdir, const VECTOR3 &ref,
+	double lscale, double wscale, VERTEX_XYZ_TEX *ev)
 {
 	// need to rotate the billboard so it faces the observer
 	const float flarescale = 7.0;
@@ -588,8 +695,162 @@ void VVessel::SetExhaustVertices (const VECTOR3 &edir, const VECTOR3 &cdir, cons
 	ev[6].y = ry - sy - ty;   ev[7].y = ry + sy - ty;
 	ev[6].z = rz - sz - tz;   ev[7].z = rz + sz - tz;
 }
+/*
+bool vVessel::ModLighting (LPD3DLIGHT7 light)
+{
+	VECTOR3 GV, GS, GP, S, P;
 
-void VVessel::Animate (unsigned int an, double state, unsigned int mshidx)
+	// we only test the closest celestial body for shadowing
+	OBJHANDLE hP = vessel->GetSurfaceRef();
+	OBJHANDLE hS = oapiGetGbodyByIndex(0); // the central star
+	CELBODY *cb = oapiGetCelbodyInterface(hP);
+	CELBODY2 *cb2 = (cb->Version() >= 2 ? (CELBODY2*)cb : NULL);
+	vessel->GetGlobalPos(GV);
+	oapiGetGlobalPos (hS, &GS);
+	S = GS-GV; // sun's position from vessel
+	double s = length(S);
+	double as = asin(oapiGetSize(hS)/s);
+	VECTOR3 lcol = {1,1,1};
+	double amb = 0;
+	double dt = 1.0;
+	bool lightmod = false;
+	int i, j;
+
+	// calculate shadowing by planet
+
+	for (i = 0;; i++) {
+		oapiGetGlobalPos (hP, &GP);
+		P = GP-GV;
+		double p = length(P);
+		if (p < s) {                                      // shadow only if planet closer than sun
+			double psize = oapiGetSize(hP);
+			double phi = acos (dotp(S,P)/(s*p));          // angular distance between sun and planet
+			double ap = (psize < p ? asin(psize / p) : PI05);  // apparent size of planet disc [rad]
+
+			const ATMCONST *atm = (oapiGetObjectType(hP)==OBJTP_PLANET ? oapiGetPlanetAtmConstants (hP) : NULL);
+			if (atm) {  // case 1: planet has atmosphere
+				double alt = p-psize;                // vessel altitude
+				double altlimit = *(double*)oapiGetObjectParam (hP, OBJPRM_PLANET_ATTENUATIONALT);
+				double ap1 = ap * (altlimit+psize)/psize; 
+				if (alt < altlimit) {
+					static const double delta0 = RAD*100.0;
+					// This is the angular separation between planet centre and star below which
+					// the atmosphere affects lighting when on the planet surface. (100: when sun
+					// is 10 deg above horizon). Should possibly be made atmosphere-specific.
+					ap1 = delta0 / (1.0 + alt*(delta0-ap1)/(altlimit*ap1));
+				}
+
+				if (as+ap1 >= phi && ap/as > 0.1) {       // overlap and significant planet size
+					double dap = ap1-ap;
+					VECTOR3 plight = {1,1,1};
+					if (as < ap) {                        // planet disc larger than sun disc
+						if (phi < ap-as) {                // totality (sun below horizon)
+							plight.x = plight.y = plight.z = 0.0;
+						} else {
+							double dispersion = std::max (0.02, std::min (0.9, log (atm->rho0+1.0)));
+							double r0 = 1.0-0.35*dispersion;
+							double g0 = 1.0-0.75*dispersion;
+							double b0 = 1.0-1.0 *dispersion;
+							if (phi > as+ap) {            // sun above horizon
+								double f = (phi-as-ap)/dap;
+								plight.x = f*(1.0-r0) + r0;
+								plight.y = f*(1.0-g0) + g0;
+								plight.z = f*(1.0-b0) + b0;
+							} else {                      // sun partially below horizon
+								double f = (phi-ap+as)/(2.0*as);
+								plight.x = f*r0;
+								plight.y = f*g0;
+								plight.z = f*b0;
+							}
+							dt = 0.1;
+						}
+					} else {  // planet disc smaller than sun disc
+						double maxcover = ap*ap / (as*as);
+						if (phi < as-ap)
+							plight.x = plight.y = plight.z = 1.0-maxcover; // annularity
+						else {
+							double frac = 1.0 - 0.5*maxcover * (1.0 + (as-phi)/ap); // partial cover
+							plight.x = plight.y = plight.z = frac;
+							dt = 0.1;
+						}
+					}
+					for	(j = 0; j < 3; j++) lcol.data[j] = std::min (lcol.data[j], plight.data[j]);
+					lightmod = true;
+				}
+
+				// modification of ambient lighting
+				if (!i && vessel->GetAtmRef()) {
+					double sunelev = phi-ap;
+					if (sunelev > - 14.0*RAD) {
+						double amb0 = std::min (0.7, log (atm->rho0+1.0)*0.4);
+						double alt = p-psize;
+						amb = amb0 / (alt*0.5e-4 + 1.0);
+						amb *= std::min (1.0, (sunelev+14.0*RAD)/(20.0*RAD));
+						if (!lightmod) lightmod = (amb > 0.05);
+						amb = std::max (0.0, amb-0.05);
+						// reduce direct light component to avoid overexposure
+						lcol *= 1.0-amb*0.5;
+					}
+				}
+
+			} else {  // case 2: planet has no atmosphere
+
+				if (phi < as+ap && ap/as > 0.1) {         // overlap and significant planet size
+					double lfrac;
+					if (as < ap) {                        // planet disc larger than sun disc
+						if (phi <= ap-as)                 // totality
+							lfrac = 0.0;
+						else {                            // partial cover
+							lfrac = (phi+as-ap)/(2.0*as);
+							dt = 0.1;
+						}
+					} else {                              // sun disc larger than planet disc
+						double maxcover = ap*ap / (as*as);
+						if (phi < as-ap) {                // annularity
+							lfrac = 1.0-maxcover;
+						} else {                          // partial cover
+							lfrac = 1.0 - 0.5*maxcover * (1.0 + (as-phi)/ap);
+							dt = 0.1;
+						}
+					}
+					for (j = 0; j < 3; j++) lcol.data[j] = std::min (lcol.data[j], lfrac);
+					lightmod = true;
+				}
+			}
+		}
+		if (!cb2 || (oapiGetObjectType (hP = cb2->GetParent()) != OBJTP_PLANET))
+			break;
+			// if this is a moon, also check the parent planet
+			// warning: currently this only works for moons defined via
+			// CELBODY2 interface
+		cb = oapiGetCelbodyInterface(hP);
+		cb2 = (cb->Version() >= 2 ? (CELBODY2*)cb : NULL);
+	}
+
+	if (lightmod) {
+		//D3DCOLORVALUE starcol = sun->GetLightColor();
+		D3DCOLORVALUE starcol = {1,1,1,1}; // for now
+		light->dcvDiffuse.r = light->dcvSpecular.r = starcol.r * (float)lcol.x;
+		light->dcvDiffuse.g = light->dcvSpecular.g = starcol.g * (float)lcol.y;
+		light->dcvDiffuse.b = light->dcvSpecular.b = starcol.b * (float)lcol.z;
+		light->dcvAmbient.r = (float)amb;
+		light->dcvAmbient.g = (float)amb;
+		light->dcvAmbient.b = (float)amb;
+		S /= s;
+		light->dvDirection.x = -(float)S.x;
+		light->dvDirection.y = -(float)S.y;
+		light->dvDirection.z = -(float)S.z;
+	}
+
+	tCheckLight = oapiGetSimTime() + dt;
+	// we might be able to increase the interval when far from the
+	// boundary, but then need to force a check in the case of sudden
+	// movement (e.g. editor)
+
+	return lightmod;
+}
+*/
+void vVessel::Animate (UINT an, double state, UINT mshidx)
 {
 	double s0, s1, ds;
 	unsigned int i, ii;
@@ -676,7 +937,7 @@ void VVessel::Animate (unsigned int an, double state, unsigned int mshidx)
 	}
 }
 
-void VVessel::AnimateComponent (ANIMATIONCOMP *comp, const glm::mat4 &T)
+void vVessel::AnimateComponent (ANIMATIONCOMP *comp, const glm::mat4 &T)
 {
 	unsigned int i;
 	MGROUP_TRANSFORM *trans = comp->trans;
@@ -726,7 +987,7 @@ void VVessel::AnimateComponent (ANIMATIONCOMP *comp, const glm::mat4 &T)
 	}
 }
 
-OGLTexture *VVessel::defexhausttex = nullptr;
+OGLTexture *vVessel::defexhausttex = nullptr;
 
 void TransformPoint (VECTOR3 &p, const glm::mat4 &T)
 {
@@ -752,4 +1013,3 @@ void TransformDirection (VECTOR3 &a, const glm::mat4 &T, bool normalise)
 		a.z /= len;
 	}
 }
-

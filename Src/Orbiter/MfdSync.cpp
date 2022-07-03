@@ -159,7 +159,7 @@ void Instrument_OSync::UpdateDraw (oapi::Sketchpad *skp)
 	skp->Line (ICNTX, ICNTY, ICNTX+(int)(v.x*pixrad), ICNTY-(int)(v.z*pixrad));
 
 	// relative anomaly
-	sprintf (cbuf, "RAnm%7.2f�", Deg(rlng));
+	sprintf (cbuf, "RAnm%7.2f°", Deg(rlng));
 	skp->Text (x, y, cbuf, strlen(cbuf)); y += (3*ch)/2;
 
 	// ship in planet coords
@@ -197,7 +197,7 @@ void Instrument_OSync::UpdateDraw (oapi::Sketchpad *skp)
 
 	// longitude difference
 	double dlng = normangle(tgta+domega-myta);
-	sprintf (cbuf, "DLng%7.2f�", Deg(dlng));
+	sprintf (cbuf, "DLng%7.2f°", Deg(dlng));
 	skp->Text (x, y, cbuf, strlen(cbuf)); y += ch;
 	// target distance
 	Vector rp = tgt->GPos()-vessel->GPos();
@@ -222,7 +222,7 @@ void Instrument_OSync::UpdateDraw (oapi::Sketchpad *skp)
 	sprintf (cbuf, "DTmin%s", DistStr (mindt));
 	skp->Text (x, y, cbuf, strlen(cbuf)); y += ch;
 
-	sprintf (cbuf, "RInc%7.2f�", Deg(reli));
+	sprintf (cbuf, "RInc%7.2f°", Deg(reli));
 	if (reli > RAD*1.0) skp->SetTextColor (draw[3][0].col);
 	skp->Text (x, IH-(3*ch)/2, cbuf, strlen(cbuf));
 	skp->SetTextColor (draw[0][0].col);

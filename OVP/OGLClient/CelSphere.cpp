@@ -36,8 +36,8 @@ CelestialSphere::CelestialSphere ()
 	m_starsShader = std::make_unique<Shader>("Stars.vs","Stars.fs");
 	m_eclShader = std::make_unique<Shader>("Ecliptic.vs","Ecliptic.fs");
 
-	LoadConstellationLines ();
 	LoadStars ();
+	LoadConstellationLines ();
 	CreateEcliptic ();
 }
 
@@ -56,58 +56,7 @@ void CheckError(const char *s) {
 	}
 }
 
-void CelestialSphere::LoadConstellationLines ()
-{
-	VERTEX_XYZ *cnstvtx;
-	const int maxline = 1000; // plenty for default data base, but check with custom data bases!
-	GraphicsClient::ConstRec *cline = new GraphicsClient::ConstRec[maxline];
-	ncline = g_client->LoadConstellationLines (maxline, cline);
-	if (ncline) {
-		cnstvtx = new VERTEX_XYZ[ncline*2]; // two end points per line
-		double xz;
-		for (size_t n = 0; n < ncline; n++) {
-			GraphicsClient::ConstRec *rec = cline+n;
-			xz = sphere_r * cos (rec->lat1);
-			cnstvtx[n*2].x = (float)(xz * cos(rec->lng1));
-			cnstvtx[n*2].z = (float)(xz * sin(rec->lng1));
-			cnstvtx[n*2].y = (float)(sphere_r * sin(rec->lat1));
-			xz = sphere_r * cos (rec->lat2);
-			cnstvtx[n*2+1].x = (float)(xz * cos(rec->lng2));
-			cnstvtx[n*2+1].z = (float)(xz * sin(rec->lng2));
-			cnstvtx[n*2+1].y = (float)(sphere_r * sin(rec->lat2));
-		}
-	}
-	delete []cline;
-
-	m_constellationsVAO = std::make_unique<VertexArray>();
-	m_constellationsVAO->Bind();
-	m_constellationsVBO = std::make_unique<VertexBuffer>(cnstvtx, 2 * ncline * sizeof(VERTEX_XYZ));
-	glVertexAttribPointer(
-	0,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
-	3,                  // size
-	GL_FLOAT,           // type
-	GL_FALSE,           // normalized?
-	0,                  // stride
-	(void*)0            // array buffer offset
-	);
-	CheckError("glVertexAttribPointer");
-	glEnableVertexAttribArray(0);
-	CheckError("glEnableVertexAttribArray");
-	m_constellationsVAO->UnBind();
-	delete[]cnstvtx;
-}
-
-void CelestialSphere::RenderConstellations (VECTOR3 &col, OGLCamera *c)
-{
-	auto vp = c->GetViewProjectionMatrix();
-	m_constellationsShader->Bind();
-	m_constellationsShader->SetMat4("u_ViewProjection", *vp);
-	m_constellationsVAO->Bind();
-	glDrawArrays(GL_LINES, 0, ncline * 2); // Starting from vertex 0; 3 vertices total -> 1 triangle
-	CheckError("glDrawArrays");
-	m_constellationsVAO->UnBind();
-	m_constellationsShader->UnBind();
-}
+// ==============================================================
 
 void CelestialSphere::LoadStars ()
 {
@@ -208,6 +157,46 @@ void CelestialSphere::LoadStars ()
 	}
 	delete []buf;
 }
+void CelestialSphere::LoadConstellationLines ()
+{
+	VERTEX_XYZ *cnstvtx;
+	const int maxline = 1000; // plenty for default data base, but check with custom data bases!
+	GraphicsClient::ConstRec *cline = new GraphicsClient::ConstRec[maxline];
+	ncline = g_client->LoadConstellationLines (maxline, cline);
+	if (ncline) {
+		cnstvtx = new VERTEX_XYZ[ncline*2]; // two end points per line
+		double xz;
+		for (size_t n = 0; n < ncline; n++) {
+			GraphicsClient::ConstRec *rec = cline+n;
+			xz = sphere_r * cos (rec->lat1);
+			cnstvtx[n*2].x = (float)(xz * cos(rec->lng1));
+			cnstvtx[n*2].z = (float)(xz * sin(rec->lng1));
+			cnstvtx[n*2].y = (float)(sphere_r * sin(rec->lat1));
+			xz = sphere_r * cos (rec->lat2);
+			cnstvtx[n*2+1].x = (float)(xz * cos(rec->lng2));
+			cnstvtx[n*2+1].z = (float)(xz * sin(rec->lng2));
+			cnstvtx[n*2+1].y = (float)(sphere_r * sin(rec->lat2));
+		}
+	}
+	delete []cline;
+
+	m_constellationsVAO = std::make_unique<VertexArray>();
+	m_constellationsVAO->Bind();
+	m_constellationsVBO = std::make_unique<VertexBuffer>(cnstvtx, 2 * ncline * sizeof(VERTEX_XYZ));
+	glVertexAttribPointer(
+	0,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
+	3,                  // size
+	GL_FLOAT,           // type
+	GL_FALSE,           // normalized?
+	0,                  // stride
+	(void*)0            // array buffer offset
+	);
+	CheckError("glVertexAttribPointer");
+	glEnableVertexAttribArray(0);
+	CheckError("glEnableVertexAttribArray");
+	m_constellationsVAO->UnBind();
+	delete[]cnstvtx;
+}
 
 void CelestialSphere::RenderStars (OGLCamera *c, VECTOR3 &bgcol)
 {
@@ -222,6 +211,17 @@ void CelestialSphere::RenderStars (OGLCamera *c, VECTOR3 &bgcol)
 	CheckError("glDrawArrays");
 	m_starsVAO->UnBind();
 	m_starsShader->UnBind();
+}
+void CelestialSphere::RenderConstellations (VECTOR3 &col, OGLCamera *c)
+{
+	auto vp = c->GetViewProjectionMatrix();
+	m_constellationsShader->Bind();
+	m_constellationsShader->SetMat4("u_ViewProjection", *vp);
+	m_constellationsVAO->Bind();
+	glDrawArrays(GL_LINES, 0, ncline * 2); // Starting from vertex 0; 3 vertices total -> 1 triangle
+	CheckError("glDrawArrays");
+	m_constellationsVAO->UnBind();
+	m_constellationsShader->UnBind();
 }
 
 void CelestialSphere::CreateEcliptic()

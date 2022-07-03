@@ -95,8 +95,8 @@ Camera::Camera (double _nearplane, double _farplane)
 	ap = &ap_ext;
 	nearplane = (float)_nearplane;
 	farplane = (float)_farplane;
-	SetAperture (*ap, true, true);
 	aspect = 1.0; // arbitrary default - reset with ResizeViewport
+	SetAperture (*ap, true, true);
 	w05 = h05 = 100;
 	mbdown[0] = mbdown[1] = false;
 	view_mat = glm::fmat4(1.0);

@@ -3,7 +3,7 @@
 
 // ==============================================================
 //   ORBITER VISUALISATION PROJECT (OVP)
-//   OpenGL Client module
+//   D3D7 Client module
 // ==============================================================
 
 // ==============================================================
@@ -17,21 +17,23 @@
 #include "TileMgr.h"
 #include "VPlanet.h"
 #include "Texture.h"
-#include "VertexBuffer.h"
-#include "OGLClient.h"
-#include "Shader.h"
-#include "OGLCamera.h"
-#include "Scene.h"
 #include <cstring>
+#include "OGLCamera.h"
+//#include "D3D7Config.h"
 
 using namespace oapi;
 
 // Max supported patch resolution level
 int SURF_MAX_PATCHLEVEL = 14;
-const int NOTILE = -1; // "no tile" flag
+const uint32_t NOTILE = (uint32_t)-1; // "no tile" flag
+
+VertexBuffer *bbtarget;  // target buffer for bounding box transformation
+
+OGLMaterial pmat;
+OGLMaterial watermat = {{1,1,1,1},{1,1,1,1},{1,1,1,1},{0,0,0,0},20.0f};
 
 struct IDXLIST {
-	int idx, ofs;
+	uint32_t idx, ofs;
 };
 
 // Some debugging parameters
@@ -45,10 +47,11 @@ int compare_idx (const void *el1, const void *el2);
 
 // =======================================================================
 
-TileManager::TileManager (const VPlanet *vplanet)
+TileManager::TileManager (const vPlanet *vplanet)
 {
+//	cfg = gc->Cfg();
 	vp = vplanet;
-	obj = vp->GetObject();
+	obj = vp->Object();
 	char name[256];
 	oapiGetObjectName (obj, name, 256);
 	objname = new char[strlen(name)+1];
@@ -60,14 +63,14 @@ TileManager::TileManager (const VPlanet *vplanet)
 	maxlvl = maxbaselvl = 0;
 	microtex = 0;
 	microlvl = 0.0;
-	bPreloadTile = false;//g_client->Cfg()->PlanetPreloadMode;
+	bPreloadTile = 0;//cfg->PlanetPreloadMode;
 }
 
 // =======================================================================
 
 TileManager::~TileManager ()
 {
-	int i, maxidx = patchidx[maxbaselvl];
+	uint32_t i, maxidx = patchidx[maxbaselvl];
 
 	if (ntex) {
 		for (i = 0; i < ntex; i++)
@@ -99,6 +102,7 @@ bool TileManager::LoadPatchData ()
 	char fname[256], cpath[256];
 	strcpy (fname, objname);
 	strcat (fname, "_lmask.bin");
+
 	if (!(bGlobalSpecular || bGlobalLights) || !g_client->TexturePath (fname, cpath) || !(binf = fopen (cpath, "rb"))) {
 
 		for (i = 0; i < patchidx[maxbaselvl]; i++)
@@ -109,46 +113,21 @@ bool TileManager::LoadPatchData ()
 
 		uint16_t *tflag = 0;
 		LMASKFILEHEADER lmfh;
-		size_t ret = fread (&lmfh, sizeof (lmfh), 1, binf);
-		if(ret != sizeof (lmfh) ) {
-			fclose (binf);
-			printf("Error reading patch data\n");
-			exit(EXIT_FAILURE);
-		}
+		fread (&lmfh, sizeof (lmfh), 1, binf);
 		if (!strncmp (lmfh.id, "PLTA0100", 8)) { // v.1.00 format
 			minres = lmfh.minres;
 			maxres = lmfh.maxres;
 			npatch = lmfh.npatch;
 			tflag = new uint16_t[npatch];
-			ret = fread (tflag, sizeof(uint16_t), npatch, binf);
-			if(ret != sizeof(uint16_t) * npatch) {
-				fclose (binf);
-				printf("Error reading patch data\n");
-				exit(EXIT_FAILURE);
-			}
+			fread (tflag, sizeof(uint16_t), npatch, binf);
 		} else {                                 // pre-v.1.00 format
 			fseek (binf, 0, SEEK_SET);
-			ret = fread (&minres, 1, 1, binf);
-			if(ret != 1) {
-				fclose (binf);
-				printf("Error reading patch data\n");
-				exit(EXIT_FAILURE);
-			}
-			ret = fread (&maxres, 1, 1, binf);
-			if(ret != 1) {
-				fclose (binf);
-				printf("Error reading patch data\n");
-				exit(EXIT_FAILURE);
-			}
+			fread (&minres, 1, 1, binf);
+			fread (&maxres, 1, 1, binf);
 			npatch = patchidx[maxres] - patchidx[minres-1];
 			tflag = new uint16_t[npatch];
 			for (i = 0; i < npatch; i++) {
-				ret = fread (&flag, 1, 1, binf);
-				if(ret != 1) {
-					fclose (binf);
-					printf("Error reading patch data\n");
-					exit(EXIT_FAILURE);
-				}
+				fread (&flag, 1, 1, binf);
 				tflag[i] = flag;
 			}
 			//LOGOUT1P("*** WARNING: Old-style texture contents file %s_lmask.bin", cbody->Name());
@@ -190,12 +169,7 @@ bool TileManager::LoadTileData ()
 
 	// read file header
 	char idstr[9] = "        ";
-	size_t ret = fread (idstr, 1, 8, file);
-	if(ret != 8) {
-		fclose (file);
-		printf("Error reading tile data\n");
-		exit(EXIT_FAILURE);
-	}
+	fread (idstr, 1, 8, file);
 	if (!strncmp (idstr, "PLTS", 4)) {
 		tilever = 1;
 	} else { // no header: old-style file format
@@ -203,21 +177,10 @@ bool TileManager::LoadTileData ()
 		fseek (file, 0, SEEK_SET);
 	}
 
-	int i, j;
-	int32_t n;
-	ret = fread (&n, sizeof(int32_t), 1, file);
-	if(ret != sizeof(int32_t)) {
-		fclose (file);
-		printf("Error reading tile data\n");
-		exit(EXIT_FAILURE);
-	}
+	uint32_t n, i, j;
+	fread (&n, sizeof(uint32_t), 1, file);
 	TILEFILESPEC *tfs = new TILEFILESPEC[n];
-	ret = fread (tfs, sizeof(TILEFILESPEC), n, file);
-	if(ret != sizeof(TILEFILESPEC) * n) {
-		fclose (file);
-		printf("Error reading tile data\n");
-		exit(EXIT_FAILURE);
-	}
+	fread (tfs, sizeof(TILEFILESPEC), n, file);
 
 	if (bPreloadTile) {
 		if (tilever >= 1) { // convert texture offsets to indices
@@ -267,9 +230,9 @@ int compare_idx (const void *el1, const void *el2)
 
 // =======================================================================
 
-bool TileManager::AddSubtileData (TILEDESC &td, TILEFILESPEC *tfs, int idx, int sub, int lvl)
+bool TileManager::AddSubtileData (TILEDESC &td, TILEFILESPEC *tfs, uint32_t idx, uint32_t sub, uint32_t lvl)
 {
-	int j, subidx = tfs[idx].subidx[sub];
+	uint32_t j, subidx = tfs[idx].subidx[sub];
 	TILEFILESPEC &t = tfs[subidx];
 	bool bSubtiles = false;
 	for (j = 0; j < 4; j++)
@@ -280,7 +243,7 @@ bool TileManager::AddSubtileData (TILEDESC &td, TILEFILESPEC *tfs, int idx, int 
 			td.subtile[sub]->flag = t.flags;
 			td.subtile[sub]->tex.idx = t.sidx;
 			if (bGlobalSpecular || bGlobalLights) {
-				if (t.midx != (uint32_t)NOTILE) {
+				if (t.midx != NOTILE) {
 					td.subtile[sub]->ltex.idx = t.midx;
 				}
 			} else {
@@ -296,7 +259,7 @@ bool TileManager::AddSubtileData (TILEDESC &td, TILEFILESPEC *tfs, int idx, int 
 				}
 			}
 			nhitex++;
-			if (t.midx != (uint32_t)NOTILE) nhispec++;
+			if (t.midx != NOTILE) nhispec++;
 		} else td.subtile[sub] = NULL;
 	}
 	return true;
@@ -310,12 +273,12 @@ void TileManager::LoadTextures (char *modstr)
 
 	// pre-load level 1-8 textures
 	ntex = patchidx[maxbaselvl];
-	texbuf = new OGLTexture*[ntex];
+	texbuf = new OGLTexture *[ntex];
 	char fname[256];
 	strcpy (fname, objname);
 	if (modstr) strcat (fname, modstr);
 	strcat (fname, ".tex");
-	if ((ntex = g_client->GetTexMgr()->LoadTextures (fname, texbuf, 0, ntex))) {
+	if (ntex = g_client->GetTexMgr()->LoadTextures (fname, texbuf, 0, ntex)) {
 		while ((int)ntex < patchidx[maxbaselvl]) maxlvl = --maxbaselvl;
 		while ((int)ntex > patchidx[maxbaselvl]) texbuf[--ntex]->Release();
 		// not enough textures loaded for requested resolution level
@@ -336,12 +299,12 @@ void TileManager::LoadTextures (char *modstr)
 
 // =======================================================================
 
-void TileManager::PreloadTileTextures (TILEDESC *tile8, int ntex, int nmask)
+void TileManager::PreloadTileTextures (TILEDESC *tile8, uint32_t ntex, uint32_t nmask)
 {
 	// Load tile surface and mask/light textures, and copy them into the tile tree
 
 	char fname[256];
-	int i, j, nt = 0, nm = 0;
+	uint32_t i, j, nt = 0, nm = 0;
 	OGLTexture **texbuf = NULL, **maskbuf = NULL;
 
 	if (ntex) {  // load surface textures
@@ -365,46 +328,46 @@ void TileManager::PreloadTileTextures (TILEDESC *tile8, int ntex, int nmask)
 	}
 	// release unused textures
 	if (nt) {
-//		for (i = 0; i < nt; i++)
-//			if (texbuf[i])
-//				texbuf[i]->Release();
+		for (i = 0; i < nt; i++)
+			if (texbuf[i])
+				texbuf[i]->Release();
 		delete []texbuf;
 	}
 	if (nm) {
-//		for (i = 0; i < nm; i++)
-//			if (maskbuf[i])
-//				maskbuf[i]->Release();
+		for (i = 0; i < nm; i++)
+			if (maskbuf[i])
+				maskbuf[i]->Release();
 		delete []maskbuf;
 	}
 }
 
 // =======================================================================
 
-void TileManager::AddSubtileTextures (TILEDESC *td, OGLTexture **tbuf, int nt, OGLTexture **mbuf, int nm)
+void TileManager::AddSubtileTextures (TILEDESC *td, OGLTexture **tbuf, uint32_t nt, OGLTexture **mbuf, uint32_t nm)
 {
-	int i;
+	uint32_t i;
 
 	uint32_t tidx = td->tex.idx;  // copy surface texture
-	if (tidx != (uint32_t)NOTILE) {
-		if (tidx < (uint32_t)nt) {
+	if (tidx != NOTILE) {
+		if (tidx < nt) {
 			td->tex.obj = tbuf[tidx];
-			tbuf[tidx] = nullptr;
+			tbuf[tidx] = NULL;
 		} else {                   // inconsistency
 			tmissing++;
-			td->tex.obj = nullptr;
+			td->tex.obj = NULL;
 		}
-	} else td->tex.obj = nullptr;
+	} else td->tex.obj = NULL;
 
 	uint32_t midx = td->ltex.idx;  // copy mask/light texture
-	if (midx != (uint32_t)NOTILE) {
-		if (midx < (uint32_t)nm) {
+	if (midx != NOTILE) {
+		if (midx < nm) {
 			td->ltex.obj = mbuf[midx];
-			mbuf[midx] = nullptr;
+			mbuf[midx] = NULL;
 		} else {                  // inconsistency
 			tmissing++;
-			td->ltex.obj = nullptr;
+			td->ltex.obj = NULL;
 		}
-	} else td->ltex.obj = nullptr;
+	} else td->ltex.obj = NULL;
 	td->flag &= ~0x80; // remove "not loaded" flag
 
 	for (i = 0; i < 4; i++) {
@@ -417,14 +380,14 @@ void TileManager::AddSubtileTextures (TILEDESC *td, OGLTexture **tbuf, int nt, O
 void TileManager::LoadSpecularMasks ()
 {
 	int i;
-	int n;
+	uint32_t n;
 	char fname[256];
 
 	if (nmask) {
 		strcpy (fname, objname);
 		strcat (fname, "_lmask.tex");
 		specbuf = new OGLTexture *[nmask];
-		if ((n = g_client->GetTexMgr()->LoadTextures (fname, specbuf, 0, nmask))) {
+		if (n = g_client->GetTexMgr()->LoadTextures (fname, specbuf, 0, nmask)) {
 			if (n < nmask) {
 				//LOGOUT1P("Transparency texture mask file too short: %s_lmask.tex", cbody->Name());
 				//LOGOUT("Disabling specular reflection for this planet");
@@ -458,9 +421,9 @@ void TileManager::LoadSpecularMasks ()
 void TileManager::Render (glm::mat4 &wmat, double scale, int level, double viewap, bool bfog)
 {
 	VECTOR3 gpos;
-	glm::mat4 imat(0);
+	glm::mat4 imat;
 
-	level = std::max(1, std::min (level, maxlvl));
+	level = std::min (level, maxlvl);
 
 	RenderParam.wmat = wmat;
 	RenderParam.wmat_tmp = wmat;
@@ -475,13 +438,13 @@ void TileManager::Render (glm::mat4 &wmat, double scale, int level, double viewa
 	oapiGetGlobalPos (obj, &gpos);
 
 	RenderParam.objsize = oapiGetSize (obj);
-	RenderParam.cdist = vp->CamDist() / vp->mSize; // camera distance in units of planet radius
+	RenderParam.cdist = vp->CamDist() / vp->rad; // camera distance in units of planet radius
 	RenderParam.viewap = (viewap ? viewap : acos (1.0/std::max (1.0, RenderParam.cdist)));
 	RenderParam.sdir = tmul (RenderParam.grot, -gpos);
 	normalise (RenderParam.sdir); // sun direction in planet frame
 
 	// limit resolution for fast camera movements
-	double limitstep, cstep = acos (std::min (1.0, dotp (RenderParam.cdir, pcdir)));
+	double limitstep, cstep = acos (std::min(1.0, dotp (RenderParam.cdir, pcdir)));
 	int maxlevel = SURF_MAX_PATCHLEVEL;
 	static double limitstep0 = 5.12 * pow(2.0, -(double)SURF_MAX_PATCHLEVEL);
 	for (limitstep = limitstep0; cstep > limitstep && maxlevel > 5; limitstep *= 2.0)
@@ -490,7 +453,7 @@ void TileManager::Render (glm::mat4 &wmat, double scale, int level, double viewa
 
 	RenderParam.tgtlvl = level;
 
-	int startlvl = std::max(1, std::min (level, 8));
+	int startlvl = std::min (level, 8);
 	int hemisp, ilat, ilng, idx;
 	int  nlat = NLAT[startlvl];
 	int *nlng = NLNG[startlvl];
@@ -499,19 +462,18 @@ void TileManager::Render (glm::mat4 &wmat, double scale, int level, double viewa
 
 	TEXCRDRANGE range = {0,1,0,1};
 
-//	dev->SetTextureStageState (0, D3DTSS_ADDRESS, D3DTADDRESS_CLAMP);
+	//dev->SetTextureStageState (0, D3DTSS_ADDRESS, D3DTADDRESS_CLAMP);
 
 	if (level <= 4) {
 
 		RenderSimple (level, td);
 
 	} else {
+
 		tilebuf->hQueueMutex.lock(); // make sure we can write to texture request queue
 		for (hemisp = idx = 0; hemisp < 2; hemisp++) {
 			if (hemisp) { // flip world transformation to southern hemisphere
-//				D3DMAT_MatrixMultiply (&RenderParam.wmat, &RenderParam.wmat, &Rsouth);
 				RenderParam.wmat = RenderParam.wmat * Rsouth;
-//				D3DMAT_Copy (&RenderParam.wmat_tmp, &RenderParam.wmat);
 				RenderParam.wmat_tmp = RenderParam.wmat;
 				RenderParam.grot.m12 = -RenderParam.grot.m12;
 				RenderParam.grot.m13 = -RenderParam.grot.m13;
@@ -535,21 +497,19 @@ void TileManager::Render (glm::mat4 &wmat, double scale, int level, double viewa
 	//dev->SetTextureStageState (0, D3DTSS_ADDRESS, D3DTADDRESS_WRAP);
 
 	pcdir = RenderParam.cdir; // store camera direction
-
 }
 
 // =======================================================================
 
 void TileManager::ProcessTile (int lvl, int hemisp, int ilat, int nlat, int ilng, int nlng, TILEDESC *tile,
-	const TEXCRDRANGE &range, OGLTexture *tex, OGLTexture *ltex, int flag,
-	const TEXCRDRANGE &bkp_range, OGLTexture *bkp_tex, OGLTexture *bkp_ltex, int bkp_flag)
+	const TEXCRDRANGE &range, OGLTexture *tex, OGLTexture *ltex, uint32_t flag,
+	const TEXCRDRANGE &bkp_range, OGLTexture *bkp_tex, OGLTexture *bkp_ltex, uint32_t bkp_flag)
 {
 	// Check if patch is visible from camera position
 	static const double rad0 = sqrt(2.0)*PI05*0.5;
 	VECTOR3 cnt = TileCentre (hemisp, ilat, nlat, ilng, nlng);
 	double rad = rad0/(double)nlat;
 	double adist = acos (dotp (RenderParam.cdir, cnt)) - rad;
-	
 	if (adist >= RenderParam.viewap) {
 		tilebuf->DeleteSubTiles (tile); // remove tile descriptions below
 		return;
@@ -617,7 +577,7 @@ void TileManager::ProcessTile (int lvl, int hemisp, int ilat, int nlat, int ilng
 					isfull = false;
 				}
 				if (isfull)
-					isfull = (subtile->tex.obj != nullptr);
+					isfull = (subtile->tex.obj != NULL);
 				if (isfull)
 					ProcessTile (lvl+1, hemisp, ilat*2+i, nlat*2, ilng*2+j, nlng*2, subtile,
 						fullrange, subtile->tex.obj, subtile->ltex.obj, subtile->flag,
@@ -649,20 +609,22 @@ void TileManager::RenderSimple (int level, TILEDESC *tile)
 {
 	// render complete sphere (used at low LOD levels)
 
-	//extern D3DMATERIAL7 def_mat;
+	extern OGLMaterial def_mat;
 	int idx, npatch = patchidx[level] - patchidx[level-1];
-//	RenderParam.dev->SetTransform (D3DTRANSFORMSTATE_WORLD, &RenderParam.wmat);
 
 	static Shader s("Tile.vs","Tile.fs");
-
 	s.Bind();
 	OGLCamera *c = g_client->GetScene()->GetCamera();
 	auto *vpm = c->GetViewProjectionMatrix();
 	s.SetMat4("u_ViewProjection",*vpm);
 	s.SetMat4("u_Model",RenderParam.wmat);
-    glm::vec3 sundir = *g_client->GetScene()->GetSunDir();
-	s.SetVec3("u_SunDir", sundir);
+	const VECTOR3 &sd = g_client->GetScene()->GetSunDir();
+	glm::vec3 sundir;
+	sundir.x = sd.x;
+	sundir.y = sd.y;
+	sundir.z = sd.z;
 
+	s.SetVec3("u_SunDir", sundir);
 	if(vp->prm.bAddBkg) {
 		VECTOR3 v3bgcol = g_client->GetScene()->SkyColour();
 		glm::vec3 bgcol;
@@ -675,35 +637,35 @@ void TileManager::RenderSimple (int level, TILEDESC *tile)
 		s.SetVec3("u_bgcol", bgcol);
 	}
 
-	if(vp->prm.bFog) {
-		s.SetVec4("u_FogColor", vp->prm.mFogColor);
-		s.SetFloat("u_FogDensity", vp->prm.mFogDensity);
+	if(vp->prm.bFog && g_client->mRenderContext.bFog) {
+		glm::vec4 fogColor;
+		fogColor.x = g_client->mRenderContext.fogColor.x;
+		fogColor.y = g_client->mRenderContext.fogColor.y;
+		fogColor.z = g_client->mRenderContext.fogColor.z;
+		s.SetVec4("u_FogColor", fogColor);
+		s.SetFloat("u_FogDensity", g_client->mRenderContext.fogDensity);
 	} else {
 		s.SetFloat("u_FogDensity", 0);
 	}
+	auto *view = c->GetViewMatrix();
 
-//glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
-/*PATCH_TPL_3.VAO->Bind();
-glDrawElements(GL_TRIANGLES, PATCH_TPL_3.IBO->GetCount(), GL_UNSIGNED_SHORT, 0);
-PATCH_TPL_3.VAO->UnBind();
-s.UnBind();*/
-//return;
-//glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+	s.SetMat4("u_View", *view);
+
 
 	for (idx = 0; idx < npatch; idx++) {
+
 		VBMESH &mesh = PATCH_TPL[level][idx]; // patch template
-		//bool purespec = ((tile[idx].flag & 3) == 2);
-		//bool mixedspec = ((tile[idx].flag & 3) == 3);
 
 		glBindTexture(GL_TEXTURE_2D, tile[idx].tex.obj->m_TexId);
 
-		mesh.VAO->Bind();
-        glDrawElements(GL_TRIANGLES, mesh.IBO->GetCount(), GL_UNSIGNED_SHORT, 0);
-		mesh.VAO->UnBind();
+		mesh.va->Bind();
+        glDrawElements(GL_TRIANGLES, mesh.ib->GetCount(), GL_UNSIGNED_SHORT, 0);
+		mesh.va->UnBind();
 		glBindTexture(GL_TEXTURE_2D,  0);
-//glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
 
 /*
+		bool purespec = ((tile[idx].flag & 3) == 2);
+		bool mixedspec = ((tile[idx].flag & 3) == 3);
 		// step 1: render full patch, either completely diffuse or completely specular
 		if (purespec) { // completely specular
 			RenderParam.dev->GetMaterial (&pmat);
@@ -735,7 +697,8 @@ s.UnBind();*/
 			RenderParam.dev->SetRenderState (D3DRENDERSTATE_ALPHABLENDENABLE, FALSE);
 			RenderParam.dev->SetRenderState (D3DRENDERSTATE_SRCBLEND, D3DBLEND_SRCALPHA);
 			RenderParam.dev->SetRenderState (D3DRENDERSTATE_DESTBLEND, D3DBLEND_INVSRCALPHA);
-		}*/
+		}
+		*/
 	}
 	s.UnBind();
 }
@@ -771,13 +734,12 @@ void TileManager::TileExtents (int hemisp, int ilat, int nlat, int ilng, int nln
 
 bool TileManager::TileInView (int lvl, int ilat)
 {
-	//FIXME
 	return true;
 	/*
 	const double eps = 1e-3;
 	bool bx1, bx2, by1, by2, bz1, bz2, bbvis;
 	int v;
-	D3DVALUE x, y;
+	float x, y;
 	VERTEX_XYZH *vtx;
 	VBMESH &mesh = PATCH_TPL[lvl][ilat];
 	bbtarget->ProcessVertices (D3DVOP_TRANSFORM, 0, 8, mesh.bb, 0, RenderParam.dev, 0);
@@ -795,7 +757,8 @@ bool TileManager::TileInView (int lvl, int ilat)
 		if (bbvis = bx1 && bx2 && by1 && by2 && bz1 && bz2) break;
 	}
 	bbtarget->Unlock();
-	return bbvis;*/
+	return bbvis;
+	*/
 }
 
 // =======================================================================
@@ -861,45 +824,45 @@ bool TileManager::SpecularColour (glm::vec4 *col)
 
 void TileManager::GlobalInit ()
 {
-	bGlobalSpecular = false;// *(bool*)gclient->GetConfigParam (CFGPRM_SURFACEREFLECT);
-	bGlobalRipple   = false;//bGlobalSpecular && *(bool*)gclient->GetConfigParam (CFGPRM_SURFACERIPPLE);
-	bGlobalLights   = false;//*(bool*)gclient->GetConfigParam (CFGPRM_SURFACELIGHTS);
+	bGlobalSpecular = *(bool*)g_client->GetConfigParam (CFGPRM_SURFACEREFLECT);
+	bGlobalRipple   = bGlobalSpecular && *(bool*)g_client->GetConfigParam (CFGPRM_SURFACERIPPLE);
+	bGlobalLights   = *(bool*)g_client->GetConfigParam (CFGPRM_SURFACELIGHTS);
 
 	// Level 1 patch template
-	CreateSphere ( PATCH_TPL_1, 6, false, 0, 64);
+	CreateSphere (PATCH_TPL_1, 6, false, 0, 64);
 
 	// Level 2 patch template
-	CreateSphere ( PATCH_TPL_2, 8, false, 0, 128);
+	CreateSphere (PATCH_TPL_2, 8, false, 0, 128);
 
 	// Level 3 patch template
-	CreateSphere ( PATCH_TPL_3, 12, false, 0, 256);
+	CreateSphere (PATCH_TPL_3, 12, false, 0, 256);
 
 	// Level 4 patch templates
-	CreateSphere ( PATCH_TPL_4[0], 16, true, 0, 256);
-	CreateSphere ( PATCH_TPL_4[1], 16, true, 1, 256);
+	CreateSphere (PATCH_TPL_4[0], 16, true, 0, 256);
+	CreateSphere (PATCH_TPL_4[1], 16, true, 1, 256);
 
 	// Level 5 patch template
-	CreateSpherePatch2 ( PATCH_TPL_5, 4, 1, 0, 18);
+	CreateSpherePatch (PATCH_TPL_5, 4, 1, 0, 18);
 
 	// Level 6 patch templates
-	CreateSpherePatch2 ( PATCH_TPL_6[0], 8, 2, 0, 10, 16);
-	CreateSpherePatch2 ( PATCH_TPL_6[1], 4, 2, 1, 12);
+	CreateSpherePatch (PATCH_TPL_6[0], 8, 2, 0, 10, 16);
+	CreateSpherePatch (PATCH_TPL_6[1], 4, 2, 1, 12);
 
 	// Level 7 patch templates
-	CreateSpherePatch2 ( PATCH_TPL_7[0], 16, 4, 0, 12, 12, false);
-	CreateSpherePatch2 ( PATCH_TPL_7[1], 16, 4, 1, 12, 12, false);
-	CreateSpherePatch2 ( PATCH_TPL_7[2], 12, 4, 2, 10, 16, true);
-	CreateSpherePatch2 ( PATCH_TPL_7[3],  6, 4, 3, 12, -1, true);
+	CreateSpherePatch (PATCH_TPL_7[0], 16, 4, 0, 12, 12, false);
+	CreateSpherePatch (PATCH_TPL_7[1], 16, 4, 1, 12, 12, false);
+	CreateSpherePatch (PATCH_TPL_7[2], 12, 4, 2, 10, 16, true);
+	CreateSpherePatch (PATCH_TPL_7[3],  6, 4, 3, 12, -1, true);
 
 	// Level 8 patch templates
-	CreateSpherePatch2 ( PATCH_TPL_8[0], 32, 8, 0, 12, 15, false, true, true);
-	CreateSpherePatch2 ( PATCH_TPL_8[1], 32, 8, 1, 12, 15, false, true, true);
-	CreateSpherePatch2 ( PATCH_TPL_8[2], 30, 8, 2, 12, 16, false, true, true);
-	CreateSpherePatch2 ( PATCH_TPL_8[3], 28, 8, 3, 12, 12, false, true, true);
-	CreateSpherePatch2 ( PATCH_TPL_8[4], 24, 8, 4, 12, 12, false, true, true);
-	CreateSpherePatch2 ( PATCH_TPL_8[5], 18, 8, 5, 12, 12, false, true, true);
-	CreateSpherePatch2 ( PATCH_TPL_8[6], 12, 8, 6, 10, 16, true,  true, true);
-	CreateSpherePatch2 ( PATCH_TPL_8[7],  6, 8, 7, 12, -1, true,  true, true);
+	CreateSpherePatch (PATCH_TPL_8[0], 32, 8, 0, 12, 15, false, true, true);
+	CreateSpherePatch (PATCH_TPL_8[1], 32, 8, 1, 12, 15, false, true, true);
+	CreateSpherePatch (PATCH_TPL_8[2], 30, 8, 2, 12, 16, false, true, true);
+	CreateSpherePatch (PATCH_TPL_8[3], 28, 8, 3, 12, 12, false, true, true);
+	CreateSpherePatch (PATCH_TPL_8[4], 24, 8, 4, 12, 12, false, true, true);
+	CreateSpherePatch (PATCH_TPL_8[5], 18, 8, 5, 12, 12, false, true, true);
+	CreateSpherePatch (PATCH_TPL_8[6], 12, 8, 6, 10, 16, true,  true, true);
+	CreateSpherePatch (PATCH_TPL_8[7],  6, 8, 7, 12, -1, true,  true, true);
 
 	// Patch templates for level 9 and beyond
 	const int n = 8;
@@ -911,9 +874,9 @@ void TileManager::GlobalInit ()
 		for (i = 0; i < 8; i++) {
 			for (j = 0; j < mult; j++) {
 				if (idx < n*mult)
-					CreateSpherePatch2 ( PATCH_TPL[lvl][idx], nlng8[i]*mult, n*mult, idx, 12, res8[i], false, true, true, true);
+					CreateSpherePatch (PATCH_TPL[lvl][idx], nlng8[i]*mult, n*mult, idx, 12, res8[i], false, true, true, true);
 				else
-					CreateSpherePatch2 ( PATCH_TPL[lvl][idx], nlng8[i]*mult, n*mult, idx, 12, -1, true, true, true, true);
+					CreateSpherePatch (PATCH_TPL[lvl][idx], nlng8[i]*mult, n*mult, idx, 12, -1, true, true, true, true);
 				idx++;
 			}
 		}
@@ -922,21 +885,21 @@ void TileManager::GlobalInit ()
 
 	// create the system-wide tile cache
 	tilebuf = new TileBuffer ();
-/*
+
+
 	// create the vertex buffer for tile bounding box checks
-	static D3DVERTEXBUFFERDESC bbvbd = 
-	{ sizeof(D3DVERTEXBUFFERDESC), D3DVBCAPS_SYSTEMMEMORY, D3DFVF_XYZRHW, 8 };
-	d3d->CreateVertexBuffer (&bbvbd, &bbtarget, 0);
-*/
+//	static D3DVERTEXBUFFERDESC bbvbd = 
+//	{ sizeof(D3DVERTEXBUFFERDESC), D3DVBCAPS_SYSTEMMEMORY, D3DFVF_XYZRHW, 8 };
+//	d3d->CreateVertexBuffer (&bbvbd, &bbtarget, 0);
+
 	// viewport size for clipping calculations
-	/*
-	D3DVIEWPORT7 vp;
-	dev->GetViewport (&vp);
-	vpX0 = vp.dwX, vpX1 = vpX0 + vp.dwWidth;
-	vpY0 = vp.dwY, vpY1 = vpY0 + vp.dwHeight;
-*/
+	GLint vp[4];
+	glGetIntegerv(GL_VIEWPORT, vp);
+	//returns four values: the x and y window coordinates of the viewport, followed by its width and height
+	vpX0 = vp[0], vpX1 = vpX0 + vp[2];
+	vpY0 = vp[1], vpY1 = vpY0 + vp[3];
+
 	// rotation matrix for flipping patches onto southern hemisphere
-//	D3DMAT_RotX (&Rsouth, PI);
 	double sinr = sin(PI), cosr = cos(PI);
 //	Rsouth[1][1] = Rsouth[2][2] = (float)cosr;
 //	Rsouth[1][2] = -(Rsouth[2][1] = (float)sinr);
@@ -968,18 +931,16 @@ void TileManager::GlobalExit ()
 	}
 	delete tilebuf;
 
-	//bbtarget->Release();
-	//bbtarget = 0;
+	delete bbtarget;
+	bbtarget = 0;
 }
 
 // ==============================================================
 
 void TileManager::SetMicrotexture (const char *fname)
 {
-	//if (fname)
-	//	g_client->GetTexMgr()->GetTexture (fname, &microtex, 0);
-	//else
-		microtex = 0;
+	if (fname) g_client->GetTexMgr()->GetTexture (fname, &microtex, 0);
+	else microtex = 0;
 }
 
 // ==============================================================
@@ -1000,8 +961,7 @@ bool TileManager::bGlobalRipple = false;
 bool TileManager::bGlobalLights = false;
 
 TileBuffer *TileManager::tilebuf = NULL;
-glm::mat4   TileManager::Rsouth(0);
-int TileManager::vbMemCaps = 0;
+glm::mat4   TileManager::Rsouth;
 
 VBMESH TileManager::PATCH_TPL_1;
 VBMESH TileManager::PATCH_TPL_2;
@@ -1030,7 +990,7 @@ int TileManager::NLNG7[4] = {16,16,12,6};
 int TileManager::NLNG8[8] = {32,32,30,28,24,18,12,6};
 int *TileManager::NLNG[9] = {0,0,0,0,0,NLNG5,NLNG6,NLNG7,NLNG8};
 
-int TileManager::vpX0, TileManager::vpX1, TileManager::vpY0, TileManager::vpY1;
+uint32_t TileManager::vpX0, TileManager::vpX1, TileManager::vpY0, TileManager::vpY1;
 
 // =======================================================================
 // Nonmember functions
@@ -1041,9 +1001,9 @@ void ApplyPatchTextureCoordinates (VBMESH &mesh, VertexBuffer *vtx, const TEXCRD
 	if (mesh.vtx) { // direct access to vertex data
 		memcpy (tgtdata, mesh.vtx, mesh.nv*sizeof(N2TVERTEX));
 	} else {        // need to lock the buffer
-		N2TVERTEX *srcdata = (N2TVERTEX *)mesh.VBO->Map();
+		N2TVERTEX *srcdata = (N2TVERTEX *)mesh.vb->Map();
 		memcpy (tgtdata, srcdata, mesh.nv*sizeof(N2TVERTEX));
-		mesh.VBO->UnMap();
+		mesh.vb->UnMap();
 	}
 	float tuscale = range.tumax-range.tumin, tuofs = range.tumin;
 	float tvscale = range.tvmax-range.tvmin, tvofs = range.tvmin;
@@ -1061,6 +1021,8 @@ void ApplyPatchTextureCoordinates (VBMESH &mesh, VertexBuffer *vtx, const TEXCRD
 
 TileBuffer::TileBuffer ()
 {
+	uint32_t id;
+
 	nbuf = 0;
 	nused = 0;
 	last = 0;
@@ -1075,15 +1037,10 @@ TileBuffer::TileBuffer ()
 
 TileBuffer::~TileBuffer()
 {
-	{
-		std::lock_guard<std::mutex> lock(hQueueMutex);
-		bRunThread = false;
-		hCV.notify_one();
-		hLoadThread.join();
-	}
+	bRunThread = false;
 
 	if (nbuf) {
-		for (int i = 0; i < nbuf; i++)
+		for (uint32_t i = 0; i < nbuf; i++)
 			if (buf[i]) {
 				if (!(buf[i]->flag & 0x80)) { // if loaded, release tile textures
 					if (buf[i]->tex.obj)  buf[i]->tex.obj->Release();
@@ -1103,7 +1060,7 @@ TILEDESC *TileBuffer::AddTile ()
 {
 	TILEDESC *td = new TILEDESC;
 	memset (td, 0, sizeof(TILEDESC));
-	int i, j;
+	uint32_t i, j;
 
 	if (nused == nbuf) {
 		TILEDESC **tmp = new TILEDESC*[nbuf+16];
@@ -1137,7 +1094,7 @@ TILEDESC *TileBuffer::AddTile ()
 
 void TileBuffer::DeleteSubTiles (TILEDESC *tile)
 {
-	for (int i = 0; i < 4; i++)
+	for (uint32_t i = 0; i < 4; i++)
 		if (tile->subtile[i]) {
 			if (DeleteTile (tile->subtile[i]))
 				tile->subtile[i] = 0;
@@ -1149,7 +1106,7 @@ void TileBuffer::DeleteSubTiles (TILEDESC *tile)
 bool TileBuffer::DeleteTile (TILEDESC *tile)
 {
 	bool del = true;
-	for (int i = 0; i < 4; i++)
+	for (uint32_t i = 0; i < 4; i++)
 		if (tile->subtile[i]) {
 			if (DeleteTile (tile->subtile[i]))
 				tile->subtile[i] = 0;
@@ -1157,7 +1114,7 @@ bool TileBuffer::DeleteTile (TILEDESC *tile)
 				del = false;
 		}
 	if (tile->vtx) {
-		//tile->vtx->Release();
+		delete tile->vtx;
 		tile->vtx = 0;
 	}
 	if (tile->tex.obj || !del) {
@@ -1180,7 +1137,7 @@ void ClearVertexBuffers (TILEDESC *td)
 			if (!sub->tex.obj || sub->flag & 0x80) {
 				// child has no own texture, i.e. uses part of parent texture
 				if (sub->vtx) {
-					//sub->vtx->Release();
+					delete sub->vtx;
 					sub->vtx = 0;
 				}
 				ClearVertexBuffers (sub); // recursion up the tree
@@ -1194,7 +1151,6 @@ void ClearVertexBuffers (TILEDESC *td)
 bool TileBuffer::LoadTileAsync (const char *name, TILEDESC *tile)
 {
 	bool ok = true;
-    std::lock_guard<std::mutex> lock(hQueueMutex);
 
 	if (nqueue == MAXQUEUE)
 		ok = false; // queue full
@@ -1213,89 +1169,78 @@ bool TileBuffer::LoadTileAsync (const char *name, TILEDESC *tile)
 
 		nqueue++;
 		queue_in = (queue_in+1) % MAXQUEUE;
-	    hCV.notify_one();
 	}
 	return ok;
 }
 
 // =======================================================================
-
-int TileBuffer::LoadTile_ThreadProc (TileBuffer *tb)
+#include <unistd.h>
+uint32_t TileBuffer::LoadTile_ThreadProc (TileBuffer *tb)
 {
-	//static const long TILESIZE = 32896; // default texture size for old-style texture files
+	static const long TILESIZE = 32896; // default texture size for old-style texture files
 	bool load;
 	static QUEUEDESC qd;
-	//static int nloaded = 0; // temporary
-	//int flag = (tb->bLoadMip ? 0:4);
-	//int idle = 10;//1000/gc->Cfg()->PlanetLoadFrequency;
+	static int nloaded = 0; // temporary
+	uint32_t flag = (tb->bLoadMip ? 0:4);
+	//uint32_t idle = 1000/g_client->Cfg()->PlanetLoadFrequency;
 	char fname[256];
 
 	while (bRunThread) {
-		{
-			std::unique_lock<std::mutex> lock(hQueueMutex);
-			while(nqueue == 0 && bRunThread)
-			{
-				hCV.wait(lock);
-			}
-			if ((load = (nqueue > 0))) {
-				memcpy (&qd, loadqueue+queue_out, sizeof(QUEUEDESC));
-			}
+//		Sleep (idle);
+		usleep(1000000);
+		hQueueMutex.lock();
+		if (load = (nqueue > 0)) {
+			memcpy (&qd, loadqueue+queue_out, sizeof(QUEUEDESC));
 		}
+		hQueueMutex.unlock();
 
 		if (load) {
 			TILEDESC *td = qd.td;
-			OGLTexture *tex = nullptr, *mask = nullptr;
-			uint32_t tidx = 0, midx = 0;
-			//long ofs;
+			OGLTexture *tex, *mask = 0;
+			uint32_t tidx, midx;
+			long ofs;
 
-			if ((td->flag & 0x80) == 0) {
-				printf("wtf?\n");
-				exit(-1);
+//			if ((td->flag & 0x80) == 0)
 //				MessageBeep (-1);
-			}
 
 			tidx = td->tex.idx;
-			if (tidx == (uint32_t)NOTILE)
+			if (tidx == NOTILE)
 				tex = NULL; // "no texture" flag
 			else {
-				//ofs = (td->flag & 0x40 ? (long)tidx * TILESIZE : (long)tidx);
+				ofs = (td->flag & 0x40 ? (long)tidx * TILESIZE : (long)tidx);
 				strcpy (fname, qd.name);
 				strcat (fname, "_tile.tex");
-				
-				//if (g_client->GetTexMgr()->LoadTexture (fname, ofs, &tex, flag) != S_OK)
+				if (!g_client->GetTexMgr()->LoadTexture (fname, ofs, &tex, flag))
 					tex = NULL;
 			}
-
 			// Load the specular mask and/or light texture
 			if (((td->flag & 3) == 3) || (td->flag & 4)) {
 				midx = td->ltex.idx;
-				if (midx == (uint32_t)NOTILE)
+				if (midx == (uint32_t)-1)
 					mask = NULL; // "no mask" flag
 				else {
-					//ofs = (td->flag & 0x40 ? (long)midx * TILESIZE : (long)midx);
+					ofs = (td->flag & 0x40 ? (long)midx * TILESIZE : (long)midx);
 					strcpy (fname, qd.name);
 					strcat (fname, "_tile_lmask.tex");
-					//if (g_client->GetTexMgr()->LoadTexture (fname, ofs, &mask) != S_OK)
+					if (!g_client->GetTexMgr()->LoadTexture (fname, ofs, &mask))
 						mask = NULL;
 				}
 			}
 			// apply loaded components
-			{
-				std::unique_lock<std::mutex> lock(hQueueMutex);
-				td->tex.obj  = tex;
-				td->ltex.obj = mask;
-				if (tex) {
-					if (td->vtx) {
-						//td->vtx->Release();
-						td->vtx = 0;
-					}
-					ClearVertexBuffers (td); // invalidate child vertex buffers
+			hQueueMutex.lock();
+			td->tex.obj  = tex;
+			td->ltex.obj = mask;
+			if (tex) {
+				if (td->vtx) {
+					delete td->vtx;
+					td->vtx = 0;
 				}
-				
-				td->flag &= 0x3F; // mark as loaded
-				nqueue--;
-				queue_out = (queue_out+1) % MAXQUEUE;
+				ClearVertexBuffers (td); // invalidate child vertex buffers
 			}
+			td->flag &= 0x3F; // mark as loaded
+			nqueue--;
+			queue_out = (queue_out+1) % MAXQUEUE;
+			hQueueMutex.unlock();
 		}
 	}
 	return 0;
@@ -1308,6 +1253,5 @@ int TileBuffer::nqueue = 0;
 int TileBuffer::queue_in = 0;
 int TileBuffer::queue_out = 0;
 std::mutex TileBuffer::hQueueMutex;
-std::condition_variable TileBuffer::hCV;
 struct TileBuffer::QUEUEDESC TileBuffer::loadqueue[MAXQUEUE] = {0};
 

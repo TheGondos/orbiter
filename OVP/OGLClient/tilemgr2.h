@@ -18,7 +18,7 @@
 //#define STRICT 1
 #include "OGLClient.h"
 #include "VPlanet.h"
-#include "SphereMesh.h"
+#include "spherepatch.h"
 #include "qtree.h"
 #include "ztreemgr.h"
 
@@ -128,10 +128,10 @@ protected:
 	int lvl;                   // tile resolution level
 	int ilat;                  // latitude index
 	int ilng;                  // longitude index
-	OGLTexture *tex;  // diffuse surface texture
+	OGLTexture *tex;           // diffuse surface texture
 	bool owntex;               // true: tile owns the texture, false: tile uses ancestor subtexture
 	TEXCRDRANGE2 texrange;     // texture coordinate subrange (if using ancestor subtexture)
-	VBMESH_TS *mesh;              // vertex-buffered tile mesh
+	VBMESH_TS *mesh;           // vertex-buffered tile mesh
 	VECTOR3 cnt;               // tile centre in local planet coords
 	VECTOR3 vtxshift;          // tile frame shift of origin from planet centre
 	bool edgeok;               // edges have been checked in this frame
@@ -190,7 +190,7 @@ public:
 	};
 
 	struct RenderPrm {
-		const VPlanet::RenderPrm *rprm;  // render parameters inherited from the vPlanet object
+		const vPlanet::RenderPrm *rprm;  // render parameters inherited from the vPlanet object
 		int maxlvl;        // max tile level
 		MATRIX4 dwmat;     // planet world matrix, double precision
 		MATRIX4 dwmat_tmp; // modifyable planet world matrix, double precision
@@ -211,7 +211,7 @@ public:
 	
 	glm::mat4 wtrans;
 
-	TileManager2Base (const VPlanet *vplanet, int _maxres, int _gridres);
+	TileManager2Base (const vPlanet *vplanet, int _maxres, int _gridres);
 
 	static void GlobalInit ();
 	static void GlobalExit ();
@@ -229,9 +229,9 @@ public:
 	template<class TileType>
 	void RenderNodeLabels (QuadTreeNode<TileType> *node, oapi::Sketchpad *skp, oapi::Font **labelfont, int *fontidx);
 
-	void SetRenderPrm (MATRIX4 &dwmat, double prerot, bool use_zbuf, const VPlanet::RenderPrm &rprm);
+	void SetRenderPrm (MATRIX4 &dwmat, double prerot, bool use_zbuf, const vPlanet::RenderPrm &rprm);
 
-	inline const VPlanet *GetPlanet() const { return vp; }
+	inline const vPlanet *GetPlanet() const { return vp; }
 	inline const OBJHANDLE &Cbody() const { return obj; }
 	inline const configPrm &Cprm() const { return cprm; }
 	inline const char *CbodyName() const { return cbody_name; }
@@ -253,7 +253,7 @@ protected:
 	static TileLoader *loader;
 
 private:
-	const VPlanet *vp;               // the planet visual
+	const vPlanet *vp;               // the planet visual
 	OBJHANDLE obj;                   // the planet object
 	char cbody_name[256];
 	ELEVHANDLE emgr;                 // elevation data query handle
@@ -273,14 +273,14 @@ class TileManager2: public TileManager2Base {
 	friend class Tile;
 
 public:
-	TileManager2 (const VPlanet *vplanet, int _maxres, int _gridres);
+	TileManager2 (const vPlanet *vplanet, int _maxres, int _gridres);
 	~TileManager2 ();
 
-	void SetRenderPrm(MATRIX4 &dwmat, double prerot, bool use_zbuf, const VPlanet::RenderPrm &rprm);
+	void SetRenderPrm(MATRIX4 &dwmat, double prerot, bool use_zbuf, const vPlanet::RenderPrm &rprm);
 
-	void Render (MATRIX4 &dwmat, bool use_zbuf, const VPlanet::RenderPrm &rprm);
+	void Render (MATRIX4 &dwmat, bool use_zbuf, const vPlanet::RenderPrm &rprm);
 	void RenderLabels (oapi::Sketchpad *skp, oapi::Font **labelfont, int *fontidx);
-	void RenderFlatCloudShadows (MATRIX4 &dwmat, const VPlanet::RenderPrm &rprm);
+	void RenderFlatCloudShadows (MATRIX4 &dwmat, const vPlanet::RenderPrm &rprm);
 
 	void CreateLabels();
 	void DeleteLabels();

@@ -18,26 +18,27 @@
 #include "VStar.h"
 #include "Scene.h"
 #include "OGLMesh.h"
+#include "OGLCamera.h"
 #include <cstring>
 
-OGLMesh *VStar::billboard = 0;
-OGLTexture *VStar::deftex = 0;
+OGLMesh *vStar::billboard = 0;
+OGLTexture *vStar::deftex = 0;
 
-VStar::VStar (OBJHANDLE _hObj): VObject (_hObj)
+vStar::vStar (OBJHANDLE _hObj, const Scene *scene): vObject (_hObj, scene)
 {
 	size = oapiGetSize (_hObj);
 	maxdist = 0.1*g_client->GetScene()->GetCamera()->GetFarlimit();
 
 }
 
-VStar::~VStar ()
+vStar::~vStar ()
 {
 }
 
-void VStar::GlobalInit ()
+void vStar::GlobalInit ()
 {
 	// create billboard mesh for sprite representation
-	billboard = new OGLMesh ();
+	billboard = new OGLMesh (2, 2);
 	static uint16_t idx[6] = {0,1,2, 3,2,1};
 	MESHGROUPEX mg;
 	memset (&mg, 0, sizeof(MESHGROUPEX));
@@ -62,7 +63,7 @@ void VStar::GlobalInit ()
 	delete []mg.Vtx;
 
 	// load the default texture
-	deftex = g_client->GetTexMgr()->LoadTexture ("star.dds", true, 0);
+	g_client->GetTexMgr()->LoadTexture ("star.dds", &deftex, 0);
 	billboard->SetTexture(1, deftex);
 
 
@@ -76,16 +77,17 @@ void VStar::GlobalInit ()
 	*billboard->GetMaterial(0) = mtrl;
 }
 
-void VStar::GlobalExit ()
+void vStar::GlobalExit ()
 {
 	if (billboard) delete billboard;
 	if (deftex)    deftex->Release();
 }
 
-bool VStar::Update ()
+bool vStar::Update ()
 {
-//	if (!mVisible) return false;
-	VObject::Update ();
+	if (!active) return false;
+
+	vObject::Update ();
 
 	float dist_scale;
 	float rad_scale = (float)size;
@@ -109,18 +111,18 @@ bool VStar::Update ()
 	mWorld._42 =  (float)cpos.y;
 	mWorld._43 =  (float)cpos.z;
 */
-	mModel[0][0] =  (float)bdir.x; //cphi;
-	mModel[0][1] =  (float)bdir.y; //0;
-	mModel[0][2] =  (float)bdir.z; //sphi;
-	mModel[2][0] = -(float)(bdir.z/hz); //-sphi;
-	mModel[2][1] =  0;
-	mModel[2][2] =  (float)(bdir.x/hz); //cphi;
-	mModel[1][0] =  -(mModel[0][1]*mModel[2][2] - mModel[2][1]*mModel[0][2]); //0;
-	mModel[1][1] =  -(mModel[0][2]*mModel[2][0] - mModel[2][2]*mModel[0][0]); //1;
-	mModel[1][2] =  -(mModel[0][0]*mModel[2][1] - mModel[2][0]*mModel[0][1]); // 0;
-	mModel[3][0] =  (float)cpos.x;
-	mModel[3][1] =  (float)cpos.y;
-	mModel[3][2] =  (float)cpos.z;
+	mWorld[0][0] =  (float)bdir.x; //cphi;
+	mWorld[0][1] =  (float)bdir.y; //0;
+	mWorld[0][2] =  (float)bdir.z; //sphi;
+	mWorld[2][0] = -(float)(bdir.z/hz); //-sphi;
+	mWorld[2][1] =  0;
+	mWorld[2][2] =  (float)(bdir.x/hz); //cphi;
+	mWorld[1][0] =  -(mWorld[0][1]*mWorld[2][2] - mWorld[2][1]*mWorld[0][2]); //0;
+	mWorld[1][1] =  -(mWorld[0][2]*mWorld[2][0] - mWorld[2][2]*mWorld[0][0]); //1;
+	mWorld[1][2] =  -(mWorld[0][0]*mWorld[2][1] - mWorld[2][0]*mWorld[0][1]); // 0;
+	mWorld[3][0] =  (float)cpos.x;
+	mWorld[3][1] =  (float)cpos.y;
+	mWorld[3][2] =  (float)cpos.z;
 
 
 	// artificially reduce size reduction with distance
@@ -132,20 +134,20 @@ bool VStar::Update ()
 	if (cdist > maxdist) {
 		dist_scale = (float)(maxdist/cdist);
 		rad_scale *= dist_scale;
-		mModel[3][0] *= dist_scale;
-		mModel[3][1] *= dist_scale;
-		mModel[3][2] *= dist_scale;
+		mWorld[3][0] *= dist_scale;
+		mWorld[3][1] *= dist_scale;
+		mWorld[3][2] *= dist_scale;
 	}
 
 	// scale up sphere radius from 1 to planet radius
-	mModel[0][0] *= rad_scale; mModel[0][1] *= rad_scale; mModel[0][2] *= rad_scale;
-	mModel[1][0] *= rad_scale; mModel[1][1] *= rad_scale; mModel[1][2] *= rad_scale;
-	mModel[2][0] *= rad_scale; mModel[2][1] *= rad_scale; mModel[2][2] *= rad_scale;
+	mWorld[0][0] *= rad_scale; mWorld[0][1] *= rad_scale; mWorld[0][2] *= rad_scale;
+	mWorld[1][0] *= rad_scale; mWorld[1][1] *= rad_scale; mWorld[1][2] *= rad_scale;
+	mWorld[2][0] *= rad_scale; mWorld[2][1] *= rad_scale; mWorld[2][2] *= rad_scale;
 
 	return true;
 }
 
-bool VStar::Render (OGLCamera *c)
+bool vStar::Render ()
 {
 	// Render states expected on entry:
 	//    D3DRENDERSTATE_ZENABLE=FALSE
@@ -162,7 +164,7 @@ bool VStar::Render (OGLCamera *c)
 //	dev->GetMaterial (&pmtrl);
 //	dev->SetMaterial (&mtrl);
 
-	billboard->Render (c, mModel);
+	billboard->Render (scn->GetCamera(), mWorld);
 //	dev->SetMaterial (&pmtrl);
 
 	return true;

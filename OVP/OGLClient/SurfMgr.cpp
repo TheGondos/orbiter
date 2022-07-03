@@ -18,6 +18,7 @@
 #include "VPlanet.h"
 #include "Texture.h"
 #include "Scene.h"
+#include "OGLCamera.h"
 #include <cstring>
 
 using namespace oapi;
@@ -33,7 +34,7 @@ static void CheckError(const char *s) {
 
 // =======================================================================
 
-SurfaceManager::SurfaceManager (const VPlanet *vplanet)
+SurfaceManager::SurfaceManager (const vPlanet *vplanet)
 : TileManager (vplanet)
 {
 	maxlvl = std::min (*(int*)g_client->GetConfigParam (CFGPRM_SURFACEMAXLEVEL),        // global setting
@@ -87,24 +88,42 @@ void SurfaceManager::Render (glm::mat4 &wmat, double scale, int level, double vi
 
 // =======================================================================
 void SurfaceManager::RenderTile (int lvl, int hemisp, int ilat, int nlat, int ilng, int nlng, double sdist,
-	TILEDESC *tile, const TEXCRDRANGE &range, OGLTexture *tex, OGLTexture *ltex, int flag)
+	TILEDESC *tile, const TEXCRDRANGE &range, OGLTexture *tex, OGLTexture *ltex, uint32_t flag)
 {
 	VBMESH &mesh = PATCH_TPL[lvl][ilat]; // patch template
 
-if (range.tumin != 0 && range.tumax != 1) {
+if (range.tumin != 0 || range.tumax != 1) {
 	printf("SurfaceManager::RenderTile tumin=%f tumax=%f tvmin=%f tvmax=%f\n",range.tumin,range.tumax,range.tvmin,range.tvmax);
 	exit(-1);
 }
 
 	static Shader s("Tile.vs","Tile.fs");
-	
+
 	s.Bind();
 	OGLCamera *c = g_client->GetScene()->GetCamera();
 	auto *vpm = c->GetViewProjectionMatrix();
 	s.SetMat4("u_ViewProjection",*vpm);
 	s.SetMat4("u_Model",RenderParam.wtrans);
-    glm::vec3 sundir = *g_client->GetScene()->GetSunDir();
+	const VECTOR3 &sd = g_client->GetScene()->GetSunDir();
+	glm::vec3 sundir;
+	sundir.x = sd.x;
+	sundir.y = sd.y;
+	sundir.z = sd.z;
 	s.SetVec3("u_SunDir", sundir);
+
+	auto *view = c->GetViewMatrix();
+
+	s.SetMat4("u_View", *view);
+	if(vp->prm.bFog && g_client->mRenderContext.bFog) {
+		glm::vec4 fogColor;
+		fogColor.x = g_client->mRenderContext.fogColor.x;
+		fogColor.y = g_client->mRenderContext.fogColor.y;
+		fogColor.z = g_client->mRenderContext.fogColor.z;
+		s.SetVec4("u_FogColor", fogColor);
+		s.SetFloat("u_FogDensity", g_client->mRenderContext.fogDensity);
+	} else {
+		s.SetFloat("u_FogDensity", 0);
+	}
 
 	if(vp->prm.bAddBkg) {
 		VECTOR3 v3bgcol = g_client->GetScene()->SkyColour();
@@ -118,24 +137,13 @@ if (range.tumin != 0 && range.tumax != 1) {
 		s.SetVec3("u_bgcol", bgcol);
 	}
 
-	if(vp->prm.bFog) {
-		s.SetVec4("u_FogColor", vp->prm.mFogColor);
-		s.SetFloat("u_FogDensity", vp->prm.mFogDensity);
-	} else {
-		s.SetFloat("u_FogDensity", 0);
-	}
-
-	auto *view = c->GetViewMatrix();
-
-	s.SetMat4("u_View", *view);
-
 
     glBindTexture(GL_TEXTURE_2D,  tex->m_TexId);
 	CheckError("SurfaceManager::RenderTile glBindTexture");
-	mesh.VAO->Bind();
-	glDrawElements(GL_TRIANGLES, mesh.IBO->GetCount(), GL_UNSIGNED_SHORT, 0);
+	mesh.va->Bind();
+	glDrawElements(GL_TRIANGLES, mesh.ib->GetCount(), GL_UNSIGNED_SHORT, 0);
 	CheckError("SurfaceManager::RenderTile glDrawElements");
-	mesh.VAO->UnBind();
+	mesh.va->UnBind();
 	s.UnBind();
     glBindTexture(GL_TEXTURE_2D,  0);
 	CheckError("SurfaceManager::RenderTile glBindTexture0");

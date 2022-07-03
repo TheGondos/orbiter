@@ -198,6 +198,30 @@ void Base::CreateStaticDeviceObjects ()
 	if (ifs) {
 		char cbuf[256], **tmp_list;
 		uint64_t *tmp_id;
+		// load list of generic mesh names
+		if (FindLine (ifs, "begin_meshes")) {
+			g_pOrbiter->OutputLoadStatus ("Generic base textures", 0);
+			char str[256];
+			for (;;) {
+				if (!ifs.getline (cbuf, 256) || !_strnicmp (cbuf, "end_meshes", 10)) break;
+				if (sscanf (cbuf, "%s", str)) {
+					tmp_list = new char*[ngenericmesh+1]; TRACENEW
+					if (ngenericmesh) {
+						memcpy (tmp_list, generic_mesh_name, ngenericmesh*sizeof(char*));
+						delete []generic_mesh_name;
+					}
+					generic_mesh_name = tmp_list;
+					generic_mesh_name[ngenericmesh] = new char[strlen(str)+1]; TRACENEW
+					strcpy (generic_mesh_name[ngenericmesh++], str);
+				}
+			}
+		}
+		// load generic meshes
+		if (ngenericmesh) {
+			generic_obj_mesh = new Mesh[ngenericmesh]; TRACENEW
+			for (int i = 0; i < ngenericmesh; i++)
+				LoadMesh (generic_mesh_name[i], generic_obj_mesh[i]);
+		}
 		// load list of generic texture names
 		if (FindLine (ifs, "begin_textures")) {
 			for (;;) {
@@ -250,7 +274,16 @@ void Base::DestroyStaticDeviceObjects ()
 {
 	// destroy common static resources
 	oapi::GraphicsClient *gclient = g_pOrbiter->GetGraphicsClient();
-
+	
+	// destroy meshes
+	if (ngenericmesh) {
+		int i;
+		for (i = 0; i < ngenericmesh; i++)
+			delete []generic_mesh_name[i];
+		delete []generic_mesh_name;
+		delete []generic_obj_mesh;
+		ngenericmesh = 0;
+	}
 	// destroy textures
 	if (gclient && ngenerictex) {
 		for (int i = 0; i < ngenerictex; i++) {

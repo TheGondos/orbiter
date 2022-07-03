@@ -250,10 +250,10 @@ void Instrument_Transfer::UpdateDraw (oapi::Sketchpad *skp)
 	y = y0;
 	sprintf (cbuf, "Src %s", src == vessel ? "[self]" : src->Name());
 	skp->Text (x0, y, cbuf, strlen(cbuf)); y += ch;
-	sprintf (cbuf, "TrL% 7.2f�", DEG*shpel->TrueLng());
+	sprintf (cbuf, "TrL% 7.2f°", DEG*shpel->TrueLng());
 	skp->Text (x0, y, cbuf, strlen(cbuf)); y += ch;
 	if (!enable_hyp && dt0 >= 0.0) {
-		sprintf (cbuf, "TLi% 7.2f�", DEG*posangle(rlng+shpel->omegab));
+		sprintf (cbuf, "TLi% 7.2f°", DEG*posangle(rlng+shpel->omegab));
 		skp->Text (x0, y, cbuf, strlen(cbuf)); y += ch;
 		sprintf (cbuf, "DTi%s", DistStr (dt0));
 		skp->Text (x0, y, cbuf, strlen(cbuf)); y += ch;
@@ -265,14 +265,14 @@ void Instrument_Transfer::UpdateDraw (oapi::Sketchpad *skp)
 		skp->Text (x0, y, "HTO", 3); y += ch;
 		sprintf (cbuf, "SMa%s", DistStr (shpel2->a));          // semi-major axis
 		skp->Text (x0, y, cbuf, strlen(cbuf)); y += ch;
-		sprintf (cbuf, "TLe% 7.2f�", DEG*l_eject);             // longitude of ejection point
+		sprintf (cbuf, "TLe% 7.2f°", DEG*l_eject);             // longitude of ejection point
 		skp->Text (x0, y, cbuf, strlen(cbuf)); y += ch;
 		sprintf (cbuf, "DTe%s", DistStr(dte));                 // time to ejection point
 		skp->Text (x0, y, cbuf, strlen(cbuf)); y += ch;
 		sprintf (cbuf, "Dv %s", DistStr (deltav));             // Dvel at ejection point
 		skp->Text (x0, y, cbuf, strlen(cbuf)); y += ch;
 		if (dt0 >= 0.0) {
-			sprintf (cbuf, "TLi% 7.2f�", DEG*posangle(rlng+shpel2->omegab));
+			sprintf (cbuf, "TLi% 7.2f°", DEG*posangle(rlng+shpel2->omegab));
 			skp->Text (x0, y, cbuf, strlen(cbuf)); y += ch;
 			sprintf (cbuf, "DTi%s", DistStr (dt0));
 			skp->Text (x0, y, cbuf, strlen(cbuf)); y += ch;
@@ -284,9 +284,9 @@ void Instrument_Transfer::UpdateDraw (oapi::Sketchpad *skp)
 	if (bTarget) {
 		strcpy (cbuf, "Tgt "); strcat (cbuf, tgt->Name());
 		skp->Text (x1, y, cbuf, strlen(cbuf)); y += ch;
-		sprintf (cbuf, "TrL% 7.2f�", DEG*tgtel->TrueLng());
+		sprintf (cbuf, "TrL% 7.2f°", DEG*tgtel->TrueLng());
 		skp->Text (x1, y, cbuf, strlen(cbuf)); y += ch;
-		if (dt0 >= 0.0) sprintf (cbuf, "TLi% 7.2f�", DEG*tlng);
+		if (dt0 >= 0.0) sprintf (cbuf, "TLi% 7.2f°", DEG*tlng);
 		else            sprintf (cbuf, "TLi  N/A");
 		skp->Text (x1, y, cbuf, strlen(cbuf)); y += ch;
 	} else {
@@ -324,7 +324,7 @@ void Instrument_Transfer::UpdateDraw (oapi::Sketchpad *skp)
 
 		// relative inclination ship orbit <-> target orbit
 		skp->SetTextColor (draw[reli < RAD*1.0 ? 0:1][1].col);
-		sprintf (cbuf, "RInc%7.2f�", Deg(reli));
+		sprintf (cbuf, "RInc%7.2f°", Deg(reli));
 		skp->Text (x0, IH-(3*ch)/2, cbuf, strlen(cbuf));
 	}
 }

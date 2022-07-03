@@ -26,13 +26,6 @@
 const uint32_t SPEC_DEFAULT = (uint32_t)(-1); // "default" material/texture flag
 const uint32_t SPEC_INHERIT = (uint32_t)(-2); // "inherit" material/texture flag
 
-struct OGLMaterial {
-    glm::vec4 diffuse;
-    glm::vec4 ambient;
-    glm::vec4 specular;
-    glm::vec4 emissive;
-    float specular_power;
-}; 
 /**
  * \brief Mesh object with D3D7-specific vertex buffer
  *
@@ -64,7 +57,7 @@ public:
 	 * \param client graphics client
 	 */
 	OGLMesh ();
-
+	OGLMesh (int nt, int nm);
 	/**
 	 * \brief Create a mesh consisting of a single mesh group
 	 * \param client graphics client

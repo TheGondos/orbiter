@@ -10,11 +10,12 @@
 // spherepatch.cpp
 // Create meshes for spheres and sphere patches
 // ==============================================================
+
 #include "glad.h"
-#include "SphereMesh.h"
-#include <cstring>
+#include "spherepatch.h"
 
 static float TEX2_MULTIPLIER = 4.0f; // microtexture multiplier
+struct VERTEX_XYZ   { float x, y, z; };
 
 static void CheckError(const char *s) {
 	GLenum err;
@@ -24,25 +25,40 @@ static void CheckError(const char *s) {
 		printf("GLError: %s - 0x%04X\n", s, err);
 	}
 }
-
 // ==============================================================
 // struct VBMESH
 
 VBMESH::VBMESH ()
 {
-
+	vb = 0;
+	ib = 0;
+	va = 0;
+	//bb = 0;
+	vtx = 0;
+	bbvtx = 0;
+	nv = 0;
+	idx = 0;
+	ni = 0;
+	ib = 0;
 }
 
 VBMESH::~VBMESH ()
 {
-
+	if (vb) delete vb;
+	if (ib) delete ib;
+	if (va) delete va;
+	//if (bb) delete bb;
+	if (nv) delete []vtx;
+	if (bbvtx) delete []bbvtx;
+	if (ni) delete []idx;
+	if (ib) delete ib;
 }
 
-void VBMESH::UpdateVertexBuffer ()
+void VBMESH::MapVertices ()
 {
-	void *data = VBO->Map();
-	memcpy (data, vtx, nv*sizeof(N2TVERTEX));
-	VBO->UnMap();
+	if (vb) delete vb;
+
+	vb = new VertexBuffer(vtx, nv*sizeof(N2TVERTEX));
 }
 
 // ==============================================================
@@ -59,11 +75,11 @@ void VBMESH::UpdateVertexBuffer ()
 //  20      822   4800
 //  24     1178   6912
 
-void CreateSphere (VBMESH &mesh, int nrings, bool hemisphere, int which_half, int texres)
+void CreateSphere (VBMESH &mesh, uint32_t nrings, bool hemisphere, int which_half, int texres)
 {
 	// Allocate memory for the vertices and indices
-	int       nVtx = hemisphere ? nrings*(nrings+1)+2 : nrings*(2*nrings+1)+2;
-	int       nIdx = hemisphere ? 6*nrings*nrings : 12*nrings*nrings;
+	uint32_t       nVtx = hemisphere ? nrings*(nrings+1)+2 : nrings*(2*nrings+1)+2;
+	uint32_t       nIdx = hemisphere ? 6*nrings*nrings : 12*nrings*nrings;
 	N2TVERTEX* Vtx = new N2TVERTEX[nVtx];
 	uint16_t*        Idx = new uint16_t[nIdx];
 
@@ -75,8 +91,8 @@ void CreateSphere (VBMESH &mesh, int nrings, bool hemisphere, int which_half, in
 	// Angle deltas for constructing the sphere's vertices
     float fDAng   = (float)PI / nrings;
     float fDAngY0 = fDAng;
-	int x1 = (hemisphere ? nrings : nrings*2);
-	int x2 = x1+1;
+	uint32_t x1 = (hemisphere ? nrings : nrings*2);
+	uint32_t x2 = x1+1;
 	float du = 0.5f/(float)texres;
 	float a  = (1.0f-2.0f*du)/(float)x1;
 
@@ -142,10 +158,20 @@ void CreateSphere (VBMESH &mesh, int nrings, bool hemisphere, int which_half, in
 		nidx += 3;
     }
 
-	mesh.VAO = std::make_unique<VertexArray>();
-	mesh.VAO->Bind();
-	mesh.VBO = std::make_unique<VertexBuffer>(Vtx, nVtx*sizeof(N2TVERTEX));
-	mesh.VBO->Bind();
+
+	mesh.vb = new VertexBuffer(Vtx, nVtx*sizeof(N2TVERTEX));
+
+	delete []Vtx;
+	mesh.nv  = nVtx;
+	mesh.idx = Idx;
+	mesh.ib = new IndexBuffer(Idx, nIdx);
+	mesh.ni  = nIdx;
+	//mesh.bb = 0;
+	mesh.vtx = 0;
+
+	mesh.va = new VertexArray();
+	mesh.va->Bind();
+	mesh.vb->Bind();
 
 	glVertexAttribPointer(
 	0,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
@@ -194,16 +220,14 @@ void CreateSphere (VBMESH &mesh, int nrings, bool hemisphere, int which_half, in
 	glEnableVertexAttribArray(3);
 	CheckError("glEnableVertexAttribArray3");
 
-	mesh.IBO = std::make_unique<IndexBuffer>(Idx, nIdx);
-	mesh.IBO->Bind();
+	mesh.ib->Bind();
 
-	mesh.VAO->UnBind();
-	mesh.nv = nVtx;
+	mesh.va->UnBind();
 }
 
 // ==============================================================
 
-void CreateSpherePatch2 (VBMESH &mesh, int nlng, int nlat, int ilat, int res, int bseg,
+void CreateSpherePatch (VBMESH &mesh, int nlng, int nlat, int ilat, int res, int bseg,
 	bool reduce, bool outside, bool store_vtx, bool shift_origin)
 {
 	const float c1 = 1.0f, c2 = 0.0f;
@@ -267,9 +291,9 @@ void CreateSpherePatch2 (VBMESH &mesh, int nlng, int nlat, int ilat, int res, in
 				else if (tpos.z > tpmax.z) tpmax.z = tpos.z;
 			}
 
-			Vtx[n].x = Vtx[n].nx = (float)pos.x;
-			Vtx[n].y = Vtx[n].ny = (float)pos.y;
-			Vtx[n].z = Vtx[n].nz = (float)pos.z;
+			Vtx[n].x = Vtx[n].nx = (float)(pos.x);
+			Vtx[n].y = Vtx[n].ny = (float)(pos.y);
+			Vtx[n].z = Vtx[n].nz = (float)(pos.z);
 			if (shift_origin)
 				Vtx[n].x -= dx, Vtx[n].y -= dy;
 
@@ -305,14 +329,30 @@ void CreateSpherePatch2 (VBMESH &mesh, int nlng, int nlat, int ilat, int res, in
 		nofs0 = nofs1;
 	}
 	if (!outside)
-		for (i = 0; i < nIdx; i += 3)
-			tmp = Idx[i+1], Idx[i+1] = Idx[i+2], Idx[i+2] = tmp;
+		for (i = 0; i < nIdx; i += 3) {
+			tmp = Idx[i+1];
+			Idx[i+1] = Idx[i+2];
+			Idx[i+2] = tmp;
+		}
+
+	mesh.vb = new VertexBuffer(Vtx, nVtx*sizeof(N2TVERTEX));
+
+	if (store_vtx) {
+		mesh.vtx = Vtx;
+	} else {
+		delete []Vtx;
+		mesh.vtx = 0;
+	}
+	mesh.nv  = nVtx;
+	mesh.idx = Idx;
+	mesh.ni  = nIdx;
+	mesh.ib = new IndexBuffer(Idx, nIdx);
 
 
-	mesh.VAO = std::make_unique<VertexArray>();
-	mesh.VAO->Bind();
-	mesh.VBO = std::make_unique<VertexBuffer>(Vtx, nVtx*sizeof(N2TVERTEX));
-	mesh.VBO->Bind();
+
+	mesh.va = new VertexArray();
+	mesh.va->Bind();
+	mesh.vb->Bind();
 
 	glVertexAttribPointer(
 	0,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
@@ -361,24 +401,12 @@ void CreateSpherePatch2 (VBMESH &mesh, int nlng, int nlat, int ilat, int res, in
 	glEnableVertexAttribArray(3);
 	CheckError("glEnableVertexAttribArray3");
 
-	mesh.IBO = std::make_unique<IndexBuffer>(Idx, nIdx);
-	mesh.IBO->Bind();
-
-	mesh.VAO->UnBind();
-	mesh.nv = nVtx;
-
-	if (store_vtx) {
-		mesh.vtx = Vtx;
-	} else {
-		delete []Vtx;
-		mesh.vtx = 0;
-	}
+	mesh.ib->Bind();
+	mesh.va->UnBind();	
 /*
 	// set bounding box
-	static D3DVERTEXBUFFERDESC bbvbd ={ sizeof(D3DVERTEXBUFFERDESC), D3DVBCAPS_SYSTEMMEMORY, D3DFVF_XYZ, 8 };
-	VERTEX_XYZ *V;
-	d3d->CreateVertexBuffer (&bbvbd, &mesh.bb, 0);
-	mesh.bb->Lock (DDLOCK_WAIT | DDLOCK_WRITEONLY | DDLOCK_DISCARDCONTENTS, (LPVOID*)&V, NULL);
+	mesh.bb = new VertexBuffer(nullptr, 8 * sizeof(VERTEX_XYZ));
+	VERTEX_XYZ *V = (VERTEX_XYZ *)mesh.bb->Map();
 
 	if (shift_origin) {
 		pref.x -= dx;
@@ -387,43 +415,46 @@ void CreateSpherePatch2 (VBMESH &mesh, int nlng, int nlat, int ilat, int res, in
 
 	// transform bounding box back to patch coordinates
 	pos = tmul (R, _V(tpmin.x, tpmin.y, tpmin.z)) + pref;
-	V[0].x = D3DVAL(pos.x); V[0].y = D3DVAL(pos.y); V[0].z = D3DVAL(pos.z);
+	V[0].x = (float)(pos.x); V[0].y = (float)(pos.y); V[0].z = (float)(pos.z);
 	pos = tmul (R, _V(tpmax.x, tpmin.y, tpmin.z)) + pref;
-	V[1].x = D3DVAL(pos.x); V[1].y = D3DVAL(pos.y); V[1].z = D3DVAL(pos.z);
+	V[1].x = (float)(pos.x); V[1].y = (float)(pos.y); V[1].z = (float)(pos.z);
 	pos = tmul (R, _V(tpmin.x, tpmax.y, tpmin.z)) + pref;
-	V[2].x = D3DVAL(pos.x); V[2].y = D3DVAL(pos.y); V[2].z = D3DVAL(pos.z);
+	V[2].x = (float)(pos.x); V[2].y = (float)(pos.y); V[2].z = (float)(pos.z);
 	pos = tmul (R, _V(tpmax.x, tpmax.y, tpmin.z)) + pref;
-	V[3].x = D3DVAL(pos.x); V[3].y = D3DVAL(pos.y); V[3].z = D3DVAL(pos.z);
+	V[3].x = (float)(pos.x); V[3].y = (float)(pos.y); V[3].z = (float)(pos.z);
 	pos = tmul (R, _V(tpmin.x, tpmin.y, tpmax.z)) + pref;
-	V[4].x = D3DVAL(pos.x); V[4].y = D3DVAL(pos.y); V[4].z = D3DVAL(pos.z);
+	V[4].x = (float)(pos.x); V[4].y = (float)(pos.y); V[4].z = (float)(pos.z);
 	pos = tmul (R, _V(tpmax.x, tpmin.y, tpmax.z)) + pref;
-	V[5].x = D3DVAL(pos.x); V[5].y = D3DVAL(pos.y); V[5].z = D3DVAL(pos.z);
+	V[5].x = (float)(pos.x); V[5].y = (float)(pos.y); V[5].z = (float)(pos.z);
 	pos = tmul (R, _V(tpmin.x, tpmax.y, tpmax.z)) + pref;
-	V[6].x = D3DVAL(pos.x); V[6].y = D3DVAL(pos.y); V[6].z = D3DVAL(pos.z);
+	V[6].x = (float)(pos.x); V[6].y = (float)(pos.y); V[6].z = (float)(pos.z);
 	pos = tmul (R, _V(tpmax.x, tpmax.y, tpmax.z)) + pref;
-	V[7].x = D3DVAL(pos.x); V[7].y = D3DVAL(pos.y); V[7].z = D3DVAL(pos.z);
-	mesh.bb->Unlock ();*/
+	V[7].x = (float)(pos.x); V[7].y = (float)(pos.y); V[7].z = (float)(pos.z);
+	mesh.bb->UnMap ();
+*/
 }
 
 // ==============================================================
 
 void DestroyVBMesh (VBMESH &mesh)
 {
-	/*
-	mesh.vb->Release();
+	delete mesh.vb;
+	delete mesh.va;
 	mesh.vb  = 0;
+	mesh.va  = 0;
 	mesh.nv  = 0;
-	if (mesh.bb) {
-		mesh.bb->Release();
-		mesh.bb  = 0;
-	}
+//	if (mesh.bb) {
+//		delete mesh.bb;
+//		mesh.bb  = 0;
+//	}
 	delete []mesh.idx;
 	mesh.idx = 0;
-	*/
+	if(mesh.ib)
+		delete mesh.ib;
 	if (mesh.vtx) {
 		delete []mesh.vtx;
 		mesh.vtx = 0;
 	}
-	//mesh.ni  = 0;
+	mesh.ni  = 0;
 }
 

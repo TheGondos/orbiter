@@ -21,13 +21,13 @@
 
 class CloudManager: public TileManager {
 public:
-	CloudManager (const VPlanet *vplanet);
+	CloudManager (const vPlanet *vplanet);
 
 	void Render (glm::mat4 &wmat, double scale, int level, double viewap = 0.0);
 
 protected:
 	void RenderTile (int lvl, int hemisp, int ilat, int nlat, int ilng, int nlng, double sdist,
-		TILEDESC *tile, const TEXCRDRANGE &range, OGLTexture *tex, OGLTexture *ltex, int flag) override;
+		TILEDESC *tile, const TEXCRDRANGE &range, OGLTexture *tex, OGLTexture *ltex, uint32_t flag) override;
 
 private:
 	int cloudtexidx;

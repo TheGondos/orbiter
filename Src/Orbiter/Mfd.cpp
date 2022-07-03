@@ -1071,8 +1071,8 @@ int *Instrument::DisabledModes = 0;
 
 COLORREF Instrument::col_green1  = 0x0000e600;
 COLORREF Instrument::col_green2  = 0x0000ac00;
-COLORREF Instrument::col_yellow1 = 0x00e6e600;
-COLORREF Instrument::col_yellow2 = 0x00acac00;
+COLORREF Instrument::col_yellow1 = 0x0000e6e6;
+COLORREF Instrument::col_yellow2 = 0x0000acac;
 COLORREF Instrument::col_grey1   = 0x00e0e0e0;
 COLORREF Instrument::col_grey2   = 0x008c8c8c;
 COLORREF Instrument::col_red1    = 0x00ff0000;

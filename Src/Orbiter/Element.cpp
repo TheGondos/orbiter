@@ -522,7 +522,7 @@ void Elements::Calculate (const Vector &R, const Vector &V, double simt)
 	// DEBUG OUTPUT
 	if (!closed_orbit) {
 		double tra_limit = acos(-1.0/e);
-		sprintf (DBG_MSG, "tra=%f�, tra_limit=%f�, diff=%g�", priv_tra*DEG, tra_limit*DEG, (fabs(tra_limit)-fabs(priv_tra))*DEG);
+		sprintf (DBG_MSG, "tra=%f°, tra_limit=%f°, diff=%g°", priv_tra*DEG, tra_limit*DEG, (fabs(tra_limit)-fabs(priv_tra))*DEG);
 	}
 #endif
 }

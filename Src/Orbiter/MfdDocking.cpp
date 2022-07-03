@@ -164,18 +164,18 @@ void Instrument_Docking::UpdateDraw (oapi::Sketchpad *skp)
 	skp->SetTextColor(draw[2][0].col);
 	skp->SetTextAlign(oapi::Sketchpad::CENTER);
 
-	skp->Text(circx, circy - (circr * 116) / 100, "0�", 2);
+	skp->Text(circx, circy - (circr * 116) / 100, u8"0°", 3);
 	if (scale) {
-		skp->Text(circx + circr / 2, circy+1, "2�", 2);
-		skp->Text(circx + circr, circy+1, "4�", 2);
-		skp->Text(circx - (circr * 54) / 100, circy - (circr * 102) / 100, "3�", 2);
-		skp->Text(circx + (circr * 54) / 100, circy - (circr * 102) / 100, "3�", 2);
+		skp->Text(circx + circr / 2, circy+1, "2°", 3);
+		skp->Text(circx + circr, circy+1, "4°", 3);
+		skp->Text(circx - (circr * 54) / 100, circy - (circr * 102) / 100, "3°", 3);
+		skp->Text(circx + (circr * 54) / 100, circy - (circr * 102) / 100, "3°", 3);
 	}
 	else {
-		skp->Text(circx + circr / 2, circy+1, "10�", 3);
-		skp->Text(circx + circr, circy+1, "20�", 3);
-		skp->Text(circx - (circr*54)/100, circy - (circr*102)/100, "30�", 3);
-		skp->Text(circx + (circr*54)/100, circy - (circr*102)/100, "30�", 3);
+		skp->Text(circx + circr / 2, circy+1, "10°", 4);
+		skp->Text(circx + circr, circy+1, "20°", 4);
+		skp->Text(circx - (circr*54)/100, circy - (circr*102)/100, "30°", 4);
+		skp->Text(circx + (circr*54)/100, circy - (circr*102)/100, "30°", 4);
 	}
 
 	skp->SetTextAlign(oapi::Sketchpad::LEFT);

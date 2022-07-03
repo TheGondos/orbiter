@@ -143,9 +143,13 @@ int _matherr(struct _exception *except )
 // =======================================================================
 // WinMain()
 // Application entry containing message loop
+#define _GNU_SOURCE 1
+#include <fenv.h>
 
 int main(int argc, const char *argv[])
 {
+	feenableexcept (FE_INVALID|FE_DIVBYZERO|FE_OVERFLOW);
+
 	if (!glfwInit()) {
 		printf("glfwInit failed\n");
 		exit(EXIT_FAILURE);
@@ -171,10 +175,6 @@ int main(int argc, const char *argv[])
 	// Create application
 	g_pOrbiter->Create ();
 
-//	setlocale (LC_CTYPE, "");
-//feenableexcept(FE_INVALID | FE_OVERFLOW);
-//feenableexcept(FE_INVALID | FE_OVERFLOW);
-//feenableexcept(FE_OVERFLOW);
 	g_pOrbiter->Run ();
 	delete g_pOrbiter;
 	return 0;
@@ -909,7 +909,7 @@ static void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 static void (*prev_key_callback)(GLFWwindow* window, int gkey, int scancode, int action, int mods) = nullptr;
 static void key_callback(GLFWwindow* window, int gkey, int scancode, int action, int mods)
 {
-	printf("key_callback gkey=%d scancode=%d action=%d mods=%d\n", gkey, scancode, action, mods);
+//	printf("key_callback gkey=%d scancode=%d action=%d mods=%d\n", gkey, scancode, action, mods);
 /*
 Unused values:
 #define 	GLFW_KEY_UNKNOWN   -1
@@ -1721,6 +1721,7 @@ bool Orbiter::BeginTimeStep (bool running)
 		// skip this step if the interval is smaller than the timer resolution
 		deltat = time_delta.count();// *1000.0;//* 0.001;
 	}
+	if(deltat>0.1) deltat=0.1;
 
 	time_prev = time_curr;
 	td.BeginStep (deltat, running);

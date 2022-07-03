@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include "VertexBuffer.h"
 #include "OGLMesh.h"
+#include "OGLCamera.h"
 
 std::unique_ptr<VertexArray> OGLParticleStream::eVBA;
 std::unique_ptr<VertexBuffer> OGLParticleStream::eVBO;
@@ -68,14 +69,11 @@ bool OGLParticleStream::bShadows = false;
 
 OGLParticleStream::OGLParticleStream (GraphicsClient *_gc, PARTICLESTREAMSPEC *pss): ParticleStream (_gc, pss)
 {
-	glm::dvec3 tmp = *g_client->GetScene()->GetCamera()->GetGPos();
-	cam_ref.x = tmp.x;
-	cam_ref.y = tmp.y;
-	cam_ref.z = tmp.z;
+	cam_ref = *g_client->GetScene()->GetCamera()->GetGPos();
 
 	src_ref = 0;
 	src_ofs = _V(0,0,0);
-	interval = 0.02;
+	interval = 0.1;
 	SetSpecs (pss ? pss : &DefaultParticleStreamSpec);
 	t0 = oapiGetSimTime();
 	active = false;
@@ -96,7 +94,7 @@ OGLParticleStream::~OGLParticleStream()
 
 void OGLParticleStream::GlobalInit ()
 {
-	deftex = g_client->GetTexMgr()->LoadTexture ("Contrail1.dds", true, 0);
+	g_client->GetTexMgr()->LoadTexture ("Contrail1.dds", &deftex, 0);
 	bShadows = *(bool*)g_client->GetConfigParam (CFGPRM_VESSELSHADOWS);
 
 	int i, j, k, r, ofs;
@@ -313,7 +311,7 @@ double OGLParticleStream::Atm2Alpha (double prm) const
 	case PARTICLESTREAMSPEC::ATM_PLIN:
 		return std::max (0.0, std::min (1.0, (prm-amin)*afac));
 	case PARTICLESTREAMSPEC::ATM_PLOG:
-		return std::max (0.0, std::min (1.0, log(prm/amin)*afac));
+		return std::max (0.0, std::min (1.0, log(std::max(1.0, prm/amin))*afac));
 	}
 	return 0; // should not happen
 }
@@ -568,20 +566,14 @@ void OGLParticleStream::RenderDiffuse (OGLCamera *c)
 	float *u, *v;
 	NTAVERTEX *vtx;
 
-	glm::dvec3 tmp = *g_client->GetScene()->GetCamera()->GetGPos();
-	cam_ref.x = tmp.x;
-	cam_ref.y = tmp.y;
-	cam_ref.z = tmp.z;
-	glDepthMask(GL_FALSE);
-	glEnable(GL_DEPTH_TEST);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	cam_ref = *g_client->GetScene()->GetCamera()->GetGPos();
+	//glEnable(GL_DEPTH_TEST);
+    //glEnable(GL_BLEND);
+    //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	/*
-	dev->SetTextureStageState (0, D3DTSS_ALPHAOP, D3DTOP_MODULATE);
-	dev->SetTextureStageState (0, D3DTSS_ALPHAARG2, D3DTA_DIFFUSE);
-	dev->SetRenderState (D3DRENDERSTATE_ZWRITEENABLE, FALSE);
-*/
+	//dev->SetTextureStageState (0, D3DTSS_ALPHAOP, D3DTOP_MODULATE);
+	//dev->SetTextureStageState (0, D3DTSS_ALPHAARG2, D3DTA_DIFFUSE);
+	glDepthMask(GL_FALSE);
 	static Shader s("Particle.vs","Particle.fs");
 	s.Bind();
 	auto vp = c->GetViewProjectionMatrix();
@@ -618,15 +610,10 @@ void OGLParticleStream::RenderDiffuse (OGLCamera *c)
 
 	dVBA->UnBind();
 	s.UnBind();
-	glDepthMask(GL_TRUE);
-	glDisable(GL_DEPTH_TEST);
-	glBindTexture(GL_TEXTURE_2D, 0);
 
-/*
-	dev->SetTextureStageState (0, D3DTSS_ALPHAOP, D3DTOP_SELECTARG1);
-	dev->SetTextureStageState (0, D3DTSS_ALPHAARG2, D3DTA_CURRENT);
-	dev->SetRenderState (D3DRENDERSTATE_ZWRITEENABLE, TRUE);
-	*/
+	//dev->SetTextureStageState (0, D3DTSS_ALPHAOP, D3DTOP_SELECTARG1);
+	//dev->SetTextureStageState (0, D3DTSS_ALPHAARG2, D3DTA_CURRENT);
+	glDepthMask(GL_TRUE);
 }
 
 void OGLParticleStream::RenderEmissive (OGLCamera *c)
@@ -635,14 +622,11 @@ void OGLParticleStream::RenderEmissive (OGLCamera *c)
 	float *u, *v;
 	NTAVERTEX *vtx;
 
-	glm::dvec3 tmp = *g_client->GetScene()->GetCamera()->GetGPos();
-	cam_ref.x = tmp.x;
-	cam_ref.y = tmp.y;
-	cam_ref.z = tmp.z;
+	cam_ref = *g_client->GetScene()->GetCamera()->GetGPos();
 	glDepthMask(GL_FALSE);
-	glEnable(GL_DEPTH_TEST);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	//glEnable(GL_DEPTH_TEST);
+    //glEnable(GL_BLEND);
+    //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	static Shader s("Particle.vs","Particle.fs");
 	s.Bind();
@@ -676,8 +660,8 @@ void OGLParticleStream::RenderEmissive (OGLCamera *c)
 	eVBA->UnBind();
 	s.UnBind();
 	glDepthMask(GL_TRUE);
-	glDisable(GL_DEPTH_TEST);
-	glBindTexture(GL_TEXTURE_2D, 0);
+	//glDisable(GL_DEPTH_TEST);
+	//glBindTexture(GL_TEXTURE_2D, 0);
 
 	/*
 	dev->SetTextureStageState (0, D3DTSS_ALPHAOP, D3DTOP_SELECTARG1);

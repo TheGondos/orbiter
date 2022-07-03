@@ -16,44 +16,39 @@
 
 #include "OGLClient.h"
 #include "VPlanet.h"
-#include "MeshManager.h"
-#include "OGLCamera.h"
-#include "VertexBuffer.h"
+#include "OGLMesh.h"
 
 #define MAXRINGRES 3
 
-
-struct RINGMESH {
-	std::unique_ptr<VertexBuffer> VBO; // mesh vertex buffer
-	std::unique_ptr<IndexBuffer> IBO;
-	std::unique_ptr<VertexArray> VAO;
-	OGLTexture *texture;
-};
-
-
+// ==============================================================
+// class RingManager (interface)
+// ==============================================================
+/**
+ * \brief Rendering of planet rings at different resolutions
+ */
 class RingManager {
 public:
-	RingManager (const VPlanet *vplanet, double inner_rad, double outer_rad);
+	RingManager (const vPlanet *vplanet, double inner_rad, double outer_rad);
 	~RingManager ();
 
 	static void GlobalInit ();
 
-	void SetMeshRes (int res);
+	void SetMeshRes (unsigned int res);
 
 	inline double InnerRad() const { return irad; }
 	inline double OuterRad() const { return orad; }
 
-	bool Render (glm::mat4 &mWorld, OGLCamera *c, bool front);
+	bool Render (OGLCamera *c, glm::mat4 &mWorld);
 
 protected:
-	void CreateRing (RINGMESH &m, double irad, double orad, int nsect, OGLTexture *tex);
-	uint32_t LoadTextures (OGLTexture **tex);
+	OGLMesh *CreateRing (double irad, double orad, int nsect);
+	unsigned int LoadTextures ();
 
 private:
-	const VPlanet *vp;
-	RINGMESH mesh[MAXRINGRES];
-	OGLTexture *tex[MAXRINGRES];
-	uint32_t rres, tres, ntex;
+	const vPlanet *vp;
+	OGLMesh *mesh[MAXRINGRES];
+	OGLTexture * tex[MAXRINGRES];
+	unsigned int rres, tres, ntex;
 	double irad, orad;
 };
 

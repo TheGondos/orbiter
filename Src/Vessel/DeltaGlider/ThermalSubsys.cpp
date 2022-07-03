@@ -194,8 +194,10 @@ void ThermalSubsystem::clbkPreStep (double simt, double simdt, double mjd)
 
 	// compute temperature change
 	for (i = 0; i < 13; i++)
-		if (cprm[i].mass)
+		if (cprm[i].mass) {
 			cprm[i].T += dQ[i] * simdt / (cprm[i].mass * cprm[i].cp);
+			if(cprm[i].T < 3.0) cprm[i].T = 3.0;
+		}
 
 	//sprintf(oapiDebugString(), "T(inner)=%lf, T(outer)=%lf", cprm[INTERIORFUSELAGE].T, cprm[SURFUPPERFUSELAGE].T);
 }

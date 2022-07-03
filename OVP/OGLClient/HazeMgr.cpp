@@ -28,13 +28,14 @@ static void CheckError(const char *s) {
 	{
 	// Process/log the error.
 		printf("GLError: %s - 0x%04X\n", s, err);
+		abort();
 	}
 }
 
-HazeManager::HazeManager (const VPlanet *vplanet)
+HazeManager::HazeManager (const vPlanet *vplanet)
 {
 	vp = vplanet;
-	obj = vp->GetObject();
+	obj = vp->Object();
 	rad = oapiGetSize (obj);
 	const ATMCONST *atmc = oapiGetPlanetAtmConstants (obj);
 	if (atmc) {
@@ -52,7 +53,6 @@ HazeManager::HazeManager (const VPlanet *vplanet)
 		cloudalt = *(double*)oapiGetObjectParam (obj, OBJPRM_PLANET_CLOUDALT);
 	} else
 		hshift = 0;
-
 	hscale = (float)(1.0 - *(double*)oapiGetObjectParam (obj, OBJPRM_PLANET_HAZEEXTENT));
 }
 
@@ -70,7 +70,7 @@ void HazeManager::GlobalInit ()
 		double phi = (double)i/(double)HORIZON_NSEG * PI*2.0;
 		CosP[i] = (float)cos(phi), SinP[i] = (float)sin(phi);
 	}
-	horizon = g_client->GetTexMgr()->LoadTexture ("Horizon.dds", true, 0);
+	g_client->GetTexMgr()->LoadTexture ("Horizon.dds", &horizon, 0);
 
 	VBA = std::make_unique<VertexArray>();
 	VBA->Bind();
@@ -125,8 +125,6 @@ void HazeManager::Render (OGLCamera *c, glm::mat4 &wmat, bool dual)
 	int i, j;
 	double phi, csun, alpha, colofs;
 	float cosp, sinp, cost, sint, h1, h2, r1, r2, intr, intg, intb;
-glDisable(GL_DEPTH_TEST);
-//	D3DMAT_MatrixInvert (&imat, &wmat);
 	imat = glm::affineInverse(wmat);
 	VECTOR3 rpos = {imat[3][0], imat[3][1], imat[3][2]};   // camera in local coords (planet radius = 1)
 	double cdist = length (rpos);
@@ -167,14 +165,11 @@ glDisable(GL_DEPTH_TEST);
 		              sint*cosp,  cost, sint*sinp, 0,
 					  -sinp,      0,    cosp,      0,
 					  0,          0,    0,         1};
-
-	//D3DMAT_MatrixMultiply (&transm, &wmat, &rmat);
 	glm::mat4 transm = wmat * rmat;
 
 	MATRIX3 rrmat = {cost*cosp, -sint, cost*sinp,
 		             sint*cosp,  cost, sint*sinp,
 					 -sinp,      0,    cosp     };
-
 	MATRIX3 grot;
 	VECTOR3 gpos;
 	oapiGetRotationMatrix (obj, &grot);
@@ -187,19 +182,16 @@ glDisable(GL_DEPTH_TEST);
 
 	colofs = (dual ? 0.4 : 0.3);
 
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+//    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 //	dev->SetTextureStageState (0, D3DTSS_ALPHAOP, D3DTOP_MODULATE);
 //	dev->SetTransform (D3DTRANSFORMSTATE_WORLD, &transm);
-//	dev->SetTexture (0, horizon);
 	glBindTexture(GL_TEXTURE_2D, horizon->m_TexId);
 
+    glEnable(GL_BLEND);
+//	dev->SetRenderState (D3DRENDERSTATE_LIGHTING, FALSE);
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);	
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);  
-//	dev->SetRenderState (D3DRENDERSTATE_ALPHABLENDENABLE, TRUE);
-//	dev->SetRenderState (D3DRENDERSTATE_LIGHTING, FALSE);
-//	dev->SetTextureStageState (0, D3DTSS_ADDRESS, D3DTADDRESS_CLAMP);
 
 	HVERTEX *v = (HVERTEX *)VBO->Map();
 
@@ -280,7 +272,7 @@ static Shader s("Haze.vs","Haze.fs");
 
 //	dev->SetTextureStageState (0, D3DTSS_ADDRESS, D3DTADDRESS_WRAP);
 //	dev->SetRenderState (D3DRENDERSTATE_LIGHTING, TRUE);
-//	dev->SetRenderState (D3DRENDERSTATE_ALPHABLENDENABLE, FALSE);
+	glDisable(GL_BLEND);
 //	dev->SetTextureStageState (0, D3DTSS_ALPHAOP, D3DTOP_SELECTARG1);
 
 	glBindTexture(GL_TEXTURE_2D, 0);

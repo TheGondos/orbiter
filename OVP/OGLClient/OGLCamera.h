@@ -39,22 +39,24 @@ public:
 	void SetFrustumLimits (double nearlimit, double farlimit);
 	void SetAperture (double _ap);
 	void SetSize(uint32_t w, uint32_t h);
-	inline const glm::dvec3 *GetGDir () const { return &gdir; }
-	inline const glm::dvec3 *GetGPos () const { return &gpos; }
+	inline const VECTOR3 *GetGDir () const { return &gdir; }
+	inline const VECTOR3 *GetGPos () const { return &gpos; }
+	inline const glm::dmat3 *GetGRot () const { return &grot; }
 	float GetFarlimit() { return farplane; }
 	float GetNearlimit() { return nearplane; }
 	uint32_t GetHeight() const { return height; }
 	uint32_t GetWidth() const { return width; }
 	float GetTanAp() const { return tanap; }
 	bool Direction2Viewport(const VECTOR3 &dir, int &x, int &y);
+	inline OBJHANDLE GetProxyBody () const { return hObj_proxy; }
 
 private:
 	void UpdateProjectionMatrix();
 	uint32_t width, height;
 
 	// camera status parameters from Orbiter API
-	glm::dvec3 gpos;           // current camera position (global frame)
-	glm::dvec3 gdir;           // current camera direction (global frame)
+	VECTOR3 gpos;           // current camera position (global frame)
+	VECTOR3 gdir;           // current camera direction (global frame)
 	glm::dmat3 grot;           // current camera rotation matrix (global frame)
 
 	// camera elements
@@ -68,11 +70,8 @@ private:
 	float fov;
 	float tanap;
 
-/*
 	OBJHANDLE hObj_proxy;   // closest celestial body
 	double alt_proxy;       // camera distance to surface of hObj_proxy
-*/
-
 };
 
 #endif // !__OGLCAMERA_H

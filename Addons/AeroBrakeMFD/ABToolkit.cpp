@@ -120,7 +120,7 @@ void value(double real,char *buf,bool angle,bool au)
 	 const char *k3={"G"};
 	 const char *k4={"AU"};
 	 const char *k5={"m"};
-	 const char *k6={"�"};
+	 const char *k6={"°"};
 	 const char *k7={"T"};
 
      n=(int)floor(log10(v))+1;
@@ -144,7 +144,7 @@ void value(double real,char *buf,bool angle,bool au)
 	 if (angle) { 
 		 sprintf(buffer,"%1.2f",real); 
 		 strncpy(buf,buffer,6);
-		 strcat(buf,"�");
+		 strcat(buf,"°");
 	 }
 	 else {
 		 sprintf(buffer,"%1.3f",real); 

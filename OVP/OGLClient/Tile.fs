@@ -18,13 +18,17 @@ void main()
     float diff = max(dot(norm, -u_SunDir), 0.0);
 //    vec4 diffuse = (diff * u_Material.diffuse);
 
-	float fogCoordinate = abs(eyeSpacePosition.z / eyeSpacePosition.w);
-	float fogfactor = exp(-u_FogDensity * fogCoordinate);
-	fogfactor = 1.0 - clamp(fogfactor, 0.0, 1.0);
-
 	color = vec4(diff * texture(ourTexture, TexCoord).rgb, texture(ourTexture, TexCoord).a) + vec4(u_bgcol,0);
 
+	if(u_FogDensity != 0.0) {
+		float fogCoordinate = abs(eyeSpacePosition.z / eyeSpacePosition.w);
+		float fogfactor = exp(-u_FogDensity * fogCoordinate);
+		fogfactor = 1.0 - clamp(fogfactor, 0.0, 1.0);
+		color = vec4(mix(color, u_FogColor, fogfactor).rgb, color.a);
+	}
+
+	//color = vec4(fogfactor,fogfactor,fogfactor,1.0);
+
 	//color = mix(color, u_FogColor, fogfactor);
-	color = vec4(mix(color, u_FogColor, fogfactor).rgb, color.a);
 	//color = vec4(1.0,1.0,0.5,1.0);
 }
