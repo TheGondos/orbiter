@@ -360,7 +360,6 @@ bool vPlanet::Render ()
 
 		uint32_t amb = prm.amb0col;
 		bool ringpostrender = false;
-		bool clear_zbuf = false;
 		float fogfactor;
 
 		prm.bFog = prm.bFogEnabled;
@@ -370,18 +369,10 @@ bool vPlanet::Render ()
 		prm.bAddBkg = ((skybg.x + skybg.y + skybg.z > 0) && (hObj != scn->GetCamera()->GetProxyBody()));
 
 		if (ringmgr) {
-			if (cdist < rad*ringmgr->InnerRad()) { // camera inside inner ring edge
-				ringmgr->Render (scn->GetCamera(), mWorld);
-			} else {
-				// if the planet has a ring system we update the z-buffer
-				// but don't do z-checking for the planet surface
-				// This strategy could do with some reconsideration
-				glEnable(GL_DEPTH_TEST);
-				glDepthMask(GL_TRUE);
-				glDepthFunc(GL_ALWAYS);
-				ringpostrender = true;
-				clear_zbuf = true;
-			}
+			glDisable(GL_CULL_FACE);
+			ringmgr->Render(scn->GetCamera(), mWorld, false);
+			glEnable(GL_CULL_FACE);
+			//dev->SetRenderState(D3DRS_CULLMODE, D3DCULL_CCW);
 		}
 
 		if (prm.bCloud && (prm.cloudvis & 1))
@@ -453,7 +444,6 @@ bool vPlanet::Render ()
 		} else {
 			bool using_zbuf;
 			RenderSphere (prm, using_zbuf);            // planet surface
-			if (using_zbuf) clear_zbuf = false;
 		}
 
 		if (nbase) RenderBaseStructures ();
@@ -478,16 +468,11 @@ bool vPlanet::Render ()
 		}
 		if (hazemgr) hazemgr->Render (scn->GetCamera(), mWorld, true); // haze across planet disc
 
-		if (ringpostrender) {
-			// turn z-buffer on for ring system
-			glEnable(GL_DEPTH_TEST);
-			ringmgr->Render (scn->GetCamera(), mWorld);
-			glDisable(GL_DEPTH_TEST);
-			glDepthMask(GL_FALSE);
+		if (ringmgr) {
+			glDisable(GL_CULL_FACE);
+			ringmgr->Render (scn->GetCamera(), mWorld, true);
+			glEnable(GL_CULL_FACE);
 		}
-
-		if (clear_zbuf)
-			glClear(GL_DEPTH_BUFFER_BIT);  
 
 		if (!nmlnml) g_client->mRenderContext.normalizeNormals = false;
 	}

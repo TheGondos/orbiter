@@ -1,5 +1,6 @@
-#add_subdirectory(XRVessels)
+add_subdirectory(XRVessels)
 add_subdirectory(AeroBrakeMFD)
 add_subdirectory(NASSP)
 add_subdirectory(UCSO)
 add_subdirectory(G42-200)
+add_subdirectory(Deepstar)

@@ -38,7 +38,7 @@ public:
 	inline double InnerRad() const { return irad; }
 	inline double OuterRad() const { return orad; }
 
-	bool Render (OGLCamera *c, glm::mat4 &mWorld);
+	bool Render (OGLCamera *c, glm::mat4 &mWorld, bool zenable);
 
 protected:
 	OGLMesh *CreateRing (double irad, double orad, int nsect);

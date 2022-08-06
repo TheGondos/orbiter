@@ -76,22 +76,45 @@ unsigned int RingManager::LoadTextures ()
 	return g_client->GetTexMgr()->LoadTextures (fname, tex, 0, MAXRINGRES);
 }
 
-bool RingManager::Render (OGLCamera *c, glm::mat4 &mWorld)
+bool RingManager::Render (OGLCamera *c, glm::mat4 &mWorld, bool front)
 {
 	MATRIX3 grot;
-	static glm::mat4 imat, *ringmat;
-	oapiGetRotationMatrix (vp->Object(), &grot);
-	VECTOR3 ppos = tmul(grot, -vp->cpos);
-	if (ppos.y >= 0) { // camera above equator
-		ringmat = &mWorld;
-	} else {           // flip rings
-		int i;
-		for (i = 0; i < 4; i++) imat[0][i] =  mWorld[0][i];
-		for (i = 0; i < 4; i++) imat[1][i] = -mWorld[1][i];
-		for (i = 0; i < 4; i++) imat[2][i] = -mWorld[2][i];
-		for (i = 0; i < 4; i++) imat[3][i] =  mWorld[3][i];
-		ringmat = &imat;
+	glm::vec3 q(mWorld[0][0], mWorld[1][0], mWorld[2][0]);
+	float scale = glm::length(q);
+	
+	oapiGetRotationMatrix(vp->Object(), &grot);
+	
+	VECTOR3 gdir; oapiCameraGlobalDir(&gdir);
+
+	VECTOR3 yaxis =  mul(grot, _V(0,1,0));
+	VECTOR3 xaxis = unit(crossp(gdir, yaxis));
+	VECTOR3 zaxis = unit(crossp(xaxis, yaxis));
+
+	if (!front) {
+		xaxis = -xaxis;
+		zaxis = -zaxis;
 	}
+
+	glm::vec3 x(float(xaxis.x), float(xaxis.y), float(xaxis.z));
+	glm::vec3 y(float(yaxis.x), float(yaxis.y), float(yaxis.z));
+	glm::vec3 z(float(zaxis.x), float(zaxis.y), float(zaxis.z));
+
+	glm::mat4 World = mWorld;
+
+	x*=scale; y*=scale;	z*=scale;
+
+	World[0][0] = x.x;
+	World[0][1] = x.y;
+	World[0][2] = x.z;
+
+	World[1][0] = y.x;
+	World[1][1] = y.y;
+	World[1][2] = y.z;
+
+	World[2][0] = z.x;
+	World[2][1] = z.y;
+	World[2][2] = z.z;
+
 	static OGLMaterial defmat = {
 		{0,0,0,1},
 		{0,0,0,1},
@@ -110,7 +133,7 @@ bool RingManager::Render (OGLCamera *c, glm::mat4 &mWorld)
 
 	auto *vp = c->GetViewProjectionMatrix();
 	s.SetMat4("u_ViewProjection",*vp);
-	s.SetMat4("u_Model",*ringmat);
+	s.SetMat4("u_Model",World);
 	s.SetVec3("u_SunDir", sundir);
     s.SetFloat("u_Textured", 1.0);
     s.SetFloat("u_MatAlpha", 1.0);
@@ -134,6 +157,7 @@ bool RingManager::Render (OGLCamera *c, glm::mat4 &mWorld)
 	if (!ablend)
 		glDisable(GL_BLEND);
 
+	s.UnBind();
 	return true;
 }
 

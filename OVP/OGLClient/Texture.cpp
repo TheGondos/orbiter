@@ -306,7 +306,6 @@ bool TextureManager::LoadTexture (const char *fname, OGLTexture **ppdds, uint32_
 }
 
 // =======================================================================
-
 bool TextureManager::LoadTexture (const char *fname, long ofs, OGLTexture **ppdds, uint32_t flags)
 {
     unsigned int SOILFlags = SOIL_FLAG_MIPMAPS;// SOIL_FLAG_TEXTURE_REPEATS;
