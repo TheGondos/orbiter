@@ -104,6 +104,20 @@ Pane::~Pane ()
 	if (mfdTex_blank) gc->clbkReleaseSurface (mfdTex_blank);
 }
 
+void Pane::Resize(int width, int height)
+{
+	W = width;
+	H = height;
+	FreeResources();
+	InitResources();
+	if (mibar)    delete mibar;
+	if (gc) mibar = new MenuInfoBar (this);
+	SetPanelMode(panelmode, true);
+	int hm = GetHUDMode(nullptr);
+	SetHUDMode(HUD_NONE);
+	SetHUDMode(hm);
+}
+
 void Pane::FocusChanged (const Vessel *focus)
 {
 	// Turn off MFDs to avoid problems

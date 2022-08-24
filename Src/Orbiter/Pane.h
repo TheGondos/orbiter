@@ -259,6 +259,7 @@ public:
 
 	inline MenuInfoBar *MIBar() const { return mibar; }
 
+	void Resize(int width, int height);
 private:
 	void InitResources ();
 	// Generate GDI resources

@@ -350,7 +350,7 @@ void OGLClient::clbkRender2DPanel (SURFHANDLE *hSurf, MESHHANDLE hMesh, MATRIX3 
 	GLboolean oldBlend = glEnableEx(GL_BLEND);
 	GLboolean oldCull = glDisableEx(GL_CULL_FACE);
 
-	static glm::mat4 ortho_proj = glm::ortho(0.0f, (float)g_client->GetScene()->GetCamera()->GetWidth(), (float)g_client->GetScene()->GetCamera()->GetHeight(), 0.0f);
+	glm::mat4 ortho_proj = glm::ortho(0.0f, (float)g_client->GetScene()->GetCamera()->GetWidth(), (float)g_client->GetScene()->GetCamera()->GetHeight(), 0.0f);
 	static Shader s("Overlay.vs","Overlay.fs");
 //	static glm::vec3 vecTextColor = glm::vec3(1,1,1);
 
