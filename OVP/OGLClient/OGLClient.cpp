@@ -1548,18 +1548,26 @@ bool OGLClient::clbkFillSurface (SURFHANDLE surf, int tgtx, int tgty, int w, int
 bool OGLClient::clbkScaleBlt (SURFHANDLE tgt, int tgtx, int tgty, int tgtw, int tgth,
 		                       SURFHANDLE src, int srcx, int srcy, int srcw, int srch, int flag) const
 {
-    printf("OGLClient::clbkScaleBlt tgtx=%d tgty=%d tgtw=%d tgth=%d\n", tgtx,tgty,tgtw,tgth);
-    printf("OGLClient::clbkScaleBlt srcx=%d srcy=%d srcw=%d srch=%d\n", srcx,srcy,srcw,srch);
+    //printf("OGLClient::clbkScaleBlt tgtx=%d tgty=%d tgtw=%d tgth=%d\n", tgtx,tgty,tgtw,tgth);
+    //printf("OGLClient::clbkScaleBlt srcx=%d srcy=%d srcw=%d srch=%d\n", srcx,srcy,srcw,srch);
 	GLboolean oldBlend = glDisableEx(GL_BLEND);
+	GLboolean oldCull = glDisableEx(GL_CULL_FACE);
+	glm::mat4 ortho_proj;
 	GLint oldFB;
-	glGetIntegerv(GL_FRAMEBUFFER_BINDING, &oldFB);
 	GLint oldViewport[4];
-	glGetIntegerv(GL_VIEWPORT, oldViewport);
 
-	OGLTexture *m_tex = (OGLTexture *)tgt;
-	//ortho_proj = glm::ortho(0.0f, (float)m_tex->m_Width, (float)m_tex->m_Height, 0.0f); //y-flipped
-	glm::mat4 ortho_proj = glm::ortho(0.0f, (float)m_tex->m_Width, 0.0f, (float)m_tex->m_Height);
-	m_tex->SetAsTarget(false);
+	if(tgt) {
+		glGetIntegerv(GL_FRAMEBUFFER_BINDING, &oldFB);
+		glGetIntegerv(GL_VIEWPORT, oldViewport);
+
+		OGLTexture *m_tex = (OGLTexture *)tgt;
+		//ortho_proj = glm::ortho(0.0f, (float)m_tex->m_Width, (float)m_tex->m_Height, 0.0f); //y-flipped
+		ortho_proj = glm::ortho(0.0f, (float)m_tex->m_Width, 0.0f, (float)m_tex->m_Height);
+		m_tex->SetAsTarget(false);
+	} else {
+		ortho_proj = glm::ortho(0.0f, (float)g_client->GetScene()->GetCamera()->GetWidth(), (float)g_client->GetScene()->GetCamera()->GetHeight(), 0.0f);
+	}
+
 	static Shader s("Overlay.vs","Overlay.fs");
 
 	static GLuint m_Buffer, m_VAO;
@@ -1605,7 +1613,6 @@ bool OGLClient::clbkScaleBlt (SURFHANDLE tgt, int tgtx, int tgty, int tgtw, int 
 		s0, t0, (float)tgtx, (float)tgty,
 		s1, t1, (float)tgtx+tgt_w, (float)tgty+tgt_h,
 	};
-	GLboolean oldCull = glDisableEx(GL_CULL_FACE);
 	glBindBuffer(GL_ARRAY_BUFFER, m_Buffer);
 	glBindVertexArray(m_VAO);
 	CheckError("OGLPad::Text glBindBuffer");
@@ -1663,41 +1670,12 @@ bool OGLClient::clbkScaleBlt (SURFHANDLE tgt, int tgtx, int tgty, int tgtw, int 
 	glBindTexture(GL_TEXTURE_2D, 0);
 	s.UnBind();
 
-	glBindFramebuffer(GL_FRAMEBUFFER, oldFB);
-	glViewport(oldViewport[0],oldViewport[1],oldViewport[2],oldViewport[3]);
-
-	/*
-	static int done = 0;
-	//static unsigned int VAO;
-	static GLuint fbo;
-	if(!done) {
-		done = 1;
-
-		glGenFramebuffers(1, &fbo);
+	if(tgt)
+    {
+		glBindFramebuffer(GL_FRAMEBUFFER, oldFB);
+		glViewport(oldViewport[0],oldViewport[1],oldViewport[2],oldViewport[3]);
 	}
-	GLint result;
-	glGetIntegerv(GL_FRAMEBUFFER_BINDING, &result);
-	assert(result == 0);
 
-	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-	glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, ((OGLTexture *)src)->m_TexId, 0);
-	glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, ((OGLTexture *)tgt)->m_TexId, 0);
-	glDrawBuffer(GL_COLOR_ATTACHMENT1);
-	glBlitFramebuffer(tgtx, tgty, tgtx + ((OGLTexture *)src)->m_Width, tgty + ((OGLTexture *)src)->m_Height, 0, 0, ((OGLTexture *)src)->m_Width, ((OGLTexture *)src)->m_Height, 
-					GL_COLOR_BUFFER_BIT, GL_NEAREST);
-
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-	glBindTexture(GL_TEXTURE_2D, ((OGLTexture *)tgt)->m_TexId);
-	CheckError("OGLClient::clbkBlt glBindTexture");
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	CheckError("OGLClient::clbkBlt glTexParameteri");
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	CheckError("OGLClient::clbkBlt glTexParameteri2");
-	glGenerateMipmap(GL_TEXTURE_2D);
-	CheckError("OGLClient::clbkBlt glGenerateMipmap");
-	glBindTexture(GL_TEXTURE_2D, 0);
-*/
 	glRestoreEx(GL_BLEND, oldBlend);
 	glRestoreEx(GL_CULL_FACE, oldCull);
 
@@ -1736,15 +1714,6 @@ bool OGLClient::clbkBlt (SURFHANDLE tgt, int tgtx, int tgty, SURFHANDLE src, int
 	//ortho_proj = glm::ortho(0.0f, (float)m_tex->m_Width, (float)m_tex->m_Height, 0.0f); //y-flipped
 	glm::mat4 ortho_proj = glm::ortho(0.0f, (float)m_tex->m_Width, 0.0f, (float)m_tex->m_Height);
 	m_tex->SetAsTarget();
-	/*
-	glBindTexture(GL_TEXTURE_2D, m_tex->m_TexId);
-	CheckError("OGLPad glBindTexture");
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	CheckError("OGLPad glTexParameteri");
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	CheckError("OGLPad glTexParameteri2");
-	glGenerateMipmap(GL_TEXTURE_2D);
-	CheckError("OGLPad glGenerateMipmap");*/
 	static Shader s("Overlay.vs","Overlay.fs");
 
 	static GLuint m_Buffer, m_VAO;
@@ -1850,39 +1819,6 @@ bool OGLClient::clbkBlt (SURFHANDLE tgt, int tgtx, int tgty, SURFHANDLE src, int
 	glBindFramebuffer(GL_FRAMEBUFFER, oldFB);
 	glViewport(oldViewport[0],oldViewport[1],oldViewport[2],oldViewport[3]);
 
-
-	/*
-	static int done = 0;
-	//static unsigned int VAO;
-	static GLuint fbo;
-	if(!done) {
-		done = 1;
-
-		glGenFramebuffers(1, &fbo);
-	}
-	GLint result;
-	glGetIntegerv(GL_FRAMEBUFFER_BINDING, &result);
-	assert(result == 0);
-
-	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-	glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, ((OGLTexture *)src)->m_TexId, 0);
-	glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, ((OGLTexture *)tgt)->m_TexId, 0);
-	glDrawBuffer(GL_COLOR_ATTACHMENT1);
-	glBlitFramebuffer(tgtx, tgty, tgtx + ((OGLTexture *)src)->m_Width, tgty + ((OGLTexture *)src)->m_Height, 0, 0, ((OGLTexture *)src)->m_Width, ((OGLTexture *)src)->m_Height, 
-					GL_COLOR_BUFFER_BIT, GL_NEAREST);
-
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-	glBindTexture(GL_TEXTURE_2D, ((OGLTexture *)tgt)->m_TexId);
-	CheckError("OGLClient::clbkBlt glBindTexture");
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	CheckError("OGLClient::clbkBlt glTexParameteri");
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	CheckError("OGLClient::clbkBlt glTexParameteri2");
-	glGenerateMipmap(GL_TEXTURE_2D);
-	CheckError("OGLClient::clbkBlt glGenerateMipmap");
-	glBindTexture(GL_TEXTURE_2D, 0);
-*/
 	glRestoreEx(GL_BLEND, oldBlend);
 	glRestoreEx(GL_CULL_FACE, oldCull);
 
@@ -2049,31 +1985,6 @@ key_tex = (OGLTexture *)src;
 
 		glBindFramebuffer(GL_FRAMEBUFFER, oldFB);
 		glViewport(oldViewport[0],oldViewport[1],oldViewport[2],oldViewport[3]);
-		/*
-		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-		CheckError("OGLClient::clbkBlt glBindFramebuffer(GL_FRAMEBUFFER, fbo)");
-		glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, ((OGLTexture *)src)->m_TexId, 0);
-		CheckError("OGLClient::clbkBlt glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0");
-		glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, ((OGLTexture *)tgt)->m_TexId, 0);
-		CheckError("OGLClient::clbkBlt glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT1");
-		glDrawBuffer(GL_COLOR_ATTACHMENT1);
-		CheckError("OGLClient::clbkBlt glDrawBuffer(GL_COLOR_ATTACHMENT1);");
-		glBlitFramebuffer(srcx, srcy, srcx + w, srcy + h, tgtx, tgty, tgtx + w, tgty + h, GL_COLOR_BUFFER_BIT, GL_NEAREST);
-		CheckError("OGLClient::clbkBlt glBlitFramebuffer(srcx, srcy, srcx + w, srcy + h, tgtx, tgty, tgtx + w, tgty + h, GL_COLOR_BUFFER_BIT, GL_NEAREST)");
-
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		CheckError("OGLClient::clbkBlt glBindFramebuffer(GL_FRAMEBUFFER, 0)");
-
-		glBindTexture(GL_TEXTURE_2D, ((OGLTexture *)tgt)->m_TexId);
-		CheckError("OGLClient::clbkBlt glBindTexture");
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		CheckError("OGLClient::clbkBlt glTexParameteri");
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-		CheckError("OGLClient::clbkBlt glTexParameteri2");
-		glGenerateMipmap(GL_TEXTURE_2D);
-		CheckError("OGLClient::clbkBlt glGenerateMipmap");
-		glBindTexture(GL_TEXTURE_2D, 0);
-		*/
 	} else {
 		glm::mat4 ortho_proj = glm::ortho(0.0f, (float)g_client->GetScene()->GetCamera()->GetWidth(), (float)g_client->GetScene()->GetCamera()->GetHeight(), 0.0f);
 		static Shader s("Overlay.vs","Overlay.fs");
