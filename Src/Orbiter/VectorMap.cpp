@@ -1474,7 +1474,7 @@ int PolyLineSet::Load (const char *path, int type_id)
 
 	ifstream ifs(path);
 	if (!ifs) {
-		printf("PolyLineSet::Load failed\n");
+		printf("PolyLineSet::Load failed %s\n", path);
 		return 0;
 	}
 
