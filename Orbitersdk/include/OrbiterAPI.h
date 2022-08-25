@@ -5178,7 +5178,8 @@ OAPIFUNC bool oapiUnregisterExternMFD (ExternMFD *emfd);
 	* \sa \ref panel_mouse "Mouse event identifiers", \ref panel_redraw "Panel redraw events",
 	*  oapiRegisterPanelBackground
 	*/
-OAPIFUNC void oapiRegisterPanelBackground (SURFHANDLE surf, int flag);
+OAPIFUNC void oapiRegisterPanelBackground (SURFHANDLE surf, int flag = PANEL_ATTACH_BOTTOM|PANEL_MOVEOUT_BOTTOM,
+				                           uint32_t ck = (uint32_t)-1);
 OAPIFUNC void oapiRegisterPanelArea (int id, const RECT &pos, int draw_event = PANEL_REDRAW_NEVER,
 					    int mouse_event = PANEL_MOUSE_IGNORE, int bkmode = PANEL_MAP_NONE);
 

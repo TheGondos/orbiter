@@ -50,7 +50,7 @@ public:
 	void Area2Screen (const RECT &srcR, RECT &tgtR) const;
 	// converts rectangle from unscaled panel space to viewport space
 
-	void DefineBackground (SURFHANDLE bgSurf, int flag);
+	void DefineBackground (SURFHANDLE bgSurf, int flag, uint32_t ck = (uint32_t)-1);
 
 	void DefineArea (int aid, const RECT &pos, int draw_mode, int mouse_mode, int bkmode);
 	void ReleaseAreas ();

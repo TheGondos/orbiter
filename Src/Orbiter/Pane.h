@@ -217,7 +217,7 @@ public:
 
 	Panel2D *GetPanel2D() { return panel2d; }
 
-	void RegisterPanelBackground (SURFHANDLE hSurf, int flag);
+	void RegisterPanelBackground (SURFHANDLE hSurf, int flag, uint32_t ck);
 	void RegisterPanelArea (int id, const RECT &pos, int draw_mode, int mouse_mode, int bkmode);
 	void SetPanelNeighbours (int left, int right, int top, int bottom);
 	void SetVCNeighbours (int left, int right, int top, int bottom);

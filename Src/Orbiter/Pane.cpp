@@ -1136,9 +1136,9 @@ void Pane::RepaintMFDButtons (MfdId mfdid, Instrument *instr)
 	}
 }
 
-void Pane::RegisterPanelBackground (SURFHANDLE hSurf, int flag)
+void Pane::RegisterPanelBackground (SURFHANDLE hSurf, int flag, uint32_t ck)
 {
-	if (panel) panel->DefineBackground (hSurf, flag);
+	if (panel) panel->DefineBackground (hSurf, flag, ck);
 }
 
 void Pane::RegisterPanelArea (int aid, const RECT &pos, int draw_mode, int mouse_mode, int bkmode)

@@ -138,7 +138,7 @@ void Panel::MFDMoved ()
 	}
 }
 
-void Panel::DefineBackground (SURFHANDLE bgSurf, int flag)
+void Panel::DefineBackground (SURFHANDLE bgSurf, int flag, uint32_t _ck)
 {
 	if (!gc) return;
 
@@ -209,6 +209,11 @@ void Panel::DefineBackground (SURFHANDLE bgSurf, int flag)
 	}
 
 	bltflag = 0;
+	if (has_ck = (_ck != (uint32_t)-1)) {
+		ck = _ck;
+		//ck.dwColorSpaceLowValue = ck.dwColorSpaceHighValue = _ck;
+		bltflag |= BLT_SRCCOLORKEY;
+	}
 
 	visible = true;
 }

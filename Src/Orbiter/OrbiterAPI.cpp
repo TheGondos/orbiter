@@ -1681,9 +1681,9 @@ DLLEXPORT void oapiVCRegisterHUD (const VCHUDSPEC *spec)
 		g_pane->RegisterVCHUD (spec);
 }
 
-DLLEXPORT void oapiRegisterPanelBackground (SURFHANDLE surf, int flag)
+DLLEXPORT void oapiRegisterPanelBackground (SURFHANDLE surf, int flag, uint32_t ck)
 {
-	g_pane->RegisterPanelBackground (surf, flag);
+	g_pane->RegisterPanelBackground (surf, flag, ck);
 }
 
 DLLEXPORT void oapiRegisterPanelArea (int id, const RECT &pos, int draw_event, int mouse_event, int bkmode)
