@@ -1064,6 +1064,7 @@ static void framebuffer_size_callback(GLFWwindow *window, int width, int height)
 {
 	if(g_camera) g_camera->ResizeViewport(width, height);
 	g_pOrbiter->GetGraphicsClient()->clbkSetViewportSize(width, height);
+	g_pOrbiter->GetRenderParameters();
 	g_pane->Resize(width, height);
 }
 
