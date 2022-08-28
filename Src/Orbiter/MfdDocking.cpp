@@ -419,7 +419,7 @@ void Instrument_Docking::UpdateDraw (oapi::Sketchpad *skp)
 		}
 
 		// Angular displacement
-		double alpha = acos (addir.z);
+		double alpha = acos (std::clamp(addir.z, -1.0, 1.0));
 		const double amax = RAD*(scale ? 4.0 : 20.0); // displacement at outer instrument radius
 		if (fabs(pitch) <= amax && fabs(yaw) <= amax) {
 			x = (int)(-yaw/amax*circr);
