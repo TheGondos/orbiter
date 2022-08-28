@@ -2,13 +2,14 @@
 # Licensed under the MIT License
 find_package(OpenGL REQUIRED)
 find_package(Fontconfig)
+find_package(Freetype REQUIRED)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${ORBITER_BINARY_PLUGIN_DIR})
 file(GLOB OGL_SHADERS ${CMAKE_CURRENT_SOURCE_DIR}/*.vs ${CMAKE_CURRENT_SOURCE_DIR}/*.fs)
 
 install(FILES ${OGL_SHADERS}
     DESTINATION ${ORBITER_INSTALL_ROOT_DIR}/Modules/OGLClient
 )
-# 
+#
 add_library(OGLClient SHARED
 Shader.cpp CelSphere.cpp Renderer.cpp VertexBuffer.cpp Scene.cpp imgui_impl_opengl3.cpp imgui_impl_glfw.cpp
 OGLCamera.cpp OGLMesh.cpp MeshManager.cpp VObject.cpp VVessel.cpp Texture.cpp VPlanet.cpp VStar.cpp
@@ -20,7 +21,7 @@ glad.c  ${EXTERN_DIR}/libnsbmp/src/libnsbmp.c
 
 target_compile_definitions(OGLClient
     PRIVATE
-		NVG_NO_STB=1
+		NVG_NO_STB=1 FONS_USE_FREETYPE=1
 )
 
 #OGL_OBJS=$(foreach src, $(OGL_SRC), OVP/OGLClient/$(src:.cpp=.o)) OVP/OGLClient/glad.o Extern/SOIL2/libSOIL2.a
@@ -28,6 +29,7 @@ target_include_directories(OGLClient
 	PUBLIC ${ORBITER_SOURCE_SDK_INCLUDE_DIR}
     PUBLIC SOIL2/incs
 	PUBLIC ${EXTERN_DIR}/libnsbmp/include
+	PUBLIC ${FREETYPE_INCLUDE_DIRS}
 )
 
 target_link_libraries(OGLClient
