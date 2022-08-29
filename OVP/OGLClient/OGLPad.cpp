@@ -72,10 +72,8 @@ NVGcontext *OGLPad::s_nvg_fb;
 NVGcontext *OGLPad::s_nvg_mfd;
 /////////////////// SKETCHPAD STUFF ////////////////////////////
 void OGLPad::GlobalInit() {
-    s_nvg_fb  = nvgCreateGL3(NVG_ANTIALIAS | NVG_STENCIL_STROKES);
-    s_nvg_mfd = nvgCreateGL3(NVG_ANTIALIAS | NVG_STENCIL_STROKES | NVG_YFLIP);
-//    s_nvg_fb  = nvgCreateGL3(NVG_STENCIL_STROKES);
-//    s_nvg_mfd = nvgCreateGL3(NVG_STENCIL_STROKES | NVG_YFLIP);
+    s_nvg_fb  = nvgCreateGL3(NVG_STENCIL_STROKES);
+    s_nvg_mfd = nvgCreateGL3(NVG_STENCIL_STROKES | NVG_YFLIP);
 }
 
 void OGLPad::GlobalExit() {

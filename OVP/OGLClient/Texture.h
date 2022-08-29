@@ -21,17 +21,18 @@
 
 struct OGLTexture
 {
-    GLuint m_TexId;
-    GLuint m_FBO;
-    unsigned int m_RefCnt;
-    bool m_InCache;
-    int m_Width;
-    int m_Height;
-    bool Release();
-    void AddRef() {m_RefCnt++;}
-    void SetAsTarget(bool checkFB = true);
-    void InitSize();
-    uint32_t m_colorkey;
+	OGLTexture();
+	GLuint m_TexId;
+	GLuint m_FBO;
+	unsigned int m_RefCnt;
+	bool m_InCache;
+	int m_Width;
+	int m_Height;
+	bool Release();
+	void AddRef() {m_RefCnt++;}
+	void SetAsTarget(bool checkFB = true);
+	void InitSize();
+	uint32_t m_colorkey;
 	std::string m_file;
 };
 

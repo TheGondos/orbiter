@@ -1630,26 +1630,19 @@ bool OGLClient::clbkScaleBlt (SURFHANDLE tgt, int tgtx, int tgty, int tgtw, int 
 	s.Bind();
 	s.SetMat4("projection", ortho_proj);
 
-	OGLTexture *key_tex = nullptr;
-	if(flag & BLT_SRCCOLORKEY) {
-		key_tex = (OGLTexture *)src;
-	} else if(flag & BLT_TGTCOLORKEY) {
-		key_tex = (OGLTexture *)tgt;
-	} else {
-		s.SetFloat("color_keyed", 0.0);
-	}
-	key_tex = (OGLTexture *)src;
-
-	if(key_tex) {
+	OGLTexture *key_tex = (OGLTexture *)src;
+	bool hasck = key_tex->m_colorkey != SURF_NO_CK && key_tex->m_colorkey != 0;
+	if(hasck) {
 		uint32_t ck = key_tex->m_colorkey;
 		glm::vec4 ckv;
 		ckv.r = ((ck>>16)&0xff)/255.0;
 		ckv.g = ((ck>>8)&0xff)/255.0;
 		ckv.b = ((ck>>0)&0xff)/255.0;
 		ckv.a = ((ck>>24)&0xff)/255.0;
-	//			printf("ck = %f %f %f %f %p\n", ckv.r, ckv.g, ckv.b, ckv.a, src);
 		s.SetVec4("color_key", ckv);
 		s.SetFloat("color_keyed", 1.0);
+	} else {
+		s.SetFloat("color_keyed", 0.0);
 	}
 
 	/*
@@ -1659,6 +1652,11 @@ bool OGLClient::clbkScaleBlt (SURFHANDLE tgt, int tgtx, int tgty, int tgtw, int 
 	*/
 	glBindTexture(GL_TEXTURE_2D, ((OGLTexture *)src)->m_TexId);
 	CheckError("glBindTexture");
+	if(hasck) {
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	} else {
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	}
 
 	glBindVertexArray(m_VAO);
 	CheckError("glBindVertexArray");
@@ -1776,26 +1774,19 @@ bool OGLClient::clbkBlt (SURFHANDLE tgt, int tgtx, int tgty, SURFHANDLE src, int
 	s.Bind();
 	s.SetMat4("projection", ortho_proj);
 
-	OGLTexture *key_tex = nullptr;
-	if(flag & BLT_SRCCOLORKEY) {
-		key_tex = (OGLTexture *)src;
-	} else if(flag & BLT_TGTCOLORKEY) {
-		key_tex = (OGLTexture *)tgt;
-	} else {
-		s.SetFloat("color_keyed", 0.0);
-	}
-	key_tex = (OGLTexture *)src;
-
-	if(key_tex) {
+	OGLTexture *key_tex = (OGLTexture *)src;
+	bool hasck = key_tex->m_colorkey != SURF_NO_CK && key_tex->m_colorkey != 0;
+	if(hasck) {
 		uint32_t ck = key_tex->m_colorkey;
 		glm::vec4 ckv;
 		ckv.r = ((ck>>16)&0xff)/255.0;
 		ckv.g = ((ck>>8)&0xff)/255.0;
 		ckv.b = ((ck>>0)&0xff)/255.0;
 		ckv.a = ((ck>>24)&0xff)/255.0;
-	//			printf("ck = %f %f %f %f %p\n", ckv.r, ckv.g, ckv.b, ckv.a, src);
 		s.SetVec4("color_key", ckv);
 		s.SetFloat("color_keyed", 1.0);
+	} else {
+		s.SetFloat("color_keyed", 0.0);
 	}
 
 	/*
@@ -1805,6 +1796,11 @@ bool OGLClient::clbkBlt (SURFHANDLE tgt, int tgtx, int tgty, SURFHANDLE src, int
 	*/
 	glBindTexture(GL_TEXTURE_2D, ((OGLTexture *)src)->m_TexId);
 	CheckError("glBindTexture");
+	if(hasck) {
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	} else {
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	}
 
 	glBindVertexArray(m_VAO);
 	CheckError("glBindVertexArray");
@@ -1943,26 +1939,19 @@ bool OGLClient::clbkBlt (SURFHANDLE tgt, int tgtx, int tgty, SURFHANDLE src, int
 		s.Bind();
 		s.SetMat4("projection", ortho_proj);
 
-		OGLTexture *key_tex = nullptr;
-		if(flag & BLT_SRCCOLORKEY) {
-			key_tex = (OGLTexture *)src;
-		} else if(flag & BLT_TGTCOLORKEY) {
-			key_tex = (OGLTexture *)tgt;
-		} else {
-			s.SetFloat("color_keyed", 0.0);
-		}
-key_tex = (OGLTexture *)src;
-
-		if(key_tex) {
+		OGLTexture *key_tex = (OGLTexture *)src;
+		bool hasck = key_tex->m_colorkey != SURF_NO_CK && key_tex->m_colorkey != 0;
+		if(hasck) {
 			uint32_t ck = key_tex->m_colorkey;
 			glm::vec4 ckv;
 			ckv.r = ((ck>>16)&0xff)/255.0;
 			ckv.g = ((ck>>8)&0xff)/255.0;
 			ckv.b = ((ck>>0)&0xff)/255.0;
 			ckv.a = ((ck>>24)&0xff)/255.0;
-//			printf("ck = %f %f %f %f %p\n", ckv.r, ckv.g, ckv.b, ckv.a, src);
 			s.SetVec4("color_key", ckv);
 			s.SetFloat("color_keyed", 1.0);
+		} else {
+			s.SetFloat("color_keyed", 0.0);
 		}
 
 /*
@@ -1972,7 +1961,11 @@ key_tex = (OGLTexture *)src;
 */
 		glBindTexture(GL_TEXTURE_2D, ((OGLTexture *)src)->m_TexId);
 		CheckError("glBindTexture");
-
+		if(hasck) {
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		} else {
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		}
 		glBindVertexArray(m_VAO);
 		CheckError("glBindVertexArray");
 
@@ -2049,28 +2042,20 @@ key_tex = (OGLTexture *)src;
 		s.Bind();
 		s.SetMat4("projection", ortho_proj);
 
-		OGLTexture *key_tex = nullptr;
-		if(flag & BLT_SRCCOLORKEY) {
-			key_tex = (OGLTexture *)src;
-		} else if(flag & BLT_TGTCOLORKEY) {
-			key_tex = (OGLTexture *)tgt;
-		} else {
-			s.SetFloat("color_keyed", 0.0);
-		}
-		key_tex = (OGLTexture *)src;
-
-		if(key_tex) {
+		OGLTexture *key_tex = (OGLTexture *)src;
+		bool hasck = key_tex->m_colorkey != SURF_NO_CK && key_tex->m_colorkey != 0;
+		if(hasck) {
 			uint32_t ck = key_tex->m_colorkey;
 			glm::vec4 ckv;
 			ckv.r = ((ck>>16)&0xff)/255.0;
 			ckv.g = ((ck>>8)&0xff)/255.0;
 			ckv.b = ((ck>>0)&0xff)/255.0;
 			ckv.a = ((ck>>24)&0xff)/255.0;
-//			printf("ck = %f %f %f %f %p\n", ckv.r, ckv.g, ckv.b, ckv.a, src);
 			s.SetVec4("color_key", ckv);
 			s.SetFloat("color_keyed", 1.0);
+		} else {
+			s.SetFloat("color_keyed", 0.0);
 		}
-
 
 		GLint whichID;
 		glGetIntegerv(GL_TEXTURE_BINDING_2D, &whichID);
@@ -2078,6 +2063,12 @@ key_tex = (OGLTexture *)src;
 
 		glBindTexture(GL_TEXTURE_2D, ((OGLTexture *)src)->m_TexId);
 		CheckError("glBindTexture");
+
+		if(hasck) {
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		} else {
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		}
 
 		glBindVertexArray(m_VAO);
 		CheckError("glBindVertexArray");

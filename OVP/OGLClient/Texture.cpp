@@ -35,7 +35,6 @@ static void CheckError(const char *s) {
         exit(-1);
 	}
 }
-
 static unsigned char *load_file(const char *path, size_t *data_size)
 {
         FILE *fd;
@@ -244,7 +243,6 @@ bool TextureManager::ReadTextureFromMemory (const uint8_t *buf, uint32_t nbuf, O
     (*ppdds)->m_RefCnt = 1;
     (*ppdds)->m_InCache = false;
     (*ppdds)->m_FBO = 0;
-    (*ppdds)->m_colorkey = 0x00ffffff;
     (*ppdds)->InitSize();
 
     return (*ppdds)->m_TexId != 0;
@@ -265,7 +263,6 @@ bool TextureManager::LoadTexture (const char *fname, OGLTexture **ppdds, uint32_
             (*ppdds)->m_InCache = false;
             (*ppdds)->m_FBO = 0;
             (*ppdds)->InitSize();
-            (*ppdds)->m_colorkey = 0x00ffffff;
             return true;
         }
     }
@@ -299,7 +296,6 @@ bool TextureManager::LoadTexture (const char *fname, OGLTexture **ppdds, uint32_
         (*ppdds)->m_InCache = false;
         (*ppdds)->m_FBO = 0;
         (*ppdds)->InitSize();
-        (*ppdds)->m_colorkey = 0x00ffffff;
         return true;
     }
     return false;
@@ -336,7 +332,6 @@ bool TextureManager::LoadTexture (const char *fname, long ofs, OGLTexture **ppdd
         (*ppdds)->m_InCache = false;
         (*ppdds)->m_FBO = 0;
         (*ppdds)->InitSize();
-        (*ppdds)->m_colorkey = 0x00ffffff;
         return true;
     }
     return false;
@@ -386,7 +381,6 @@ int TextureManager::LoadTextures (const char *fname, OGLTexture **ppdds, uint32_
         ppdds[i]->m_RefCnt = 0;
         ppdds[i]->m_TexId = tmp[i];
         ppdds[i]->m_FBO = 0;
-        ppdds[i]->m_colorkey = 0x00ffffff;
         ppdds[i]->InitSize();
     }
 
@@ -722,7 +716,6 @@ bool TextureManager::ReadDDSSurfaceFromMemory (const uint8_t *buf, uint32_t nbuf
 		(*ppddsDXT)->m_RefCnt = 1;
 		(*ppddsDXT)->m_InCache = false;
 		(*ppddsDXT)->m_FBO = 0;
-		(*ppddsDXT)->m_colorkey = 0x00ffffff;
 		(*ppddsDXT)->InitSize();
 		
 		return true;
@@ -795,7 +788,6 @@ bool TextureManager::ReadDDSSurfaceFromMemory (const uint8_t *buf, uint32_t nbuf
 		(*ppddsDXT)->m_InCache = false;
 		(*ppddsDXT)->m_Width = width;
 		(*ppddsDXT)->m_Height = height;
-		(*ppddsDXT)->m_colorkey = 0x00ffffff;
 		(*ppddsDXT)->m_FBO = 0;
 
         // prepare new incomplete texture
@@ -851,7 +843,6 @@ bool TextureManager::ReadDDSSurfaceFromMemory (const uint8_t *buf, uint32_t nbuf
 		(*ppddsDXT)->m_InCache = false;
 		(*ppddsDXT)->m_Width = width;
 		(*ppddsDXT)->m_Height = height;
-		(*ppddsDXT)->m_colorkey = 0x00ffffff;
 		(*ppddsDXT)->m_FBO = 0;
 
         // prepare new incomplete texture
@@ -929,7 +920,6 @@ OGLTexture *TextureManager::CreateTextureFromTexId(GLuint texId, int width, int 
     tex->m_Width = width;
     tex->m_Height = height;
     tex->m_TexId = texId;
-    tex->m_colorkey = 0x00ffffff;
 	tex->m_FBO = 0;
     return tex;
 }
@@ -942,7 +932,6 @@ OGLTexture *TextureManager::GetTextureForRendering(int w, int h, int attrib)
     tex->m_InCache = true;
     tex->m_Width = w;
     tex->m_Height = h;
-    tex->m_colorkey = 0x00ffffff;
     GLint oldFB;
 
     GLenum format = GL_RGBA;
@@ -1061,6 +1050,10 @@ uint16_t GetNumberOfBits (uint32_t dwMask)
         wBits++;
     }
     return wBits;
+}
+
+OGLTexture::OGLTexture() {
+    m_colorkey = SURF_NO_CK;
 }
 
 bool OGLTexture::Release()
