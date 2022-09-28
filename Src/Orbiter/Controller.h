@@ -53,6 +53,7 @@ public:
     Pin::kind kind;
     float fVal;
     bool bVal;
+    bool bOldValue;
     int hVal;
     Node *node;
 

@@ -25,6 +25,7 @@ Pin::Pin(Pin &&from) {
     bVal = from.bVal;
     hVal = from.hVal;
     node = from.node;
+    bOldValue = from.bOldValue;
     inputs = std::move(from.inputs);
     cbContextMenu = from.cbContextMenu;
     node->graph->pins[id.AsPointer()] = this;
@@ -41,6 +42,7 @@ Pin& Pin::operator=(Pin&&from) {
     bVal = from.bVal;
     hVal = from.hVal;
     node = from.node;
+    bOldValue = from.bOldValue;
     inputs = std::move(from.inputs);
     cbContextMenu = from.cbContextMenu;
     node->graph->pins[id.AsPointer()] = this;
@@ -60,6 +62,7 @@ Pin::Pin(std::string n, enum Pin::type t, enum Pin::kind k, Node *nd, ed::PinId 
     fVal = 0.0;
     bVal = false;
     hVal = 0;
+    bOldValue = false;
     node->graph->pins[id.AsPointer()] = this;
     cbContextMenu = nullptr;
 }
@@ -81,13 +84,26 @@ Pin::~Pin() {
 
 void Pin::UpdateInput() {
     switch(type) {
-        case Button: // fallthrough
-        case Trigger:
+        case Button:
             bVal = false;
             for(auto &p: inputs) {
                 bVal|=p->bVal;
             }
             break;
+        case Trigger:
+        {
+            bool bIn = false;
+            for(auto &p: inputs) {
+                bIn|=p->bVal;
+            }
+            if(!bOldValue && bIn) {
+                bVal = true;
+            } else {
+                bVal = false;
+            }
+            bOldValue = bIn;
+            break;
+        }
         case HalfAxis:
             fVal = 0.0f;
             for(auto &p: inputs) {
@@ -177,7 +193,7 @@ void DrawInput(const Pin &pin, bool minimized) {
     builder.Input(pin.id);
     auto alpha = ImGui::GetStyle().Alpha;
 
-    if(pin.node->graph->draggedPin && (!(pin.type == pin.node->graph->draggedPin->type || (pin.node->graph->draggedPin->type == Pin::Trigger && pin.type == Pin::Button)) || pin.node->graph->draggedPin->kind == pin.kind)) {
+    if(pin.node->graph->draggedPin && (!(pin.type == pin.node->graph->draggedPin->type || (pin.node->graph->draggedPin->type == Pin::Button && pin.type == Pin::Trigger)) || pin.node->graph->draggedPin->kind == pin.kind)) {
         alpha = alpha * (48.0f / 255.0f);
     }
     ImGui::PushStyleVar(ImGuiStyleVar_Alpha, alpha);
@@ -697,7 +713,8 @@ void ControllerGraph::Editor() {
                     std::swap(inputPinId, outputPinId);
                 }
                 if (ip == op || ip->kind == op->kind
-                || !(ip->type == op->type || (op->type == Pin::Button && ip->type == Pin::Trigger))) {
+//                || !(ip->type == op->type || (op->type == Pin::Button && ip->type == Pin::Trigger))) {
+                || !(ip->type == op->type || (op->type == Pin::Trigger && ip->type == Pin::Button))) {
                     ed::RejectNewItem(ImColor(255, 0, 0), 2.0f);
                 } else if(ed::AcceptNewItem(ImColor(128, 255, 128), 2.0f)) {
                     _lastaddedlink = _lastid;
@@ -870,8 +887,6 @@ void ControllerGraph::Editor() {
                 node = new Btn2Axis(this);
             if (ImGui::MenuItem("Btn2HalfAxis"))
                 node = new Btn2HalfAxis(this);
-            if (ImGui::MenuItem("Trigger"))
-                node = new Trigger(this);
                
             ImGui::EndMenu();
         }
@@ -934,7 +949,6 @@ void InputController::GlobalInit() {
     ControllerGraph::Register<Toggle, false>("Toggle");
     ControllerGraph::Register<Filter, false>("Filter");
     ControllerGraph::Register<Decoder, false>("Decoder");
-    ControllerGraph::Register<Trigger, false>("Trigger");
     ControllerGraph::Register<Selector, false>("Selector");
     ControllerGraph::Register<NavMode, true>("NavMode");
     ControllerGraph::Register<PanelCtl, true>("PanelCtl");

@@ -413,33 +413,6 @@ void Toggle::UpdateOutputs() {
     }
 }
 
-Trigger::Trigger(ControllerGraph *cg):Node(cg, "Trigger") {
-    AddInput("in", Pin::Button);
-    AddOutput("out", Pin::Trigger);
-    oldValue = false;
-    minimized = true;
-    outputs[Out].bVal = false;
-}
-Trigger::Trigger(ControllerGraph *cg, const crude_json::value &json):Node(cg, json) {
-    oldValue = false;
-    outputs[Out].bVal = false;
-}
-
-crude_json::value Trigger::ToJSON() {
-    crude_json::value ret = Node::ToJSON();
-    ret["class"] = "Trigger";
-    return ret;
-}
-
-void Trigger::UpdateOutputs() {
-    if(!oldValue && inputs[In].bVal) {
-        outputs[Out].bVal = true;
-    } else {
-        outputs[Out].bVal = false;
-    }
-    oldValue = inputs[In].bVal;
-}
-
 Deadzone::Deadzone(ControllerGraph *cg):Node(cg, "Deadzone") {
     AddInput("in", Pin::Axis);
     AddOutput("out", Pin::Axis);

@@ -151,21 +151,6 @@ class Toggle : public Node {
     bool oldValue;
 };
 
-class Trigger : public Node {
-    public:
-    enum {
-        In  = 0,
-        Out = 0,
-    };
-
-    Trigger(ControllerGraph *cg);
-    Trigger(ControllerGraph *cg, const crude_json::value &json);
-    virtual void UpdateOutputs() override;
-    virtual crude_json::value ToJSON() override;
-
-    bool oldValue;
-};
-
 class Deadzone : public Node {
     public:
     enum {
