@@ -1933,38 +1933,46 @@ void Vessel::ClearVariableDragElements ()
 
 // ==============================================================
 
-void Vessel::ApplyUserAttitudeControls (int *ctrl)
+void Vessel::ApplyUserAttitudeControls (int *ctrlKeyboard, int *ctrlJoystick, int airfoils[6])
 {
 	if (bFRplayback) return;
 	// ignore user controls during playback 
 
 	if (attmode) { // RCS thrusters
 		if (attmode == 1) { // rotational mode
-			IncThrusterGroupOverride (THGROUP_ATT_PITCHUP,   0.001*ctrl[THGROUP_ATT_PITCHUP]);
-			IncThrusterGroupOverride (THGROUP_ATT_PITCHDOWN, 0.001*ctrl[THGROUP_ATT_PITCHDOWN]);
-			IncThrusterGroupOverride (THGROUP_ATT_YAWLEFT,   0.001*ctrl[THGROUP_ATT_YAWLEFT]);
-			IncThrusterGroupOverride (THGROUP_ATT_YAWRIGHT,  0.001*ctrl[THGROUP_ATT_YAWRIGHT]);
-			IncThrusterGroupOverride (THGROUP_ATT_BANKLEFT,  0.001*ctrl[THGROUP_ATT_BANKLEFT]);
-			IncThrusterGroupOverride (THGROUP_ATT_BANKRIGHT, 0.001*ctrl[THGROUP_ATT_BANKRIGHT]);
+			IncThrusterGroupOverride (THGROUP_ATT_PITCHUP,   0.001*ctrlKeyboard[THGROUP_ATT_PITCHUP]);
+			IncThrusterGroupOverride (THGROUP_ATT_PITCHDOWN, 0.001*ctrlKeyboard[THGROUP_ATT_PITCHDOWN]);
+			IncThrusterGroupOverride (THGROUP_ATT_YAWLEFT,   0.001*ctrlKeyboard[THGROUP_ATT_YAWLEFT]);
+			IncThrusterGroupOverride (THGROUP_ATT_YAWRIGHT,  0.001*ctrlKeyboard[THGROUP_ATT_YAWRIGHT]);
+			IncThrusterGroupOverride (THGROUP_ATT_BANKLEFT,  0.001*ctrlKeyboard[THGROUP_ATT_BANKLEFT]);
+			IncThrusterGroupOverride (THGROUP_ATT_BANKRIGHT, 0.001*ctrlKeyboard[THGROUP_ATT_BANKRIGHT]);
 		} else {            // translational mode
-			IncThrusterGroupOverride (THGROUP_ATT_RIGHT,     0.001*ctrl[THGROUP_ATT_RIGHT]);
-			IncThrusterGroupOverride (THGROUP_ATT_LEFT,      0.001*ctrl[THGROUP_ATT_LEFT]);
-			IncThrusterGroupOverride (THGROUP_ATT_UP,        0.001*ctrl[THGROUP_ATT_UP]);
-			IncThrusterGroupOverride (THGROUP_ATT_DOWN,      0.001*ctrl[THGROUP_ATT_DOWN]);
-			IncThrusterGroupOverride (THGROUP_ATT_FORWARD,   0.001*ctrl[THGROUP_ATT_FORWARD]);
-			IncThrusterGroupOverride (THGROUP_ATT_BACK,      0.001*ctrl[THGROUP_ATT_BACK]);
+			IncThrusterGroupOverride (THGROUP_ATT_RIGHT,     0.001*ctrlKeyboard[THGROUP_ATT_RIGHT]);
+			IncThrusterGroupOverride (THGROUP_ATT_LEFT,      0.001*ctrlKeyboard[THGROUP_ATT_LEFT]);
+			IncThrusterGroupOverride (THGROUP_ATT_UP,        0.001*ctrlKeyboard[THGROUP_ATT_UP]);
+			IncThrusterGroupOverride (THGROUP_ATT_DOWN,      0.001*ctrlKeyboard[THGROUP_ATT_DOWN]);
+			IncThrusterGroupOverride (THGROUP_ATT_FORWARD,   0.001*ctrlKeyboard[THGROUP_ATT_FORWARD]);
+			IncThrusterGroupOverride (THGROUP_ATT_BACK,      0.001*ctrlKeyboard[THGROUP_ATT_BACK]);
 		}
 	}
 
 	if (ctrlsurfmode) { // airfoil control surfaces
-		if (ctrlsurfmode & 1) SetControlSurfaceLevel (AIRCTRL_ELEVATOR, 0.001*ctrl[THGROUP_ATT_PITCHUP]-0.001*ctrl[THGROUP_ATT_PITCHDOWN],true);
-		if (ctrlsurfmode & 2) SetControlSurfaceLevel (AIRCTRL_RUDDER,   0.001*ctrl[THGROUP_ATT_YAWRIGHT]-0.001*ctrl[THGROUP_ATT_YAWLEFT],true);
-		if (ctrlsurfmode & 4) SetControlSurfaceLevel (AIRCTRL_AILERON,  0.001*ctrl[THGROUP_ATT_BANKRIGHT]-0.001*ctrl[THGROUP_ATT_BANKLEFT],true);
+		if (ctrlsurfmode & 1) SetControlSurfaceLevel (AIRCTRL_ELEVATOR, 0.001*ctrlKeyboard[THGROUP_ATT_PITCHUP]-0.001*ctrlKeyboard[THGROUP_ATT_PITCHDOWN],true);
+		if (ctrlsurfmode & 2) SetControlSurfaceLevel (AIRCTRL_RUDDER,   0.001*ctrlKeyboard[THGROUP_ATT_YAWRIGHT]-0.001*ctrlKeyboard[THGROUP_ATT_YAWLEFT],true);
+		if (ctrlsurfmode & 4) SetControlSurfaceLevel (AIRCTRL_AILERON,  0.001*ctrlKeyboard[THGROUP_ATT_BANKRIGHT]-0.001*ctrlKeyboard[THGROUP_ATT_BANKLEFT],true);
 	}
 
-	OverrideMainLevel (0.001*ctrl[THGROUP_MAIN]);
-	SetThrusterGroupLevel (THGROUP_HOVER, 0.001*ctrl[THGROUP_HOVER]);
-	SetThrusterGroupLevel (THGROUP_RETRO, 0.001*ctrl[THGROUP_RETRO]);
+	IncThrusterGroupOverride (THGROUP_MAIN,  0.001*ctrlKeyboard[THGROUP_MAIN]);
+	IncThrusterGroupOverride (THGROUP_HOVER, 0.001*ctrlKeyboard[THGROUP_HOVER]);
+	IncThrusterGroupOverride (THGROUP_RETRO, 0.001*ctrlKeyboard[THGROUP_RETRO]);
+
+	for(int i = 0; i < 15; i++) {
+		IncThrusterGroupOverride((THGROUP_TYPE)i, 0.001 * ctrlJoystick[i]);
+	}
+
+	for(int i = 0; i < 6; i++) {
+		SetControlSurfaceLevel((AIRCTRL_TYPE)i, 0.001 * airfoils[i], true);
+	}
 }
 
 // ==============================================================

@@ -26,3 +26,6 @@
 	path = OVP/OGLClient/nanovg
 	url = https://github.com/TheGondos/nanovg.git
 
+[submodule "Extern/imgui-node-editor"]
+	path = Extern/imgui-node-editor
+	url = https://github.com/TheGondos/imgui-node-editor.git

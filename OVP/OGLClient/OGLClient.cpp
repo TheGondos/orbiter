@@ -628,6 +628,7 @@ GLFWwindow *OGLClient::clbkCreateRenderWindow ()
 
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
+//	ImNodes::CreateContext();
 
 	ImGuiIO& io = ImGui::GetIO();
 	io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;

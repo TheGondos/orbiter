@@ -1,11 +1,10 @@
 #include "DlgLaunchpad.h"
 #include "Orbiter.h"
+#include "Controller.h"
 
 #include <dirent.h>
-#include <unistd.h>
-#include <imgui/imgui.h>
 #include <filesystem>
-#include <vector>
+
 namespace fs = std::filesystem;
 
 extern Orbiter *g_pOrbiter;
@@ -14,6 +13,16 @@ const std::string DlgLaunchpad::etype = "DlgLaunchpad";
 DlgLaunchpad::DlgLaunchpad(const std::string &name) : GUIElement(name, "DlgLaunchpad") {
     show = true;
     m_SelectedScenario = "./Scenarios//Demo/DG ISS Approach.scn";
+}
+
+void DlgLaunchpad::DrawVideo() {
+    ImGui::Text("DrawVideo");
+}
+void DlgLaunchpad::DrawExtra() {
+    ImGui::Text("DrawExtra");
+}
+void DlgLaunchpad::DrawAbout() {
+    ImGui::Text("DrawAbout");
 }
 
 void DlgLaunchpad::Show() {
@@ -154,15 +163,12 @@ void DlgLaunchpad::DrawModules() {
     }
 }
 
-void DlgLaunchpad::DrawVideo() {
-    ImGui::Text("DrawVideo");
-}
 void DlgLaunchpad::DrawJoystick() {
-    ImGui::Text("DrawJoystick");
-}
-void DlgLaunchpad::DrawExtra() {
-    ImGui::Text("DrawExtra");
-}
-void DlgLaunchpad::DrawAbout() {
-    ImGui::Text("DrawAbout");
+    InputController::DrawEditor();
+    /*
+    static ControllerGraph cg;
+    cg.Editor();
+    cg.Refresh();
+//    cg.Execute();
+    cg.Simulate();*/
 }

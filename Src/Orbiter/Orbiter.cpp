@@ -31,6 +31,7 @@
 #include "MenuInfoBar.h"
 #include "Script.h"
 #include "GraphicsAPI.h"
+#include "Controller.h"
 
 #include "DlgCamera.h"
 #include "DlgInfo.h"
@@ -43,7 +44,6 @@
 #include "DlgRecorder.h"
 #include "Select.h"
 #include "PlaybackEd.h"
-#include "Gamepad.h"
 
 #include <fenv.h>
 #include <unistd.h>
@@ -149,6 +149,8 @@ int _matherr(struct _exception *except )
 int main(int argc, const char *argv[])
 {
 	feenableexcept (FE_INVALID|FE_DIVBYZERO|FE_OVERFLOW);
+
+	glfwInitHint(GLFW_JOYSTICK_HAT_BUTTONS, GLFW_FALSE);
 
 	if (!glfwInit()) {
 		printf("glfwInit failed\n");
@@ -324,6 +326,8 @@ void Orbiter::Create ()
 			CreateRenderWindow();
 		}
 	}
+	
+	InputController::GlobalInit();
 
 	//CreateRenderWindow();
 }
@@ -690,6 +694,7 @@ GLFWwindow *Orbiter::CreateRenderWindow ()
 		m_pGUIManager->RegisterCtrl(m_DlgInputBox.get());
 		m_pGUIManager->RegisterCtrl(m_DlgPlaybackEditor.get());
 		m_pGUIManager->RegisterCtrl(m_DlgRecorder.get());
+		m_pGUIManager->RegisterCtrl(new DlgJoystick("DlgJoystick"));
 
 		// playback screen annotation manager
 		snote_playback = gclient->clbkCreateAnnotation ();
@@ -797,7 +802,6 @@ void Orbiter::GetRenderParameters ()
 void Orbiter::BroadcastGlobalInit ()
 {
 	Instrument::GlobalInit (gclient);
-	GamepadController::GlobalInit();
 //	DlgMap::GlobalInit();
 }
 
@@ -1065,7 +1069,7 @@ static void framebuffer_size_callback(GLFWwindow *window, int width, int height)
 	if(g_camera) g_camera->ResizeViewport(width, height);
 	g_pOrbiter->GetGraphicsClient()->clbkSetViewportSize(width, height);
 	g_pOrbiter->GetRenderParameters();
-	g_pane->Resize(width, height);
+	if(g_pane) g_pane->Resize(width, height);
 }
 
 //-----------------------------------------------------------------------------
@@ -1083,7 +1087,6 @@ int Orbiter::Run ()
 	prev_key_callback = glfwSetKeyCallback(hRenderWnd, key_callback);
 	prev_mouse_button_callback = glfwSetMouseButtonCallback(hRenderWnd, mouse_button_callback);
 	prev_scroll_callback = glfwSetScrollCallback(hRenderWnd, scroll_callback);
-	glfwSetJoystickCallback(GamepadController::JoystickCallback);
 	glfwSetFramebufferSizeCallback(hRenderWnd, framebuffer_size_callback);
 
 	while (!glfwWindowShouldClose(hRenderWnd)) {
@@ -1219,6 +1222,7 @@ Vessel *Orbiter::SetFocusObject (Vessel *vessel, bool setview)
 
 	// Inform pane about focus change
 	if (g_pane) g_pane->FocusChanged (g_focusobj);
+	InputController::SwitchProfile(g_focusobj->ClassName());
 
 	// switch camera
 	if (setview) SetView (g_focusobj, 2);
@@ -1957,66 +1961,16 @@ void Orbiter::UserInput ()
 
 	for (int i = 0; i < 15; i++) ctrlTotal[i] = ctrlKeyboard[i]; // update attitude requests
 
-
-	GamepadController::ProcessInput();
-	double camx, camy;
-	bool reset_camera = GamepadController::GetCameraRotation(&camx, &camy);
-/*
-        TOGGLE_PAUSE,
-        TOGGLE_LANDING_GEAR,
-        TOGGLE_PANEL_MODE,
-        RESET_CAMERA,
-*/
-	if(GamepadController::ActionRequired(GamepadController::TOGGLE_PAUSE))	TogglePause();
-	if(GamepadController::ActionRequired(GamepadController::TOGGLE_PANEL_MODE))		g_pane->TogglePanelMode();
-
-	if(g_focusobj) {
-		if(GamepadController::ActionRequired(GamepadController::TOGGLE_LANDING_GEAR)) g_focusobj->GetModuleInterface()->SendBufferedKey(OAPI_KEY_G);
-		if(GamepadController::ActionRequired(GamepadController::TOGGLE_CAMERA_INT_EXT)) SetView (g_focusobj, !g_camera->IsExternal());
-
-		if(GamepadController::ActionRequired(GamepadController::TRIM_UP)) g_focusobj->IncTrim (AIRCTRL_ELEVATORTRIM);
-		if(GamepadController::ActionRequired(GamepadController::TRIM_DOWN)) g_focusobj->DecTrim (AIRCTRL_ELEVATORTRIM);
-		if(GamepadController::GetNavMode())  g_focusobj->TglNavMode(GamepadController::GetNavMode());
-	}
-
-	if(g_pane) {
-		if(g_camera->IsInternal()) {
-			if(GamepadController::ActionRequired(GamepadController::PANEL_SWITCH_LEFT))  g_pane->SwitchPanel (0);
-			if(GamepadController::ActionRequired(GamepadController::PANEL_SWITCH_RIGHT)) g_pane->SwitchPanel (1);
-			if(GamepadController::ActionRequired(GamepadController::PANEL_SWITCH_UP))    g_pane->SwitchPanel (2);
-			if(GamepadController::ActionRequired(GamepadController::PANEL_SWITCH_DOWN))  g_pane->SwitchPanel (3);
-			if(GamepadController::ActionRequired(GamepadController::TOGGLE_HUD_COLOR))   g_pane->ToggleHUDColour();
-		}
-	}
-
-
-	if (g_camera->IsExternal()) {  // use the joystick's coolie hat to rotate external camera
-		g_camera->AddPhi   (td.SysDT * camx);
-		g_camera->AddTheta (td.SysDT * camy);
-	} else { // internal view
-		if(reset_camera) {
-			g_camera->ResetCockpitDir();
-		} else {
-			g_camera->Rotate (-td.SysDT * camx,  -td.SysDT * camy, true);
-		}
-	}
-
-
-	for (int i = 0; i < THGROUP_ATT_BACK + 1; i++) ctrlTotal[i] += GamepadController::GetThrusterLevel((THGROUP_TYPE)i);
-	// joystick input
-	/*
-	DIJOYSTATE2 js;
-	if (pDI->PollJoystick (&js)) {
-		UserJoyInput_System (&js);                  // general joystick functions
-		if (bRunning) UserJoyInput_OnRunning (&js); // joystick vessel control functions
-		for (i = 0; i < 15; i++) ctrlTotal[i] += ctrlJoystick[i]; // update thrust requests
-	}*/
+	int airfoils[6];
+	InputController::ProcessInput(ctrlJoystick, airfoils);
+	
+	for (int i = 0; i < 15; i++) ctrlTotal[i] += ctrlJoystick[i]; // update thrust requests
 
 	if(bSession) {
 		g_camera->UpdateMouse();
 
 		// apply manual attitude control
-		g_focusobj->ApplyUserAttitudeControls (ctrlTotal);
+		g_focusobj->ApplyUserAttitudeControls (ctrlKeyboard, ctrlJoystick, airfoils);
 	}
 }
 

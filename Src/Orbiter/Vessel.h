@@ -734,7 +734,7 @@ public:
 	void ClearVariableDragElements ();
 	// Remove all drag element definitions
 
-	void ApplyUserAttitudeControls (int *ctrl);
+	void ApplyUserAttitudeControls (int *ctrlKeyboard, int *ctrlJoystick, int airfoils[6]);
 	// translate user keyboard/joystick input into RCS or airfoil response (single frame)
 
 	void IncTrim (AIRCTRL_TYPE ctrl);
@@ -837,6 +837,7 @@ public:
 	bool SetAttMode (int mode, bool fromstream = false);
 	// return/toggle/set attitude thruster mode (0=disable, 1=rot, 2=lin)
 
+	int GetADCtrlMode () { return ctrlsurfmode; }
 	int ToggleADCtrlMode ();
 	void SetADCtrlMode (int mode, bool fromstream = false);
 	// connect/disconnect user input to aerodynamic control surfaces

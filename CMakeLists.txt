@@ -112,6 +112,7 @@ set(IMGUI_SOURCES
     "${IMGUI_LIB_NAME}/imgui_draw.cpp"
     "${IMGUI_LIB_NAME}/imgui_tables.cpp"
     "${IMGUI_LIB_NAME}/imgui_widgets.cpp"
+    "${IMGUI_LIB_NAME}/imgui_stacklayout.cpp"
 )
 
 set(IMGUI_HEADERS
@@ -136,6 +137,36 @@ target_include_directories(imgui
         "${IMGUI_INC_PATH}"
         "${GLFW_INC_PATH}"
         "${GLAD_INC_PATH}"
+)
+
+set(IMGUI_NODE_EDITOR_LIB_NAME "Extern/imgui-node-editor")
+set(IMGUI_NODE_EDITOR_SOURCES
+	"${IMGUI_NODE_EDITOR_LIB_NAME}/imgui_node_editor.cpp"
+	"${IMGUI_NODE_EDITOR_LIB_NAME}/imgui_node_editor_api.cpp"
+	"${IMGUI_NODE_EDITOR_LIB_NAME}/imgui_canvas.cpp"
+	"${IMGUI_NODE_EDITOR_LIB_NAME}/crude_json.cpp"
+	"${IMGUI_NODE_EDITOR_LIB_NAME}/examples/blueprints-example/utilities/builders.cpp"
+	"${IMGUI_NODE_EDITOR_LIB_NAME}/examples/blueprints-example/utilities/drawing.cpp"
+	"${IMGUI_NODE_EDITOR_LIB_NAME}/examples/blueprints-example/utilities/widgets.cpp"
+
+)
+
+set(IMGUI_NODE_EDITOR_HEADERS
+    "${IMGUI_NODE_EDITOR_LIB_NAME}/imgui_node_editor.h"
+)
+
+set(IMGUI_NODE_EDITOR_INC_PATH "${IMGUI_NODE_EDITOR_LIB_NAME}/")
+
+add_library(imgui-node-editor
+    STATIC
+        ${IMGUI_NODE_EDITOR_SOURCES}
+        ${IMGUI_NODE_EDITOR_HEADERS}
+)
+target_include_directories(imgui-node-editor
+    PUBLIC
+	"${IMGUI_INC_PATH}"
+	"${IMGUI_NODE_EDITOR_INC_PATH}"
+	"${IMGUI_NODE_EDITOR_LIB_NAME}/examples/blueprints-example/"
 )
 
 # We don't query Qt with find_package because we need the 64-bit version here

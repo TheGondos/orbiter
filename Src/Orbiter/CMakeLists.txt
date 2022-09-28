@@ -90,7 +90,8 @@ set(common_src
 	Util.cpp
 	ZTreeMgr.cpp
 	GUIManager.cpp
-	Gamepad.cpp
+	Controller.cpp
+	ControllerNodes.cpp
 )
 
 # Sources for DX7 built-in graphics version only
@@ -160,6 +161,7 @@ target_link_libraries(Orbiter_server
 	${CMAKE_DL_LIBS}
 	glfw
 	imgui
+	imgui-node-editor
 	z
 	lua::lib
 )

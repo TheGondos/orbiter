@@ -42,11 +42,11 @@ public:
 	// (kstate only used for modifier keys)
 	// if clearkey == true then key is set to 0 on return, if a match is found
 
+	bool ScanStr (char *cbuf, uint16_t &key) const;
+	char *PrintStr (char *cbuf, uint16_t key) const;
 private:
 	bool IsMatchingModifier (char *kstate, int key) const;
 
-	bool ScanStr (char *cbuf, uint16_t &key) const;
-	char *PrintStr (char *cbuf, uint16_t key) const;
 
 	uint16_t func[LKEY_COUNT];
 	// list of logical function keys

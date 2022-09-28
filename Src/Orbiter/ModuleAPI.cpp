@@ -133,6 +133,7 @@ void Module::clbkPause (bool pause)
 
 
 OAPIFUNC MODULEHANDLE oapiModuleLoad (const char *name) {
+	printf("oapiModuleLoad %s\n", name);
 	std::string path = oapiGetFilePath(name);
 	return dlopen(path.c_str(), RTLD_LAZY|RTLD_GLOBAL|RTLD_DEEPBIND);
 }
