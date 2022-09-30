@@ -31,6 +31,7 @@ static const float fuely = fd_y0+29.5f+fuelh;
 
 FuelMFD::FuelMFD (VESSEL3 *v): PanelElement (v)
 {
+	Tsample = 0.0;
 	isScram = false;
 	Mmain = Mrcs = Mscram = 0.0;
 	memset (&vc_grp, 0, sizeof(GROUPREQUESTSPEC));

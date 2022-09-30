@@ -1306,9 +1306,9 @@ void HUD_Orbit::SwitchColour (int idx)
 
 void HUD_Orbit::Display (oapi::Sketchpad *skp)
 {
-	int px, py, iphi, iphi0;
+	int iphi, iphi0;
 	int xbl, xbr, y, dx, len;
-	double fac, a, b, c, phi, phi0, alpha, sina, cosa, d, d0, d1, v;
+	double a, b, c, phi, phi0, alpha, sina, cosa, d, d0, d1, v;
 	double lwcosa, lwsina;
 	char cbuf[64];
 
@@ -1384,10 +1384,6 @@ void HUD_Orbit::Display (oapi::Sketchpad *skp)
 	skp->SetFont(font);
 
 	Vector Prel = tmul (self->GRot(), P).unit();
-	//if (Prel.z < 0.0) Prel = -Prel;
-	fac = VRES05 / (Prel.z * g_camera->TanAperture());
-	px = HRES05 + (int)(Prel.x * fac);
-	py = VRES05 - (int)(Prel.y * fac);
 	// equation of orbital plane in ship's relative coords: ax + by + cz = 0
 	a = Prel.z*Vrel.y - Prel.y*Vrel.z;
 	b = Prel.x*Vrel.z - Prel.z*Vrel.x;
