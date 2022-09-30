@@ -1398,7 +1398,8 @@ protected:
 	 *   panel, HUD, etc.)
 	 */
 	virtual void clbkRenderScene () = 0;
-	virtual void clbkRenderGUI () = 0;
+	virtual void clbkImGuiNewFrame () = 0;
+	virtual void clbkImGuiRenderDrawData () = 0;
 
 	/**
 	 * \brief Display a scene on screen after rendering it.

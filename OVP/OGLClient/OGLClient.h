@@ -913,8 +913,9 @@ protected:
 	 *   panel, HUD, etc.)
 	 */
 	virtual void clbkRenderScene ();
-	virtual void clbkRenderGUI ();
-void Style();
+	virtual void clbkImGuiNewFrame ();
+	virtual void clbkImGuiRenderDrawData ();
+
 	/**
 	 * \brief Display a scene on screen after rendering it.
 	 *

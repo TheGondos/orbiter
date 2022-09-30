@@ -84,7 +84,14 @@ class OAPIFUNC GUIElement {
 
 class OAPIFUNC GUIManager {
     public:
+		enum NotifType {
+			Success,
+			Warning,
+			Error,
+			Info
+		};
         GUIManager();
+		void Notify(enum NotifType, const char *title, const char *content);
         void RegisterCtrl(GUIElement *ctrl) {
             for(auto &e: m_GUICtrls) {
                 if(e == ctrl) {
@@ -5915,8 +5922,15 @@ OAPIFUNC void      oapiOpenDialog (GUIElement *);
 	* \note This function should be called in response to an \c IDCANCEL message in the
 	*  dialog message handler to close a dialog which was opened by oapiOpenDialog().
 	*/
-OAPIFUNC void       oapiCloseDialog (GUIElement *);
-OAPIFUNC void       oapiDrawDialogs ();
+OAPIFUNC void oapiCloseDialog (GUIElement *);
+
+	/**
+	* \brief Show a notification.
+	* \param type type of notification
+	* \param title title of the notification box
+	* \param content content of the notification box
+	*/
+OAPIFUNC void oapiAddNotification(enum GUIManager::NotifType type, const char *title, const char *content);
 
 	/**
 	 * \brief Returns the display mode of the main menu bar.

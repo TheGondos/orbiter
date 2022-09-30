@@ -2022,13 +2022,9 @@ DLLEXPORT void oapiCloseDialog (GUIElement *e)
 {
 	g_pOrbiter->UnregisterGUIElement (e);
 }
-DLLEXPORT void oapiDrawDialogs ()
-{
-	for(auto &ctrl: g_pOrbiter->m_pGUIManager->m_GUICtrls) {
-		if(ctrl->show) {
-			ctrl->Show();
-		}
-	}
+
+DLLEXPORT void oapiAddNotification(enum GUIManager::NotifType type, const char *title, const char *content) {
+	g_pOrbiter->m_pGUIManager->Notify(type, title, content);
 }
 
 DLLEXPORT int oapiGetMainMenuVisibilityMode()

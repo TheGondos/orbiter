@@ -92,6 +92,7 @@ set(common_src
 	GUIManager.cpp
 	Controller.cpp
 	ControllerNodes.cpp
+	imgui_impl_glfw.cpp
 )
 
 # Sources for DX7 built-in graphics version only
@@ -153,6 +154,7 @@ set_target_properties(Orbiter_server
 
 target_include_directories(Orbiter_server PUBLIC
 	${Orbiter_includes}
+	${EXTERN_DIR}/imgui-notify/example/src
 )
 
 target_link_libraries(Orbiter_server
