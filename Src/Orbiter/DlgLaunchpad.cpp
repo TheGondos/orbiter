@@ -1,6 +1,7 @@
 #include "DlgLaunchpad.h"
 #include "Orbiter.h"
 #include "Controller.h"
+#include "font_awesome_5.h"
 
 #include <dirent.h>
 #include <filesystem>
@@ -28,7 +29,7 @@ void DlgLaunchpad::DrawAbout() {
 void DlgLaunchpad::Show() {
 	if(show) {
         const char *tabs[] = {
-            "Scenarios", "Parameters", "Visual Effects", "Modules", "Video", "Joystick", "Extra", "About"
+            ICON_FA_GLOBE" Scenarios", ICON_FA_TOOLS" Parameters", ICON_FA_TACHOMETER_ALT" Visual Effects", ICON_FA_PUZZLE_PIECE" Modules", ICON_FA_DESKTOP" Video", ICON_FA_GAMEPAD" Joystick", "Extra", ICON_FA_QUESTION_CIRCLE" About"
         };
 
         void (DlgLaunchpad::* func[])() = {
@@ -125,7 +126,9 @@ void DlgLaunchpad::DrawDir(const char *path) {
         const bool is_selected = m_SelectedScenario == p.first;
         ImGuiTreeNodeFlags node_flags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
         if(is_selected) node_flags |= ImGuiTreeNodeFlags_Selected;
-        ImGui::TreeNodeEx(p.second.c_str(), node_flags);
+        char node_text[256];
+        sprintf(node_text, ICON_FA_PAPER_PLANE" %s", p.second.c_str());
+        ImGui::TreeNodeEx(node_text, node_flags);
         if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) {
             m_SelectedScenario = p.first;
         }
