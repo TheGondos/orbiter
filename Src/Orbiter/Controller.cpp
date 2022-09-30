@@ -585,7 +585,7 @@ void ControllerGraph::SynchronizeJoysticks() {
         if(n->is_joystick) {
             Joystick *joy = (Joystick *)n;
             if(joy->connected && !glfwJoystickPresent(joy->joy_id)) {
-                //printf("joystick disconnected %s\n", joy->name.c_str());
+                oapiAddNotification(GUIManager::Warning, "Joystick disconnected", joy->name.c_str());
                 joy->connected = false;
                 joy->joy_id = -1;
             }
@@ -600,21 +600,19 @@ void ControllerGraph::SynchronizeJoysticks() {
             if (id == jbindings.end()) {
                 const char *guid = glfwGetJoystickGUID(j);
                 const char *name = glfwGetJoystickName(j);
-                //printf("New joystick connected - %s\n", name);
                 auto id2 = std::find_if(jbindings.begin(), jbindings.end(), [guid](auto& jbind) { return jbind.joystick->guid == guid; });
                 if (id2 == jbindings.end()) {
-                    //printf("joystick with new guid\n");
+                    oapiAddNotification(GUIManager::Info, "New joystick connected", name);
                     nodes.push_back(new Joystick(this, j));
                     dirty = true;
                 } else {
-                    //printf("joystick with known guid\n");
+                    oapiAddNotification(GUIManager::Info, "Joystick connected", name);
                     id2->joystick->connected = true;
                     id2->joystick->joy_id = j;
                 }
             }
         }
     }
-
 }
 
 void ControllerGraph::DrawKnownJoysticks() {
@@ -656,7 +654,6 @@ void ControllerGraph::Editor() {
     {
         ImGui::TextUnformatted("Joysticks");
         ImGui::Separator();
-        //DrawTree();
         DrawKnownJoysticks();
         ImGui::EndPopup();
     }
@@ -894,6 +891,8 @@ void ControllerGraph::Editor() {
             node = new KeyBinds(this);
         if (ImGui::MenuItem("Note"))
             node = new GraphNote(this);
+        if (ImGui::MenuItem("Notification"))
+            node = new GraphNotification(this);
 
 
         if(node) {
@@ -989,16 +988,8 @@ void InputController::SwitchProfile(const char *profile) {
     }
 }
 void InputController::DrawEditor() {
-    //ImGui::ShowDemoWindow();
-
     static ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_AutoSelectNewTabs | ImGuiTabBarFlags_Reorderable | ImGuiTabBarFlags_FittingPolicyResizeDown;
-    /*
-    ImGui::CheckboxFlags("ImGuiTabBarFlags_TabListPopupButton", &tab_bar_flags, ImGuiTabBarFlags_TabListPopupButton);
-    if (ImGui::CheckboxFlags("ImGuiTabBarFlags_FittingPolicyResizeDown", &tab_bar_flags, ImGuiTabBarFlags_FittingPolicyResizeDown))
-        tab_bar_flags &= ~(ImGuiTabBarFlags_FittingPolicyMask_ ^ ImGuiTabBarFlags_FittingPolicyResizeDown);
-    if (ImGui::CheckboxFlags("ImGuiTabBarFlags_FittingPolicyScroll", &tab_bar_flags, ImGuiTabBarFlags_FittingPolicyScroll))
-        tab_bar_flags &= ~(ImGuiTabBarFlags_FittingPolicyMask_ ^ ImGuiTabBarFlags_FittingPolicyScroll);
-*/
+
     if (ImGui::BeginTabBar("ClassTabs", tab_bar_flags))
     {
         // Demo Trailing Tabs: click the "+" button to add a new tab (in your app you may want to use a font icon instead of the "+")

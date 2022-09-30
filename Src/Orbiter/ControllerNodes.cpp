@@ -6,6 +6,7 @@
 #include "Camera.h"
 #include "Vessel.h"
 #include "Pane.h"
+#include "font_awesome_5.h"
 
 extern Pane *g_pane;
 extern Camera *g_camera;
@@ -101,6 +102,8 @@ crude_json::value Filter::ToJSON() {
 void Filter::AddEntry(ed::PinId i, ed::PinId o) {
     Pin *in;
     Pin *out;
+    graph->dirty = true;
+
     if(i != ed::PinId::Invalid) {
         in = &graph->PinFromId(i);
     } else {
@@ -145,12 +148,6 @@ void Filter::AddEntry(ed::PinId i, ed::PinId o) {
                 clearlinks = itin->type != Pin::Hat;
                 itin->type = Pin::Hat;
                 itout->type = Pin::Hat;
-            }
-            DrawIcon(Pin::Trigger, true, 255); ImGui::SameLine();
-            if (ImGui::MenuItem("Trigger")) {
-                clearlinks = itin->type != Pin::Hat;
-                itin->type = Pin::Trigger;
-                itout->type = Pin::Trigger;
             }
             ImGui::EndMenu();
         }
@@ -1162,11 +1159,9 @@ void HUDCtl::SimulateOutputs() {
     }
 }
 GraphNote::GraphNote(ControllerGraph *cg):Node(cg, "Note") {
-    deletable = false;
     note[0] = '\0';
 }
 GraphNote::GraphNote(ControllerGraph *cg, const crude_json::value &json):Node(cg, json) {
-    deletable = false;
     strcpy(note, json["note"].get<crude_json::string>().c_str());
 }
 crude_json::value GraphNote::ToJSON() {
@@ -1181,9 +1176,67 @@ void GraphNote::Draw() {
     ImVec4 col = {0,0,0,0};
     ImGui::PushStyleColor(ImGuiCol_FrameBg, col);
     if(ImGui::InputText("##new label", note, MAX_NOTE_SIZE, ImGuiInputTextFlags_EnterReturnsTrue)) {
+        graph->dirty = true;
     }
     ImGui::PopStyleColor();
     ImGui::PopStyleVar();
+}
+
+GraphNotification::GraphNotification(ControllerGraph *cg):Node(cg, "Notification") {
+    AddInput("Show", Pin::Trigger);
+    type = GUIManager::Info;
+    title[0] = '\0';
+    content[0] = '\0';
+}
+GraphNotification::GraphNotification(ControllerGraph *cg, const crude_json::value &json):Node(cg, json) {
+    strcpy(title, json["title"].get<crude_json::string>().c_str());
+    strcpy(content, json["content"].get<crude_json::string>().c_str());
+}
+crude_json::value GraphNotification::ToJSON() {
+    crude_json::value ret = Node::ToJSON();
+    ret["class"] = "GraphNotification";
+    ret["title"] = title;
+    ret["content"] = content;
+    return ret;
+}
+
+void GraphNotification::Draw() {
+    builder.Header();
+    ImGui::TextUnformatted(name.c_str());
+    builder.EndHeader();
+
+    DrawInput(inputs[0], minimized);
+
+    const char* items[] = { ICON_FA_CHECK_CIRCLE, ICON_FA_EXCLAMATION_TRIANGLE, ICON_FA_TIMES_CIRCLE, ICON_FA_INFO_CIRCLE };
+    int idx = (int)type;
+    for(int i = 0; i < 4; i++) {
+        if(i == idx) {
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{0.2f, 0.3f, 0.4f, 1.0f});
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4{0.2f, 0.3f, 0.4f, 1.0f});
+            ImGui::Button(items[i]); ImGui::SameLine();
+            ImGui::PopStyleColor(2);
+        } else {
+            if(ImGui::Button(items[i])) {
+                type = (enum GUIManager::NotifType)i;
+            }
+            ImGui::SameLine();
+        }
+    }
+    ImGui::NewLine();
+    ImGui::PushItemWidth(100);
+    
+    if(ImGui::InputText("Title", title, MAX_NOTE_SIZE, ImGuiInputTextFlags_EnterReturnsTrue)) {
+        graph->dirty = true;
+    }
+    if(ImGui::InputText("Content", content, MAX_NOTE_SIZE, ImGuiInputTextFlags_EnterReturnsTrue)) {
+        graph->dirty = true;
+    }
+    ImGui::PopItemWidth();
+}
+void GraphNotification::UpdateOutputs() {
+    if(inputs[0].bVal) {
+        oapiAddNotification(type, title, content);
+    }
 }
 
 KeyBinds::KeyBinds(ControllerGraph *cg):Node(cg, "KeyBinds") {

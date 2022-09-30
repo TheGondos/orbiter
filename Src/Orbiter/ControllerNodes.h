@@ -356,6 +356,19 @@ class GraphNote : public Node {
     char note[MAX_NOTE_SIZE];
 };
 
+class GraphNotification : public Node {
+    public:
+    static const int MAX_NOTE_SIZE = 128;
+    GraphNotification(ControllerGraph *cg);
+    GraphNotification(ControllerGraph *cg, const crude_json::value &json);
+    virtual void UpdateOutputs() override;
+    virtual crude_json::value ToJSON() override;
+    virtual void Draw() override;
+    enum GUIManager::NotifType type;
+    char title[MAX_NOTE_SIZE];
+    char content[MAX_NOTE_SIZE];
+};
+
 class KeyBinds: public Node {
     public:
     struct KeyBind {
