@@ -242,8 +242,6 @@ Node::Node(ControllerGraph *cg, const char *n) {
 }
 
 Node::Node(ControllerGraph *cg, const crude_json::value &json) {
-    //auto s = json.dump(1,2);
-    //printf("%s\n", s.c_str());
     graph = cg;
     name  = json["name"].get<std::string>();
     id    = std::stoi(json["id"].get<std::string>());
@@ -352,11 +350,10 @@ void ControllerGraph::Clear() {
         nodes.back()->visible = false;
     }
     dirty = true;
+    SynchronizeJoysticks();
 }
 
 void ControllerGraph::Load(const char *path) {
-    //printf("Load\n");
-    ed::SetCurrentEditor(m_Context);
     filename = path;
 
     for(auto &n: nodes) {
@@ -367,11 +364,14 @@ void ControllerGraph::Load(const char *path) {
     std::pair<crude_json::value, bool> ret = crude_json::value::load(path);
     if(ret.second) {
         auto &json = ret.first;
-        //json.dump(1,2);
-        //printf("Nodes:\n");
+        classname = json["classname"].get<std::string>();
+        disabled = json["disabled"].get<bool>();
+        if(disabled) {
+            return;
+        }
+        ed::SetCurrentEditor(m_Context);
         if(json.contains("nodes")) {
             for(auto &n: json["nodes"].get<crude_json::array>()) {
-                //printf("-%s\n", n["name"].get<std::string>().c_str());
                 Node *node = NodeFromJSON(n);
                 ImVec2 pos;
                 pos.x = n["xpos"].get<crude_json::number>();
@@ -391,23 +391,16 @@ void ControllerGraph::Load(const char *path) {
             }
         }
         _lastid = std::stoi(json["_lastid"].get<std::string>());
+
+        dirty = true;
+        Refresh();
+        unsaved = false;
+        ed::SetCurrentEditor(nullptr);
+        SynchronizeJoysticks();
     } else {
-        printf("Error loading %s\n", path);
-        exit(EXIT_FAILURE);
-        /*
-        for(int i = 0; i < GLFW_JOYSTICK_LAST + 1; i++) {
-            if(glfwJoystickPresent(i))
-                nodes.push_back(new Joystick(this, i));
-        }
-        for(auto &c: controllers) {
-            nodes.push_back(c(this));
-            nodes.back()->visible = false;
-        }*/
+        oapiAddNotification(GUIManager::Error, "Error loading file", path);
+        disabled = true;
     }
-    dirty = true;
-    Refresh();
-    unsaved = false;
-    ed::SetCurrentEditor(nullptr);
 }
 
 void ControllerGraph::Save() {
@@ -424,9 +417,8 @@ void ControllerGraph::Save() {
         out["links"].push_back(link);
     }
     out["_lastid"] = std::to_string(_lastid);
-
-    //auto s = out.dump(1,2);
-    //printf("%s\n", s.c_str());
+    out["classname"] = classname;
+    out["disabled"] = false;
     out.save(filename);
 }
 
@@ -434,6 +426,7 @@ ControllerGraph::ControllerGraph() {
     unsaved = false;
     dirty = true;
     draggedPin = nullptr;
+    disabled = false;
     ed::Config config;
     config.SettingsFile = nullptr;
     m_Context = ed::CreateEditor(&config);
@@ -458,6 +451,20 @@ void ControllerGraph::Simulate() {
         }
     }
 }
+
+void ControllerGraph::Disable() {
+    crude_json::value out;
+    out["classname"] = classname;
+    out["disabled"] = true;
+    disabled = true;
+    links.clear();
+    for(auto &n: nodes) {
+        delete n;
+    }
+    nodes.clear();
+    out.save(filename);
+}
+
 void ControllerGraph::Refresh() {
     if(!dirty) return;
     unsaved = true;
@@ -585,7 +592,6 @@ void ControllerGraph::SynchronizeJoysticks() {
         if(n->is_joystick) {
             Joystick *joy = (Joystick *)n;
             if(joy->connected && !glfwJoystickPresent(joy->joy_id)) {
-                oapiAddNotification(GUIManager::Warning, "Joystick disconnected", joy->name.c_str());
                 joy->connected = false;
                 joy->joy_id = -1;
             }
@@ -602,11 +608,9 @@ void ControllerGraph::SynchronizeJoysticks() {
                 const char *name = glfwGetJoystickName(j);
                 auto id2 = std::find_if(jbindings.begin(), jbindings.end(), [guid](auto& jbind) { return jbind.joystick->guid == guid; });
                 if (id2 == jbindings.end()) {
-                    oapiAddNotification(GUIManager::Info, "New joystick connected", name);
                     nodes.push_back(new Joystick(this, j));
                     dirty = true;
                 } else {
-                    oapiAddNotification(GUIManager::Info, "Joystick connected", name);
                     id2->joystick->connected = true;
                     id2->joystick->joy_id = j;
                 }
@@ -649,7 +653,6 @@ void ControllerGraph::Editor() {
     ImVec2 btn_pos = ImGui::GetItemRectMin();
     ImGui::SetNextWindowPos(btn_pos);
 
-    SynchronizeJoysticks();
     if (ImGui::BeginPopup("joystick_list"))
     {
         ImGui::TextUnformatted("Joysticks");
@@ -665,7 +668,6 @@ void ControllerGraph::Editor() {
     btn_pos = ImGui::GetItemRectMin();
     ImGui::SetNextWindowPos(btn_pos);
 
-    SynchronizeJoysticks();
     if (ImGui::BeginPopup("controller_list"))
     {
         ImGui::TextUnformatted("Controllers");
@@ -956,13 +958,15 @@ void InputController::GlobalInit() {
     ControllerGraph::Register<KeyBinds, false>("KeyBinds");
     ControllerGraph::Register<AFCtl, true>("AFCtl");
 
+    if(!std::filesystem::exists("Controllers")) {
+        std::filesystem::create_directory("Controllers");
+    }
+
     for (auto &file : fs::directory_iterator("Controllers")) {
         if(file.path().extension() == ".json") {
             ControllerGraph *cg = new ControllerGraph();
             cg->Load(file.path().c_str());
-            controllers[file.path().stem()].reset(cg);
-            printf("Controller %s\n", file.path().stem().c_str());
-            printf("Controller %s\n", file.path().c_str());
+            controllers[cg->classname].reset(cg);
         }
     }
     if(controllers.find("Default") != controllers.end()) {
@@ -971,6 +975,10 @@ void InputController::GlobalInit() {
         ControllerGraph *cg = new ControllerGraph();
         cg->Clear();
         cg->filename = "Controllers/Default.json";
+        cg->classname = "Default";
+        ed::SetCurrentEditor(cg->m_Context);
+        cg->Save();
+        ed::SetCurrentEditor(nullptr);
         controllers["Default"].reset(cg);
         currentController = cg;
     }
@@ -979,40 +987,85 @@ void InputController::ProcessInput(int ctrl[15], int af[6]) {
     if(currentController)
         currentController->Execute(ctrl, af);
 }
+void InputController::JoystickCallback(int jid, int event) {
+    if(event == GLFW_CONNECTED) {
+        const char *jname = glfwGetJoystickName(jid);
+        oapiAddNotification(GUIManager::Info, "Joystick connected", jname);
+    } else if(event == GLFW_DISCONNECTED) {
+        for(auto &n: currentController->nodes) {
+            if(n->is_joystick) {
+                Joystick *joy = (Joystick *)n;
+                if(joy->joy_id == jid) {
+                    const char *jname = joy->name.c_str();
+                    oapiAddNotification(GUIManager::Warning, "Joystick disconnected", jname);
+                }
+            }
+        }
+    }
+    for(auto &c: controllers) {
+        c.second->SynchronizeJoysticks();
+    }
+}
+
 void InputController::SwitchProfile(const char *profile) {
     auto it = controllers.find(profile);
     if(it != controllers.end()) {
-        currentController = it->second.get();
+        if(it->second->disabled) {
+            currentController = controllers["Default"].get();
+        } else {
+            currentController = it->second.get();
+        }
     } else {
-        currentController = controllers["Default"].get();
+        oapiAddNotification(GUIManager::Info, "New controller profile added", profile);
+        ControllerGraph *cg = new ControllerGraph();
+        cg->Load("Controllers/Default.json");
+        char buf[256];
+        sprintf(buf, "Controllers/%s.json", profile);
+        for(int i=strlen("Controllers/");i<strlen(buf);i++) {
+            if(buf[i]=='/'||buf[i]=='\\') {
+                buf[i]='-';
+            }
+        }
+        cg->filename = buf;
+        cg->classname = profile;
+        ed::SetCurrentEditor(cg->m_Context);
+        cg->Save();
+        ed::SetCurrentEditor(nullptr);
+        controllers[profile].reset(cg);
     }
 }
 void InputController::DrawEditor() {
-    static ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_AutoSelectNewTabs | ImGuiTabBarFlags_Reorderable | ImGuiTabBarFlags_FittingPolicyResizeDown;
-
+    static ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_Reorderable | ImGuiTabBarFlags_FittingPolicyResizeDown;
+//    static ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_Reorderable | ImGuiTabBarFlags_FittingPolicyScroll;
     if (ImGui::BeginTabBar("ClassTabs", tab_bar_flags))
     {
         // Demo Trailing Tabs: click the "+" button to add a new tab (in your app you may want to use a font icon instead of the "+")
         // Note that we submit it before the regular tabs, but because of the ImGuiTabItemFlags_Trailing flag it will always appear at the end.
-        if (ImGui::TabItemButton("+", ImGuiTabItemFlags_Trailing | ImGuiTabItemFlags_NoTooltip)) {
-//            active_tabs.push_back(next_tab_id++); // Add new tab
-        }
-
+        ControllerGraph *td = nullptr;
         for(auto &ctrl: controllers) {
             auto graph = ctrl.second.get();
+            if(graph->disabled)
+                continue;
             bool open = true;
+            bool *popen = &open;
+            if(ctrl.first == "Default") popen = nullptr;
             ImGuiTabItemFlags flags = ImGuiTabItemFlags_None;
             if(graph->unsaved) flags |= ImGuiTabItemFlags_UnsavedDocument;
-            if (ImGui::BeginTabItem(ctrl.first.c_str(), &open, flags))
+            if (ImGui::BeginTabItem(ctrl.first.c_str(), popen, flags))
             {
                 if(graph != currentController)
                     graph->Simulate();
                 graph->Editor();
                 graph->Refresh();
-//                ImGui::Text("This is the %s tab!", ctrl.first.c_str());
                 ImGui::EndTabItem();
             }
-
+            if(!open) {
+                td = ctrl.second.get();
+            }
+        }
+        if(td) {
+            oapiAddNotification(GUIManager::Info, "Controller profile disabled", td->classname.c_str());
+            td->Disable();
         }
         ImGui::EndTabBar();
     }

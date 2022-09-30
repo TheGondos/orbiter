@@ -103,10 +103,12 @@ class ControllerGraph final {
     ed::EditorContext* m_Context;
     std::unordered_map<void *, Pin *> pins;
     std::string filename;
+    std::string classname;
     Pin *draggedPin;
     int _lastaddedlink = -1;
     bool dirty;
     bool unsaved;
+    bool disabled;
     Thrusters *thrusters;
     AirCtl *airfoils;
 
@@ -125,6 +127,7 @@ class ControllerGraph final {
     void Save();
     void Load(const char *path);
     void Clear();
+    void Disable();
     void DrawKnownJoysticks();
     void SynchronizeJoysticks();
     void DrawControllers();
@@ -150,6 +153,7 @@ public:
     static void SwitchProfile(const char *);
     static void DrawEditor();
     static void ProcessInput(int ctrl[15], int af[6]);
+    static void JoystickCallback(int jid, int event);
 
     static inline std::map<std::string, std::unique_ptr<ControllerGraph>> controllers;
     static inline ControllerGraph *currentController;

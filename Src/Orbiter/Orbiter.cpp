@@ -1260,6 +1260,7 @@ int Orbiter::Run ()
 	prev_mouse_button_callback = glfwSetMouseButtonCallback(hRenderWnd, mouse_button_callback);
 	prev_scroll_callback = glfwSetScrollCallback(hRenderWnd, scroll_callback);
 	glfwSetFramebufferSizeCallback(hRenderWnd, framebuffer_size_callback);
+	glfwSetJoystickCallback(InputController::JoystickCallback);
 
 	while (!glfwWindowShouldClose(hRenderWnd)) {
 		glfwPollEvents();

@@ -846,10 +846,12 @@ AFCtl::AFCtl(ControllerGraph *cg):Node(cg, "Air Surfaces Mode") {
     AddOutput("Aileron", Pin::Button);
     deletable = false;
     is_controller = true;
+    ctrlsurfmode = 0;
 }
 
 AFCtl::AFCtl(ControllerGraph *cg, const crude_json::value &json):Node(cg, json) {
     deletable = false;
+    ctrlsurfmode = 0;
 }
 
 crude_json::value AFCtl::ToJSON() {
