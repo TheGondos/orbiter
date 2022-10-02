@@ -31,7 +31,6 @@
 #include "MenuInfoBar.h"
 #include "Script.h"
 #include "GraphicsAPI.h"
-#include "Controller.h"
 
 #include "DlgCamera.h"
 #include "DlgInfo.h"
@@ -708,6 +707,8 @@ GLFWwindow *Orbiter::CreateRenderWindow ()
 		m_DlgInputBox  = std::make_unique<InputBox>("InputBox");
 		m_DlgRecorder  = std::make_unique<DlgRecorder>("Recorder");
 		m_DlgPlaybackEditor = std::make_unique<DlgPlaybackEditor>("DlgPlaybackEditor");
+		m_DlgJoystick  = std::make_unique<DlgJoystick>("Joystick Configuration");
+		
 		
 		m_pGUIManager->RegisterCtrl(m_DlgCamera.get());
 		m_pGUIManager->RegisterCtrl(m_DlgInfo.get());
@@ -721,7 +722,7 @@ GLFWwindow *Orbiter::CreateRenderWindow ()
 		m_pGUIManager->RegisterCtrl(m_DlgInputBox.get());
 		m_pGUIManager->RegisterCtrl(m_DlgPlaybackEditor.get());
 		m_pGUIManager->RegisterCtrl(m_DlgRecorder.get());
-		m_pGUIManager->RegisterCtrl(new DlgJoystick("DlgJoystick"));
+		m_pGUIManager->RegisterCtrl(m_DlgJoystick.get());
 
 		// playback screen annotation manager
 		snote_playback = gclient->clbkCreateAnnotation ();

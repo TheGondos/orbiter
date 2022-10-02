@@ -165,7 +165,7 @@ void DlgLaunchpad::DrawModules() {
 }
 
 void DlgLaunchpad::DrawJoystick() {
-    InputController::DrawEditor();
+    InputController::DrawEditor(false);
 }
 
 struct my_markdown : public imgui_md 

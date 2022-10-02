@@ -83,6 +83,7 @@ class Joystick : public Node
     Joystick(ControllerGraph *, int joy_id);
     Joystick(ControllerGraph *cg, const crude_json::value &json);
     virtual void UpdateOutputs() override;
+    virtual void SimulateOutputs() override { UpdateOutputs(); };
     virtual void Draw() override;
     virtual crude_json::value ToJSON() override;
 

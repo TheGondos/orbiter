@@ -11,6 +11,7 @@
 #include "Mesh.h"
 #include "Astro.h"
 #include "GUIManager.h"
+#include "Controller.h"
 #include <chrono>
 
 
@@ -397,6 +398,8 @@ public:
 	std::unique_ptr<Select> m_DlgSelect;
 	std::unique_ptr<InputBox> m_DlgInputBox;
 	std::unique_ptr<DlgPlaybackEditor> m_DlgPlaybackEditor;
+	std::unique_ptr<DlgJoystick> m_DlgJoystick;
+
 private:
 	Config         *pConfig;
 	State          *pState;

@@ -151,7 +151,7 @@ class InputController {
 public:
     static void GlobalInit();
     static void SwitchProfile(const char *);
-    static void DrawEditor();
+    static void DrawEditor(bool ingame);
     static void ProcessInput(int ctrl[15], int af[6]);
     static void JoystickCallback(int jid, int event);
 
@@ -167,10 +167,17 @@ extern ax::NodeEditor::Utilities::BlueprintNodeBuilder builder;
 class DlgJoystick : public GUIElement {
 public:
     DlgJoystick(const std::string &name): GUIElement(name, "DlgJoystick") {
-        show = true;
+        show = false;
     }
     void Show() override {
-        InputController::DrawEditor();
+        if(!show) return;
+        ImGui::SetNextWindowPos(ImVec2(60, 60), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize(ImVec2(800, 600), ImGuiCond_FirstUseEver);
+        ImGui::Begin("Joystick Configuration", &show);
+
+        InputController::DrawEditor(true);
+
+        ImGui::End();
     }
     static inline const std::string etype = "DlgJoystick";
 };

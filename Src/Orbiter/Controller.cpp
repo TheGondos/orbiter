@@ -462,6 +462,7 @@ void ControllerGraph::Disable() {
         delete n;
     }
     nodes.clear();
+    sorted.clear();
     out.save(filename);
 }
 
@@ -1010,10 +1011,13 @@ void InputController::JoystickCallback(int jid, int event) {
 void InputController::SwitchProfile(const char *profile) {
     auto it = controllers.find(profile);
     if(it != controllers.end()) {
-        if(it->second->disabled) {
-            currentController = controllers["Default"].get();
-        } else {
-            currentController = it->second.get();
+        ControllerGraph *newController = controllers["Default"].get();
+        if(!it->second->disabled) {
+            newController = it->second.get();
+        }
+        if(currentController != newController) {
+            currentController = newController;
+            oapiAddNotification(GUIManager::Info, "Controller profile changed", currentController->classname.c_str());
         }
     } else {
         oapiAddNotification(GUIManager::Info, "New controller profile added", profile);
@@ -1034,14 +1038,11 @@ void InputController::SwitchProfile(const char *profile) {
         controllers[profile].reset(cg);
     }
 }
-void InputController::DrawEditor() {
-    static ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_Reorderable | ImGuiTabBarFlags_FittingPolicyResizeDown;
-//    static ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_Reorderable | ImGuiTabBarFlags_FittingPolicyScroll;
+void InputController::DrawEditor(bool ingame) {
+    static ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_FittingPolicyResizeDown;
     if (ImGui::BeginTabBar("ClassTabs", tab_bar_flags))
     {
-        // Demo Trailing Tabs: click the "+" button to add a new tab (in your app you may want to use a font icon instead of the "+")
-        // Note that we submit it before the regular tabs, but because of the ImGuiTabItemFlags_Trailing flag it will always appear at the end.
-        ControllerGraph *td = nullptr;
+        static ControllerGraph *td = nullptr;
         for(auto &ctrl: controllers) {
             auto graph = ctrl.second.get();
             if(graph->disabled)
@@ -1053,7 +1054,7 @@ void InputController::DrawEditor() {
             if(graph->unsaved) flags |= ImGuiTabItemFlags_UnsavedDocument;
             if (ImGui::BeginTabItem(ctrl.first.c_str(), popen, flags))
             {
-                if(graph != currentController)
+                if(graph != currentController || !ingame)
                     graph->Simulate();
                 graph->Editor();
                 graph->Refresh();
@@ -1061,12 +1062,34 @@ void InputController::DrawEditor() {
             }
             if(!open) {
                 td = ctrl.second.get();
+                ImGui::OpenPopup("Confirm");
             }
         }
-        if(td) {
-            oapiAddNotification(GUIManager::Info, "Controller profile disabled", td->classname.c_str());
-            td->Disable();
+
+        bool unused_open = true;
+        ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+        ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+        if (ImGui::BeginPopupModal("Confirm", &unused_open))
+        {
+            ImGui::TextUnformatted("Are you sure you want to remove this vessel class profile?");
+            ImGui::TextUnformatted("From now on it will use the Default profile.");
+            ImGui::Text("You'll need to delete the %s file to reactivate it", td->filename.c_str());
+            if (ImGui::Button("Confirm")) {
+                oapiAddNotification(GUIManager::Info, "Controller profile disabled", td->classname.c_str());
+                td->Disable();
+                if(td == currentController) {
+                    SwitchProfile("Default");
+                }
+
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Cancel"))
+                ImGui::CloseCurrentPopup();
+
+            ImGui::EndPopup();
         }
+        
         ImGui::EndTabBar();
     }
 }

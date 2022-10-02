@@ -700,6 +700,7 @@ bool MenuInfoBar::ProcessMouse (oapi::MouseEvent event, int state, int x, int y)
 	}
 	if (event == oapi::MOUSE_RBUTTONDOWN && y <= scrollpos && x >= menuX && x < menuX+menuW) {
 		//g_pOrbiter->DlgMgr()->EnsureEntry<DlgMenuCfg> ();
+		g_pOrbiter->m_pGUIManager->ShowCtrl<DlgJoystick> (); // Hack while we don't have a specific icon to open it
 		return true;
 	}
 	return false;
