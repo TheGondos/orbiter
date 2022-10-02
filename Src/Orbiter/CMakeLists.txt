@@ -93,6 +93,8 @@ set(common_src
 	Controller.cpp
 	ControllerNodes.cpp
 	imgui_impl_glfw.cpp
+	${EXTERN_DIR}/md4c/src/md4c.c
+	${EXTERN_DIR}/imgui_md/imgui_md.cpp
 )
 
 # Sources for DX7 built-in graphics version only
@@ -155,6 +157,8 @@ set_target_properties(Orbiter_server
 target_include_directories(Orbiter_server PUBLIC
 	${Orbiter_includes}
 	${EXTERN_DIR}/imgui-notify/example/src
+	${EXTERN_DIR}/md4c/src
+	${EXTERN_DIR}/imgui_md
 )
 
 target_link_libraries(Orbiter_server

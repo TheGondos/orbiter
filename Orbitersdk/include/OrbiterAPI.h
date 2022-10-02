@@ -82,6 +82,7 @@ class OAPIFUNC GUIElement {
         bool IsVisible() { return show; }
 };
 
+class ImFont;
 class OAPIFUNC GUIManager {
     public:
 		enum NotifType {
@@ -90,6 +91,11 @@ class OAPIFUNC GUIManager {
 			Error,
 			Info
 		};
+		ImFont *fontDefault;
+		ImFont *fontH1;
+		ImFont *fontH2;
+		ImFont *fontH3;
+		ImFont *fontBold;
         GUIManager();
 		void Notify(enum NotifType, const char *title, const char *content);
         void RegisterCtrl(GUIElement *ctrl) {
