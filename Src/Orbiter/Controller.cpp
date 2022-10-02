@@ -438,8 +438,15 @@ void ControllerGraph::Execute(int ctrl[15], int af[6]) {
         n->RefreshInputs();
         n->UpdateOutputs();
     }
-    thrusters->GetOutputs(ctrl);
-    airfoils->GetOutputs(af);
+    if(thrusters)
+        thrusters->GetOutputs(ctrl);
+    else
+        memset(ctrl, 0, sizeof(int)*15);
+
+    if(airfoils)
+        airfoils->GetOutputs(af);
+    else
+        memset(af, 0, sizeof(int)*6);
 }
 void ControllerGraph::Simulate() {
     for(auto &n: sorted) {
@@ -1036,6 +1043,7 @@ void InputController::SwitchProfile(const char *profile) {
         cg->Save();
         ed::SetCurrentEditor(nullptr);
         controllers[profile].reset(cg);
+        currentController = cg;
     }
 }
 void InputController::DrawEditor(bool ingame) {
