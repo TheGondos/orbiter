@@ -429,6 +429,9 @@ install(FILES ${CMAKE_SOURCE_DIR}/Extern/imgui/misc/fonts/Roboto-Medium.ttf
 install(FILES ${CMAKE_SOURCE_DIR}/OVP/OGLClient/nanovg/example/Roboto-Bold.ttf
 	DESTINATION ${ORBITER_INSTALL_ROOT_DIR}
 )
+install(FILES ${CMAKE_SOURCE_DIR}/Extern/SDL_GameControllerDB/gamecontrollerdb.txt
+	DESTINATION ${ORBITER_INSTALL_ROOT_DIR}/Config
+)
 #install(FILES ${LUA_DLL_DIR}/lua5.1.dll
 #	DESTINATION ${ORBITER_INSTALL_ROOT_DIR}
 #)

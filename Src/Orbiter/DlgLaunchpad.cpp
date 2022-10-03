@@ -252,6 +252,7 @@ More information can be found on the [Orbiter forum](https://www.orbiter-forum.c
 * [SOIL2](https://github.com/alelievr/SOIL2) : *Simple OpenGL Image Library 2* originally from [Martín Lucas Golini](https://github.com/SpartanJ/soil2) and forked by Antoine Lelievre
 * [lua-5.1.5](https://www.lua.org/) : *a powerful, efficient, lightweight, embeddable scripting language* by [PUC-Rio](https://www.puc-rio.br/index.html)
 * [glad](https://github.com/Dav1dde/glad) : *GL/GLES/EGL/GLX/WGL Loader-Generator based on the official specs* by David Herberth
+* [SDL_GameControllerDB](https://github.com/gabomdq/SDL_GameControllerDB) : database of game controller mappings by Gabriel Jacobo
 
 ## Addons
 In the interest of having some more variety, several add-ons are made compatible with this linux build.
