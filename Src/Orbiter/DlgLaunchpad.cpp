@@ -4,7 +4,6 @@
 #include "font_awesome_5.h"
 #include "imgui_md.h"
 
-#include <dirent.h>
 #include <filesystem>
 
 namespace fs = std::filesystem;
@@ -67,68 +66,54 @@ void DlgLaunchpad::DrawScenarios() {
         char cbuf[256];
         sprintf(cbuf, "%s", m_SelectedScenario.c_str());
         cbuf[strlen(cbuf)-4]='\0';
-        g_pOrbiter->Launch (cbuf+strlen("./Scenarios//"));
+        g_pOrbiter->Launch (cbuf+strlen("./Scenarios/"));
     }
     ImGui::EndChild();
 }
 
-bool alphanum_sort (std::pair<std::string, std::string> &i, std::pair<std::string, std::string> &j) {
-    return i.second<j.second;
+bool alphanum_sort (fs::path &i, fs::path &j) {
+    return i < j;
 }
 
 void DlgLaunchpad::DrawDir(const char *path) {
-    char cbuf[280];
-	struct dirent * dp = NULL;
-	DIR *dir = opendir(path);
-	if(dir == NULL) {
-		return;
-	}
+    std::vector<fs::path> directories;
+    for (auto &file : fs::directory_iterator(path)) {
+        if(file.path() != "." && file.path() != "..") {
+            if (file.is_directory()) {
+                directories.push_back(file.path());
+            }
+        }
+    }
 
-    std::vector<std::pair<std::string, std::string>> directories;
-	while ((dp = readdir(dir)) != NULL) {
-		if(dp->d_type == DT_DIR) {
-			if(strcmp(dp->d_name, ".") != 0 && strcmp(dp->d_name, "..") != 0) {
-				char subdir[280];
-				sprintf(subdir, "%s/%s", path, dp->d_name);
-				strcpy (cbuf, subdir);
-                directories.push_back(std::make_pair(cbuf, dp->d_name));
-			}
-		}
-	}
-	closedir(dir);
-
-    std::sort(directories.begin(), directories.end(), alphanum_sort);
+    std::sort(directories.begin(), directories.end());//, alphanum_sort);
     for(auto &p: directories) {
-        if(ImGui::TreeNodeEx(p.second.c_str())) {
-            DrawDir(p.first.c_str());
+        if(ImGui::TreeNodeEx(p.stem().c_str())) {
+            DrawDir(p.c_str());
             ImGui::TreePop();
         }
     }
 
-    std::vector<std::pair<std::string, std::string>> scenarios;
-	dir = opendir(path);
-	while ((dp = readdir(dir)) != NULL) {
-		auto len = strlen(dp->d_name);
-
-		if(dp->d_type != DT_DIR) {
-			if (!strcasecmp(dp->d_name + len - strlen(".scn"), ".scn")) {
-				sprintf (cbuf, "%s/%s", path, dp->d_name);
-                scenarios.push_back(std::make_pair(cbuf, dp->d_name));
-			}
-		}
-	}
-	closedir(dir);
+    std::vector<fs::path> scenarios;
+    for (auto &file : fs::directory_iterator(path)) {
+        std::string p1 = file.path().stem().c_str();
+        std::string p2 = file.path().c_str();
+        if(file.path().extension() == ".scn") {
+            if (file.is_regular_file()) {
+                scenarios.push_back(file.path());
+            }
+        }
+    }
 
     std::sort(scenarios.begin(), scenarios.end(), alphanum_sort);
     for(auto &p: scenarios) {
-        const bool is_selected = m_SelectedScenario == p.first;
+        const bool is_selected = m_SelectedScenario == p;
         ImGuiTreeNodeFlags node_flags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
         if(is_selected) node_flags |= ImGuiTreeNodeFlags_Selected;
         char node_text[256];
-        sprintf(node_text, ICON_FA_PAPER_PLANE" %s", p.second.c_str());
+        sprintf(node_text, ICON_FA_PAPER_PLANE" %s", p.stem().c_str());
         ImGui::TreeNodeEx(node_text, node_flags);
         if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) {
-            m_SelectedScenario = p.first;
+            m_SelectedScenario = p;
         }
     }
 }
