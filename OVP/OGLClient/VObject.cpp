@@ -31,7 +31,7 @@ vObject *vObject::Create (OBJHANDLE handle, const Scene *scene)
 	case OBJTP_STAR:
 		return new vStar (handle, scene);
 	case OBJTP_SURFBASE:
-	printf("xxx");exit(-1);
+		printf("xxx");exit(-1);
 		return new vBase (handle, scene);
 	default:
 		return new vObject (handle, scene);

@@ -1038,7 +1038,7 @@ TileBuffer::TileBuffer ()
 TileBuffer::~TileBuffer()
 {
 	bRunThread = false;
-
+	hLoadThread.join();
 	if (nbuf) {
 		for (uint32_t i = 0; i < nbuf; i++)
 			if (buf[i]) {
@@ -1184,7 +1184,7 @@ uint32_t TileBuffer::LoadTile_ThreadProc (TileBuffer *tb)
 	uint32_t flag = (tb->bLoadMip ? 0:4);
 	//uint32_t idle = 1000/g_client->Cfg()->PlanetLoadFrequency;
 	char fname[256];
-
+return 0;
 	while (bRunThread) {
 //		Sleep (idle);
 		usleep(1000000);

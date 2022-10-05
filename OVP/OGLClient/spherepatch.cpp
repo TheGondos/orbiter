@@ -449,8 +449,10 @@ void DestroyVBMesh (VBMESH &mesh)
 //	}
 	delete []mesh.idx;
 	mesh.idx = 0;
-	if(mesh.ib)
+	if(mesh.ib) {
 		delete mesh.ib;
+		mesh.ib = 0;
+	}
 	if (mesh.vtx) {
 		delete []mesh.vtx;
 		mesh.vtx = 0;

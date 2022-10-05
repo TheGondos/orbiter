@@ -53,6 +53,11 @@ struct VBMESH_TS {
 	uint32_t ni;
 	VECTOR4 *bbvtx;
 
+	VBMESH_TS() {
+		vtx = nullptr;
+		idx = nullptr;
+		bbvtx = nullptr;
+	}
 	~VBMESH_TS() {
 		delete[] vtx;
 		delete[] idx;

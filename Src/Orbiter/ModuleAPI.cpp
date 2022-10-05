@@ -71,6 +71,7 @@ void Module::clbkSimulationStart (RenderMode mode)
 
 void Module::clbkSimulationEnd ()
 {
+	printf("Module::clbkSimulationEnd\n");
 	// backward compatibility call (deprecated)
 	void (*opcCloseRenderViewport)() = (void(*)())oapiModuleGetProcAddress(hModule, "opcCloseRenderViewport");
 	if (opcCloseRenderViewport) opcCloseRenderViewport();
@@ -133,7 +134,6 @@ void Module::clbkPause (bool pause)
 
 
 OAPIFUNC MODULEHANDLE oapiModuleLoad (const char *name) {
-	printf("oapiModuleLoad %s\n", name);
 	std::string path = oapiGetFilePath(name);
 	return dlopen(path.c_str(), RTLD_LAZY|RTLD_GLOBAL|RTLD_DEEPBIND);
 }

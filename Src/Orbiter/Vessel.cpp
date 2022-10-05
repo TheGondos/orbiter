@@ -5826,7 +5826,7 @@ bool Vessel::RegisterModule (const char *dllname)
 	hMod = oapiModuleLoad(cbuf2);
 	if(!hMod) {
 		fprintf(stderr, "Vessel::RegisterModule failed\n");
-		exit(-1);
+		exit(EXIT_FAILURE);
 		return false;
 	}
 

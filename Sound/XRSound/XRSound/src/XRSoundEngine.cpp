@@ -63,6 +63,7 @@ void XRSoundEngine::DestroySoundEngine()
 
         // free and reset the engine
         s_pSoundEngine->drop();
+        delete s_pSoundEngine;
         s_pSoundEngine = nullptr;
         s_bSoundEngineNeedsInitialization = true;    // need to reinitialize the engine on next LoadWav call
     }

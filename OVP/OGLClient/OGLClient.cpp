@@ -95,6 +95,12 @@ OGLClient::OGLClient (MODULEHANDLE hInstance):GraphicsClient(hInstance)
 
 OGLClient::~OGLClient ()
 {
+	OGLPad::OGLPad::GlobalExit();
+	vVessel::GlobalExit();
+	OGLParticleStream::GlobalExit();
+	vStar::GlobalExit ();
+	TileManager2Base::GlobalExit();
+	TileManager::GlobalExit();
 }
 
 /**
@@ -439,20 +445,11 @@ void OGLClient::clbkRender2DPanel (SURFHANDLE *hSurf, MESHHANDLE hMesh, MATRIX3 
  *   initialisation of the 3D render environment here.
  */
 
-/*
-static void framebuffer_size_callback(GLFWwindow *window, int width, int height)
-{
-    glViewport(0, 0, width, height);
-	g_client->SetSize(width, height);
-}*/
-//#include "Camera.h"
-//extern Camera *g_camera;
 void OGLClient::clbkSetViewportSize(int w, int h) {
 	m_width = w;
 	m_height = h;
 	if(mScene) mScene->GetCamera()->SetSize(w, h);
 	glViewport(0, 0, m_width, m_height);
-//	if(g_camera) g_camera->ResizeViewport(w,h);
 }
 
 GLFWwindow *OGLClient::clbkCreateRenderWindow ()
@@ -490,22 +487,10 @@ GLFWwindow *OGLClient::clbkCreateRenderWindow ()
 
 	glViewport(0, 0, m_width, m_height);
 
-//	glfwSetFramebufferSizeCallback(hRenderWnd, framebuffer_size_callback);
-
-	//ValidateRect (hRenderWnd, NULL);
-	// avoids white flash after splash screen
-	int num_ext = 0;
-	glGetIntegerv(GL_NUM_EXTENSIONS, &num_ext);
-	for(int i=0; i<num_ext; i++)
-		if(!strcmp((const char *)glGetStringi(GL_EXTENSIONS,i), "GL_ARB_compatibility")) {
-			printf("Compatiblity Profile");
-			exit(-1);
-		}
-
 	mMeshManager = std::make_unique<OGLMeshManager>();
 	mScene = std::make_unique<Scene>(m_width, m_height);
 	mTextureManager = std::make_unique<TextureManager>();
-	TileManager::GlobalInit ();
+	TileManager::GlobalInit();
 	HazeManager::GlobalInit();
 
 	TileManager2Base::GlobalInit();
@@ -1188,13 +1173,8 @@ oapi::Sketchpad *OGLClient::clbkGetSketchpad (SURFHANDLE surf)
 void OGLClient::clbkCloseSession (bool fastclose)
 {
 	GraphicsClient::clbkCloseSession (fastclose);
-/*
-	if (scene) {
-		delete scene;
-		scene = NULL;
-	}
-	GlobalExit();
-    */
+
+	mScene.reset();
 }
 
 /**

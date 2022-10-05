@@ -734,7 +734,7 @@ int TileLoader::Load_ThreadProc (TileLoader *loader)
 	//int idle = 1000/loader->load_frequency;
 	Tile *tile[tile_packet_size];
 	int nload, i;
-
+return 0;
 sleep(6000);
 	while (bRunThread) {
 		WaitForMutex ();

@@ -421,6 +421,7 @@ public:
 
 	// module parameters
 	std::vector<std::string> m_actmod;
+	std::string m_videoPlugin;
 	void AddModule (const char *cbuf); // add a module to the list
 	void DelModule (const char *cbuf); // delete module from the list
 	bool HasModule (const char *cbuf) {

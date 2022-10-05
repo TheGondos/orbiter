@@ -1106,7 +1106,7 @@ public:
 	 * \brief Returns the object handle associated with the visual.
 	 * \return Object handle
 	 */
-	OBJHANDLE Object () const { return hObject; }
+	OBJHANDLE GetObject () const { return hObject; }
 
 	/**
 	 * \brief Message callback.

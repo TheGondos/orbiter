@@ -70,7 +70,9 @@ Scene::Scene (int w, int h)
 
 Scene::~Scene ()
 {
-	while (vobjFirst) DelVisualRec (vobjFirst);
+	while (vobjFirst) {
+		DelVisualRec (vobjFirst);
+	}
 	delete cam;
 	delete csphere;
 	//delete light;
@@ -171,7 +173,7 @@ void Scene::DelVisualRec (VOBJREC *pv)
 	else          vobjLast = pv->prev;
 
 	// delete the visual, its children and the entry itself
-	g_client->UnregisterVisObject (pv->vobj->Object());
+	g_client->UnregisterVisObject (pv->vobj->GetObject());
 	delete pv->vobj;
 	delete pv;
 }

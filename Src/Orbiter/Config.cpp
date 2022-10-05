@@ -782,6 +782,16 @@ bool Config::Load(const char *fname)
 		}
 	}
 
+	if (FindLine (ifs, "VIDEO_MODULE")) {
+		char cbuf[256], *pc;
+		while (ifs.getline (cbuf, 256) && _strnicmp (cbuf, "END_VIDEO_MODULE", 16)) {
+			pc = trim_string (cbuf);
+			m_videoPlugin = pc;
+		}
+	} else {
+		m_videoPlugin = "OGLClient";
+	}
+
 	return true;
 }
 
@@ -810,6 +820,7 @@ void Config::SetDefaults ()
 	Root = 0;
 
 	m_actmod.clear(); // no active modules
+	m_videoPlugin = "OGLClient";
 
 	bEchoAll = bEchoAll_default;
 	memset (&rLaunchpad, 0, sizeof(RECT));
@@ -1332,6 +1343,10 @@ bool Config::Write (const char *fname) const
 		}
 		ofs << "END_MODULES" << endl;
 	}
+	ofs << "VIDEO_MODULE" << endl;
+	ofs << m_videoPlugin << endl;
+	ofs << "END_VIDEO_MODULE" << endl;
+
 	ofs << flush;
 	return true;
 }

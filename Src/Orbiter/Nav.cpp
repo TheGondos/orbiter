@@ -260,7 +260,7 @@ NavManager::~NavManager ()
 void NavManager::Clear ()
 {
 	if (nbuf) {
-		for (int i = 0; i < nnav; i++) delete []nav[i];
+		for (int i = 0; i < nnav; i++) delete nav[i];
 		delete []nav;
 		nbuf = nnav = 0;
 	}

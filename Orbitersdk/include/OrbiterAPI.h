@@ -7289,8 +7289,7 @@ inline MATRIX4 _M(double m11, double m12, double m13, double m14,
  */
 inline MATRIX4 identity4 ()
 {
-	static MATRIX4 mat = {1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1};
-	return mat;
+	return {1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1};
 }
 
 /**

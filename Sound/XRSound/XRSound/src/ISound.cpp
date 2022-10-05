@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <sndfile.h>
 #include <vector>
+#include <cstring>
 
 static void CheckError(const char *msg) {
     ALCenum error;
@@ -13,7 +14,6 @@ static void CheckError(const char *msg) {
     }
 }
 
-#include <cstring>
 static std::vector<std::string> GetAudioDevices()
 {
     const ALCchar *devices = alcGetString(NULL, ALC_DEVICE_SPECIFIER);

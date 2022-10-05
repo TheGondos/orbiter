@@ -178,9 +178,9 @@ public:
 	void UpdateDeallocationProgress();
 
 	// plugin module loading/unloading
-	MODULEHANDLE LoadModule (const char *path, const char *name);   // load a plugin
-	void UnloadModule (const char *name); // unload a plugin
-	void UnloadModule (MODULEHANDLE hi);
+	MODULEHANDLE LoadModule (const char *path, const char *name, bool fatal = true);   // load a plugin
+	void UnloadModule (MODULEHANDLE hi); // unload a plugin
+	MODULEHANDLE hVideoModule;
 
 	Vessel *SetFocusObject (Vessel *vessel, bool setview = true);
 	// Select a new user-controlled vessel

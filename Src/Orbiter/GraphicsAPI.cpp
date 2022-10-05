@@ -81,8 +81,6 @@ void GraphicsClient::RegisterVisObject (OBJHANDLE hObj, VISHANDLE vis)
 	((Body*)hObj)->RegisterVisual (vis);
 }
 
-// ======================================================================
-
 void GraphicsClient::UnregisterVisObject (OBJHANDLE hObj)
 {
 	((Body*)hObj)->UnregisterVisual();

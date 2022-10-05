@@ -285,6 +285,8 @@ Orbiter::~Orbiter ()
 	m_pGUIManager->UnregisterCtrl(m_DlgRecorder.get());
 	
 	CloseApp ();
+
+	oapiModuleUnload(hVideoModule);
 }
 //-----------------------------------------------------------------------------
 // Name: Create()
@@ -313,19 +315,18 @@ void Orbiter::Create ()
 	LoadFixedModules ();
 
 	// preload modules from command line requests
-	for (auto it = pConfig->CfgCmdlinePrm.LoadPlugins.begin(); it != pConfig->CfgCmdlinePrm.LoadPlugins.end(); it++)
-		LoadModule("Modules/Plugin", it->c_str());
+	for (auto &plugin: pConfig->CfgCmdlinePrm.LoadPlugins)
+		LoadModule("Modules/Plugin", plugin.c_str());
 
 	// preload active plugin modules
-	bool winCreated = false; //FIXME: some modules are doing OpenGL calls during InitModule so
-	//we need to load the GC module first and initialise the OpenGL context
-	//for now we are lucky because it is the first in the list...
+
+	std::string videoPlugin = std::string("Modules/Plugin/lib") + pConfig->m_videoPlugin + ".so";
+	hVideoModule = oapiModuleLoad(videoPlugin.c_str());
+	CreateRenderWindow();
+
 	for (const auto &mod: pConfig->m_actmod) {
-		LoadModule ("Modules/Plugin", mod.c_str());
-		if(gclient && winCreated == false) {
-			winCreated = true;
-			CreateRenderWindow();
-		}
+		if(mod == pConfig->m_videoPlugin) continue;
+		LoadModule ("Modules/Plugin", mod.c_str(), false);
 	}
 	
 	InputController::GlobalInit();
@@ -350,7 +351,9 @@ void Orbiter::SaveConfig ()
 void Orbiter::CloseApp (bool fast_shutdown)
 {
 	SaveConfig();
-	while (nmodule) UnloadModule (module[0].name);
+	if(bSession)
+		CloseSession();
+	while (nmodule) UnloadModule (module[nmodule - 1].hMod);
 
 	if (!fast_shutdown) {
 		if (pConfig)  delete pConfig;
@@ -424,7 +427,7 @@ void Orbiter::LoadFixedModules ()
 // Name: LoadModule()
 // Desc: Load a named plugin DLL
 //-----------------------------------------------------------------------------
-MODULEHANDLE Orbiter::LoadModule (const char *path, const char *name)
+MODULEHANDLE Orbiter::LoadModule (const char *path, const char *name, bool fatal)
 {
 	char cbuf[256];
 	sprintf (cbuf, "%s/lib%s.so", path, name);
@@ -438,11 +441,7 @@ MODULEHANDLE Orbiter::LoadModule (const char *path, const char *name)
 			delete []module;
 		}
 		module = tmp;
-/*
-		void (*InitModule)(void *) = (void(*)(void *))(*hi)["InitModule"];
-		if(InitModule)
-			InitModule(hi);
-*/
+
 		void (*opcDLLInit)(MODULEHANDLE) = (void(*)(MODULEHANDLE))oapiModuleGetProcAddress(hi, "opcDLLInit");
 		if(opcDLLInit)
 			opcDLLInit(hi);
@@ -452,38 +451,15 @@ MODULEHANDLE Orbiter::LoadModule (const char *path, const char *name)
 		module[nmodule].name = new char[strlen(name)+1]; TRACENEW
 		strcpy (module[nmodule].name, name);
 		nmodule++;
-
-		
 	} else {
 		const char *err = dlerror();
 		printf ("Failed loading module %s (code %s)\n", cbuf, err);
-		exit(EXIT_FAILURE);
+		if(fatal)
+			exit(EXIT_FAILURE);
+		else
+			return nullptr;
 	}
 	return hi;
-}
-
-//-----------------------------------------------------------------------------
-// Name: UnloadModule()
-// Desc: Unload a named plugin DLL
-//-----------------------------------------------------------------------------
-void Orbiter::UnloadModule (const char *name)
-{
-	int i, j, k;
-	struct DLLModule *tmp;
-	for (i = 0; i < nmodule; i++)
-		if (!_stricmp (module[i].name, name)) break;
-	if (i == nmodule) return; // not present
-	delete []module[i].name;
-	delete module[i].module;
-	dlclose (module[i].hMod);
-	if (nmodule > 1) {
-		tmp = new struct DLLModule[nmodule-1]; TRACENEW
-		for (j = k = 0; j < nmodule; j++)
-			if (j != i) tmp[k++] = module[j];
-	} else tmp = 0;
-	delete []module;
-	module = tmp;
-	nmodule--;
 }
 
 //-----------------------------------------------------------------------------
