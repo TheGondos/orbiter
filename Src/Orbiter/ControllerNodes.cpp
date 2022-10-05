@@ -1103,6 +1103,52 @@ void PanelCtl::UpdateOutputs() {
     }
 }
 
+TimeCtl::TimeCtl(ControllerGraph *cg):Node(cg, "TimeCtl") {
+    AddInput("Toggle Pause", Pin::Trigger);
+    AddInput("Warp x0.1", Pin::Trigger);
+    AddInput("Warp x1", Pin::Trigger);
+    AddInput("Warp x10", Pin::Trigger);
+    AddInput("Warp x100", Pin::Trigger);
+    AddInput("Warp x1000", Pin::Trigger);
+    AddInput("Warp x10000", Pin::Trigger);
+    is_controller = true;
+    deletable = false;
+}
+void TimeCtl::UpdateOutputs() {
+    if(inputs[TogglePause].bVal) {
+        g_pOrbiter->TogglePause();
+    }
+    if(inputs[Warp_01].bVal) {
+        g_pOrbiter->SetWarpFactor (0.1);
+    }
+    if(inputs[Warp_1].bVal) {
+        g_pOrbiter->SetWarpFactor (1.0);
+    }
+    if(inputs[Warp_10].bVal) {
+        g_pOrbiter->SetWarpFactor (10.0);
+    }
+    if(inputs[Warp_100].bVal) {
+        g_pOrbiter->SetWarpFactor (100.0);
+    }
+    if(inputs[Warp_1000].bVal) {
+        g_pOrbiter->SetWarpFactor (1000.0);
+    }
+    if(inputs[Warp_10000].bVal) {
+        g_pOrbiter->SetWarpFactor (10000.0);
+    }
+}
+TimeCtl::TimeCtl(ControllerGraph *cg, const crude_json::value &json):Node(cg, json) {
+    deletable = false;
+}
+
+crude_json::value TimeCtl::ToJSON() {
+    crude_json::value ret = Node::ToJSON();
+    ret["class"] = "TimeCtl";
+    return ret;
+}
+void TimeCtl::SimulateOutputs() {
+}
+
 HUDCtl::HUDCtl(ControllerGraph *cg):Node(cg, "HUDCtl") {
     AddInput("Show", Pin::Button);
     AddInput("Toggle On/Off", Pin::Trigger);

@@ -965,7 +965,8 @@ void InputController::GlobalInit() {
     ControllerGraph::Register<GraphNote, false>("GraphNote");
     ControllerGraph::Register<KeyBinds, false>("KeyBinds");
     ControllerGraph::Register<AFCtl, true>("AFCtl");
-
+    ControllerGraph::Register<TimeCtl, true>("TimeCtl");
+    
     if(!std::filesystem::exists("Controllers")) {
         std::filesystem::create_directory("Controllers");
     }

@@ -347,6 +347,24 @@ class HUDCtl : public Node {
     virtual void SimulateOutputs() override;
 };
 
+class TimeCtl : public Node {
+    enum {
+        TogglePause,
+        Warp_01,
+        Warp_1,
+        Warp_10,
+        Warp_100,
+        Warp_1000,
+        Warp_10000,
+    };
+    public:
+    TimeCtl(ControllerGraph *cg);
+    TimeCtl(ControllerGraph *cg, const crude_json::value &json);
+    virtual crude_json::value ToJSON() override;
+    virtual void UpdateOutputs() override;
+    virtual void SimulateOutputs() override;
+};
+
 class GraphNote : public Node {
     public:
     static const int MAX_NOTE_SIZE = 128;
