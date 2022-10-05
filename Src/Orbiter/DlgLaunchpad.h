@@ -17,7 +17,9 @@ public:
     void DrawAbout();
     void DrawDir(const char *path);
 
+    std::string GetScenarioDescription();
+
     std::string m_SelectedScenario;
-    std::string m_SelectedScenarioPath;
+    std::string m_SelectedDirectory;
     static const std::string etype;
 };
