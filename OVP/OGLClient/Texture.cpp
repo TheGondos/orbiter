@@ -281,14 +281,15 @@ bool TextureManager::LoadTexture (const char *fname, OGLTexture **ppdds, uint32_
 
 	char cpath[256];
 	*ppdds = 0;
-    GLuint tid = 0;
-    if (g_client->TexturePath(fname, cpath)) {
-        tid = SOIL_load_OGL_texture(cpath, SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOILFlags, 0);
-    } else {
-    	g_client->PlanetTexturePath(fname, cpath);
-        tid = SOIL_load_OGL_texture(cpath, SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOILFlags, 0);
+    GLuint tid = SOIL_load_OGL_texture(fname, SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOILFlags, 0);
+    if(tid == 0) {
+        if (g_client->TexturePath(fname, cpath)) {
+            tid = SOIL_load_OGL_texture(cpath, SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOILFlags, 0);
+        } else {
+            g_client->PlanetTexturePath(fname, cpath);
+            tid = SOIL_load_OGL_texture(cpath, SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOILFlags, 0);
+        }
     }
-
     if(tid != 0) {
         *ppdds = new OGLTexture;
         (*ppdds)->m_TexId = tid;

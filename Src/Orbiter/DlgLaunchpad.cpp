@@ -52,17 +52,27 @@ struct my_markdown : public imgui_md
 
 	bool get_image(image_info& nfo) const override
 	{
-
-        assert(0);
-		//use m_href to identify images
-		//nfo.texture_id = g_texture1;
-		nfo.size = {40,20};
-		nfo.uv0 = { 0,0 };
-		nfo.uv1 = {1,1};
+		SURFHANDLE s;
+		if(m_textureCache.count(m_href)) {
+			s = m_textureCache[m_href];
+		} else {
+			SURFHANDLE s = oapiLoadTexture(m_href.c_str());
+			if(!s) return false;
+			m_textureCache[m_href] = s;
+		}
+		int w, h;
+		oapiIncrTextureRef(s);
+		oapiGetTextureSize(s, &w, &h);
+		nfo.texture_id = s;
+		nfo.size = { (float)w, (float)h };
+		nfo.uv0 = { 0, 0 };
+		nfo.uv1 = { 1, 1 };
 		nfo.col_tint = { 1,1,1,1 };
 		nfo.col_border = { 0,0,0,0 };
 		return true;
 	}
+
+	mutable std::map<std::string, SURFHANDLE> m_textureCache;
 	/*
 	void html_div(const std::string& dclass, bool e) override
 	{
@@ -80,7 +90,7 @@ struct my_markdown : public imgui_md
 
 DlgLaunchpad::DlgLaunchpad(const std::string &name) : GUIElement(name, "DlgLaunchpad") {
     show = true;
-    m_SelectedScenario = "./Scenarios//Demo/DG ISS Approach.scn";
+    //m_SelectedScenario = "./Scenarios//Demo/DG ISS Approach.scn";
 }
 
 void DlgLaunchpad::DrawVideo() {

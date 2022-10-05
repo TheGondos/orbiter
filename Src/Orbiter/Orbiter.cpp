@@ -730,7 +730,7 @@ void Orbiter::CloseSession ()
 	bSession = false;
 	if      (bRecord)   ToggleRecorder();
 	else if (bPlayback) EndPlayback();
-	const char *desc = "Current scenario state\n\n\nContains the latest simulation state.";
+	const char *desc = "Current scenario state\n\n![screenshot](Images/CurrentState.jpg)";
 	SaveScenario (CurrentScenario, desc);
 	if (hScnInterp) {
 		script->DelInterpreter (hScnInterp);
@@ -1164,6 +1164,9 @@ int Orbiter::Run ()
 			DisplayFrame();
 		}
     }
+	if(bSession)
+		PreCloseSession();
+
 	hRenderWnd = NULL;
     return 0;
 }
