@@ -927,7 +927,8 @@ protected:
 	 *   if no operation was performed.
 	 * \default None, returns false.
 	 */
-	virtual bool clbkDisplayFrame ();
+	virtual bool clbkDisplayFrame () override;
+	virtual bool clbkClearFrame () override;
 
 	/**
 	 * \brief Display a load status message on the splash screen

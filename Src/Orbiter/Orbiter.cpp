@@ -893,6 +893,13 @@ void Orbiter::DisplayFrame ()
 	}
 }
 
+void Orbiter::ClearFrame ()
+{
+	if (gclient) {
+		gclient->clbkClearFrame ();
+	}
+}
+
 //-----------------------------------------------------------------------------
 // Name: ScreenToClient()
 // Desc: Converts screen to client coordinates. In fullscreen mode they are identical
@@ -1176,6 +1183,7 @@ int Orbiter::Run ()
 			DisplayFrame();
 			bRenderOnce = false;
 		} else {
+			ClearFrame();
 			RenderGUI();
 			DisplayFrame();
 		}

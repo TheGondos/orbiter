@@ -1413,6 +1413,7 @@ protected:
 	 * \default None, returns false.
 	 */
 	virtual bool clbkDisplayFrame () { return false; }
+	virtual bool clbkClearFrame () { return false; }
 
 	/**
 	 * \brief Display a load status message on the splash screen

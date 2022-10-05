@@ -17,6 +17,7 @@
 #include "VVessel.h"
 #include "OGLPad.h"
 #include "OGLCamera.h"
+#include "stb_image_write.h"
 
 //extern Orbiter *g_pOrbiter;
 /*
@@ -680,6 +681,60 @@ SURFHANDLE OGLClient::clbkLoadSurface (const char *fname, int flags)
 bool OGLClient::clbkSaveSurfaceToImage (SURFHANDLE surf, const char *fname,
 		ImageFileFormat fmt, float quality)
 {
+	int width, height, data_size;
+	GLubyte* pixels;
+
+	if(surf) {
+		OGLTexture *tx = (OGLTexture *)surf;
+		width = tx->m_Width;
+		height = tx->m_Height;
+		data_size = tx->m_Width * tx->m_Height * 4;
+		pixels = new GLubyte[data_size];
+
+		GLuint fbo;
+		glGenFramebuffers(1, &fbo);
+		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tx->m_TexId, 0);
+		glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glDeleteFramebuffers(1, &fbo);
+	} else {
+		width = m_width;
+		height = m_height;
+		data_size = width * height * 4;
+		pixels = new GLubyte[data_size];
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+	}
+
+	int status = 0;
+	std::string filename = fname;
+	stbi_flip_vertically_on_write(1);
+	switch(fmt) {
+		case IMAGE_BMP:
+			filename+=".bmp";
+		    status = stbi_write_bmp(filename.c_str(), width, height, 4, pixels);
+			break;
+		case IMAGE_PNG:
+			filename+=".png";
+		    status = stbi_write_png(filename.c_str(), width, height, 4, pixels, 0);
+			break;
+		case IMAGE_JPG:
+			filename+=".jpg";
+			status = stbi_write_jpg(filename.c_str(), width, height, 4, pixels, 100);
+			break;
+		case IMAGE_TIF:
+			break;
+	}
+
+	if(status) {
+		oapiAddNotification(GUIManager::Success, "Image saved", filename.c_str());
+	} else {
+		oapiAddNotification(GUIManager::Error, "Error saving image", filename.c_str());
+	}
+
+	delete []pixels;
+
     return false;
 }
 
@@ -1157,14 +1212,17 @@ bool OGLClient::clbkDisplayFrame ()
 {
 	CheckError("before clbkDisplayFrame");
 	glfwSwapBuffers(hRenderWnd);
-
+	return true;
+}
+bool OGLClient::clbkClearFrame ()
+{
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	CheckError("glClearColor");
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	CheckError("glClear");
-
 	return true;
 }
+ 
 void OGLClient::clbkImGuiNewFrame ()
 {
 	ImGui_ImplOpenGL3_NewFrame();

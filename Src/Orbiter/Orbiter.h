@@ -146,6 +146,7 @@ public:
 	void Render3DEnvironment();
 	void RenderGUI();
 	void DisplayFrame();
+	void ClearFrame();
 	void Output2DData ();
 	void OutputLoadStatus (const char *msg, int line);
 	void OutputLoadTick (int line, bool ok = true);
