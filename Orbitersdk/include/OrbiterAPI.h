@@ -97,6 +97,7 @@ class OAPIFUNC GUIManager {
 		ImFont *fontH3;
 		ImFont *fontBold;
         GUIManager();
+		void RenderGUI();
 		void Notify(enum NotifType, const char *title, const char *content);
         void RegisterCtrl(GUIElement *ctrl) {
             for(auto &e: m_GUICtrls) {

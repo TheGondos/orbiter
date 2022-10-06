@@ -43,8 +43,6 @@
 #include "DlgRecorder.h"
 #include "Select.h"
 #include "PlaybackEd.h"
-#include "imgui_notify.h"
-#include "imgui_impl_glfw.h"
 
 #include <fenv.h>
 #include <unistd.h>
@@ -644,18 +642,7 @@ GLFWwindow *Orbiter::CreateRenderWindow ()
 	glfwWindowHint(GLFW_FOCUS_ON_SHOW, false);
 	//	glfwWindowHint(GLFW_SAMPLES, 4);
 
-	IMGUI_CHECKVERSION();
-	ImGui::CreateContext();
-	ImGuiIO& io = ImGui::GetIO();
-	io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
-//	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-//	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-//	io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
-
-	// Setup Dear ImGui style
-	//ImGui::StyleColorsDark();
-	ImGui::StyleColorsClassic();
-
+	m_pGUIManager  = std::make_unique<GUIManager>();
 
 	if (gclient) {
 		hRenderWnd = gclient->clbkCreateRenderWindow();
@@ -670,7 +657,6 @@ GLFWwindow *Orbiter::CreateRenderWindow ()
 	}
 
 	if (gclient) {
-		m_pGUIManager  = std::make_unique<GUIManager>();
 		m_DlgCamera    = std::make_unique<DlgCamera>("Camera");
 		m_DlgInfo      = std::make_unique<DlgInfo>("Info");
 		m_DlgTacc      = std::make_unique<DlgTacc>("Time Acceleration");
@@ -823,43 +809,7 @@ void Orbiter::Render3DEnvironment ()
 
 void Orbiter::RenderGUI ()
 {
-	if (gclient) {
-		static const auto toast2icon = [](ImGuiToastType type) {
-			switch (type)
-			{
-			case ImGuiToastType_None:
-				return (const char *)nullptr;
-			case ImGuiToastType_Success:
-				return ICON_FA_CHECK_CIRCLE;
-			case ImGuiToastType_Warning:
-				return ICON_FA_EXCLAMATION_TRIANGLE;
-			case ImGuiToastType_Error:
-				return ICON_FA_TIMES_CIRCLE;
-			case ImGuiToastType_Info:
-				return ICON_FA_INFO_CIRCLE;
-			}
-			assert(false);
-		};
-
-		gclient->clbkImGuiNewFrame ();
-		ImGui_ImplGlfw_NewFrame();
-		ImGui::NewFrame();
-
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 5.f); // Round borders
-		ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(43.f / 255.f, 43.f / 255.f, 43.f / 255.f, 100.f / 255.f)); // Background color
-		ImGui::RenderNotifications(toast2icon); // <-- Here we render all notifications
-		ImGui::PopStyleVar(1); // Don't forget to Pop()
-		ImGui::PopStyleColor(1);	
-
-		for(auto &ctrl: m_pGUIManager->m_GUICtrls) {
-			if(ctrl->show) {
-				ctrl->Show();
-			}
-		}
-
-		ImGui::Render();
-		gclient->clbkImGuiRenderDrawData ();
-	}
+	m_pGUIManager->RenderGUI();
 }
 
 void Orbiter::DisplayFrame ()

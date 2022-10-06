@@ -1,10 +1,13 @@
 #include "OrbiterAPI.h"
+#include "Orbiter.h"
 #include <imgui/imgui.h>
 #include "imgui_notify.h"
+#include "imgui_impl_glfw.h"
 #include "fa_solid_900.h"
 
-ImGuiContext*   GImGui = NULL;
+extern Orbiter *g_pOrbiter;
 
+ImGuiContext*   GImGui = NULL;
 
 const ImWchar*  GetGlyphRangesOrbiter()
 {
@@ -108,27 +111,24 @@ static void ImGuiSetStyle()
 		style.Colors[ImGuiCol_WindowBg].w = 1.0f;
 	}
 #endif
-/*
-	ImGuiIO& io = ImGui::GetIO();
-	ImFontConfig config;
-	
-	io.Fonts->AddFontFromFileTTF("Roboto-Medium.ttf", 14.0f, &config, GetGlyphRangesOrbiter());
-	static const ImWchar icons_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
-
-	ImFontConfig icons_config;
-	icons_config.MergeMode = true;
-	icons_config.PixelSnapH = true;
-	icons_config.FontDataOwnedByAtlas = false;
-
-	io.Fonts->AddFontFromMemoryTTF((void*)fa_solid_900, sizeof(fa_solid_900), 14.0, &icons_config, icons_ranges);
-*/
 }
-
 GUIManager::GUIManager()
 {
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO();
+	io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+//	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+//	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+//	io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+
+	// Setup Dear ImGui style
+	//ImGui::StyleColorsDark();
+	ImGui::StyleColorsClassic();
+
+
     ImGuiSetStyle();
 
-	ImGuiIO& io = ImGui::GetIO();
 	ImFontConfig config;
 
 	static const ImWchar icons_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
@@ -171,4 +171,43 @@ void GUIManager::Notify(enum NotifType type, const char *title, const char *cont
             break;
     }
   	ImGui::InsertNotification({ toasttype, title, content });
+}
+
+void GUIManager::RenderGUI()
+{
+	static const auto toast2icon = [](ImGuiToastType type) {
+		switch (type)
+		{
+		case ImGuiToastType_None:
+			return (const char *)nullptr;
+		case ImGuiToastType_Success:
+			return ICON_FA_CHECK_CIRCLE;
+		case ImGuiToastType_Warning:
+			return ICON_FA_EXCLAMATION_TRIANGLE;
+		case ImGuiToastType_Error:
+			return ICON_FA_TIMES_CIRCLE;
+		case ImGuiToastType_Info:
+			return ICON_FA_INFO_CIRCLE;
+		}
+		assert(false);
+	};
+
+	g_pOrbiter->GetGraphicsClient()->clbkImGuiNewFrame ();
+	ImGui_ImplGlfw_NewFrame();
+	ImGui::NewFrame();
+
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 5.f); // Round borders
+	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(43.f / 255.f, 43.f / 255.f, 43.f / 255.f, 100.f / 255.f)); // Background color
+	ImGui::RenderNotifications(toast2icon); // <-- Here we render all notifications
+	ImGui::PopStyleVar(1); // Don't forget to Pop()
+	ImGui::PopStyleColor(1);
+
+	for(auto &ctrl: m_GUICtrls) {
+		if(ctrl->show) {
+			ctrl->Show();
+		}
+	}
+
+	ImGui::Render();
+	g_pOrbiter->GetGraphicsClient()->clbkImGuiRenderDrawData ();
 }

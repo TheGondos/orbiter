@@ -1285,6 +1285,8 @@ public:
 	 */
 	virtual bool clbkFilterElevation(OBJHANDLE hPlanet, int ilat, int ilng, int lvl, double elev_res, int16_t* elev) { return false; }
 	// @}
+	virtual void clbkImGuiNewFrame () = 0;
+	virtual void clbkImGuiRenderDrawData () = 0;
 
 protected:
 	/** \brief Launchpad video tab indicator
@@ -1398,8 +1400,6 @@ protected:
 	 *   panel, HUD, etc.)
 	 */
 	virtual void clbkRenderScene () = 0;
-	virtual void clbkImGuiNewFrame () = 0;
-	virtual void clbkImGuiRenderDrawData () = 0;
 
 	/**
 	 * \brief Display a scene on screen after rendering it.
