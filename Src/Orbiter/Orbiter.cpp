@@ -187,8 +187,7 @@ int main(int argc, const char *argv[])
 
 bool Orbiter::InitializeWorld (char *name)
 {
-	if (hRenderWnd)
-		g_pane = new Pane (gclient, viewW, viewH, viewBPP); TRACENEW
+	g_pane = new Pane (gclient, viewW, viewH, viewBPP); TRACENEW
 	if (g_camera) delete g_camera;
 	g_camera = new Camera (g_nearplane, g_farplane); TRACENEW
 	g_camera->ResizeViewport (viewW, viewH);
@@ -231,7 +230,6 @@ Orbiter::Orbiter ()
 	bFullscreen     = false;
 	viewW = viewH = viewBPP = 0;
 	gclient         = NULL;
-	hRenderWnd      = NULL;
 	hScnInterp      = NULL;
 	snote_playback  = NULL;
 	nsnote          = 0;
@@ -557,7 +555,7 @@ void Orbiter::StartSession (Config *pCfg, const char *scenario)
 	LOGOUT ("Finished initialising camera");
 
 	bSession = true;
-	bVisible = (hRenderWnd != NULL);
+	bVisible = true;
 	bActive = bVisible;
 	bRunning = bRequestRunning = true;
 	bRenderOnce = false;
@@ -589,9 +587,8 @@ void Orbiter::StartSession (Config *pCfg, const char *scenario)
 		}
 	}
 
-	Module::RenderMode rendermode = (
-		hRenderWnd ? (bFullscreen ? Module::RENDER_FULLSCREEN : Module::RENDER_WINDOW) : Module::RENDER_NONE
-	);
+	Module::RenderMode rendermode = bFullscreen ? Module::RENDER_FULLSCREEN : Module::RENDER_WINDOW;
+
 	//for (i = 0; i < nmodule; i++) {
 	//	module[i].module->clbkSimulationStart (rendermode);
 	//	CHECKCWD(cwd,module[i].name);
@@ -628,14 +625,9 @@ void Orbiter::StartSession (Config *pCfg, const char *scenario)
 // Name: CreateRenderWindow()
 // Desc: Create the window used for rendering the scene
 //-----------------------------------------------------------------------------
-GLFWwindow *Orbiter::CreateRenderWindow ()
+void Orbiter::CreateRenderWindow ()
 {
 	/* Initialize the library */
-    if (!glfwInit()) {
-		printf("glfwInit failed\n");
-		exit(EXIT_FAILURE);
-	}
-
     glfwWindowHint(GLFW_DOUBLEBUFFER , 1);
     glfwWindowHint(GLFW_DEPTH_BITS, 24);
     glfwWindowHint(GLFW_STENCIL_BITS, 8);
@@ -644,59 +636,44 @@ GLFWwindow *Orbiter::CreateRenderWindow ()
 
 	m_pGUIManager  = std::make_unique<GUIManager>();
 
-	if (gclient) {
-		hRenderWnd = gclient->clbkCreateRenderWindow();
-		GetRenderParameters ();
-	} else {
-		hRenderWnd = NULL;
-	}
+	GetRenderParameters ();
 
 	// Generate logical world objects
-	if (gclient) {
-		Base::CreateStaticDeviceObjects();
-	}
+	Base::CreateStaticDeviceObjects();
 
-	if (gclient) {
-		m_DlgCamera    = std::make_unique<DlgCamera>("Camera");
-		m_DlgInfo      = std::make_unique<DlgInfo>("Info");
-		m_DlgTacc      = std::make_unique<DlgTacc>("Time Acceleration");
-		m_DlgMap       = std::make_unique<DlgMap>("Map");
-		m_DlgFocus     = std::make_unique<DlgFocus>("Ship");
-		m_DlgFunction  = std::make_unique<DlgFunction>("Custom Functions");
-		m_DlgVishelper = std::make_unique<DlgVishelper>("Visual Helpers");
-		m_DlgLaunchpad = std::make_unique<DlgLaunchpad>("Launchpad");
-		m_DlgSelect    = std::make_unique<Select>("Select");
-		m_DlgInputBox  = std::make_unique<InputBox>("InputBox");
-		m_DlgRecorder  = std::make_unique<DlgRecorder>("Recorder");
-		m_DlgPlaybackEditor = std::make_unique<DlgPlaybackEditor>("DlgPlaybackEditor");
-		m_DlgJoystick  = std::make_unique<DlgJoystick>("Joystick Configuration");
-		
-		
-		m_pGUIManager->RegisterCtrl(m_DlgCamera.get());
-		m_pGUIManager->RegisterCtrl(m_DlgInfo.get());
-		m_pGUIManager->RegisterCtrl(m_DlgTacc.get());
-		m_pGUIManager->RegisterCtrl(m_DlgMap.get());
-		m_pGUIManager->RegisterCtrl(m_DlgFocus.get());
-		m_pGUIManager->RegisterCtrl(m_DlgFunction.get());
-		m_pGUIManager->RegisterCtrl(m_DlgVishelper.get());
-		m_pGUIManager->RegisterCtrl(m_DlgLaunchpad.get());
-		m_pGUIManager->RegisterCtrl(m_DlgSelect.get());
-		m_pGUIManager->RegisterCtrl(m_DlgInputBox.get());
-		m_pGUIManager->RegisterCtrl(m_DlgPlaybackEditor.get());
-		m_pGUIManager->RegisterCtrl(m_DlgRecorder.get());
-		m_pGUIManager->RegisterCtrl(m_DlgJoystick.get());
+	m_DlgCamera    = std::make_unique<DlgCamera>("Camera");
+	m_DlgInfo      = std::make_unique<DlgInfo>("Info");
+	m_DlgTacc      = std::make_unique<DlgTacc>("Time Acceleration");
+	m_DlgMap       = std::make_unique<DlgMap>("Map");
+	m_DlgFocus     = std::make_unique<DlgFocus>("Ship");
+	m_DlgFunction  = std::make_unique<DlgFunction>("Custom Functions");
+	m_DlgVishelper = std::make_unique<DlgVishelper>("Visual Helpers");
+	m_DlgLaunchpad = std::make_unique<DlgLaunchpad>("Launchpad");
+	m_DlgSelect    = std::make_unique<Select>("Select");
+	m_DlgInputBox  = std::make_unique<InputBox>("InputBox");
+	m_DlgRecorder  = std::make_unique<DlgRecorder>("Recorder");
+	m_DlgPlaybackEditor = std::make_unique<DlgPlaybackEditor>("DlgPlaybackEditor");
+	m_DlgJoystick  = std::make_unique<DlgJoystick>("Joystick Configuration");
+	
+	
+	m_pGUIManager->RegisterCtrl(m_DlgCamera.get());
+	m_pGUIManager->RegisterCtrl(m_DlgInfo.get());
+	m_pGUIManager->RegisterCtrl(m_DlgTacc.get());
+	m_pGUIManager->RegisterCtrl(m_DlgMap.get());
+	m_pGUIManager->RegisterCtrl(m_DlgFocus.get());
+	m_pGUIManager->RegisterCtrl(m_DlgFunction.get());
+	m_pGUIManager->RegisterCtrl(m_DlgVishelper.get());
+	m_pGUIManager->RegisterCtrl(m_DlgLaunchpad.get());
+	m_pGUIManager->RegisterCtrl(m_DlgSelect.get());
+	m_pGUIManager->RegisterCtrl(m_DlgInputBox.get());
+	m_pGUIManager->RegisterCtrl(m_DlgPlaybackEditor.get());
+	m_pGUIManager->RegisterCtrl(m_DlgRecorder.get());
+	m_pGUIManager->RegisterCtrl(m_DlgJoystick.get());
 
-		// playback screen annotation manager
-		snote_playback = gclient->clbkCreateAnnotation ();
-	}
-	else {
-		printf("gclient==NULL\n");
-		exit(EXIT_FAILURE);
-	}
+	// playback screen annotation manager
+	snote_playback = gclient->clbkCreateAnnotation ();
 
 	LOGOUT ("Finished setting up render state");
-
-	return hRenderWnd;
 }
 
 void Orbiter::PreCloseSession()
@@ -745,7 +722,6 @@ void Orbiter::CloseSession ()
 		for (i = 0; i < nmodule; i++)
 			module[i].module->clbkSimulationEnd();
 
-		hRenderWnd = NULL;
 	} else {
 		if (gclient) {
 			gclient->clbkCloseSession (true);
@@ -755,7 +731,6 @@ void Orbiter::CloseSession ()
 		for (i = 0; i < nmodule; i++)
 			module[i].module->clbkSimulationEnd();
 
-		hRenderWnd = NULL;
 		CloseApp (true);
 		if (pConfig->CfgDebugPrm.ShutdownMode == 2 || bFastExit) {
 			LOGOUT("**** Fast process shutdown\r\n");
@@ -837,215 +812,6 @@ void Orbiter::ScreenToClient (POINT *pt) const
 		::ScreenToClient (hRenderWnd, pt);*/
 }
 
-static void (*prev_cursor_position_callback)(GLFWwindow* window, double xpos, double ypos) = nullptr;
-static void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
-{
-	ImGuiIO& io = ImGui::GetIO();
-	if(prev_cursor_position_callback) prev_cursor_position_callback(window, xpos, ypos);
-	if (io.WantCaptureMouse)
-		return;
-	g_pOrbiter->MouseEvent(oapi::MOUSE_MOVE, 0, xpos, ypos);
-}
-
-static void (*prev_mouse_button_callback)(GLFWwindow* window, int button, int action, int mods) = nullptr;
-static void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
-{
-	ImGuiIO& io = ImGui::GetIO();
-	if(prev_mouse_button_callback) prev_mouse_button_callback(window, button, action, mods);
-	if (io.WantCaptureMouse)
-		return;
-
-	double xpos, ypos;
-	glfwGetCursorPos(window, &xpos, &ypos);
-
-	int m = oapi::MouseModifier::MOUSE_NONE;
-
-	if(mods & GLFW_MOD_SHIFT)   m |= oapi::MouseModifier::MOUSE_SHIFT;
-	if(mods & GLFW_MOD_CONTROL) m |= oapi::MouseModifier::MOUSE_CTRL;
-	if(mods & GLFW_MOD_ALT)     m |= oapi::MouseModifier::MOUSE_ALT;
-
-    if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS) {
-        g_pOrbiter->MouseEvent(oapi::MOUSE_RBUTTONDOWN, m, xpos, ypos);
-	} else if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_RELEASE) {
-        g_pOrbiter->MouseEvent(oapi::MOUSE_RBUTTONUP, m, xpos, ypos);
-	} else if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
-        g_pOrbiter->MouseEvent(oapi::MOUSE_LBUTTONDOWN, m, xpos, ypos);
-	} else if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE) {
-        g_pOrbiter->MouseEvent(oapi::MOUSE_LBUTTONUP, m, xpos, ypos);
-	}
-}
-
-static void (*prev_scroll_callback)(GLFWwindow* window, double xoffset, double yoffset) = nullptr;
-static void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
-{
-	ImGuiIO& io = ImGui::GetIO();
-	io.MouseWheelH += (float)xoffset;
-	io.MouseWheel += (float)yoffset;
-
-	if(prev_scroll_callback) prev_scroll_callback(window, xoffset, yoffset);
-	if (io.WantCaptureMouse)
-		return;
-
-	double xpos, ypos;
-	glfwGetCursorPos(window, &xpos, &ypos);
-	int mod = 0;
-	if(glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS
-	|| glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS)
-		mod = oapi::MouseModifier::MOUSE_CTRL;
-		
-	if(glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS
-	|| glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS)
-		mod = oapi::MouseModifier::MOUSE_SHIFT;
-		
-	if(glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS
-	|| glfwGetKey(window, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS)
-		mod = oapi::MouseModifier::MOUSE_ALT;
-		
-	// yoffset is  one of -1/0/1 -> too small, scale it 50 times
-	g_pOrbiter->MouseEvent(oapi::MOUSE_WHEEL, mod, xoffset * 10.0, yoffset * 50.0);
-}
-
-static void (*prev_key_callback)(GLFWwindow* window, int gkey, int scancode, int action, int mods) = nullptr;
-static void key_callback(GLFWwindow* window, int gkey, int scancode, int action, int mods)
-{
-//	printf("key_callback gkey=%d scancode=%d action=%d mods=%d\n", gkey, scancode, action, mods);
-/*
-Unused values:
-#define 	GLFW_KEY_UNKNOWN   -1
-#define 	GLFW_KEY_WORLD_1   161 // non-US #1 
-#define 	GLFW_KEY_WORLD_2   162 // non-US #2 
-#define 	GLFW_KEY_KP_EQUAL   336
-#define 	GLFW_KEY_LEFT_SUPER   343
-#define 	GLFW_KEY_RIGHT_SUPER   347
-#define 	GLFW_KEY_MENU   348
-#define 	GLFW_KEY_LAST   GLFW_KEY_MENU
-#define OAPI_KEY_OEM_102		0x56  ///< | \< \> on UK/German keyboards
-*/
-	if(prev_key_callback) prev_key_callback(window, gkey, scancode, action, mods);
-
-	ImGuiIO& io = ImGui::GetIO();
-	if (io.WantCaptureKeyboard) {
-		return;
-	}
-	
-	if(gkey == GLFW_KEY_UNKNOWN)
-		return;
-
-	static char glfw2oapi[GLFW_KEY_LAST];
-	static int initdone=0;
-	if(!initdone) {
-		initdone=1;
-		memset(glfw2oapi, 0, GLFW_KEY_LAST);
-		glfw2oapi[GLFW_KEY_SPACE]=OAPI_KEY_SPACE;
-		glfw2oapi[GLFW_KEY_APOSTROPHE]=OAPI_KEY_APOSTROPHE;
-		glfw2oapi[GLFW_KEY_COMMA]=OAPI_KEY_COMMA;
-		glfw2oapi[GLFW_KEY_MINUS]=OAPI_KEY_MINUS;
-		glfw2oapi[GLFW_KEY_PERIOD]=OAPI_KEY_PERIOD;
-		glfw2oapi[GLFW_KEY_SLASH]=OAPI_KEY_SLASH;
-		glfw2oapi[GLFW_KEY_0]=OAPI_KEY_0;
-		glfw2oapi[GLFW_KEY_1]=OAPI_KEY_1;
-		glfw2oapi[GLFW_KEY_2]=OAPI_KEY_2;
-		glfw2oapi[GLFW_KEY_3]=OAPI_KEY_3;
-		glfw2oapi[GLFW_KEY_4]=OAPI_KEY_4;
-		glfw2oapi[GLFW_KEY_5]=OAPI_KEY_5;
-		glfw2oapi[GLFW_KEY_6]=OAPI_KEY_6;
-		glfw2oapi[GLFW_KEY_7]=OAPI_KEY_7;
-		glfw2oapi[GLFW_KEY_8]=OAPI_KEY_8;
-		glfw2oapi[GLFW_KEY_9]=OAPI_KEY_9;
-		glfw2oapi[GLFW_KEY_SEMICOLON]=OAPI_KEY_SEMICOLON;
-		glfw2oapi[GLFW_KEY_EQUAL]=OAPI_KEY_EQUALS;
-		glfw2oapi[GLFW_KEY_A]=OAPI_KEY_A;
-		glfw2oapi[GLFW_KEY_B]=OAPI_KEY_B;
-		glfw2oapi[GLFW_KEY_C]=OAPI_KEY_C;
-		glfw2oapi[GLFW_KEY_D]=OAPI_KEY_D;
-		glfw2oapi[GLFW_KEY_E]=OAPI_KEY_E;
-		glfw2oapi[GLFW_KEY_F]=OAPI_KEY_F;
-		glfw2oapi[GLFW_KEY_G]=OAPI_KEY_G;
-		glfw2oapi[GLFW_KEY_H]=OAPI_KEY_H;
-		glfw2oapi[GLFW_KEY_I]=OAPI_KEY_I;
-		glfw2oapi[GLFW_KEY_J]=OAPI_KEY_J;
-		glfw2oapi[GLFW_KEY_K]=OAPI_KEY_K;
-		glfw2oapi[GLFW_KEY_L]=OAPI_KEY_L;
-		glfw2oapi[GLFW_KEY_M]=OAPI_KEY_M;
-		glfw2oapi[GLFW_KEY_N]=OAPI_KEY_N;
-		glfw2oapi[GLFW_KEY_O]=OAPI_KEY_O;
-		glfw2oapi[GLFW_KEY_P]=OAPI_KEY_P;
-		glfw2oapi[GLFW_KEY_Q]=OAPI_KEY_Q;
-		glfw2oapi[GLFW_KEY_R]=OAPI_KEY_R;
-		glfw2oapi[GLFW_KEY_S]=OAPI_KEY_S;
-		glfw2oapi[GLFW_KEY_T]=OAPI_KEY_T;
-		glfw2oapi[GLFW_KEY_U]=OAPI_KEY_U;
-		glfw2oapi[GLFW_KEY_V]=OAPI_KEY_V;
-		glfw2oapi[GLFW_KEY_W]=OAPI_KEY_W;
-		glfw2oapi[GLFW_KEY_X]=OAPI_KEY_X;
-		glfw2oapi[GLFW_KEY_Y]=OAPI_KEY_Y;
-		glfw2oapi[GLFW_KEY_Z]=OAPI_KEY_Z;
-		glfw2oapi[GLFW_KEY_LEFT_BRACKET]=OAPI_KEY_LBRACKET;
-		glfw2oapi[GLFW_KEY_BACKSLASH]=OAPI_KEY_BACKSLASH;
-		glfw2oapi[GLFW_KEY_RIGHT_BRACKET]=OAPI_KEY_RBRACKET;
-		glfw2oapi[GLFW_KEY_GRAVE_ACCENT]=OAPI_KEY_GRAVE;
-		glfw2oapi[GLFW_KEY_ESCAPE]=OAPI_KEY_ESCAPE;
-		glfw2oapi[GLFW_KEY_ENTER]=OAPI_KEY_RETURN;
-		glfw2oapi[GLFW_KEY_TAB]=OAPI_KEY_TAB;
-		glfw2oapi[GLFW_KEY_BACKSPACE]=OAPI_KEY_BACK;
-		glfw2oapi[GLFW_KEY_INSERT]=OAPI_KEY_INSERT;
-		glfw2oapi[GLFW_KEY_DELETE]=OAPI_KEY_DELETE;
-		glfw2oapi[GLFW_KEY_RIGHT]=OAPI_KEY_RIGHT;
-		glfw2oapi[GLFW_KEY_LEFT]=OAPI_KEY_LEFT;
-		glfw2oapi[GLFW_KEY_DOWN]=OAPI_KEY_DOWN;
-		glfw2oapi[GLFW_KEY_UP]=OAPI_KEY_UP;
-		glfw2oapi[GLFW_KEY_PAGE_UP]=OAPI_KEY_PRIOR;
-		glfw2oapi[GLFW_KEY_PAGE_DOWN]=OAPI_KEY_NEXT;
-		glfw2oapi[GLFW_KEY_HOME]=OAPI_KEY_HOME;
-		glfw2oapi[GLFW_KEY_END]=OAPI_KEY_END;
-		glfw2oapi[GLFW_KEY_CAPS_LOCK]=OAPI_KEY_CAPITAL;
-		glfw2oapi[GLFW_KEY_SCROLL_LOCK]=OAPI_KEY_SCROLL;
-		glfw2oapi[GLFW_KEY_NUM_LOCK]=OAPI_KEY_NUMLOCK;
-		glfw2oapi[GLFW_KEY_PRINT_SCREEN]=OAPI_KEY_SYSRQ;
-		glfw2oapi[GLFW_KEY_PAUSE]=OAPI_KEY_PAUSE;
-		glfw2oapi[GLFW_KEY_F1]=OAPI_KEY_F1;
-		glfw2oapi[GLFW_KEY_F2]=OAPI_KEY_F2;
-		glfw2oapi[GLFW_KEY_F3]=OAPI_KEY_F3;
-		glfw2oapi[GLFW_KEY_F4]=OAPI_KEY_F4;
-		glfw2oapi[GLFW_KEY_F5]=OAPI_KEY_F5;
-		glfw2oapi[GLFW_KEY_F6]=OAPI_KEY_F6;
-		glfw2oapi[GLFW_KEY_F7]=OAPI_KEY_F7;
-		glfw2oapi[GLFW_KEY_F8]=OAPI_KEY_F8;
-		glfw2oapi[GLFW_KEY_F9]=OAPI_KEY_F9;
-		glfw2oapi[GLFW_KEY_F10]=OAPI_KEY_F10;
-		glfw2oapi[GLFW_KEY_F11]=OAPI_KEY_F11;
-		glfw2oapi[GLFW_KEY_F12]=OAPI_KEY_F12;
-		glfw2oapi[GLFW_KEY_KP_0]=OAPI_KEY_NUMPAD0;
-		glfw2oapi[GLFW_KEY_KP_1]=OAPI_KEY_NUMPAD1;
-		glfw2oapi[GLFW_KEY_KP_2]=OAPI_KEY_NUMPAD2;
-		glfw2oapi[GLFW_KEY_KP_3]=OAPI_KEY_NUMPAD3;
-		glfw2oapi[GLFW_KEY_KP_4]=OAPI_KEY_NUMPAD4;
-		glfw2oapi[GLFW_KEY_KP_5]=OAPI_KEY_NUMPAD5;
-		glfw2oapi[GLFW_KEY_KP_6]=OAPI_KEY_NUMPAD6;
-		glfw2oapi[GLFW_KEY_KP_7]=OAPI_KEY_NUMPAD7;
-		glfw2oapi[GLFW_KEY_KP_8]=OAPI_KEY_NUMPAD8;
-		glfw2oapi[GLFW_KEY_KP_9]=OAPI_KEY_NUMPAD9;
-		glfw2oapi[GLFW_KEY_KP_DECIMAL]=OAPI_KEY_DECIMAL;
-		glfw2oapi[GLFW_KEY_KP_DIVIDE]=OAPI_KEY_DIVIDE;
-		glfw2oapi[GLFW_KEY_KP_MULTIPLY]=OAPI_KEY_MULTIPLY;
-		glfw2oapi[GLFW_KEY_KP_SUBTRACT]=OAPI_KEY_SUBTRACT;
-		glfw2oapi[GLFW_KEY_KP_ADD]=OAPI_KEY_ADD;
-		glfw2oapi[GLFW_KEY_KP_ENTER]=OAPI_KEY_NUMPADENTER;
-		glfw2oapi[GLFW_KEY_LEFT_SHIFT]=OAPI_KEY_LSHIFT;
-		glfw2oapi[GLFW_KEY_LEFT_CONTROL]=OAPI_KEY_LCONTROL;
-		glfw2oapi[GLFW_KEY_RIGHT_SHIFT]=OAPI_KEY_RSHIFT;
-		glfw2oapi[GLFW_KEY_LEFT_ALT]=OAPI_KEY_LALT;
-		glfw2oapi[GLFW_KEY_RIGHT_CONTROL]=OAPI_KEY_RCONTROL;
-		glfw2oapi[GLFW_KEY_RIGHT_ALT]=OAPI_KEY_RALT;
-	}
-
-	if(action == GLFW_REPEAT) return; //ignore repeated keydown events when holding key
-	char down = (action == GLFW_PRESS) ? 0x80:0x00;
-	
-	unsigned int key=(unsigned char)glfw2oapi[gkey];
-	g_pOrbiter->KeyCallback(key, down);
-}
-
 void Orbiter::KeyCallback(int key, char state) {
 	if(key && bSession) {
 		simkstate[key] = state;
@@ -1059,14 +825,6 @@ void Orbiter::KeyCallback(int key, char state) {
 	}
 }
 
-static void framebuffer_size_callback(GLFWwindow *window, int width, int height)
-{
-	if(g_camera) g_camera->ResizeViewport(width, height);
-	g_pOrbiter->GetGraphicsClient()->clbkSetViewportSize(width, height);
-	g_pOrbiter->GetRenderParameters();
-	if(g_pane) g_pane->Resize(width, height);
-}
-
 //-----------------------------------------------------------------------------
 // Name: Run()
 // Desc: Message-processing loop. Idle time is used to render the scene.
@@ -1078,14 +836,9 @@ int Orbiter::Run ()
 	// otherwise wait for the user to make a selection from the scenario
 	// list in the launchpad dialog
 
-	prev_cursor_position_callback = glfwSetCursorPosCallback(hRenderWnd, cursor_position_callback);
-	prev_key_callback = glfwSetKeyCallback(hRenderWnd, key_callback);
-	prev_mouse_button_callback = glfwSetMouseButtonCallback(hRenderWnd, mouse_button_callback);
-	prev_scroll_callback = glfwSetScrollCallback(hRenderWnd, scroll_callback);
-	glfwSetFramebufferSizeCallback(hRenderWnd, framebuffer_size_callback);
-	glfwSetJoystickCallback(InputController::JoystickCallback);
+	m_pGUIManager->SetupCallbacks();
 
-	while (!glfwWindowShouldClose(hRenderWnd)) {
+	while (!m_pGUIManager->ShouldCloseWindow()) {
 		glfwPollEvents();
 	
 		if (bSession) {
@@ -1117,7 +870,7 @@ int Orbiter::Run ()
 	if(bSession)
 		PreCloseSession();
 
-	hRenderWnd = NULL;
+	//hRenderWnd = NULL;
     return 0;
 }
 
@@ -1150,38 +903,13 @@ void Orbiter::TerminateOnError ()
 void Orbiter::InitRotationMode ()
 {
 	bKeepFocus = true;
-
-	glfwSetInputMode(hRenderWnd, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-/*
-	ShowCursor (false);
-	SetCapture (hRenderWnd);
-
-	// Limit cursor to render window confines, so we don't miss the button up event
-	if (!bFullscreen && hRenderWnd) {
-		RECT rClient;
-		GetClientRect (hRenderWnd, &rClient);
-		POINT pLeftTop = {rClient.left, rClient.top};
-		POINT pRightBottom = {rClient.right, rClient.bottom};
-		ClientToScreen (hRenderWnd, &pLeftTop);
-		ClientToScreen (hRenderWnd, &pRightBottom);
-		RECT rScreen = {pLeftTop.x, pLeftTop.y, pRightBottom.x, pRightBottom.y};
-		ClipCursor (&rScreen);
-	}*/
+	m_pGUIManager->DisableMouseCursor();
 }
 
 void Orbiter::ExitRotationMode ()
 {
 	bKeepFocus = false;
-
-	glfwSetInputMode(hRenderWnd, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-	/*
-	ReleaseCapture ();
-	ShowCursor (true);
-
-	// Release cursor from render window confines
-	if (!bFullscreen && hRenderWnd) {
-		ClipCursor (NULL);
-	}*/
+	m_pGUIManager->EnableMouseCursor();
 }
 
 //-----------------------------------------------------------------------------
@@ -1758,11 +1486,7 @@ void Orbiter::EndTimeStep (bool running)
 
 	// check for termination of demo mode
 	if (SessionLimitReached()) {
-		if (hRenderWnd) {
-			glfwSetWindowShouldClose(hRenderWnd, GL_TRUE);
-		} else {
-			CloseSession();
-		}
+		m_pGUIManager->CloseWindow();
 	}
 }
 
@@ -1896,12 +1620,10 @@ void Orbiter::UpdateWorld ()
 
 	g_bStateUpdate = false;
 
-	if (!KillVessels())  // kill any vessels marked for deletion
-		if (hRenderWnd) {
-			printf("Orbiter::UpdateWorld !KillVessels()\n");
-			glfwSetWindowShouldClose(hRenderWnd, GL_TRUE);
-		}
-	//g_texmanager->OutputInfo();
+	if (!KillVessels())  { // kill any vessels marked for deletion
+		printf("Orbiter::UpdateWorld !KillVessels()\n");
+		m_pGUIManager->CloseWindow();
+	}
 }
 
 const char *Orbiter::KeyState() const
@@ -2212,8 +1934,7 @@ void Orbiter::KbdInputBuffered_System (char *kstate, int key)
 			if (bPlayback) EndPlayback();
 			else ToggleRecorder ();
 		} else if (keymap.IsLogicalKey (key, kstate, OAPI_LKEY_Quit)) {
-			if (hRenderWnd)
-				glfwSetWindowShouldClose(hRenderWnd, GL_TRUE);
+			m_pGUIManager->CloseWindow();
 		} else if (keymap.IsLogicalKey (key, kstate, OAPI_LKEY_SelectPrevVessel)) {
 			if (g_pfocusobj) SetFocusObject (g_pfocusobj);
 		}

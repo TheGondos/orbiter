@@ -719,7 +719,112 @@ void Btn2HalfAxis::Draw() {
     }
 }
 
-CameraCtl::CameraCtl(ControllerGraph *cg):Node(cg, "CameraCtl") {
+
+CursorCtl::CursorCtl(ControllerGraph *cg):Node(cg, "Virtual Mouse") {
+    AddInput("Enable",  Pin::Button);
+    AddInput("dX",  Pin::Axis);
+    AddInput("dY",  Pin::Axis);
+    AddInput("Left Click",  Pin::Button);
+    AddInput("Right Click",  Pin::Button);
+    
+    deletable = false;
+    is_controller = true;
+    oldLClick = false;
+    oldRClick = false;
+
+    maxspeed = 10.0f;
+    acceleration = 100.0f;
+    timepressed = 0.0;
+}
+CursorCtl::CursorCtl(ControllerGraph *cg, const crude_json::value &json):Node(cg, json) {
+    deletable = false;
+    is_controller = true;
+    oldLClick = false;
+    oldRClick = false;
+
+    maxspeed  = json["maxspeed"].get<crude_json::number>();
+    acceleration = json["acceleration"].get<crude_json::number>();
+    timepressed = 0.0;
+}
+void CursorCtl::Draw() {
+    if(minimized) {
+        Node::Draw();
+    } else {
+        builder.Header();
+        ImGui::TextUnformatted(name.c_str());
+        builder.EndHeader();
+        DrawInput(inputs[Enable]);
+        DrawInput(inputs[dX]);
+        DrawInput(inputs[dY]);
+        DrawInput(inputs[LClick]);
+        DrawInput(inputs[RClick]);
+
+        builder.Middle();
+        ImGui::PushItemWidth(60.f);
+        ImGui::DragFloat("Max Speed", &maxspeed, 10.0f, 10.0f, 100.0f, "%0.02f");
+        ImGui::DragFloat("Acceleration", &acceleration, 1.0f, 10.0f, 100.0f, "%0.02f");
+        ImGui::PopItemWidth();
+    }
+}
+
+crude_json::value CursorCtl::ToJSON() {
+    crude_json::value ret = Node::ToJSON();
+    ret["class"] = "CursorCtl";
+    ret["maxspeed"]  = maxspeed;
+    ret["acceleration"] = acceleration;
+
+    return ret;
+}
+void CursorCtl::SimulateOutputs() { 
+    td.SysDT = 1.0/60.0;
+    UpdateOutputs();
+}
+void CursorCtl::UpdateOutputs() {
+    if (inputs[Enable].bVal) {
+        if(inputs[dX].fVal != 0.0 || inputs[dY].fVal != 0.0) {
+            
+            float dx = inputs[dX].fVal * td.SysDT * 300.0;
+            float dy = inputs[dY].fVal * td.SysDT * 300.0;
+            if(inputs[dX].fVal * inputs[dX].fVal + inputs[dY].fVal * inputs[dY].fVal > 0.7) {
+                timepressed += td.SysDT;
+                dx += 0.5f * timepressed * timepressed * acceleration * inputs[dX].fVal;
+                dy += 0.5f * timepressed * timepressed * acceleration * inputs[dY].fVal;
+            }
+
+            dx = std::clamp(dx, -maxspeed, maxspeed);
+            dy = std::clamp(dy, -maxspeed, maxspeed);
+            g_pOrbiter->m_pGUIManager->UpdateCursor(dx, dy);
+        } else {
+            timepressed = 0.0;
+        }
+    }
+
+    if (inputs[LClick].bVal) {
+        if(!oldLClick) {
+            oldLClick = true;
+            g_pOrbiter->m_pGUIManager->LeftClick(true);
+        }
+    } else {
+        if(oldLClick) {
+            oldLClick = false;
+            g_pOrbiter->m_pGUIManager->LeftClick(false);
+        }
+    }
+
+    if (inputs[RClick].bVal) {
+        if(!oldRClick) {
+            oldRClick = true;
+            g_pOrbiter->m_pGUIManager->RightClick(true);
+        }
+    } else {
+        if(oldRClick) {
+            oldRClick = false;
+            g_pOrbiter->m_pGUIManager->RightClick(false);
+        }
+    }
+}
+
+CameraCtl::CameraCtl(ControllerGraph *cg):Node(cg, "Camera") {
     AddInput("RotX",  Pin::Axis);
     AddInput("RotY",  Pin::Axis);
     AddInput("RotZ",  Pin::Axis);
@@ -806,7 +911,7 @@ void Thrusters::SimulateOutputs() {
 void Thrusters::UpdateOutputs() {
 }
 
-AirCtl::AirCtl(ControllerGraph *cg):Node(cg, "AirCtl") {
+AirCtl::AirCtl(ControllerGraph *cg):Node(cg, "Airfoils") {
     AddInput("Elevator", Pin::Axis);
     AddInput("Rudder", Pin::Axis);
     AddInput("Aileron", Pin::Axis);
@@ -919,7 +1024,7 @@ void AFCtl::UpdateOutputs() {
 }
 
 
-RCSCtl::RCSCtl(ControllerGraph *cg):Node(cg, "RCS Control") {
+RCSCtl::RCSCtl(ControllerGraph *cg):Node(cg, "RCS Mode") {
     AddInput("Disable", Pin::Trigger);
     AddInput("Translation", Pin::Trigger);
     AddInput("Rotation", Pin::Trigger);
@@ -997,7 +1102,7 @@ void RCSCtl::UpdateOutputs() {
     outputs[Out_Translation].bVal = (mode & 2) !=0;
 }
 
-NavMode::NavMode(ControllerGraph *cg):Node(cg, "NavMode") {
+NavMode::NavMode(ControllerGraph *cg):Node(cg, "Autopilots") {
     AddInput("Kill Rotation", Pin::Trigger);
     AddInput("Horizontal Level", Pin::Trigger);
     AddInput("Prograde", Pin::Trigger);
@@ -1048,11 +1153,14 @@ void NavMode::UpdateOutputs() {
     }
 }
 
-PanelCtl::PanelCtl(ControllerGraph *cg):Node(cg, "PanelCtl") {
+PanelCtl::PanelCtl(ControllerGraph *cg):Node(cg, "Panel") {
     AddInput("Switch Left", Pin::Trigger);
     AddInput("Switch Right", Pin::Trigger);
     AddInput("Switch Up", Pin::Trigger);
     AddInput("Switch Down", Pin::Trigger);
+
+    AddInput("ShiftX", Pin::Axis);
+    AddInput("ShiftY", Pin::Axis);
 
     AddInput("No Panel", Pin::Trigger);
     AddInput("MFDs Only", Pin::Trigger);
@@ -1072,8 +1180,13 @@ crude_json::value PanelCtl::ToJSON() {
     return ret;
 }
 void PanelCtl::SimulateOutputs() {
+        td.SysDT = 1.0/60.0;
 }
 void PanelCtl::UpdateOutputs() {
+    if(inputs[ShiftX].fVal != 0.0 || inputs[ShiftY].fVal != 0.0) {
+    	g_pane->ShiftPanel (inputs[ShiftX].fVal * td.SysDT * 600.0, inputs[ShiftY].fVal * td.SysDT * 600.0);
+    }
+
     if(inputs[SwitchLeft].bVal) {
         g_pane->SwitchPanel (0);
     }
@@ -1103,7 +1216,7 @@ void PanelCtl::UpdateOutputs() {
     }
 }
 
-TimeCtl::TimeCtl(ControllerGraph *cg):Node(cg, "TimeCtl") {
+TimeCtl::TimeCtl(ControllerGraph *cg):Node(cg, "Time") {
     AddInput("Toggle Pause", Pin::Trigger);
     AddInput("Warp x0.1", Pin::Trigger);
     AddInput("Warp x1", Pin::Trigger);
@@ -1149,7 +1262,7 @@ crude_json::value TimeCtl::ToJSON() {
 void TimeCtl::SimulateOutputs() {
 }
 
-HUDCtl::HUDCtl(ControllerGraph *cg):Node(cg, "HUDCtl") {
+HUDCtl::HUDCtl(ControllerGraph *cg):Node(cg, "HUD") {
     AddInput("Show", Pin::Button);
     AddInput("Toggle On/Off", Pin::Trigger);
     AddInput("Switch Mode", Pin::Trigger);

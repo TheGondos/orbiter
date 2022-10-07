@@ -694,7 +694,7 @@ bool MenuInfoBar::ProcessMouse (oapi::MouseEvent event, int state, int x, int y)
 			return true;
 		case 11:
 			g_pOrbiter->PreCloseSession();
-			glfwSetWindowShouldClose(g_pOrbiter->GetRenderWnd(), GL_TRUE);
+			g_pOrbiter->m_pGUIManager->CloseWindow();
 			return true;
 		}
 	}

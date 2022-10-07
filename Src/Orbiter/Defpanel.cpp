@@ -682,7 +682,7 @@ void DefaultPanel::GetButtonState (int &state, int &mfd, int &btn)
 		POINT pt;
 //		GetCursorPos (&pt);
 		double xpos, ypos;
-		glfwGetCursorPos(g_pOrbiter->GetRenderWnd(), &xpos, &ypos);
+		g_pOrbiter->m_pGUIManager->GetCursorPos(&xpos, &ypos);
 		pt.x = floor(xpos);
 		pt.y = floor(ypos);
 		g_pOrbiter->ScreenToClient (&pt);

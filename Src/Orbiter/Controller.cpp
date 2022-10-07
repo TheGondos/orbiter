@@ -398,7 +398,7 @@ void ControllerGraph::Load(const char *path) {
         ed::SetCurrentEditor(nullptr);
         SynchronizeJoysticks();
     } else {
-        oapiAddNotification(GUIManager::Error, "Error loading file", path);
+        oapiAddNotification(OAPINOTIF_ERROR, "Error loading file", path);
         disabled = true;
     }
 }
@@ -943,6 +943,7 @@ void InputController::GlobalInit() {
 
     ControllerGraph::Register<Joystick, false>("Joystick");
     ControllerGraph::Register<CameraCtl, true>("CameraCtl");
+    ControllerGraph::Register<CursorCtl, true>("CursorCtl");
     ControllerGraph::Register<Thrusters, true>("Thrusters");
     ControllerGraph::Register<AirCtl, true>("AirCtl");
     ControllerGraph::Register<RCSCtl, true>("RCSCtl");
@@ -999,14 +1000,14 @@ void InputController::ProcessInput(int ctrl[15], int af[6]) {
 void InputController::JoystickCallback(int jid, int event) {
     if(event == GLFW_CONNECTED) {
         const char *jname = glfwGetJoystickName(jid);
-        oapiAddNotification(GUIManager::Info, "Joystick connected", jname);
+        oapiAddNotification(OAPINOTIF_INFO, "Joystick connected", jname);
     } else if(event == GLFW_DISCONNECTED) {
         for(auto &n: currentController->nodes) {
             if(n->is_joystick) {
                 Joystick *joy = (Joystick *)n;
                 if(joy->joy_id == jid) {
                     const char *jname = joy->name.c_str();
-                    oapiAddNotification(GUIManager::Warning, "Joystick disconnected", jname);
+                    oapiAddNotification(OAPINOTIF_WARNING, "Joystick disconnected", jname);
                 }
             }
         }
@@ -1025,10 +1026,10 @@ void InputController::SwitchProfile(const char *profile) {
         }
         if(currentController != newController) {
             currentController = newController;
-            oapiAddNotification(GUIManager::Info, "Controller profile changed", currentController->classname.c_str());
+            oapiAddNotification(OAPINOTIF_INFO, "Controller profile changed", currentController->classname.c_str());
         }
     } else {
-        oapiAddNotification(GUIManager::Info, "New controller profile added", profile);
+        oapiAddNotification(OAPINOTIF_INFO, "New controller profile added", profile);
         ControllerGraph *cg = new ControllerGraph();
         cg->Load("Controllers/Default.json");
         char buf[256];
@@ -1084,7 +1085,7 @@ void InputController::DrawEditor(bool ingame) {
             ImGui::TextUnformatted("From now on it will use the Default profile.");
             ImGui::Text("You'll need to delete the %s file to reactivate it", td->filename.c_str());
             if (ImGui::Button("Confirm")) {
-                oapiAddNotification(GUIManager::Info, "Controller profile disabled", td->classname.c_str());
+                oapiAddNotification(OAPINOTIF_INFO, "Controller profile disabled", td->classname.c_str());
                 td->Disable();
                 if(td == currentController) {
                     SwitchProfile("Default");

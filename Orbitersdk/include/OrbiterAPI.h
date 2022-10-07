@@ -73,70 +73,14 @@ typedef struct {
 
 class OAPIFUNC GUIElement {
     public:
-        GUIElement(const std::string &n, const std::string type):name(n) ,type(type) {}
+        GUIElement(const std::string &n, const std::string &type):name(n) ,type(type) {}
         virtual ~GUIElement() {}
+        bool IsVisible() { return show; }
         virtual void Show() = 0;
         const std::string name;
-        bool show = false;
         const std::string type;
-        bool IsVisible() { return show; }
+        bool show = false;
 };
-
-class ImFont;
-class OAPIFUNC GUIManager {
-    public:
-		enum NotifType {
-			Success,
-			Warning,
-			Error,
-			Info
-		};
-		ImFont *fontDefault;
-		ImFont *fontH1;
-		ImFont *fontH2;
-		ImFont *fontH3;
-		ImFont *fontBold;
-        GUIManager();
-		void RenderGUI();
-		void Notify(enum NotifType, const char *title, const char *content);
-        void RegisterCtrl(GUIElement *ctrl) {
-            for(auto &e: m_GUICtrls) {
-                if(e == ctrl) {
-                    return;
-                }
-            }
-            m_GUICtrls.push_back(ctrl);
-        }
-        void UnregisterCtrl(GUIElement *e) {
-            for (auto it = m_GUICtrls.begin(); it != m_GUICtrls.end(); ) {
-                if (*it == e) {
-                    it = m_GUICtrls.erase(it);
-                    return;
-                } else {
-                    ++it;
-                }
-            }
-        }
-
-        std::list<GUIElement *> m_GUICtrls;
-        
-        template<class T>
-        T *GetCtrl() {
-            for(auto &e: m_GUICtrls) {
-                if(e->type == T::etype) {
-                    return (T *)e;
-                }
-            }
-            return nullptr;
-        }
-        template<class T>
-        void ShowCtrl() { auto e = GetCtrl<T>(); if(e) e->show = true; }
-        template<class T>
-        void HideCtrl() { auto e = GetCtrl<T>(); if(e) e->show = false; }
-        template<class T>
-        void ToggleCtrl() { auto e = GetCtrl<T>(); if(e) e->show = !e->show; }
-};
-
 
 // ======================================================================
 /// \defgroup constants Some useful general constants
@@ -427,6 +371,11 @@ typedef struct {
 #define OAPISURFACE_SYSMEM       0x0200 ///< Create the surface in system (host) memory
 #define OAPISURFACE_RENDER3D     0x0400 ///< Create a surface that can act as a target for rendering a 3D scene
 //@}
+
+#define OAPINOTIF_SUCCESS 0
+#define OAPINOTIF_WARNING 1
+#define OAPINOTIF_ERROR   2
+#define OAPINOTIF_INFO    3
 
 /**
  * \ingroup defines
@@ -5922,7 +5871,7 @@ OAPIFUNC bool       oapiUnregisterCustomCmd (int cmdId);
 	* \sa oapiFindDialog, oapiCloseDialog, oapiOpenDialogEx
 	*/
 
-OAPIFUNC void      oapiOpenDialog (GUIElement *);
+OAPIFUNC void oapiOpenDialog (GUIElement *);
 	/**
 	* \brief Close a dialog box.
 	* \param hDlg dialog window handle (as obtained by oapiOpenDialog)
@@ -5937,7 +5886,7 @@ OAPIFUNC void oapiCloseDialog (GUIElement *);
 	* \param title title of the notification box
 	* \param content content of the notification box
 	*/
-OAPIFUNC void oapiAddNotification(enum GUIManager::NotifType type, const char *title, const char *content);
+OAPIFUNC void oapiAddNotification(int type, const char *title, const char *content);
 
 	/**
 	 * \brief Returns the display mode of the main menu bar.

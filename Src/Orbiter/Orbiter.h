@@ -136,7 +136,7 @@ public:
 	void CloseApp (bool fast_shutdown = false);
 	int GetVersion () const;
 	void StartSession (Config *pCfg, const char *scenario);
-	GLFWwindow *CreateRenderWindow ();
+	void CreateRenderWindow ();
 	void PreCloseSession();
 	void CloseSession ();
 	void GetRenderParameters ();
@@ -217,7 +217,7 @@ public:
 	// Increase camera field of view by dfov
 
 	// Accessor functions
-	inline GLFWwindow *GetRenderWnd() const { return hRenderWnd; }
+	inline GLFWwindow *GetRenderWnd() const { return m_pGUIManager->hRenderWnd; }
 	inline bool    IsFullscreen() const { return bFullscreen; }
 	inline int   ViewW() const { return viewW; }
 	inline int   ViewH() const { return viewH; }
@@ -405,8 +405,7 @@ private:
 	Config         *pConfig;
 	State          *pState;
 	//DialogManager  *pDlgMgr;
-	DInput         *pDI;
-	GLFWwindow     *hRenderWnd;    // render window handle (NULL if no render support)
+	//GLFWwindow     *hRenderWnd;    // render window handle (NULL if no render support)
 	bool            bRenderOnce;   // flag for single frame render request
 	bool            bEnableLighting;
 	bool			bUseStencil;   // render device provides stencil buffer (and user requests it)

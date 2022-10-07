@@ -2023,8 +2023,25 @@ DLLEXPORT void oapiCloseDialog (GUIElement *e)
 	g_pOrbiter->UnregisterGUIElement (e);
 }
 
-DLLEXPORT void oapiAddNotification(enum GUIManager::NotifType type, const char *title, const char *content) {
-	g_pOrbiter->m_pGUIManager->Notify(type, title, content);
+DLLEXPORT void oapiAddNotification(int type, const char *title, const char *content) {
+	enum GUIManager::NotifType t;
+	switch(type) {
+		case OAPINOTIF_SUCCESS:
+			t = GUIManager::Success;
+			break;
+		case OAPINOTIF_WARNING:
+			t = GUIManager::Warning;
+			break;
+		case OAPINOTIF_ERROR:
+			t = GUIManager::Error;
+			break;
+		case OAPINOTIF_INFO:
+		default:
+			t = GUIManager::Info;
+			break;
+	}
+
+	g_pOrbiter->m_pGUIManager->Notify(t, title, content);
 }
 
 DLLEXPORT int oapiGetMainMenuVisibilityMode()

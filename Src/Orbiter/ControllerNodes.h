@@ -2,6 +2,7 @@
 #define CONTROLLERNODE_H
 
 #include "Controller.h"
+#include "GUIManager.h"
 
 class CameraCtl : public Node
 {
@@ -314,6 +315,8 @@ class PanelCtl : public Node {
         SwitchRight,
         SwitchUp,
         SwitchDown,
+        ShiftX,
+        ShiftY,
         NoPanel,
         MFDOnly,
         Panel2D,
@@ -407,6 +410,29 @@ class KeyBinds: public Node {
     virtual void UpdateOutputs() override;
 
     std::vector<KeyBind> bindings;
+};
+
+class CursorCtl : public Node
+{
+    public:
+    enum {
+        Enable = 0,
+        dX = 1,
+        dY = 2,
+        LClick = 3,
+        RClick = 4
+    };
+    CursorCtl(ControllerGraph *);
+    CursorCtl(ControllerGraph *cg, const crude_json::value &json);
+    void Draw() override;
+    virtual crude_json::value ToJSON() override;
+    virtual void UpdateOutputs() override;
+    virtual void SimulateOutputs() override;
+    bool oldLClick;
+    bool oldRClick;
+    float maxspeed;
+    float acceleration;
+    float timepressed;
 };
 
 #endif

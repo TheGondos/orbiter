@@ -56,7 +56,7 @@ struct my_markdown : public imgui_md
 		if(m_textureCache.count(m_href)) {
 			s = m_textureCache[m_href];
 		} else {
-			SURFHANDLE s = oapiLoadTexture(m_href.c_str());
+			s = oapiLoadTexture(m_href.c_str());
 			if(!s) return false;
 			m_textureCache[m_href] = s;
 		}

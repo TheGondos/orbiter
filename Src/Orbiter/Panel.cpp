@@ -437,7 +437,7 @@ void Panel::GetMouseState (int &idx, int &state, int &mx, int &my) const
 //		if (cwnd) // need to subtract client window offset
 //			ScreenToClient (cwnd, &pt);
 		double xpos, ypos;
-		glfwGetCursorPos(g_pOrbiter->GetRenderWnd(), &xpos, &ypos);
+		g_pOrbiter->m_pGUIManager->GetCursorPos(&xpos, &ypos);
 		pt.x = floor(xpos);
 		pt.y = floor(ypos);
 

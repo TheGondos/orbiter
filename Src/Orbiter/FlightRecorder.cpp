@@ -933,7 +933,7 @@ void Orbiter::FRecorder_Play ()
 					Timejump(tgtmjd, PROP_ORBITAL_FIXEDSURF);
 				}
 			} else if (!_strnicmp (s, "ENDSESSION", 10)) {
-				if (hRenderWnd) glfwSetWindowShouldClose(hRenderWnd, GL_TRUE);
+				g_pOrbiter->m_pGUIManager->CloseWindow();
 			}
 		}
 		*FRsys_stream >> frec_sys_simt; // read time for next event

@@ -713,9 +713,9 @@ bool OGLClient::clbkSaveSurfaceToImage (SURFHANDLE surf, const char *fname,
 	}
 
 	if(status) {
-		oapiAddNotification(GUIManager::Success, "Image saved", filename.c_str());
+		oapiAddNotification(OAPINOTIF_SUCCESS, "Image saved", filename.c_str());
 	} else {
-		oapiAddNotification(GUIManager::Error, "Error saving image", filename.c_str());
+		oapiAddNotification(OAPINOTIF_ERROR, "Error saving image", filename.c_str());
 	}
 
 	delete []pixels;

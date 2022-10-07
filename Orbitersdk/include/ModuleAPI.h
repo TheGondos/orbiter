@@ -115,7 +115,6 @@ namespace oapi {
 		 * \sa clbkSimulationStarted
 		 */
 		enum RenderMode {
-			RENDER_NONE,		///< no graphics support
 			RENDER_FULLSCREEN,  ///< fullscreen mode
 			RENDER_WINDOW       ///< windowed mode
 		};

@@ -1288,18 +1288,6 @@ public:
 	virtual void clbkImGuiNewFrame () = 0;
 	virtual void clbkImGuiRenderDrawData () = 0;
 
-protected:
-	/** \brief Launchpad video tab indicator
-	 *
-	 * Indicate if the the default video tab in the Orbiter launchpad dialog
-	 * is to be used for obtaining user video preferences. If a derived
-	 * class returns false here, the video tab is not shown.
-	 * \return true if the module wants to use the video tab in the launchpad
-	 *   dialog, false otherwise.
-	 * \default Return true.
-	 */
-	virtual bool clbkUseLaunchpadVideoTab () const { return true; }
-
 	/**
 	 * \brief Simulation session start notification
 	 *
@@ -1317,6 +1305,18 @@ protected:
 	 *   initialisation of the 3D render environment here.
 	 */
 	virtual GLFWwindow *clbkCreateRenderWindow () = 0;
+
+protected:
+	/** \brief Launchpad video tab indicator
+	 *
+	 * Indicate if the the default video tab in the Orbiter launchpad dialog
+	 * is to be used for obtaining user video preferences. If a derived
+	 * class returns false here, the video tab is not shown.
+	 * \return true if the module wants to use the video tab in the launchpad
+	 *   dialog, false otherwise.
+	 * \default Return true.
+	 */
+	virtual bool clbkUseLaunchpadVideoTab () const { return true; }
 
 	virtual void clbkMakeContextCurrent(bool) {}
 
