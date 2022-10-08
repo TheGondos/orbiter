@@ -112,6 +112,7 @@ public:
     Filter(ControllerGraph *cg, const crude_json::value &json);
     
     void AddEntry(ed::PinId i = ed::PinId::Invalid, ed::PinId o = ed::PinId::Invalid);
+    virtual ed::PinId LinkWithAddPin(enum Pin::kind, enum Pin::type) override;
     virtual void UpdateOutputs() override;
     virtual void SimulateOutputs() override;
     virtual void Draw() override;
@@ -135,6 +136,7 @@ public:
     Memory(ControllerGraph *cg, const crude_json::value &json);
     
     void AddEntry(ed::PinId i = ed::PinId::Invalid, ed::PinId o = ed::PinId::Invalid);
+    virtual ed::PinId LinkWithAddPin(enum Pin::kind, enum Pin::type) override;
     virtual void UpdateOutputs() override;
     virtual void SimulateOutputs() override;
     virtual void Draw() override;
@@ -153,6 +155,7 @@ public:
     Selector(ControllerGraph *cg);
     Selector(ControllerGraph *cg, const crude_json::value &json);
     void AddEntry(ed::PinId id = ed::PinId::Invalid);
+    virtual ed::PinId LinkWithAddPin(enum Pin::kind, enum Pin::type) override;
     virtual void UpdateOutputs() override;
     virtual void SimulateOutputs() override;
     virtual void Draw() override;
@@ -427,6 +430,7 @@ class KeyBinds: public Node {
 
     KeyBinds(ControllerGraph *cg);
     KeyBinds(ControllerGraph *cg, const crude_json::value &json);
+    virtual ed::PinId LinkWithAddPin(enum Pin::kind, enum Pin::type) override;
     virtual crude_json::value ToJSON() override;
     virtual void Draw() override;
     void AddEntry(ed::PinId e = ed::PinId::Invalid, int key = 0);

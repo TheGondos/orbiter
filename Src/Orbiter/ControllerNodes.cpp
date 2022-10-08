@@ -75,14 +75,30 @@ class ControllerDB
 
 Filter::Filter(ControllerGraph *cg):Node(cg, "Filter") {
     AddInput("Enable", Pin::Button);
-    AddEntry();
+    EnableAddPins(true, true);
 }
 Filter::Filter(ControllerGraph *cg, const crude_json::value &json):Node(cg, json) {
-    for(auto &e: json["entries"].get<crude_json::array>()) {
-        ed::PinId i = std::stoi(e["in"].get<std::string>());
-        ed::PinId o = std::stoi(e["out"].get<std::string>());
-        AddEntry(i, o);
+    if(json.contains("entries")) {
+        for(auto &e: json["entries"].get<crude_json::array>()) {
+            ed::PinId i = std::stoi(e["in"].get<std::string>());
+            ed::PinId o = std::stoi(e["out"].get<std::string>());
+            AddEntry(i, o);
+        }
     }
+    EnableAddPins(true, true);
+}
+
+ed::PinId Filter::LinkWithAddPin(enum Pin::kind k, enum Pin::type t) {
+    AddEntry();
+    auto &sp = entries.back();
+    Pin &in = graph->PinFromId(sp.in);
+    Pin &out = graph->PinFromId(sp.out);
+    in.type = t;
+    out.type = t;
+    if(k == Pin::Input)
+        return sp.in;
+    else
+        return sp.out;
 }
 
 crude_json::value Filter::ToJSON() {
@@ -198,9 +214,6 @@ void Filter::UpdateOutputs() {
 void Filter::Draw() {
     builder.Header();
     ImGui::TextUnformatted(name.c_str());
-    if(ImGui::SmallButton(ICON_FA_PLUS_CIRCLE " Add")) {
-        AddEntry();
-    }
     DrawInput(inputs[Enable], minimized);
     builder.EndHeader();
 
@@ -208,23 +221,28 @@ void Filter::Draw() {
         Pin &i = graph->PinFromId(pins.in);
         DrawInput(i, minimized);
     }
+    DrawInput(*inAdd, minimized);
 
     for(auto &pins: entries) {
         Pin &o = graph->PinFromId(pins.out);
         DrawOutput(o, minimized);
     }
+    DrawOutput(*outAdd, minimized);
 }
 
 Memory::Memory(ControllerGraph *cg):Node(cg, "Memory") {
     AddInput("Keep values", Pin::Button);
-    AddEntry();
+    EnableAddPins(true, true);
 }
 Memory::Memory(ControllerGraph *cg, const crude_json::value &json):Node(cg, json) {
-    for(auto &e: json["entries"].get<crude_json::array>()) {
-        ed::PinId i = std::stoi(e["in"].get<std::string>());
-        ed::PinId o = std::stoi(e["out"].get<std::string>());
-        AddEntry(i, o);
+    if(json.contains("entries")) {
+        for(auto &e: json["entries"].get<crude_json::array>()) {
+            ed::PinId i = std::stoi(e["in"].get<std::string>());
+            ed::PinId o = std::stoi(e["out"].get<std::string>());
+            AddEntry(i, o);
+        }
     }
+    EnableAddPins(true, true);
 }
 
 crude_json::value Memory::ToJSON() {
@@ -239,6 +257,19 @@ crude_json::value Memory::ToJSON() {
     }
 
     return ret;
+}
+
+ed::PinId Memory::LinkWithAddPin(enum Pin::kind k, enum Pin::type t) {
+    AddEntry();
+    auto &sp = entries.back();
+    Pin &in = graph->PinFromId(sp.in);
+    Pin &out = graph->PinFromId(sp.out);
+    in.type = t;
+    out.type = t;
+    if(k == Pin::Input)
+        return sp.in;
+    else
+        return sp.out;
 }
 
 void Memory::AddEntry(ed::PinId i, ed::PinId o) {
@@ -320,7 +351,6 @@ void Memory::AddEntry(ed::PinId i, ed::PinId o) {
 void Memory::SimulateOutputs() {
     UpdateOutputs();
 }
-
 void Memory::UpdateOutputs() {
     for(auto &pins: entries) {
         Pin &o = graph->PinFromId(pins.out);
@@ -332,13 +362,9 @@ void Memory::UpdateOutputs() {
         }
     }
 }
-
 void Memory::Draw() {
     builder.Header();
     ImGui::TextUnformatted(name.c_str());
-    if(ImGui::SmallButton(ICON_FA_PLUS_CIRCLE " Add")) {
-        AddEntry();
-    }
     DrawInput(inputs[Keep], minimized);
     builder.EndHeader();
 
@@ -346,17 +372,20 @@ void Memory::Draw() {
         Pin &i = graph->PinFromId(pins.in);
         DrawInput(i, minimized);
     }
+    DrawInput(*inAdd, minimized);
 
     for(auto &pins: entries) {
         Pin &o = graph->PinFromId(pins.out);
         DrawOutput(o, minimized);
     }
+    DrawOutput(*outAdd, minimized);
 }
 
 Selector::Selector(ControllerGraph *cg):Node(cg, "Selector") {
     AddInput("Next", Pin::Trigger);
     AddInput("Prev", Pin::Trigger);
     AddEntry();
+    EnableAddPins(false, true, Pin::Add_Button);
     selected = 0;
 }
 Selector::Selector(ControllerGraph *cg, const crude_json::value &json):Node(cg, json) {
@@ -364,12 +393,21 @@ Selector::Selector(ControllerGraph *cg, const crude_json::value &json):Node(cg, 
     for(auto &e: outputs) {
         AddEntry(e.id);
     }
+    EnableAddPins(false, true, Pin::Add_Button);
 }
 
 crude_json::value Selector::ToJSON() {
     crude_json::value ret = Node::ToJSON();
     ret["class"] = "Selector";
     return ret;
+}
+ed::PinId Selector::LinkWithAddPin(enum Pin::kind k, enum Pin::type t) {
+    assert(k == Pin::Output);
+    assert(t == Pin::Button);
+    AddEntry();
+    auto &pin = outputs.back();
+    pin.type = t;
+    return pin.id;
 }
 
 void Selector::AddEntry(ed::PinId id) {
@@ -428,9 +466,6 @@ void Selector::UpdateOutputs() {
 void Selector::Draw() {
     builder.Header();
     ImGui::TextUnformatted(name.c_str());
-    if(ImGui::SmallButton(ICON_FA_PLUS_CIRCLE " Add")) {
-        AddEntry();
-    }
     builder.EndHeader();
     DrawInput(inputs[Next], minimized);
     DrawInput(inputs[Prev], minimized);
@@ -438,6 +473,7 @@ void Selector::Draw() {
     for(auto &o: outputs) {
         DrawOutput(o, minimized);
     }
+    DrawOutput(*outAdd, minimized);
 }
 
 
@@ -1539,7 +1575,7 @@ void GraphNotification::UpdateOutputs() {
 }
 
 KeyBinds::KeyBinds(ControllerGraph *cg):Node(cg, "KeyBinds") {
-    AddEntry();
+    EnableAddPins(true, false, Pin::Add_Trigger);
 }
 KeyBinds::KeyBinds(ControllerGraph *cg, const crude_json::value &json):Node(cg, json) {
     if(json.contains("bindings")) {
@@ -1547,6 +1583,7 @@ KeyBinds::KeyBinds(ControllerGraph *cg, const crude_json::value &json):Node(cg, 
             AddEntry(stoi(i["id"].get<std::string>()), stoi(i["key"].get<std::string>()));
         }
     }
+    EnableAddPins(true, false, Pin::Add_Trigger);
 }
 crude_json::value KeyBinds::ToJSON() {
     crude_json::value ret = Node::ToJSON();
@@ -1560,6 +1597,14 @@ crude_json::value KeyBinds::ToJSON() {
     }
 
     return ret;
+}
+ed::PinId KeyBinds::LinkWithAddPin(enum Pin::kind k, enum Pin::type t) {
+    assert(k == Pin::Input);
+    assert(t == Pin::Trigger);
+    AddEntry();
+    auto &pin = inputs.back();
+    pin.type = t;
+    return pin.id;
 }
 void KeyBinds::AddEntry(ed::PinId e, int key) {
     Pin *in;
@@ -1599,9 +1644,6 @@ void KeyBinds::UpdateOutputs() {
 void KeyBinds::Draw() {
     builder.Header();
     ImGui::TextUnformatted(name.c_str());
-    if(ImGui::SmallButton(ICON_FA_PLUS_CIRCLE " Add")) {
-        AddEntry();
-    }
     builder.EndHeader();
 
     int k=0;
@@ -1628,4 +1670,5 @@ void KeyBinds::Draw() {
         ImGui::PopStyleVar(2);
         k++;
     }
+    DrawInput(*inAdd, minimized);
 }

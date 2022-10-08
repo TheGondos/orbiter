@@ -32,7 +32,10 @@ public:
         HalfAxis,
         Axis,
         Hat,
-        Trigger
+        Trigger,
+        Add,
+        Add_Button,
+        Add_Trigger,
     };
     enum kind {
         Input,
@@ -93,6 +96,12 @@ public:
     std::vector<Pin> outputs;
     std::set<Node *> children;
     std::set<Node *> parents;
+
+    void EnableAddPins(bool in, bool out, enum Pin::type = Pin::Add);
+    std::optional<Pin> inAdd;
+    std::optional<Pin> outAdd;
+    bool bAddPin;
+    virtual ed::PinId LinkWithAddPin(enum Pin::kind, enum Pin::type) { assert(0); };
 };
 
 class ControllerGraph final {

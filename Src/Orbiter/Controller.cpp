@@ -158,6 +158,7 @@ static const ImU32 colAxis  = IM_COL32( 86, 180, 233, 255);
 static const ImU32 colHAxis = IM_COL32(  0, 158, 115, 255);
 static const ImU32 colHat   = IM_COL32(240, 228,  66, 255);
 static const ImU32 colTrg   = IM_COL32(204, 121, 167, 255);
+static const ImU32 colWhite = IM_COL32(255, 255, 255, 255);
 
 ImU32 GetIconColor(enum Pin::type type)
 {
@@ -165,10 +166,13 @@ ImU32 GetIconColor(enum Pin::type type)
     {
         default:
         case Pin::Button:   return colBtn;
-        case Pin::Trigger:  return colTrg;
+        case Pin::Trigger:  return colBtn;
         case Pin::HalfAxis: return colHAxis;
         case Pin::Axis:     return colAxis;
         case Pin::Hat:      return colHat;
+        case Pin::Add:      return colWhite;
+        case Pin::Add_Button: return colBtn;
+        case Pin::Add_Trigger: return colBtn;
     }
 };
 
@@ -184,17 +188,41 @@ void DrawIcon(enum Pin::type type, bool connected, int alpha)
         case Pin::HalfAxis: iconType = ax::Drawing::IconType::Flow;    break;
         case Pin::Axis:     iconType = ax::Drawing::IconType::Diamond; break;
         case Pin::Hat:      iconType = ax::Drawing::IconType::Grid;    break;
+        case Pin::Add:      iconType = ax::Drawing::IconType::Plus;    break;
+        case Pin::Add_Button:      iconType = ax::Drawing::IconType::Plus;    break;
+        case Pin::Add_Trigger:      iconType = ax::Drawing::IconType::Plus;    break;
         default: return;
     }
 
     ax::Widgets::Icon(ImVec2(ImGui::GetTextLineHeight(), ImGui::GetTextLineHeight()), iconType, connected, color, ImColor(32, 32, 32, alpha));
 };
 
+bool canLink(const Pin *a, const Pin *b) {
+    const Pin *in = a;
+    const Pin *out = b;
+    if(a->kind == Pin::Output) {
+        in = b;
+        out = a;
+    }
+    if(in->kind == out->kind) return false;
+    if(in->type == Pin::Add && out->type == Pin::Add) return false;
+    if(in->type == Pin::Trigger && out->type == Pin::Button) return true;
+    if(in->type == Pin::Button && out->type == Pin::Add_Button) return true;
+    if(in->type == Pin::Trigger && out->type == Pin::Add_Button) return true;
+    if(in->type == Pin::Add_Button && out->type == Pin::Button) return true;
+    if(in->type == Pin::Add_Trigger && out->type == Pin::Button) return true;
+    if(in->type == Pin::Add || out->type == Pin::Add) return true;
+
+    if(in->type != out->type) return false;
+
+    return true;
+}
+
 void DrawInput(const Pin &pin, bool minimized) {
     builder.Input(pin.id);
     auto alpha = ImGui::GetStyle().Alpha;
 
-    if(pin.node->graph->draggedPin && (!(pin.type == pin.node->graph->draggedPin->type || (pin.node->graph->draggedPin->type == Pin::Button && pin.type == Pin::Trigger)) || pin.node->graph->draggedPin->kind == pin.kind)) {
+    if(pin.node->graph->draggedPin && !canLink(pin.node->graph->draggedPin, &pin)) {
         alpha = alpha * (48.0f / 255.0f);
     }
     ImGui::PushStyleVar(ImGuiStyleVar_Alpha, alpha);
@@ -210,7 +238,7 @@ void DrawOutput(const Pin &pin, bool minimized)
 {
     builder.Output(pin.id);
     auto alpha = ImGui::GetStyle().Alpha;
-    if(pin.node->graph->draggedPin && (!(pin.type == pin.node->graph->draggedPin->type || (pin.node->graph->draggedPin->type == Pin::Button && pin.type == Pin::Trigger)) || pin.node->graph->draggedPin->kind == pin.kind)) {
+    if(pin.node->graph->draggedPin && !canLink(pin.node->graph->draggedPin, &pin)) {
         alpha = alpha * (48.0f / 255.0f);
     }
     ImGui::PushStyleVar(ImGuiStyleVar_Alpha, alpha);
@@ -223,6 +251,8 @@ void DrawOutput(const Pin &pin, bool minimized)
             case Pin::Axis:     ImGui::Text("%s : %0.02f", pin.name, pin.fVal); break;
             case Pin::HalfAxis: ImGui::Text("%s : %0.02f", pin.name, pin.fVal); break;
             case Pin::Hat:      Hat2Str(pin.hVal, buf); ImGui::Text("%s : %s", pin.name, buf); break;
+            case Pin::Add:      ImGui::Text("%s", pin.name); break;
+            case Pin::Add_Button:      ImGui::Text("%s", pin.name); break;
         }
     }
 
@@ -240,6 +270,15 @@ Node::Node(ControllerGraph *cg, const char *n) {
     is_controller = false;
     is_joystick = false;
     minimized = false;
+}
+
+void Node::EnableAddPins(bool in, bool out, enum Pin::type t) {
+    if(in) {
+        inAdd.emplace("New", t, Pin::Input, this, ed::PinId::Invalid);
+    }
+    if(out) {
+        outAdd.emplace("New", t, Pin::Output, this, ed::PinId::Invalid);
+    }
 }
 
 Node::Node(ControllerGraph *cg, const crude_json::value &json) {
@@ -312,9 +351,11 @@ void Node::Draw() {
 
     for(auto &i : inputs)
         DrawInput(i, minimized);
+    if(inAdd) DrawInput(*inAdd, minimized);
 
     for(auto &o : outputs)
         DrawOutput(o, minimized);
+    if(outAdd) DrawOutput(*outAdd, minimized);
 }
 
 void Node::RefreshInputs() {
@@ -480,7 +521,6 @@ void ControllerGraph::Disable() {
 void ControllerGraph::Refresh() {
     if(!dirty) return;
     unsaved = true;
-    printf("Refresh\n");
     dirty = false;
     sorted.clear();
     std::set<Node *> noincoming;
@@ -649,7 +689,7 @@ void ControllerGraph::DrawControllers() {
 static std::string g_copiedGraph;
 
 void ControllerGraph::Editor() {
-    //ImGui::Text("Links: %d Nodes: %d Pins: %d", (int)links.size(), (int)nodes.size(),(int)pins.size());
+    ImGui::Text("Links: %d Nodes: %d Pins: %d", (int)links.size(), (int)nodes.size(),(int)pins.size());
 
     ed::SetCurrentEditor(m_Context);
 
@@ -750,15 +790,74 @@ void ControllerGraph::Editor() {
                     std::swap(ip, op);
                     std::swap(inputPinId, outputPinId);
                 }
-                if (ip == op || ip->kind == op->kind
-//                || !(ip->type == op->type || (op->type == Pin::Button && ip->type == Pin::Trigger))) {
-                || !(ip->type == op->type || (op->type == Pin::Trigger && ip->type == Pin::Button))) {
+                if(!canLink(ip, op)) {
                     ed::RejectNewItem(ImColor(255, 0, 0), 2.0f);
                 } else if(ed::AcceptNewItem(ImColor(128, 255, 128), 2.0f)) {
-                    _lastaddedlink = _lastid;
-                    links.push_back({ ed::LinkId(_lastid++), inputPinId, outputPinId });
-                    dirty = true;
-                    ed::Link(links.back().Id, links.back().InputId, links.back().OutputId);
+                    if(op->type == Pin::Add_Trigger && ip->type == Pin::Add) {
+                        // Add -> Add_Trigger
+                        ed::PinId newpinin = ip->node->LinkWithAddPin(Pin::Output, Pin::Button);
+                        ed::PinId newpinout = op->node->LinkWithAddPin(Pin::Input, Pin::Trigger);
+                        _lastaddedlink = _lastid;
+                        links.push_back({ ed::LinkId(_lastid++), newpinin, newpinout });
+                        dirty = true;
+                        ed::Link(links.back().Id, links.back().InputId, links.back().OutputId);
+                    } else if(ip->type == Pin::Add_Trigger) {
+                        // Add_Trigger should not be used as source
+                        assert(0);
+                    } else if(op->type == Pin::Add_Trigger) {
+                        enum Pin::type type = Pin::Trigger;
+                        ed::PinId newpin = op->node->LinkWithAddPin(Pin::Input, type);
+                        _lastaddedlink = _lastid;
+                        links.push_back({ ed::LinkId(_lastid++), inputPinId, newpin });
+                        dirty = true;
+                        ed::Link(links.back().Id, links.back().InputId, links.back().OutputId);
+                    } else if(op->type == Pin::Add_Button && ip->type == Pin::Add) {
+                        // Add -> Add_Button not needed for now...
+                        assert(0);
+                    } else if(ip->type == Pin::Add_Button && op->type == Pin::Add) {
+                        enum Pin::type type = Pin::Button;
+                        ed::PinId newpinin = ip->node->LinkWithAddPin(Pin::Output, type);
+                        ed::PinId newpinout = op->node->LinkWithAddPin(Pin::Input, type);
+                        _lastaddedlink = _lastid;
+                        links.push_back({ ed::LinkId(_lastid++), newpinin, newpinout });
+                        dirty = true;
+                        ed::Link(links.back().Id, links.back().InputId, links.back().OutputId);
+                    } else if(ip->type == Pin::Add_Button) {
+                        enum Pin::type type = Pin::Button;
+                        ed::PinId newpin = ip->node->LinkWithAddPin(Pin::Output, type);
+                        _lastaddedlink = _lastid;
+                        links.push_back({ ed::LinkId(_lastid++), newpin, outputPinId });
+                        dirty = true;
+                        ed::Link(links.back().Id, links.back().InputId, links.back().OutputId);
+                    } else if(op->type == Pin::Add_Button) {
+                        enum Pin::type type = Pin::Button;
+                        ed::PinId newpin = op->node->LinkWithAddPin(Pin::Input, type);
+                        _lastaddedlink = _lastid;
+                        links.push_back({ ed::LinkId(_lastid++), inputPinId, newpin });
+                        dirty = true;
+                        ed::Link(links.back().Id, links.back().InputId, links.back().OutputId);
+                    } else if(ip->type == Pin::Add) {
+                        enum Pin::type type = op->type;
+                        if(type == Pin::Trigger) type = Pin::Button;
+                        ed::PinId newpin = ip->node->LinkWithAddPin(Pin::Output, type);
+                        _lastaddedlink = _lastid;
+                        links.push_back({ ed::LinkId(_lastid++), newpin, outputPinId });
+                        dirty = true;
+                        ed::Link(links.back().Id, links.back().InputId, links.back().OutputId);
+                    } else if(op->type == Pin::Add) {
+                        enum Pin::type type = ip->type;
+                        if(type == Pin::Trigger) type = Pin::Button;
+                        ed::PinId newpin = op->node->LinkWithAddPin(Pin::Input, type);
+                        _lastaddedlink = _lastid;
+                        links.push_back({ ed::LinkId(_lastid++), inputPinId, newpin });
+                        dirty = true;
+                        ed::Link(links.back().Id, links.back().InputId, links.back().OutputId);
+                    } else {
+                        _lastaddedlink = _lastid;
+                        links.push_back({ ed::LinkId(_lastid++), inputPinId, outputPinId });
+                        dirty = true;
+                        ed::Link(links.back().Id, links.back().InputId, links.back().OutputId);
+                    }
                 }
             }
         }
