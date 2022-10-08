@@ -67,6 +67,8 @@ public:
 };
 
 using json_ctr = std::function<Node *(ControllerGraph *, const crude_json::value&)>;
+#define MAX_COMMENT_SIZE 32
+
 class Node
 {
 public:
@@ -91,6 +93,8 @@ public:
     bool is_controller;
     bool is_joystick;
     bool minimized;
+    bool has_comment;
+    char comment[MAX_COMMENT_SIZE];
     ControllerGraph *graph;
 
     std::vector<Pin> inputs;

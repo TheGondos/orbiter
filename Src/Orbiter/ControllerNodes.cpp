@@ -76,6 +76,7 @@ class ControllerDB
 Filter::Filter(ControllerGraph *cg):Node(cg, "Filter") {
     AddInput("Enable", Pin::Button);
     EnableAddPins(true, true);
+    has_comment = true;
 }
 Filter::Filter(ControllerGraph *cg, const crude_json::value &json):Node(cg, json) {
     if(json.contains("entries")) {
@@ -86,6 +87,7 @@ Filter::Filter(ControllerGraph *cg, const crude_json::value &json):Node(cg, json
         }
     }
     EnableAddPins(true, true);
+    has_comment = true;
 }
 
 ed::PinId Filter::LinkWithAddPin(enum Pin::kind k, enum Pin::type t) {
@@ -111,7 +113,6 @@ crude_json::value Filter::ToJSON() {
         entry["out"] = std::to_string((ptrdiff_t)e.out.AsPointer());
         ret["entries"].push_back(entry);
     }
-
     return ret;
 }
 
@@ -214,6 +215,7 @@ void Filter::UpdateOutputs() {
 void Filter::Draw() {
     builder.Header();
     ImGui::TextUnformatted(name.c_str());
+    ImGui::TextUnformatted(comment);
     DrawInput(inputs[Enable], minimized);
     builder.EndHeader();
 
@@ -233,6 +235,7 @@ void Filter::Draw() {
 Memory::Memory(ControllerGraph *cg):Node(cg, "Memory") {
     AddInput("Keep values", Pin::Button);
     EnableAddPins(true, true);
+    has_comment = true;
 }
 Memory::Memory(ControllerGraph *cg, const crude_json::value &json):Node(cg, json) {
     if(json.contains("entries")) {
@@ -243,6 +246,7 @@ Memory::Memory(ControllerGraph *cg, const crude_json::value &json):Node(cg, json
         }
     }
     EnableAddPins(true, true);
+    has_comment = true;
 }
 
 crude_json::value Memory::ToJSON() {
@@ -365,6 +369,7 @@ void Memory::UpdateOutputs() {
 void Memory::Draw() {
     builder.Header();
     ImGui::TextUnformatted(name.c_str());
+    ImGui::TextUnformatted(comment);
     DrawInput(inputs[Keep], minimized);
     builder.EndHeader();
 
@@ -387,6 +392,7 @@ Selector::Selector(ControllerGraph *cg):Node(cg, "Selector") {
     AddEntry();
     EnableAddPins(false, true, Pin::Add_Button);
     selected = 0;
+    has_comment = true;
 }
 Selector::Selector(ControllerGraph *cg, const crude_json::value &json):Node(cg, json) {
     selected = 0;
@@ -394,6 +400,7 @@ Selector::Selector(ControllerGraph *cg, const crude_json::value &json):Node(cg, 
         AddEntry(e.id);
     }
     EnableAddPins(false, true, Pin::Add_Button);
+    has_comment = true;
 }
 
 crude_json::value Selector::ToJSON() {
@@ -437,6 +444,7 @@ void Selector::AddEntry(ed::PinId id) {
         if (ImGui::BeginMenu("Rename")) {
             if(ImGui::InputText("##new label", pin.name, 32, ImGuiInputTextFlags_EnterReturnsTrue)) {
                 ImGui::CloseCurrentPopup();
+                graph->dirty = true;
             }
             ImGui::EndMenu();
         }
@@ -466,6 +474,7 @@ void Selector::UpdateOutputs() {
 void Selector::Draw() {
     builder.Header();
     ImGui::TextUnformatted(name.c_str());
+    ImGui::TextUnformatted(comment);
     builder.EndHeader();
     DrawInput(inputs[Next], minimized);
     DrawInput(inputs[Prev], minimized);
@@ -595,9 +604,11 @@ Toggle::Toggle(ControllerGraph *cg):Node(cg, "Toggle") {
     AddOutput("B", Pin::Button);
     outputs[OutA].bVal = true;
     minimized = true;
+    has_comment = true;
 }
 Toggle::Toggle(ControllerGraph *cg, const crude_json::value &json):Node(cg, json) {
     outputs[OutA].bVal = true;
+    has_comment = true;
 }
 
 crude_json::value Toggle::ToJSON() {
@@ -1026,16 +1037,6 @@ crude_json::value CameraCtl::ToJSON() {
 void CameraCtl::SimulateOutputs() {
 }
 void CameraCtl::UpdateOutputs() {
-/*
-    enum {
-        RotX = 0,
-        RotY = 1,
-        RotZ = 2,
-        Reset = 3,
-        ToggleView = 4
-    };
-*/
-
     if (g_camera->IsExternal()) {  // use the joystick's coolie hat to rotate external camera
 		g_camera->AddPhi   (td.SysDT * inputs[RotX].fVal);
 		g_camera->AddTheta (td.SysDT * inputs[RotY].fVal);
@@ -1582,6 +1583,7 @@ static char kstate[256] = {0};
 
 KeyBinds::KeyBinds(ControllerGraph *cg):Node(cg, "KeyBinds") {
     EnableAddPins(true, false, Pin::Add_Trigger);
+    has_comment = true;
 }
 KeyBinds::KeyBinds(ControllerGraph *cg, const crude_json::value &json):Node(cg, json) {
     if(json.contains("bindings")) {
@@ -1594,6 +1596,7 @@ KeyBinds::KeyBinds(ControllerGraph *cg, const crude_json::value &json):Node(cg, 
         }
     }
     EnableAddPins(true, false, Pin::Add_Trigger);
+    has_comment = true;
 }
 crude_json::value KeyBinds::ToJSON() {
     crude_json::value ret = Node::ToJSON();
@@ -1665,6 +1668,7 @@ void KeyBinds::UpdateOutputs() {
 void KeyBinds::Draw() {
     builder.Header();
     ImGui::TextUnformatted(name.c_str());
+    ImGui::TextUnformatted(comment);
     builder.EndHeader();
 
     int k=0;

@@ -273,6 +273,7 @@ Node::Node(ControllerGraph *cg, const char *n) {
     is_controller = false;
     is_joystick = false;
     minimized = false;
+    memset(comment, 0, MAX_COMMENT_SIZE);
 }
 
 void Node::EnableAddPins(bool in, bool out, enum Pin::type t) {
@@ -314,6 +315,12 @@ Node::Node(ControllerGraph *cg, const crude_json::value &json) {
             }
         }
     }
+    if(json.contains("comment")) {
+        std::string tmp = json["comment"].get<std::string>();
+        strcpy(comment, tmp.c_str());
+    } else {
+        memset(comment, 0, MAX_COMMENT_SIZE);
+    }
 }
 
 crude_json::value Node::ToJSON() {
@@ -325,6 +332,10 @@ crude_json::value Node::ToJSON() {
     ret["is_controller"] = is_controller;
     ret["is_joystick"] = is_joystick;
     ret["minimized"] = minimized;
+
+    if(has_comment) {
+        ret["comment"] = comment;
+    }
 
     ImVec2 pos = ed::GetNodePosition(id);
 
@@ -356,6 +367,9 @@ crude_json::value Node::ToJSON() {
 void Node::Draw() {
     builder.Header();
     ImGui::TextUnformatted(name.c_str());
+    if(has_comment) {
+        ImGui::TextUnformatted(comment);
+    }
     builder.EndHeader();
 
     for(auto &i : inputs)
@@ -967,6 +981,15 @@ void ControllerGraph::Editor() {
             } else {
                 if (ImGui::MenuItem("Hide node")) {
                     node->visible = false;
+                }
+            }
+            if(node->has_comment) {
+                if (ImGui::BeginMenu("Comment")) {
+                    if(ImGui::InputText("##comment", node->comment, MAX_COMMENT_SIZE, ImGuiInputTextFlags_EnterReturnsTrue)) {
+                        node->graph->dirty = true;
+                        ImGui::CloseCurrentPopup();
+                    }
+                    ImGui::EndMenu();
                 }
             }
         }
