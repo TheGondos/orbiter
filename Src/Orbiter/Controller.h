@@ -126,6 +126,7 @@ class ControllerGraph final {
     void Editor();
     void Save();
     void Load(const char *path);
+    void Reload();
     void Clear();
     void Disable();
     void DrawKnownJoysticks();

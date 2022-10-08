@@ -11,6 +11,7 @@
 #include <numeric>
 #include <filesystem>
 #include "utilities/widgets.h"
+#include "font_awesome_5.h"
 
 namespace fs = std::filesystem;
 
@@ -353,6 +354,9 @@ void ControllerGraph::Clear() {
     SynchronizeJoysticks();
 }
 
+void ControllerGraph::Reload() {
+    Load(filename.c_str());
+}
 void ControllerGraph::Load(const char *path) {
     filename = path;
 
@@ -641,21 +645,48 @@ void ControllerGraph::DrawControllers() {
         }
     }
 }
+
+static std::string g_copiedGraph;
+
 void ControllerGraph::Editor() {
-    ImGui::Text("Links: %d Nodes: %d Pins: %d", (int)links.size(), (int)nodes.size(),(int)pins.size());
+    //ImGui::Text("Links: %d Nodes: %d Pins: %d", (int)links.size(), (int)nodes.size(),(int)pins.size());
 
     ed::SetCurrentEditor(m_Context);
 
-    if(ImGui::Button("Save")) {
+    if(ImGui::Button(ICON_FA_SAVE" Save")) {
         Save();
     }
     ImGui::SameLine();
-    if(ImGui::Button("Clear")) {
+    if(ImGui::Button(ICON_FA_ERASER" Clear")) {
         Clear();
+    }
+    ImGui::SameLine();
+    if(ImGui::Button(ICON_FA_TRASH" Discard")) {
+        Reload();
+        ed::SetCurrentEditor(m_Context);
+    }
+    ImGui::SameLine();
+    if(ImGui::Button(ICON_FA_COPY" Copy")) {
+        g_copiedGraph = filename;
+    }
+    ImGui::SameLine();
+    if(g_copiedGraph.empty()) {
+        ImGui::BeginDisabled();
+        ImGui::Button(ICON_FA_PASTE" Paste");
+        ImGui::EndDisabled();
+    } else if(ImGui::Button(ICON_FA_PASTE" Paste")) {
+        std::string fname = filename;
+        std::string cname = classname;
+        Load(g_copiedGraph.c_str());
+        filename = fname;
+        classname = cname;
+        g_copiedGraph.clear();
+        ed::SetCurrentEditor(m_Context);
+        dirty = true;
     }
 
     ImGui::SameLine();
-    if (ImGui::Button("Joysticks"))
+    if (ImGui::Button(ICON_FA_GAMEPAD" Joysticks"))
         ImGui::OpenPopup("joystick_list");
 
     ImVec2 btn_pos = ImGui::GetItemRectMin();
@@ -670,15 +701,15 @@ void ControllerGraph::Editor() {
     }
 
     ImGui::SameLine();
-    if (ImGui::Button("Controllers"))
-        ImGui::OpenPopup("controller_list");
+    if (ImGui::Button(ICON_FA_SLIDERS_H" Actions"))
+        ImGui::OpenPopup("actions_list");
 
     btn_pos = ImGui::GetItemRectMin();
     ImGui::SetNextWindowPos(btn_pos);
 
-    if (ImGui::BeginPopup("controller_list"))
+    if (ImGui::BeginPopup("actions_list"))
     {
-        ImGui::TextUnformatted("Controllers");
+        ImGui::TextUnformatted("Actions");
         ImGui::Separator();
         //DrawTree();
         DrawControllers();
@@ -919,7 +950,7 @@ void ControllerGraph::Editor() {
             }
             ImGui::EndMenu();
         }
-        if(ImGui::BeginMenu("Controllers")) {
+        if(ImGui::BeginMenu("Actions")) {
             for(auto &n : nodes) {
                 if(n->is_controller) {
                     ImGui::Checkbox(n->name.c_str(), &n->visible);
@@ -1049,7 +1080,7 @@ void InputController::SwitchProfile(const char *profile) {
     }
 }
 void InputController::DrawEditor(bool ingame) {
-    static ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_FittingPolicyResizeDown;
+    const ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_FittingPolicyResizeDown;
     if (ImGui::BeginTabBar("ClassTabs", tab_bar_flags))
     {
         static ControllerGraph *td = nullptr;
