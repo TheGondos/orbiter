@@ -578,7 +578,7 @@ void ControllerGraph::Refresh() {
     }
     //printf("sorted size=%d nodes=%d\n", sorted.size(), nodes.size());
     if(sorted.size() != nodes.size()) {
-        printf("Can link back to an ancestor node, removing last added link!\n");
+        oapiAddNotification(OAPINOTIF_ERROR, "Can link back to an ancestor node", "Removing last added link!\n");
         auto id = std::find_if(links.begin(), links.end(), [this](Link& link) { return link.Id == (ed::LinkId)_lastaddedlink; });
         if (id != links.end()) {
             links.erase(id);
@@ -1161,6 +1161,7 @@ void InputController::SwitchProfile(const char *profile) {
         if(currentController != newController) {
             currentController = newController;
             oapiAddNotification(OAPINOTIF_INFO, "Controller profile changed", currentController->classname.c_str());
+            defaultTab = profile;
         }
     } else {
         oapiAddNotification(OAPINOTIF_INFO, "New controller profile added", profile);
@@ -1180,10 +1181,12 @@ void InputController::SwitchProfile(const char *profile) {
         ed::SetCurrentEditor(nullptr);
         controllers[profile].reset(cg);
         currentController = cg;
+        defaultTab = profile;
     }
 }
 void InputController::DrawEditor(bool ingame) {
-    const ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_FittingPolicyResizeDown;
+    //const ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_FittingPolicyResizeDown;
+    const ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_FittingPolicyMask_;
     if (ImGui::BeginTabBar("ClassTabs", tab_bar_flags))
     {
         static ControllerGraph *td = nullptr;
@@ -1193,9 +1196,17 @@ void InputController::DrawEditor(bool ingame) {
                 continue;
             bool open = true;
             bool *popen = &open;
-            if(ctrl.first == "Default") popen = nullptr;
+            
             ImGuiTabItemFlags flags = ImGuiTabItemFlags_None;
             if(graph->unsaved) flags |= ImGuiTabItemFlags_UnsavedDocument;
+            if(ctrl.first == "Default") {
+                popen = nullptr;
+                flags |= ImGuiTabItemFlags_Leading;
+            }
+            if(defaultTab == ctrl.first) {
+                flags |= ImGuiTabItemFlags_SetSelected;
+                defaultTab.clear();
+            }
             if (ImGui::BeginTabItem(ctrl.first.c_str(), popen, flags))
             {
                 if(graph != currentController || !ingame)

@@ -167,6 +167,7 @@ public:
 
     static inline std::map<std::string, std::unique_ptr<ControllerGraph>> controllers;
     static inline ControllerGraph *currentController;
+    static inline std::string defaultTab;
 };
 
 void DrawIcon(enum Pin::type type, bool connected, int alpha);

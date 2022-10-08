@@ -420,12 +420,18 @@ class GraphNotification : public Node {
 class KeyBinds: public Node {
     public:
     struct KeyBind {
-        KeyBind(ed::PinId i, int k) {
+        KeyBind(ed::PinId i, int k, bool c = false, bool a = false, bool s = false) {
             id = i;
             key = k;
+            ctrl = c;
+            alt = a;
+            shift =s;
         }
         ed::PinId id;
         int key;
+        bool ctrl;
+        bool alt;
+        bool shift;
     };
 
     KeyBinds(ControllerGraph *cg);
@@ -433,7 +439,7 @@ class KeyBinds: public Node {
     virtual ed::PinId LinkWithAddPin(enum Pin::kind, enum Pin::type) override;
     virtual crude_json::value ToJSON() override;
     virtual void Draw() override;
-    void AddEntry(ed::PinId e = ed::PinId::Invalid, int key = 0);
+    void AddEntry(ed::PinId e = ed::PinId::Invalid, int key = 0, bool ctrl = false, bool alt = false, bool shift = false);
     virtual void UpdateOutputs() override;
 
     std::vector<KeyBind> bindings;

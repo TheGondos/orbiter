@@ -1574,13 +1574,19 @@ void GraphNotification::UpdateOutputs() {
     }
 }
 
+static char kstate[256] = {0};
+
 KeyBinds::KeyBinds(ControllerGraph *cg):Node(cg, "KeyBinds") {
     EnableAddPins(true, false, Pin::Add_Trigger);
 }
 KeyBinds::KeyBinds(ControllerGraph *cg, const crude_json::value &json):Node(cg, json) {
     if(json.contains("bindings")) {
         for(auto &i: json["bindings"].get<crude_json::array>()) {
-            AddEntry(stoi(i["id"].get<std::string>()), stoi(i["key"].get<std::string>()));
+            bool ctrl = i["ctrl"].get<bool>();
+            bool alt = i["alt"].get<bool>();
+            bool shift = i["shift"].get<bool>();
+
+            AddEntry(stoi(i["id"].get<std::string>()), stoi(i["key"].get<std::string>()), ctrl, alt, shift);
         }
     }
     EnableAddPins(true, false, Pin::Add_Trigger);
@@ -1593,6 +1599,10 @@ crude_json::value KeyBinds::ToJSON() {
         crude_json::value entry;
         entry["id"] = std::to_string((ptrdiff_t)e.id.AsPointer());
         entry["key"] = std::to_string(e.key);
+        entry["ctrl"] = e.ctrl;
+        entry["alt"] = e.alt;
+        entry["shift"] = e.shift;
+
         ret["bindings"].push_back(entry);
     }
 
@@ -1606,7 +1616,7 @@ ed::PinId KeyBinds::LinkWithAddPin(enum Pin::kind k, enum Pin::type t) {
     pin.type = t;
     return pin.id;
 }
-void KeyBinds::AddEntry(ed::PinId e, int key) {
+void KeyBinds::AddEntry(ed::PinId e, int key, bool ctrl, bool alt, bool shift) {
     Pin *in;
     if(e != ed::PinId::Invalid) {
         in = &graph->PinFromId(e);
@@ -1614,10 +1624,10 @@ void KeyBinds::AddEntry(ed::PinId e, int key) {
         in = &AddInput("In", Pin::Trigger);
     }
 
-    bindings.emplace_back(in->id, key);
+    bindings.emplace_back(in->id, key, ctrl, alt, shift);
 
     auto cb = [this](Pin &pin) {
-        if (inputs.size() > 1 && ImGui::MenuItem("Delete")) {
+        if (ImGui::MenuItem("Delete")) {
             auto itbind = std::find_if(bindings.begin(), bindings.end(), [&pin](const KeyBind &e) { return e.id == pin.id; });
             auto itpin  = std::find(inputs.begin(), inputs.end(), graph->PinFromId(itbind->id));
 
@@ -1633,11 +1643,18 @@ void KeyBinds::AddEntry(ed::PinId e, int key) {
 
     in->cbContextMenu = cb;
 }
+
 void KeyBinds::UpdateOutputs() {
     for(auto &kb: bindings) {
         Pin &pin = graph->PinFromId(kb.id);
         if(pin.bVal) {
-            g_focusobj->GetModuleInterface()->SendBufferedKey(kb.key);
+            kstate[OAPI_KEY_LCONTROL] = 0;
+            kstate[OAPI_KEY_LALT] = 0;
+            kstate[OAPI_KEY_LSHIFT] = 0;
+            if(kb.ctrl)  kstate[OAPI_KEY_LCONTROL] = 0x80;
+            if(kb.alt)   kstate[OAPI_KEY_LALT]     = 0x80;
+            if(kb.shift) kstate[OAPI_KEY_LSHIFT]   = 0x80;
+            g_focusobj->GetModuleInterface()->SendBufferedKey(kb.key, true, kstate);
         }
     }
 }
@@ -1666,6 +1683,13 @@ void KeyBinds::Draw() {
                 bindings[k].key = (int)val;
             }
         }
+        ImGui::SameLine();
+        ImGui::Checkbox("Ctrl", &bindings[k].ctrl);
+        ImGui::SameLine();
+        ImGui::Checkbox("Alt", &bindings[k].alt);
+        ImGui::SameLine();
+        ImGui::Checkbox("Shift", &bindings[k].shift);
+        ImGui::SameLine();
         ImGui::PopID();
         ImGui::PopStyleVar(2);
         k++;
