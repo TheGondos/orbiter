@@ -26,6 +26,7 @@ Pin::Pin(Pin &&from) {
     bVal = from.bVal;
     hVal = from.hVal;
     node = from.node;
+    deadzone = from.deadzone;
     bOldValue = from.bOldValue;
     inputs = std::move(from.inputs);
     cbContextMenu = from.cbContextMenu;
@@ -43,6 +44,7 @@ Pin& Pin::operator=(Pin&&from) {
     bVal = from.bVal;
     hVal = from.hVal;
     node = from.node;
+    deadzone = from.deadzone;
     bOldValue = from.bOldValue;
     inputs = std::move(from.inputs);
     cbContextMenu = from.cbContextMenu;
@@ -63,6 +65,7 @@ Pin::Pin(std::string n, enum Pin::type t, enum Pin::kind k, Node *nd, ed::PinId 
     fVal = 0.0;
     bVal = false;
     hVal = 0;
+    deadzone = 0;
     bOldValue = false;
     node->graph->pins[id.AsPointer()] = this;
     cbContextMenu = nullptr;
@@ -304,7 +307,11 @@ Node::Node(ControllerGraph *cg, const crude_json::value &json) {
             std::string name = o["name"].get<std::string>();
             enum Pin::type type = (enum Pin::type)stoi(o["type"].get<std::string>());
             ed::PinId id = std::stoi(o["id"].get<std::string>());
-            AddOutput(name.c_str(), type, id);
+            Pin &p = AddOutput(name.c_str(), type, id);
+            if(o.contains("deadzone")) {
+                float deadzone = o["deadzone"].get<crude_json::number>();
+                p.deadzone = deadzone;
+            }
         }
     }
 }
@@ -339,6 +346,8 @@ crude_json::value Node::ToJSON() {
         pin["id"] = std::to_string((ptrdiff_t)n.id.AsPointer());
         pin["name"] = n.name;
         pin["type"] = std::to_string(n.type);
+        if(n.deadzone != 0.0f)
+            pin["deadzone"] = n.deadzone;
         ret["outputs"].push_back(pin);
     }
     return ret;
@@ -933,29 +942,6 @@ void ControllerGraph::Editor() {
             ed::DeleteLink(contextLinkId);
             dirty = true;
         }
-
-        auto id = std::find_if(links.begin(), links.end(), [](auto& link) { return link.Id == contextLinkId; });
-        Pin &p = PinFromId(id->InputId);
-        if (p.type == Pin::Axis && ImGui::MenuItem("Deadzone")) {
-            auto newNodePostion = openPopupPosition;
-            Node *node = new Deadzone(this);
-            ed::SetNodePosition(node->id, newNodePostion);
-            nodes.push_back(node);
-            dirty = true;
-
-            auto id = std::find_if(links.begin(), links.end(), [](auto& link) { return link.Id == contextLinkId; });
-            if (id != links.end()) {
-                auto to = id->OutputId;
-                auto from = id->InputId;
-                links.push_back({ ed::LinkId(_lastid++), node->outputs[0].id, to });
-                links.push_back({ ed::LinkId(_lastid++), from, node->inputs[0].id });
-                dirty = true;
-                ed::DeleteLink(contextLinkId);
-            }
-
-
-        }
-
         ImGui::EndPopup();
     }
 
@@ -994,8 +980,6 @@ void ControllerGraph::Editor() {
         ImGui::TextUnformatted("New Node");
         ImGui::Separator();
         if (ImGui::BeginMenu("Logic")) {
-            if (ImGui::MenuItem("Deadzone"))
-                node = new Deadzone(this);
             if (ImGui::MenuItem("Negate"))
                 node = new Negate(this);
             if (ImGui::MenuItem("Inverter"))
@@ -1010,6 +994,9 @@ void ControllerGraph::Editor() {
                 node = new Selector(this);
             if (ImGui::MenuItem("Memory"))
                 node = new Memory(this);
+            if (ImGui::MenuItem("And Gate"))
+                node = new AndGate(this);
+                
                 
             ImGui::EndMenu();
         }
@@ -1080,7 +1067,6 @@ void InputController::GlobalInit() {
     ControllerGraph::Register<Thrusters, true>("Thrusters");
     ControllerGraph::Register<AirCtl, true>("AirCtl");
     ControllerGraph::Register<RCSCtl, true>("RCSCtl");
-    ControllerGraph::Register<Deadzone, false>("Deadzone");
     ControllerGraph::Register<Splitter, false>("Splitter");
     ControllerGraph::Register<Negate, false>("Negate");
     ControllerGraph::Register<Inverter, false>("Inverter");
@@ -1093,11 +1079,13 @@ void InputController::GlobalInit() {
     ControllerGraph::Register<Memory, false>("Memory");
     ControllerGraph::Register<Filter, false>("Filter");
     ControllerGraph::Register<Decoder, false>("Decoder");
+    ControllerGraph::Register<AndGate, false>("AndGate");
     ControllerGraph::Register<Selector, false>("Selector");
     ControllerGraph::Register<NavMode, true>("NavMode");
     ControllerGraph::Register<PanelCtl, true>("PanelCtl");
     ControllerGraph::Register<HUDCtl, true>("HUDCtl");
     ControllerGraph::Register<GraphNote, false>("GraphNote");
+    ControllerGraph::Register<GraphNotification, false>("GraphNotification");
     ControllerGraph::Register<KeyBinds, false>("KeyBinds");
     ControllerGraph::Register<AFCtl, true>("AFCtl");
     ControllerGraph::Register<TimeCtl, true>("TimeCtl");

@@ -55,6 +55,7 @@ public:
     Pin::type type;
     Pin::kind kind;
     float fVal;
+    float deadzone;
     bool bVal;
     bool bOldValue;
     int hVal;

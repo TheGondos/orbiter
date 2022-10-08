@@ -476,16 +476,33 @@ void Selector::Draw() {
     DrawOutput(*outAdd, minimized);
 }
 
-
 void Joystick::Draw() {
     if(!connected) ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.2);
     builder.Header();
     ImGui::TextUnformatted(name.c_str());
     builder.EndHeader();
 
-    for(auto &o : outputs)
+    for(auto &o : outputs) {
         DrawOutput(o, minimized);
+    }
     if(!connected) ImGui::PopStyleVar();
+}
+
+void Joystick::AddContextMenus() {
+    int i = 0;
+    const float *a = glfwGetJoystickAxes(joy_id, &nbAxis);
+
+    auto cb = [this](Pin &pin) {
+        ImGui::PushItemWidth(60.f);
+        if(ImGui::DragFloat("Deadzone", &pin.deadzone, 0.01f, 0.0f, 0.9f, "%0.02f"))
+            pin.node->graph->dirty = true;
+        ImGui::PopItemWidth();
+    };
+
+    for(int n = 0; n < nbAxis; n++) {
+        outputs[i].cbContextMenu = cb;
+        i++;
+    }
 }
 
 Joystick::Joystick(ControllerGraph *cg, int joy_id):Node(cg, glfwGetJoystickName(joy_id)),joy_id(joy_id) {
@@ -496,6 +513,7 @@ Joystick::Joystick(ControllerGraph *cg, int joy_id):Node(cg, glfwGetJoystickName
     static ControllerDB db;
     guid = glfwGetJoystickGUID(joy_id);
     glfwGetJoystickAxes(joy_id, &nbAxis);
+
     for(int i = 0; i < nbAxis; i++) {
         char buf[32];
         sprintf(buf, "a%d", i);
@@ -523,6 +541,7 @@ Joystick::Joystick(ControllerGraph *cg, int joy_id):Node(cg, glfwGetJoystickName
         }
         AddOutput(hatName.c_str(), Pin::Hat);
     }
+    AddContextMenus();
 }
 Joystick::Joystick(ControllerGraph *cg, const crude_json::value &json):Node(cg, json) {
     guid = json["guid"].get<std::string>();
@@ -540,10 +559,20 @@ crude_json::value Joystick::ToJSON() {
 
 void Joystick::UpdateOutputs() {
     if(!connected) return;
+    AddContextMenus();
     int i = 0;
     const float *a = glfwGetJoystickAxes(joy_id, &nbAxis);
     for(int n = 0; n < nbAxis; n++) {
-        outputs[i].fVal = a[n];
+        float f = a[n];
+        float deadzone = outputs[i].deadzone;
+        if(fabs(f) < deadzone) {
+            f = 0.0f;
+        } else if(f<0.0) {
+            f = (f + deadzone) / (1.0f-deadzone);
+        } else {
+            f = (f - deadzone) / (1.0f-deadzone);
+        }
+        outputs[i].fVal = f;
         i++;
     }
 
@@ -581,49 +610,6 @@ void Toggle::UpdateOutputs() {
     if(inputs[In].bVal) {
         outputs[OutB].bVal = outputs[OutA].bVal;
         outputs[OutA].bVal = !outputs[OutB].bVal;
-    }
-}
-
-Deadzone::Deadzone(ControllerGraph *cg):Node(cg, "Deadzone") {
-    AddInput("in", Pin::Axis);
-    AddOutput("out", Pin::Axis);
-    deadzone = 0.2f;
-}
-Deadzone::Deadzone(ControllerGraph *cg, const crude_json::value &json):Node(cg, json) {
-    deadzone = json["deadzone"].get<crude_json::number>();
-}
-
-crude_json::value Deadzone::ToJSON() {
-    crude_json::value ret = Node::ToJSON();
-    ret["class"] = "Deadzone";
-    ret["deadzone"] = deadzone;
-    return ret;
-}
-
-void Deadzone::UpdateOutputs() {
-    float f = inputs[In].fVal;
-    if(fabs(f) < deadzone) {
-        f = 0.0f;
-    } else if(f<0.0) {
-        f = (f + deadzone) / (1.0f-deadzone);
-    } else {
-        f = (f - deadzone) / (1.0f-deadzone);
-    }
-    outputs[Out].fVal = f;
-}
-
-void Deadzone::Draw() {
-    if(minimized) {
-        Node::Draw();
-    } else {
-        builder.Header();
-        ImGui::PushItemWidth(60.f);
-        ImGui::SameLine();
-        ImGui::DragFloat("Deadzone", &deadzone, 0.01f, 0.0f, 0.9f, "%0.02f");
-        ImGui::PopItemWidth();
-        builder.EndHeader();
-        DrawInput(inputs[In]);
-        DrawOutput(outputs[Out]);
     }
 }
 
@@ -690,6 +676,24 @@ void Decoder::UpdateOutputs() {
     outputs[1].bVal =  inputs[A].bVal && !inputs[B].bVal;
     outputs[2].bVal = !inputs[A].bVal &&  inputs[B].bVal;
     outputs[3].bVal =  inputs[A].bVal &&  inputs[B].bVal;
+}
+
+AndGate::AndGate(ControllerGraph *cg):Node(cg, "And")
+{
+    AddInput("A", Pin::Button);
+    AddInput("B", Pin::Button);
+    AddOutput("Out", Pin::Button);
+}
+AndGate::AndGate(ControllerGraph *cg, const crude_json::value &json):Node(cg, json) {}
+
+crude_json::value AndGate::ToJSON() {
+    crude_json::value ret = Node::ToJSON();
+    ret["class"] = "AndGate";
+    return ret;
+}
+
+void AndGate::UpdateOutputs() {
+    outputs[0].bVal = inputs[A].bVal && inputs[B].bVal;
 }
 
 Inverter::Inverter(ControllerGraph *cg):Node(cg, "Inverter") {

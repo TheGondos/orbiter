@@ -87,6 +87,7 @@ class Joystick : public Node
     virtual void SimulateOutputs() override { UpdateOutputs(); };
     virtual void Draw() override;
     virtual crude_json::value ToJSON() override;
+    void AddContextMenus();
 
     int joy_id;
     int nbAxis;
@@ -179,21 +180,6 @@ class Toggle : public Node {
     bool oldValue;
 };
 
-class Deadzone : public Node {
-    public:
-    enum {
-        In  = 0,
-        Out = 0,
-    };
-    Deadzone(ControllerGraph *cg);
-    Deadzone(ControllerGraph *cg, const crude_json::value &json);
-    virtual void UpdateOutputs() override;
-    virtual void Draw() override;
-    virtual crude_json::value ToJSON() override;
-
-    float deadzone;
-};
-
 class Splitter : public Node {
     public:
     enum {
@@ -227,6 +213,17 @@ class Decoder : public Node {
     };
     Decoder(ControllerGraph *cg);
     Decoder(ControllerGraph *cg, const crude_json::value &json);
+    virtual void UpdateOutputs() override;
+    virtual crude_json::value ToJSON() override;
+};
+class AndGate : public Node {
+    public:
+    enum {
+        A = 0,
+        B = 1,
+    };
+    AndGate(ControllerGraph *cg);
+    AndGate(ControllerGraph *cg, const crude_json::value &json);
     virtual void UpdateOutputs() override;
     virtual crude_json::value ToJSON() override;
 };
