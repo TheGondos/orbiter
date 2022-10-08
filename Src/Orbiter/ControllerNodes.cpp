@@ -198,10 +198,148 @@ void Filter::UpdateOutputs() {
 void Filter::Draw() {
     builder.Header();
     ImGui::TextUnformatted(name.c_str());
-    if(ImGui::Button("New")) {
+    if(ImGui::SmallButton(ICON_FA_PLUS_CIRCLE " Add")) {
         AddEntry();
     }
     DrawInput(inputs[Enable], minimized);
+    builder.EndHeader();
+
+    for(auto &pins: entries) {
+        Pin &i = graph->PinFromId(pins.in);
+        DrawInput(i, minimized);
+    }
+
+    for(auto &pins: entries) {
+        Pin &o = graph->PinFromId(pins.out);
+        DrawOutput(o, minimized);
+    }
+}
+
+Memory::Memory(ControllerGraph *cg):Node(cg, "Memory") {
+    AddInput("Keep values", Pin::Button);
+    AddEntry();
+}
+Memory::Memory(ControllerGraph *cg, const crude_json::value &json):Node(cg, json) {
+    for(auto &e: json["entries"].get<crude_json::array>()) {
+        ed::PinId i = std::stoi(e["in"].get<std::string>());
+        ed::PinId o = std::stoi(e["out"].get<std::string>());
+        AddEntry(i, o);
+    }
+}
+
+crude_json::value Memory::ToJSON() {
+    crude_json::value ret = Node::ToJSON();
+
+    ret["class"] = "Memory";
+    for(auto &e: entries) {
+        crude_json::value entry;
+        entry["in"] = std::to_string((ptrdiff_t)e.in.AsPointer());
+        entry["out"] = std::to_string((ptrdiff_t)e.out.AsPointer());
+        ret["entries"].push_back(entry);
+    }
+
+    return ret;
+}
+
+void Memory::AddEntry(ed::PinId i, ed::PinId o) {
+    Pin *in;
+    Pin *out;
+    graph->dirty = true;
+
+    if(i != ed::PinId::Invalid) {
+        in = &graph->PinFromId(i);
+    } else {
+        in = &AddInput("In", Pin::Axis);
+    }
+
+    if(o != ed::PinId::Invalid) {
+        out = &graph->PinFromId(o);
+    } else {
+        out = &AddOutput("Out", Pin::Axis);
+    }
+
+    entries.emplace_back(in->id, out->id);
+
+    auto cb = [this](Pin &pin){
+        auto itpair = std::find_if(entries.begin(), entries.end(), [&pin](const PinPair &e) { return e.in == pin.id || e.out == pin.id; });
+        auto itin   = std::find(inputs.begin(), inputs.end(), graph->PinFromId(itpair->in));
+        auto itout  = std::find(outputs.begin(), outputs.end(), graph->PinFromId(itpair->out));
+        bool clearlinks = false;
+        if (ImGui::BeginMenu("Type"))
+        {
+            DrawIcon(Pin::Button, true, 255); ImGui::SameLine();
+            if (ImGui::MenuItem("Button")) {
+                clearlinks = itin->type != Pin::Button;
+                itin->type = Pin::Button;
+                itout->type = Pin::Button;
+            }
+            DrawIcon(Pin::Axis, true, 255); ImGui::SameLine();
+            if (ImGui::MenuItem("Axis")) {
+                clearlinks = itin->type != Pin::Axis;
+                itin->type = Pin::Axis;
+                itout->type = Pin::Axis;
+            }
+            DrawIcon(Pin::HalfAxis, true, 255); ImGui::SameLine();
+            if (ImGui::MenuItem("Half-Axis")) {
+                clearlinks = itin->type != Pin::HalfAxis;
+                itin->type = Pin::HalfAxis;
+                itout->type = Pin::HalfAxis;
+            }
+            DrawIcon(Pin::Hat, true, 255); ImGui::SameLine();
+            if (ImGui::MenuItem("Hat")) {
+                clearlinks = itin->type != Pin::Hat;
+                itin->type = Pin::Hat;
+                itout->type = Pin::Hat;
+            }
+            ImGui::EndMenu();
+        }
+        bool deletePair = false;
+        if (ImGui::MenuItem("Delete")) {
+            clearlinks = true;
+            deletePair = true;
+        }
+
+        if(clearlinks) {
+            graph->links.erase(std::remove_if(graph->links.begin(),
+                            graph->links.end(),
+                            [=](Link &x){return x.InputId == itout->id || x.OutputId == itin->id;}),
+            graph->links.end());
+            graph->dirty = true;
+        }
+        if(deletePair) {
+            entries.erase(itpair);
+            inputs.erase(itin);
+            outputs.erase(itout);
+            graph->dirty = true;
+        }
+    };
+
+    in->cbContextMenu = cb;
+    out->cbContextMenu = cb;
+}
+void Memory::SimulateOutputs() {
+    UpdateOutputs();
+}
+
+void Memory::UpdateOutputs() {
+    for(auto &pins: entries) {
+        Pin &o = graph->PinFromId(pins.out);
+        if(!inputs[Keep].bVal) {
+            Pin &i = graph->PinFromId(pins.in);
+            o.bVal = i.bVal;
+            o.fVal = i.fVal;
+            o.hVal = i.hVal;
+        }
+    }
+}
+
+void Memory::Draw() {
+    builder.Header();
+    ImGui::TextUnformatted(name.c_str());
+    if(ImGui::SmallButton(ICON_FA_PLUS_CIRCLE " Add")) {
+        AddEntry();
+    }
+    DrawInput(inputs[Keep], minimized);
     builder.EndHeader();
 
     for(auto &pins: entries) {
@@ -290,7 +428,7 @@ void Selector::UpdateOutputs() {
 void Selector::Draw() {
     builder.Header();
     ImGui::TextUnformatted(name.c_str());
-    if(ImGui::Button("New")) {
+    if(ImGui::SmallButton(ICON_FA_PLUS_CIRCLE " Add")) {
         AddEntry();
     }
     builder.EndHeader();
@@ -1461,7 +1599,7 @@ void KeyBinds::UpdateOutputs() {
 void KeyBinds::Draw() {
     builder.Header();
     ImGui::TextUnformatted(name.c_str());
-    if(ImGui::Button("New")) {
+    if(ImGui::SmallButton(ICON_FA_PLUS_CIRCLE " Add")) {
         AddEntry();
     }
     builder.EndHeader();

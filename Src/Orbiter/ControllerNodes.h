@@ -119,6 +119,29 @@ public:
 
     std::vector<PinPair> entries;
 };
+class Memory : public Node {
+public:
+    enum { Keep = 0 };
+    struct PinPair {
+        PinPair(ed::PinId i, ed::PinId o) {
+            in = i;
+            out = o;
+        }
+        ed::PinId in;
+        ed::PinId out;
+    };
+
+    Memory(ControllerGraph *cg);
+    Memory(ControllerGraph *cg, const crude_json::value &json);
+    
+    void AddEntry(ed::PinId i = ed::PinId::Invalid, ed::PinId o = ed::PinId::Invalid);
+    virtual void UpdateOutputs() override;
+    virtual void SimulateOutputs() override;
+    virtual void Draw() override;
+    virtual crude_json::value ToJSON() override;
+
+    std::vector<PinPair> entries;
+};
 
 class Selector : public Node {
 public:

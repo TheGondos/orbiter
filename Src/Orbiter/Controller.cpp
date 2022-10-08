@@ -909,6 +909,9 @@ void ControllerGraph::Editor() {
                 node = new Decoder(this);
             if (ImGui::MenuItem("Selector"))
                 node = new Selector(this);
+            if (ImGui::MenuItem("Memory"))
+                node = new Memory(this);
+                
             ImGui::EndMenu();
         }
 
@@ -988,6 +991,7 @@ void InputController::GlobalInit() {
     ControllerGraph::Register<Btn2Axis, false>("Btn2Axis");
     ControllerGraph::Register<Btn2HalfAxis, false>("Btn2HalfAxis");
     ControllerGraph::Register<Toggle, false>("Toggle");
+    ControllerGraph::Register<Memory, false>("Memory");
     ControllerGraph::Register<Filter, false>("Filter");
     ControllerGraph::Register<Decoder, false>("Decoder");
     ControllerGraph::Register<Selector, false>("Selector");
