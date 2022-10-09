@@ -1584,6 +1584,7 @@ static char kstate[256] = {0};
 KeyBinds::KeyBinds(ControllerGraph *cg):Node(cg, "KeyBinds") {
     EnableAddPins(true, false, Pin::Add_Trigger);
     has_comment = true;
+    is_controller = true;
 }
 KeyBinds::KeyBinds(ControllerGraph *cg, const crude_json::value &json):Node(cg, json) {
     if(json.contains("bindings")) {
@@ -1597,6 +1598,7 @@ KeyBinds::KeyBinds(ControllerGraph *cg, const crude_json::value &json):Node(cg, 
     }
     EnableAddPins(true, false, Pin::Add_Trigger);
     has_comment = true;
+    is_controller = true;
 }
 crude_json::value KeyBinds::ToJSON() {
     crude_json::value ret = Node::ToJSON();
