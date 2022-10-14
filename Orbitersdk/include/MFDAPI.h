@@ -363,7 +363,7 @@ public:
  * This class is derived from MFD and provides a template for MFD modes containing 2D
  * graphs. An example is the ascent profile recorder in the samples\\CustomMFD folder.
  */
-class OAPIFUNC GraphMFD: public MFD {
+class OAPIFUNC GraphMFD: public MFD2 {
 public:
 	/**
 	 * \brief Constructor. Creates a new GraphMFD.

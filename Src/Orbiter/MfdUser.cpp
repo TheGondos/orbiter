@@ -196,7 +196,7 @@ uint32_t MFD2::GetDefaultColour (int colidx, int intens) const
 // =======================================================================
 
 GraphMFD::GraphMFD (int w, int h, VESSEL *vessel)
-: MFD (w, h, vessel)
+: MFD2 (w, h, vessel)
 {
 	ngraph  = 0;
 }
