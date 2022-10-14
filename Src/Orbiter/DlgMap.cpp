@@ -30,6 +30,7 @@ void DlgMap::AddCbodyNode(const CelestialBody *cbody) {
         if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) {
             m_SelectedBody = cbody->Name();
             SetBody(cbody->Name());
+            ImGui::CloseCurrentPopup();
         }
         if(node_open) {
             for (int i = 0; i < cbody->nSecondary(); i++) {
@@ -42,6 +43,7 @@ void DlgMap::AddCbodyNode(const CelestialBody *cbody) {
         if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) {
             m_SelectedBody = cbody->Name();
             SetBody(cbody->Name());
+            ImGui::CloseCurrentPopup();
         }
     }
 }
