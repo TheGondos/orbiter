@@ -3465,6 +3465,7 @@ void Vessel::InitOrbiting (const Vector &relr, const Vector &relv, const Vector 
 
 	 // sanity check: position vector must have nonzero length
 	if (!cpos.x && !cpos.y && !cpos.z) cpos.z = 1.0;
+	if (!cvel.x && !cvel.y && !cvel.z) cvel.y = 1.0;
 
 	// sanity check: make sure we are above ground
 	double rad, elev = 0.0;
