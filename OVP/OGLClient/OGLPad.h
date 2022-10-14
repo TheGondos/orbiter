@@ -81,8 +81,8 @@ private:
     uint32_t textColorNative;
 	NVGcolor bgColor;
     uint32_t bgColorNative;
-	uint32_t m_curX;
-	uint32_t m_curY;
+	int32_t m_curX;
+	int32_t m_curY;
 	OGLTexture *m_tex;
 
 	int m_TextAlign;
