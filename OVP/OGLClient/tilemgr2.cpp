@@ -16,16 +16,7 @@
 #include "Texture.h"
 #include "OGLCamera.h"
 #include "Scene.h"
-
-static void CheckError(const char *s) {
-	GLenum err;
-	while((err = glGetError()) != GL_NO_ERROR)
-	{
-	// Process/log the error.
-		printf("GLError: %s - 0x%04X\n", s, err);
-		exit(-2);
-	}
-}
+#include "Renderer.h"
 
 // =======================================================================
 // Externals
@@ -559,7 +550,7 @@ void VBMESH_TS::Upload()
 	sizeof(N2TVERTEX),                  // stride
 	(void*)0            // array buffer offset
 	);
-	CheckError("glVertexAttribPointer0");
+	Renderer::CheckError("glVertexAttribPointer0");
 	glEnableVertexAttribArray(0);
 
 	glVertexAttribPointer(
@@ -570,9 +561,9 @@ void VBMESH_TS::Upload()
 	sizeof(N2TVERTEX),                  // stride
 	(void*)12            // array buffer offset
 	);
-	CheckError("glVertexAttribPointer");
+	Renderer::CheckError("glVertexAttribPointer");
 	glEnableVertexAttribArray(1);
-	CheckError("glEnableVertexAttribArray1");
+	Renderer::CheckError("glEnableVertexAttribArray1");
 
 	glVertexAttribPointer(
 	2,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
@@ -582,9 +573,9 @@ void VBMESH_TS::Upload()
 	sizeof(N2TVERTEX),                  // stride
 	(void*)24            // array buffer offset
 	);
-	CheckError("glVertexAttribPointer");
+	Renderer::CheckError("glVertexAttribPointer");
 	glEnableVertexAttribArray(2);
-	CheckError("glEnableVertexAttribArray2");
+	Renderer::CheckError("glEnableVertexAttribArray2");
 
 	glVertexAttribPointer(
 	3,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
@@ -594,9 +585,9 @@ void VBMESH_TS::Upload()
 	sizeof(N2TVERTEX),                  // stride
 	(void*)32            // array buffer offset
 	);
-	CheckError("glVertexAttribPointer");
+	Renderer::CheckError("glVertexAttribPointer");
 	glEnableVertexAttribArray(3);
-	CheckError("glEnableVertexAttribArray3");
+	Renderer::CheckError("glEnableVertexAttribArray3");
 
 	IBO = std::make_unique<IndexBuffer>(idx, ni);
 	IBO->Bind();

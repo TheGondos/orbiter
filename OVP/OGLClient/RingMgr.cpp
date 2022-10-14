@@ -15,19 +15,10 @@
 #include "RingMgr.h"
 #include "Texture.h"
 #include "OGLCamera.h"
+#include "Renderer.h"
 #include <cstring>
 
 using namespace oapi;
-
-static void CheckError(const char *s) {
-	GLenum err;
-	while((err = glGetError()) != GL_NO_ERROR)
-	{
-	// Process/log the error.
-		printf("GLError: %s - 0x%04X\n", s, err);
-        abort();
-	}
-}
 
 RingManager::RingManager (const vPlanet *vplanet, double inner_rad, double outer_rad)
 {
@@ -147,15 +138,11 @@ bool RingManager::Render (OGLCamera *c, glm::mat4 &mWorld, bool front)
 
 	glBindTexture(GL_TEXTURE_2D, tex[tres]->m_TexId);
     
-	GLboolean ablend;
-	glGetBooleanv(GL_BLEND, &ablend);
-	if (!ablend)
-		glEnable(GL_BLEND);
+	Renderer::PushBool(Renderer::BLEND, true);
 
 	mesh[rres]->RenderGroup (mesh[rres]->GetGroup(0));
 
-	if (!ablend)
-		glDisable(GL_BLEND);
+	Renderer::PopBool();
 
 	s.UnBind();
 	return true;
@@ -224,7 +211,7 @@ OGLMesh *RingManager::CreateRing (double irad, double orad, int nsect)
     sizeof(NTVERTEX),                  // stride
     (void*)0            // array buffer offset
     );
-    CheckError("glVertexAttribPointer0");
+    Renderer::CheckError("glVertexAttribPointer0");
     glEnableVertexAttribArray(0);
 
     glVertexAttribPointer(
@@ -235,9 +222,9 @@ OGLMesh *RingManager::CreateRing (double irad, double orad, int nsect)
     sizeof(NTVERTEX),                  // stride
     (void*)12            // array buffer offset
     );
-    CheckError("glVertexAttribPointer");
+    Renderer::CheckError("glVertexAttribPointer");
     glEnableVertexAttribArray(1);
-    CheckError("glEnableVertexAttribArray1");
+    Renderer::CheckError("glEnableVertexAttribArray1");
 
     glVertexAttribPointer(
     2,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
@@ -247,9 +234,9 @@ OGLMesh *RingManager::CreateRing (double irad, double orad, int nsect)
     sizeof(NTVERTEX),                  // stride
     (void*)24            // array buffer offset
     );
-    CheckError("glVertexAttribPointer");
+    Renderer::CheckError("glVertexAttribPointer");
     glEnableVertexAttribArray(2);
-    CheckError("glEnableVertexAttribArray2");
+    Renderer::CheckError("glEnableVertexAttribArray2");
 
     grp->IBO = std::make_unique<IndexBuffer>(grp->Idx, grp->nIdx + 12);
     grp->IBO->Bind();

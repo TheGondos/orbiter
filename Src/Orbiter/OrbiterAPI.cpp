@@ -1787,7 +1787,7 @@ DLLEXPORT oapi::Sketchpad *oapiGetSketchpad (SURFHANDLE surf)
 {
 	oapi::GraphicsClient *gc = g_pOrbiter->GetGraphicsClient();
 	oapi::Sketchpad *skp = NULL;
-	if (gc && surf) skp = gc->clbkGetSketchpad (surf);
+	if (gc) skp = gc->clbkGetSketchpad (surf);
 	return skp;
 }
 

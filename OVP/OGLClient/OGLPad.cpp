@@ -13,20 +13,10 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #include "OGLCamera.h"
 #include <cstring>
 #include <fontconfig/fontconfig.h>
+#include "Renderer.h"
 
 #define NANOVG_GL3_IMPLEMENTATION
 #include "nanovg/src/nanovg_gl.h"
-
-static void CheckError(const char *s) {
-	GLenum err;
-	while((err = glGetError()) != GL_NO_ERROR)
-	{
-	// Process/log the error.
-		printf("GLError: %s - 0x%04X\n", s, err);
-		abort();
-		exit(-1);
-	}
-}
 
 static NVGcolor nvgCol(uint32_t col)
 {
@@ -101,29 +91,17 @@ OGLPad::OGLPad (SURFHANDLE s):oapi::Sketchpad(s)
 	m_tex = (OGLTexture *)s;
 	if(s)
 	{
-		GLint result;
+		Renderer::PushRenderTarget(m_tex);
 		s_nvg = s_nvg_mfd;
-		glGetIntegerv(GL_FRAMEBUFFER_BINDING, &result);
-		assert(result == 0);
-		m_tex->SetAsTarget();
 		height = m_tex->m_Height;
 		width = m_tex->m_Width;
-
-		glBindTexture(GL_TEXTURE_2D, m_tex->m_TexId);
-		CheckError("OGLPad glBindTexture");
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		CheckError("OGLPad glTexParameteri");
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-		CheckError("OGLPad glTexParameteri2");
-		glGenerateMipmap(GL_TEXTURE_2D);
-		CheckError("OGLPad glGenerateMipmap");
 	}
 	else
 	{
 		s_nvg = s_nvg_fb;
 		height = g_client->GetScene()->GetCamera()->GetHeight();
 		width = g_client->GetScene()->GetCamera()->GetWidth();
-		glDisable(GL_CULL_FACE);
+		Renderer::PushBool(Renderer::CULL_FACE, false);
 	}
 
     nvgBeginFrame(s_nvg, width, height, /* pxRatio */ 1.0);
@@ -132,13 +110,14 @@ OGLPad::~OGLPad ()
 {
     nvgEndFrame(s_nvg);
 	if(m_tex) {
+		Renderer::PopRenderTarget();
 		glBindTexture(GL_TEXTURE_2D, m_tex->m_TexId);
 		glGenerateMipmap(GL_TEXTURE_2D);
 	} else {
-		glEnable(GL_CULL_FACE);
+		Renderer::PopBool();
 	}
-
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	// Restore states destroyed by nanovg
+	Renderer::Sync();
 }
 
 oapi::Font *OGLPad::SetFont (oapi::Font *font) const

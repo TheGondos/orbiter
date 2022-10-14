@@ -21,6 +21,7 @@
 #include "TileMgr.h"
 #include "OGLClient.h"
 #include "OGLCamera.h"
+#include "Renderer.h"
 #include <cstring>
 
 struct VERTEX_XYZ   { float x, y, z; };
@@ -82,16 +83,6 @@ vBase::~vBase ()
 			delete shmesh[i].idx;
 		}
 		delete []shmesh;
-	}
-}
-static void CheckError(const char *s) {
-	GLenum err;
-	while((err = glGetError()) != GL_NO_ERROR)
-	{
-	// Process/log the error.
-		printf("GLError: %s - 0x%04X\n", s, err);
-        abort();
-        exit(-1);
 	}
 }
 
@@ -267,13 +258,13 @@ bool vBase::RenderSurface ()
 
 	// render generic objects under shadows
 	if (nstructure_bs) {
-		glEnable(GL_DEPTH_TEST);
-		glDepthMask(GL_TRUE);
+		Renderer::PushBool(Renderer::DEPTH_TEST, true);
+		Renderer::PushDepthMask(true);
 		for (i = 0; i < nstructure_bs; i++) {
 			structure_bs[i]->Render (scn->GetCamera(), mWorld);
 		}
-		glDisable(GL_DEPTH_TEST);
-		glDepthMask(GL_FALSE);
+		Renderer::PopDepthMask();
+		Renderer::PopBool();
 	}
 
 	// render surface shadows (TODO)

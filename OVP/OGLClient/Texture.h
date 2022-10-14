@@ -18,6 +18,7 @@
 #define __TEXTURE_H
 
 #include <stdio.h>
+#include <string>
 
 struct OGLTexture
 {
@@ -30,7 +31,6 @@ struct OGLTexture
 	int m_Height;
 	bool Release();
 	void AddRef() {m_RefCnt++;}
-	void SetAsTarget(bool checkFB = true);
 	void InitSize();
 	uint32_t m_colorkey;
 	std::string m_file;

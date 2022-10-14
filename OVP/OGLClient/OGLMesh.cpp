@@ -20,17 +20,8 @@
 #include "OGLClient.h"
 #include "Scene.h"
 #include "OGLCamera.h"
+#include "Renderer.h"
 #include <cstring>
-
-static void CheckError(const char *s) {
-	GLenum err;
-	while((err = glGetError()) != GL_NO_ERROR)
-	{
-	// Process/log the error.
-		printf("GLError: %s - 0x%04X\n", s, err);
-        abort();
-	}
-}
 
 using namespace oapi;
 
@@ -198,7 +189,7 @@ bool OGLMesh::CopyGroup (GROUPREC *tgt, const GROUPREC *src)
     sizeof(NTVERTEX),                  // stride
     (void*)0            // array buffer offset
     );
-    CheckError("glVertexAttribPointer0");
+    Renderer::CheckError("glVertexAttribPointer0");
     glEnableVertexAttribArray(0);
 
     glVertexAttribPointer(
@@ -209,9 +200,9 @@ bool OGLMesh::CopyGroup (GROUPREC *tgt, const GROUPREC *src)
     sizeof(NTVERTEX),                  // stride
     (void*)12            // array buffer offset
     );
-    CheckError("glVertexAttribPointer");
+    Renderer::CheckError("glVertexAttribPointer");
     glEnableVertexAttribArray(1);
-    CheckError("glEnableVertexAttribArray1");
+    Renderer::CheckError("glEnableVertexAttribArray1");
 
     glVertexAttribPointer(
     2,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
@@ -221,9 +212,9 @@ bool OGLMesh::CopyGroup (GROUPREC *tgt, const GROUPREC *src)
     sizeof(NTVERTEX),                  // stride
     (void*)24            // array buffer offset
     );
-    CheckError("glVertexAttribPointer");
+    Renderer::CheckError("glVertexAttribPointer");
     glEnableVertexAttribArray(2);
-    CheckError("glEnableVertexAttribArray2");
+    Renderer::CheckError("glEnableVertexAttribArray2");
 
     tgt->IBO = std::make_unique<IndexBuffer>(tgt->Idx, tgt->nIdx);
     tgt->IBO->Bind();
@@ -264,7 +255,7 @@ bool OGLMesh::CopyGroup (GROUPREC *grp, const MESHGROUPEX *mg)
     sizeof(NTVERTEX),                  // stride
     (void*)0            // array buffer offset
     );
-    CheckError("glVertexAttribPointer0");
+    Renderer::CheckError("glVertexAttribPointer0");
     glEnableVertexAttribArray(0);
 
     glVertexAttribPointer(
@@ -275,9 +266,9 @@ bool OGLMesh::CopyGroup (GROUPREC *grp, const MESHGROUPEX *mg)
     sizeof(NTVERTEX),                  // stride
     (void*)12            // array buffer offset
     );
-    CheckError("glVertexAttribPointer");
+    Renderer::CheckError("glVertexAttribPointer");
     glEnableVertexAttribArray(1);
-    CheckError("glEnableVertexAttribArray1");
+    Renderer::CheckError("glEnableVertexAttribArray1");
 
     glVertexAttribPointer(
     2,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
@@ -287,9 +278,9 @@ bool OGLMesh::CopyGroup (GROUPREC *grp, const MESHGROUPEX *mg)
     sizeof(NTVERTEX),                  // stride
     (void*)24            // array buffer offset
     );
-    CheckError("glVertexAttribPointer");
+    Renderer::CheckError("glVertexAttribPointer");
     glEnableVertexAttribArray(2);
-    CheckError("glEnableVertexAttribArray2");
+    Renderer::CheckError("glEnableVertexAttribArray2");
 
     grp->IBO = std::make_unique<IndexBuffer>(mg->Idx, mg->nIdx);
     grp->IBO->Bind();
@@ -439,23 +430,18 @@ void OGLMesh::RenderGroup (GROUPREC *grp)
 	if (grp->nVtx && grp->nIdx) {
         grp->VBA->Bind();
         glDrawElements(GL_TRIANGLES, grp->IBO->GetCount(), GL_UNSIGNED_SHORT, 0);
-	    CheckError("glDrawElements");
+	    Renderer::CheckError("glDrawElements");
         grp->VBA->UnBind();
 	}
 }
 
 void OGLMesh::Render (OGLCamera *c, glm::fmat4 &model)
 {
-    glEnable(GL_BLEND);
-    glFrontFace(GL_CW);
-    glEnable(GL_CULL_FACE);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	/*
-    glEnable(GL_DEPTH_TEST);
-    glEnable(GL_CULL_FACE);
-    glFrontFace(GL_CW);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-*/
+	Renderer::PushBool(Renderer::BLEND, true);
+	Renderer::PushBool(Renderer::CULL_FACE, true);
+	Renderer::PushFrontFace(Renderer::CW);
+	Renderer::PushBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
 	const VECTOR3 &sd = g_client->GetScene()->GetSunDir();
     glm::vec3 sundir;
 	sundir.x = sd.x;
@@ -533,7 +519,7 @@ void OGLMesh::Render (OGLCamera *c, glm::fmat4 &model)
                 mShader.SetFloat("u_Textured", 0.0);
             } else {
                 glBindTexture(GL_TEXTURE_2D,  tx->m_TexId);
-				CheckError("glBindTexture");
+				Renderer::CheckError("glBindTexture");
                 mShader.SetFloat("u_Textured", 1.0);
                 mShader.SetFloat("u_MatAlpha", 1.0);
             }
@@ -577,7 +563,7 @@ void OGLMesh::Render (OGLCamera *c, glm::fmat4 &model)
 */
 		if (uflag & 0x8) { // brighten
             //glEnable(GL_BLEND);
-            glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+			Renderer::PushBlendFunc(GL_SRC_ALPHA, GL_ONE);
 		}
 
 		if (uflag &0x10) { // skip texture color information
@@ -593,7 +579,7 @@ void OGLMesh::Render (OGLCamera *c, glm::fmat4 &model)
 		}*/
 
 		if (uflag & 0x8) { // reset brighten
-            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			Renderer::PopBlendFunc();
 		}
 
 		if (uflag & 0x10) {
@@ -614,6 +600,9 @@ void OGLMesh::Render (OGLCamera *c, glm::fmat4 &model)
 	if (bModulateMatAlpha)
 		dev->SetTextureStageState (0, D3DTSS_ALPHAOP, D3DTOP_SELECTARG1);
         */
+    Renderer::PopBlendFunc();
+	Renderer::PopFrontFace();
+	Renderer::PopBool(2);
 }
 
 void OGLMesh::TransformGroup (int n, const glm::fmat4 *mm)

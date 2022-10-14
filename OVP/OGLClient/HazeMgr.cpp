@@ -18,19 +18,10 @@
 #include "VPlanet.h"
 #include "Texture.h"
 #include "OGLCamera.h"
+#include "Renderer.h"
 #include <glm/gtc/matrix_inverse.hpp>
 
 using namespace oapi;
-
-static void CheckError(const char *s) {
-	GLenum err;
-	while((err = glGetError()) != GL_NO_ERROR)
-	{
-	// Process/log the error.
-		printf("GLError: %s - 0x%04X\n", s, err);
-		abort();
-	}
-}
 
 HazeManager::HazeManager (const vPlanet *vplanet)
 {
@@ -87,7 +78,7 @@ void HazeManager::GlobalInit ()
         sizeof(HVERTEX),                  // stride
         (void*)0            // array buffer offset
         );
-        CheckError("glVertexAttribPointer0");
+        Renderer::CheckError("glVertexAttribPointer0");
         glEnableVertexAttribArray(0);
 
         glVertexAttribPointer(
@@ -98,9 +89,9 @@ void HazeManager::GlobalInit ()
         sizeof(HVERTEX),                  // stride
         (void*)12            // array buffer offset
         );
-        CheckError("glVertexAttribPointer");
+        Renderer::CheckError("glVertexAttribPointer");
         glEnableVertexAttribArray(1);
-        CheckError("glEnableVertexAttribArray1");
+        Renderer::CheckError("glEnableVertexAttribArray1");
 
         glVertexAttribPointer(
         2,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
@@ -110,9 +101,9 @@ void HazeManager::GlobalInit ()
         sizeof(HVERTEX),                  // stride
         (void*)28            // array buffer offset
         );
-        CheckError("glVertexAttribPointer");
+        Renderer::CheckError("glVertexAttribPointer");
         glEnableVertexAttribArray(2);
-        CheckError("glEnableVertexAttribArray2");
+        Renderer::CheckError("glEnableVertexAttribArray2");
 
 	VBA->UnBind();
 }
@@ -188,7 +179,8 @@ void HazeManager::Render (OGLCamera *c, glm::mat4 &wmat, bool dual)
 //	dev->SetTransform (D3DTRANSFORMSTATE_WORLD, &transm);
 	glBindTexture(GL_TEXTURE_2D, horizon->m_TexId);
 
-    glEnable(GL_BLEND);
+	Renderer::PushBool(Renderer::BLEND, true);
+
 //	dev->SetRenderState (D3DRENDERSTATE_LIGHTING, FALSE);
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);	
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);  
@@ -230,10 +222,7 @@ static Shader s("Haze.vs","Haze.fs");
 	s.Bind();
 	auto *vp = c->GetViewProjectionMatrix();
 	s.SetMat4("u_ViewProjection",*vp);
-//	s.SetMat4("u_Model",*ringmat);
 	s.SetMat4("u_Model",transm);
-//glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
-//glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
 	VBA->Bind();
 	glDrawElements(GL_TRIANGLE_STRIP, IBO->GetCount(), GL_UNSIGNED_SHORT, 0);
 	VBA->UnBind();
@@ -258,21 +247,18 @@ static Shader s("Haze.vs","Haze.fs");
 //			D3DFVF_TEX1 | D3DFVF_TEXCOORDSIZE2(0), Vtx, 2*HORIZON_NSEG, Idx, nIdx, 0);
 //		dev->SetRenderState (D3DRENDERSTATE_CULLMODE, D3DCULL_CCW);
 		VBA->Bind();
-	glFrontFace(GL_CCW);
+		Renderer::PushFrontFace(Renderer::CCW);
 		glDrawElements(GL_TRIANGLE_STRIP, IBO->GetCount(), GL_UNSIGNED_SHORT, 0);
-	glFrontFace(GL_CW);
+		Renderer::PopFrontFace();
 
 		VBA->UnBind();
 	}
-
-//glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
-
 
 	s.UnBind();
 
 //	dev->SetTextureStageState (0, D3DTSS_ADDRESS, D3DTADDRESS_WRAP);
 //	dev->SetRenderState (D3DRENDERSTATE_LIGHTING, TRUE);
-	glDisable(GL_BLEND);
+	Renderer::PopBool();
 //	dev->SetTextureStageState (0, D3DTSS_ALPHAOP, D3DTOP_SELECTARG1);
 
 	glBindTexture(GL_TEXTURE_2D, 0);

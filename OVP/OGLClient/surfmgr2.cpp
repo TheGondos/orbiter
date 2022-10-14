@@ -19,18 +19,10 @@
 #include "Texture.h"
 #include "OGLCamera.h"
 #include "Scene.h"
+#include "Renderer.h"
 #include <cstring>
 
 // =======================================================================
-static void CheckError(const char *s) {
-	GLenum err;
-	while((err = glGetError()) != GL_NO_ERROR)
-	{
-	// Process/log the error.
-		printf("GLError: %s - 0x%04X\n", s, err);
-        exit(-1);
-	}
-}
 
 #pragma pack(push,1)
 
@@ -572,15 +564,15 @@ void SurfTile::Render ()
 	}
 
     glBindTexture(GL_TEXTURE_2D,  tex->m_TexId);
-	CheckError("SurfTile::Render glBindTexture");
+	Renderer::CheckError("SurfTile::Render glBindTexture");
 	mesh->VAO->Bind();
 
 	glDrawElements(GL_TRIANGLES, mesh->IBO->GetCount(), GL_UNSIGNED_SHORT, 0);
-	CheckError("SurfTile::Render glDrawElements");
+	Renderer::CheckError("SurfTile::Render glDrawElements");
 	mesh->VAO->UnBind();
 	s.UnBind();
     glBindTexture(GL_TEXTURE_2D,  0);
-	CheckError("SurfTile::Render glBindTexture0");
+	Renderer::CheckError("SurfTile::Render glBindTexture0");
 	//glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
 	return;
 

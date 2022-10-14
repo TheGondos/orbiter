@@ -18,42 +18,13 @@
 #include "OGLPad.h"
 #include "OGLCamera.h"
 #include "stb_image_write.h"
+#include "Renderer.h"
 
 //extern Orbiter *g_pOrbiter;
 /*
 const uint32_t SPEC_DEFAULT = (uint32_t)(-1); // "default" material/texture flag
 const uint32_t SPEC_INHERIT = (uint32_t)(-2); // "inherit" material/texture flag
 */
-static void CheckError(const char *s) {
-	GLenum err;
-	while((err = glGetError()) != GL_NO_ERROR)
-	{
-	// Process/log the error.
-		printf("GLError: %s - 0x%04X\n", s, err);
-		abort();
-		exit(-1);
-	}
-}
-
-GLboolean glEnableEx(GLenum e) {
-	GLboolean ret;
-	glGetBooleanv(e, &ret);
-	glEnable(e);
-	return ret; 
-}
-GLboolean glDisableEx(GLenum e) {
-	GLboolean ret;
-	glGetBooleanv(e, &ret);
-	glDisable(e);
-	return ret; 
-}
-
-void glRestoreEx(GLenum e, GLboolean v) {
-	if(v)
-		glEnable(e);
-	else
-		glDisable(e);
-}
 
 // ==============================================================
 // API interface
@@ -256,9 +227,9 @@ void OGLClient::clbkRender2DPanel (SURFHANDLE *hSurf, MESHHANDLE hMesh, MATRIX3 
 		float x, y;
 	} *hvtx = new HVTX[1];
 
-	GLboolean oldDepth = glDisableEx(GL_DEPTH_TEST);
-	GLboolean oldBlend = glEnableEx(GL_BLEND);
-	GLboolean oldCull = glDisableEx(GL_CULL_FACE);
+	Renderer::PushBool(Renderer::DEPTH_TEST, false);
+	Renderer::PushBool(Renderer::BLEND, true);
+	Renderer::PushBool(Renderer::CULL_FACE, false);
 
 	glm::mat4 ortho_proj = glm::ortho(0.0f, (float)g_client->GetScene()->GetCamera()->GetWidth(), (float)g_client->GetScene()->GetCamera()->GetHeight(), 0.0f);
 	static Shader s("Overlay.vs","Overlay.fs");
@@ -269,18 +240,18 @@ void OGLClient::clbkRender2DPanel (SURFHANDLE *hSurf, MESHHANDLE hMesh, MATRIX3 
 	if(!init) {
 		init=true;
 		glGenVertexArrays(1, &m_VAO);
-		CheckError("clbkRender2DPanel glGenVertexArrays");
+		Renderer::CheckError("clbkRender2DPanel glGenVertexArrays");
 		glBindVertexArray(m_VAO);
-		CheckError("clbkRender2DPanel glBindVertexArray");
+		Renderer::CheckError("clbkRender2DPanel glBindVertexArray");
 
 		glGenBuffers(1, &m_Buffer);
-		CheckError("clbkRender2DPanel glGenBuffers");
+		Renderer::CheckError("clbkRender2DPanel glGenBuffers");
 		glBindBuffer(GL_ARRAY_BUFFER, m_Buffer);
-		CheckError("clbkRender2DPanel glBindBuffer");
+		Renderer::CheckError("clbkRender2DPanel glBindBuffer");
 		glBufferData(GL_ARRAY_BUFFER, 2048 * 4 * sizeof(GLfloat), NULL, GL_DYNAMIC_DRAW);
-		CheckError("clbkRender2DPanel glBufferData");
+		Renderer::CheckError("clbkRender2DPanel glBufferData");
 		glGenBuffers(1, &IBO);
-		CheckError("clbkRender2DPanel glGenBuffers");
+		Renderer::CheckError("clbkRender2DPanel glGenBuffers");
 
 		glBindVertexArray(0);
 	}
@@ -351,27 +322,27 @@ void OGLClient::clbkRender2DPanel (SURFHANDLE *hSurf, MESHHANDLE hMesh, MATRIX3 
 //		pd3dDevice->DrawIndexedPrimitive (D3DPT_TRIANGLELIST, vtxFmt, hvtx, nvtx, grp->Idx, grp->nIdx, 0);
 		glBindBuffer(GL_ARRAY_BUFFER, m_Buffer);
 		glBindVertexArray(m_VAO);
-		CheckError("clbkRender2DPanel glBindBuffer");
+		Renderer::CheckError("clbkRender2DPanel glBindBuffer");
 		glBufferSubData(GL_ARRAY_BUFFER, 0, nvtx * sizeof(HVTX), hvtx);
-		CheckError("clbkRender2DPanel glBufferSubData");
+		Renderer::CheckError("clbkRender2DPanel glBufferSubData");
 		glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, NULL);
-		CheckError("clbkRender2DPanel glVertexAttribPointer");
+		Renderer::CheckError("clbkRender2DPanel glVertexAttribPointer");
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
-		CheckError("clbkRender2DPanel glBindBuffer");
+		Renderer::CheckError("clbkRender2DPanel glBindBuffer");
 		
 		glEnableVertexAttribArray(0);
-		CheckError("clbkRender2DPanel glEnableVertexAttribArray0");
+		Renderer::CheckError("clbkRender2DPanel glEnableVertexAttribArray0");
 
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
-		CheckError("clbkRender2DPanel glBindBuffer");
+		Renderer::CheckError("clbkRender2DPanel glBindBuffer");
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, grp->nIdx * 2, grp->Idx, GL_STATIC_DRAW);
-		CheckError("clbkRender2DPanel glBufferData");
+		Renderer::CheckError("clbkRender2DPanel glBufferData");
 
 		glDrawElements(GL_TRIANGLES, grp->nIdx, GL_UNSIGNED_SHORT, 0);
 	//		glDrawArrays(GL_TRIANGLES, 0, nvtx);
-		CheckError("clbkRender2DPanel glDrawArrays");
+		Renderer::CheckError("clbkRender2DPanel glDrawArrays");
 
-		CheckError("clbkRender2DPanel glDrawArrays");
+		Renderer::CheckError("clbkRender2DPanel glDrawArrays");
 		glBindVertexArray(0);
 
 
@@ -383,9 +354,7 @@ void OGLClient::clbkRender2DPanel (SURFHANDLE *hSurf, MESHHANDLE hMesh, MATRIX3 
 	//if (transparent)
 	//	glBlendFunc(GL_DST_ALPHA, GL_ONE_MINUS_DST_ALPHA);
 
-	glRestoreEx(GL_DEPTH_TEST, oldDepth);
-	glRestoreEx(GL_BLEND, oldBlend);
-	glRestoreEx(GL_CULL_FACE, oldCull);
+	Renderer::PopBool(3);
 }
 
 /**
@@ -490,6 +459,7 @@ GLFWwindow *OGLClient::clbkCreateRenderWindow ()
 	mMeshManager = std::make_unique<OGLMeshManager>();
 	mScene = std::make_unique<Scene>(m_width, m_height);
 	mTextureManager = std::make_unique<TextureManager>();
+	Renderer::GlobalInit();
 	TileManager::GlobalInit();
 	HazeManager::GlobalInit();
 
@@ -1092,6 +1062,7 @@ bool OGLClient::clbkReleaseSurface (SURFHANDLE surf)
  * \default None.
  * \sa Sketchpad, clbkGetSketchpad
  */
+
 void OGLClient::clbkReleaseSketchpad (oapi::Sketchpad *sp)
 {
 	delete (OGLPad *)sp;
@@ -1190,16 +1161,16 @@ void OGLClient::clbkCloseSession (bool fastclose)
  */
 bool OGLClient::clbkDisplayFrame ()
 {
-	CheckError("before clbkDisplayFrame");
+	Renderer::CheckError("before clbkDisplayFrame");
 	glfwSwapBuffers(hRenderWnd);
 	return true;
 }
 bool OGLClient::clbkClearFrame ()
 {
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-	CheckError("glClearColor");
+	Renderer::CheckError("glClearColor");
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	CheckError("glClear");
+	Renderer::CheckError("glClear");
 	return true;
 }
  
@@ -1210,15 +1181,15 @@ void OGLClient::clbkImGuiNewFrame ()
 void OGLClient::clbkImGuiRenderDrawData ()
 {
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-	CheckError("ImGui_ImplOpenGL3_RenderDrawData");
+	Renderer::CheckError("ImGui_ImplOpenGL3_RenderDrawData");
 
 	ImGuiIO &io = ImGui::GetIO();
 	if(io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
 		GLFWwindow* backup_current_context = glfwGetCurrentContext();
 		ImGui::UpdatePlatformWindows();
-		CheckError("ImGui::UpdatePlatformWindows");
+		Renderer::CheckError("ImGui::UpdatePlatformWindows");
 		ImGui::RenderPlatformWindowsDefault();
-		CheckError("ImGui::RenderPlatformWindowsDefault");
+		Renderer::CheckError("ImGui::RenderPlatformWindowsDefault");
 		glfwMakeContextCurrent(backup_current_context);
 	}
 }
@@ -1354,20 +1325,20 @@ bool OGLClient::clbkFillSurface (SURFHANDLE surf, int tgtx, int tgty, int w, int
 	if(!init) {
 		init=true;
 		glGenVertexArrays(1, &m_VAO);
-		CheckError("glGenVertexArrays");
+		Renderer::CheckError("glGenVertexArrays");
 		glBindVertexArray(m_VAO);
-		CheckError("glBindVertexArray");
+		Renderer::CheckError("glBindVertexArray");
 
 		glGenBuffers(1, &m_Buffer);
-		CheckError("glGenBuffers");
+		Renderer::CheckError("glGenBuffers");
 		glBindBuffer(GL_ARRAY_BUFFER, m_Buffer);
-		CheckError("glBindBuffer");
+		Renderer::CheckError("glBindBuffer");
 		glBufferData(GL_ARRAY_BUFFER, 6 * 4 * sizeof(GLfloat), NULL, GL_DYNAMIC_DRAW);
-		CheckError("glBufferSubData");
+		Renderer::CheckError("glBufferSubData");
 		glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, NULL);
-		CheckError("glVertexAttribPointer");
+		Renderer::CheckError("glVertexAttribPointer");
 		glEnableVertexAttribArray(0);
-		CheckError("glEnableVertexAttribArray");
+		Renderer::CheckError("glEnableVertexAttribArray");
 
 		glBindVertexArray(0);
 	}
@@ -1382,23 +1353,19 @@ bool OGLClient::clbkFillSurface (SURFHANDLE surf, int tgtx, int tgty, int w, int
 		0, 0, (float)tgtx+w, (float)tgty+h,
 	};
 
-	GLint oldFB = 0;
-	GLint oldViewport[4];
 	OGLTexture *m_tex = (OGLTexture *)surf;
 	if(m_tex) {
-		glGetIntegerv(GL_FRAMEBUFFER_BINDING, &oldFB);
-		glGetIntegerv(GL_VIEWPORT, oldViewport);
+		Renderer::PushRenderTarget(m_tex);
 		ortho_proj = glm::ortho(0.0f, (float)m_tex->m_Width, 0.0f, (float)m_tex->m_Height);
-		m_tex->SetAsTarget(false);
 	}
 
 	glBindBuffer(GL_ARRAY_BUFFER, m_Buffer);
 	glBindVertexArray(m_VAO);
-	CheckError("glBindBuffer");
+	Renderer::CheckError("glBindBuffer");
 	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertex), vertex);
-	CheckError("glBufferSubData");
+	Renderer::CheckError("glBufferSubData");
 	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, NULL);
-	CheckError("glVertexAttribPointer");
+	Renderer::CheckError("glVertexAttribPointer");
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	
 	glEnableVertexAttribArray(0);
@@ -1413,18 +1380,17 @@ bool OGLClient::clbkFillSurface (SURFHANDLE surf, int tgtx, int tgty, int w, int
 	s.SetVec3("quad_color", color);
 
 	glBindVertexArray(m_VAO);
-	CheckError("glBindVertexArray");
+	Renderer::CheckError("glBindVertexArray");
 
 	glDrawArrays(GL_TRIANGLES, 0, 6);
-	CheckError("glDrawArrays");
+	Renderer::CheckError("glDrawArrays");
 
 	glBindVertexArray(0);
 
 	s.UnBind();
 
 	if(surf) {
-		glBindFramebuffer(GL_FRAMEBUFFER, oldFB);
-		glViewport(oldViewport[0],oldViewport[1],oldViewport[2],oldViewport[3]);
+		Renderer::PopRenderTarget();
 	}
 
     return true;
@@ -1455,20 +1421,16 @@ bool OGLClient::clbkScaleBlt (SURFHANDLE tgt, int tgtx, int tgty, int tgtw, int 
 {
     //printf("OGLClient::clbkScaleBlt tgtx=%d tgty=%d tgtw=%d tgth=%d\n", tgtx,tgty,tgtw,tgth);
     //printf("OGLClient::clbkScaleBlt srcx=%d srcy=%d srcw=%d srch=%d\n", srcx,srcy,srcw,srch);
-	GLboolean oldBlend = glDisableEx(GL_BLEND);
-	GLboolean oldCull = glDisableEx(GL_CULL_FACE);
+
+	Renderer::PushBool(Renderer::BLEND, false);
+	Renderer::PushBool(Renderer::CULL_FACE, false);
+
 	glm::mat4 ortho_proj;
-	GLint oldFB;
-	GLint oldViewport[4];
 
 	if(tgt) {
-		glGetIntegerv(GL_FRAMEBUFFER_BINDING, &oldFB);
-		glGetIntegerv(GL_VIEWPORT, oldViewport);
-
 		OGLTexture *m_tex = (OGLTexture *)tgt;
-		//ortho_proj = glm::ortho(0.0f, (float)m_tex->m_Width, (float)m_tex->m_Height, 0.0f); //y-flipped
+		Renderer::PushRenderTarget(m_tex);
 		ortho_proj = glm::ortho(0.0f, (float)m_tex->m_Width, 0.0f, (float)m_tex->m_Height);
-		m_tex->SetAsTarget(false);
 	} else {
 		ortho_proj = glm::ortho(0.0f, (float)g_client->GetScene()->GetCamera()->GetWidth(), (float)g_client->GetScene()->GetCamera()->GetHeight(), 0.0f);
 	}
@@ -1480,20 +1442,20 @@ bool OGLClient::clbkScaleBlt (SURFHANDLE tgt, int tgtx, int tgty, int tgtw, int 
 	if(!init) {
 		init=true;
 		glGenVertexArrays(1, &m_VAO);
-		CheckError("glGenVertexArrays");
+		Renderer::CheckError("glGenVertexArrays");
 		glBindVertexArray(m_VAO);
-		CheckError("glBindVertexArray");
+		Renderer::CheckError("glBindVertexArray");
 
 		glGenBuffers(1, &m_Buffer);
-		CheckError("glGenBuffers");
+		Renderer::CheckError("glGenBuffers");
 		glBindBuffer(GL_ARRAY_BUFFER, m_Buffer);
-		CheckError("glBindBuffer");
+		Renderer::CheckError("glBindBuffer");
 		glBufferData(GL_ARRAY_BUFFER, 6 * 4 * sizeof(GLfloat), NULL, GL_DYNAMIC_DRAW);
-		CheckError("glBufferSubData");
+		Renderer::CheckError("glBufferSubData");
 		glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, NULL);
-		CheckError("glVertexAttribPointer");
+		Renderer::CheckError("glVertexAttribPointer");
 		glEnableVertexAttribArray(0);
-		CheckError("glEnableVertexAttribArray");
+		Renderer::CheckError("glEnableVertexAttribArray");
 
 		glBindVertexArray(0);
 	}
@@ -1520,11 +1482,11 @@ bool OGLClient::clbkScaleBlt (SURFHANDLE tgt, int tgtx, int tgty, int tgtw, int 
 	};
 	glBindBuffer(GL_ARRAY_BUFFER, m_Buffer);
 	glBindVertexArray(m_VAO);
-	CheckError("OGLPad::Text glBindBuffer");
+	Renderer::CheckError("OGLPad::Text glBindBuffer");
 	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertex), vertex);
-	CheckError("OGLPad::Text glBufferSubData");
+	Renderer::CheckError("OGLPad::Text glBufferSubData");
 	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, NULL);
-	CheckError("OGLPad::Text glVertexAttribPointer");
+	Renderer::CheckError("OGLPad::Text glVertexAttribPointer");
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 	//	CheckError("OGLPad::Text glBindBuffer0");
@@ -1550,13 +1512,8 @@ bool OGLClient::clbkScaleBlt (SURFHANDLE tgt, int tgtx, int tgty, int tgtw, int 
 		s.SetFloat("color_keyed", 0.0);
 	}
 
-	/*
-	GLint whichID;
-	glGetIntegerv(GL_TEXTURE_BINDING_2D, &whichID);
-	assert(whichID==0);
-	*/
 	glBindTexture(GL_TEXTURE_2D, ((OGLTexture *)src)->m_TexId);
-	CheckError("glBindTexture");
+	Renderer::CheckError("glBindTexture");
 	if(hasck) {
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	} else {
@@ -1564,10 +1521,10 @@ bool OGLClient::clbkScaleBlt (SURFHANDLE tgt, int tgtx, int tgty, int tgtw, int 
 	}
 
 	glBindVertexArray(m_VAO);
-	CheckError("glBindVertexArray");
+	Renderer::CheckError("glBindVertexArray");
 
 	glDrawArrays(GL_TRIANGLES, 0, 6);
-	CheckError("glDrawArrays");
+	Renderer::CheckError("glDrawArrays");
 
 	glBindVertexArray(0);
 	glBindTexture(GL_TEXTURE_2D, 0);
@@ -1575,13 +1532,10 @@ bool OGLClient::clbkScaleBlt (SURFHANDLE tgt, int tgtx, int tgty, int tgtw, int 
 
 	if(tgt)
     {
-		glBindFramebuffer(GL_FRAMEBUFFER, oldFB);
-		glViewport(oldViewport[0],oldViewport[1],oldViewport[2],oldViewport[3]);
+		Renderer::PopRenderTarget();
 	}
 
-	glRestoreEx(GL_BLEND, oldBlend);
-	glRestoreEx(GL_CULL_FACE, oldCull);
-
+	Renderer::PopBool(2);
 	return true;
 }
 
@@ -1606,17 +1560,11 @@ bool OGLClient::clbkScaleBlt (SURFHANDLE tgt, int tgtx, int tgty, int tgtw, int 
  */
 bool OGLClient::clbkBlt (SURFHANDLE tgt, int tgtx, int tgty, SURFHANDLE src, int flag) const
 {
-	GLboolean oldBlend = glDisableEx(GL_BLEND);
-	GLboolean oldCull = glDisableEx(GL_CULL_FACE);
-	GLint oldFB;
-	glGetIntegerv(GL_FRAMEBUFFER_BINDING, &oldFB);
-	GLint oldViewport[4];
-	glGetIntegerv(GL_VIEWPORT, oldViewport);
-
+	Renderer::PushBool(Renderer::BLEND, false);
+	Renderer::PushBool(Renderer::CULL_FACE, false);
 	OGLTexture *m_tex = (OGLTexture *)tgt;
-	//ortho_proj = glm::ortho(0.0f, (float)m_tex->m_Width, (float)m_tex->m_Height, 0.0f); //y-flipped
+	Renderer::PushRenderTarget(m_tex);
 	glm::mat4 ortho_proj = glm::ortho(0.0f, (float)m_tex->m_Width, 0.0f, (float)m_tex->m_Height);
-	m_tex->SetAsTarget();
 	static Shader s("Overlay.vs","Overlay.fs");
 
 	static GLuint m_Buffer, m_VAO;
@@ -1624,20 +1572,20 @@ bool OGLClient::clbkBlt (SURFHANDLE tgt, int tgtx, int tgty, SURFHANDLE src, int
 	if(!init) {
 		init=true;
 		glGenVertexArrays(1, &m_VAO);
-		CheckError("glGenVertexArrays");
+		Renderer::CheckError("glGenVertexArrays");
 		glBindVertexArray(m_VAO);
-		CheckError("glBindVertexArray");
+		Renderer::CheckError("glBindVertexArray");
 
 		glGenBuffers(1, &m_Buffer);
-		CheckError("glGenBuffers");
+		Renderer::CheckError("glGenBuffers");
 		glBindBuffer(GL_ARRAY_BUFFER, m_Buffer);
-		CheckError("glBindBuffer");
+		Renderer::CheckError("glBindBuffer");
 		glBufferData(GL_ARRAY_BUFFER, 6 * 4 * sizeof(GLfloat), NULL, GL_DYNAMIC_DRAW);
-		CheckError("glBufferSubData");
+		Renderer::CheckError("glBufferSubData");
 		glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, NULL);
-		CheckError("glVertexAttribPointer");
+		Renderer::CheckError("glVertexAttribPointer");
 		glEnableVertexAttribArray(0);
-		CheckError("glEnableVertexAttribArray");
+		Renderer::CheckError("glEnableVertexAttribArray");
 
 		glBindVertexArray(0);
 	}
@@ -1664,11 +1612,11 @@ bool OGLClient::clbkBlt (SURFHANDLE tgt, int tgtx, int tgty, SURFHANDLE src, int
 	};
 	glBindBuffer(GL_ARRAY_BUFFER, m_Buffer);
 	glBindVertexArray(m_VAO);
-	CheckError("OGLPad::Text glBindBuffer");
+	Renderer::CheckError("OGLPad::Text glBindBuffer");
 	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertex), vertex);
-	CheckError("OGLPad::Text glBufferSubData");
+	Renderer::CheckError("OGLPad::Text glBufferSubData");
 	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, NULL);
-	CheckError("OGLPad::Text glVertexAttribPointer");
+	Renderer::CheckError("OGLPad::Text glVertexAttribPointer");
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 	//	CheckError("OGLPad::Text glBindBuffer0");
@@ -1694,13 +1642,8 @@ bool OGLClient::clbkBlt (SURFHANDLE tgt, int tgtx, int tgty, SURFHANDLE src, int
 		s.SetFloat("color_keyed", 0.0);
 	}
 
-	/*
-	GLint whichID;
-	glGetIntegerv(GL_TEXTURE_BINDING_2D, &whichID);
-	assert(whichID==0);
-	*/
 	glBindTexture(GL_TEXTURE_2D, ((OGLTexture *)src)->m_TexId);
-	CheckError("glBindTexture");
+	Renderer::CheckError("glBindTexture");
 	if(hasck) {
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	} else {
@@ -1708,21 +1651,17 @@ bool OGLClient::clbkBlt (SURFHANDLE tgt, int tgtx, int tgty, SURFHANDLE src, int
 	}
 
 	glBindVertexArray(m_VAO);
-	CheckError("glBindVertexArray");
+	Renderer::CheckError("glBindVertexArray");
 
 	glDrawArrays(GL_TRIANGLES, 0, 6);
-	CheckError("glDrawArrays");
+	Renderer::CheckError("glDrawArrays");
 
 	glBindVertexArray(0);
 	glBindTexture(GL_TEXTURE_2D, 0);
 	s.UnBind();
 
-	glBindFramebuffer(GL_FRAMEBUFFER, oldFB);
-	glViewport(oldViewport[0],oldViewport[1],oldViewport[2],oldViewport[3]);
-
-	glRestoreEx(GL_BLEND, oldBlend);
-	glRestoreEx(GL_CULL_FACE, oldCull);
-
+	Renderer::PopRenderTarget();
+	Renderer::PopBool(2);
 	return true;
 }
 
@@ -1751,57 +1690,36 @@ bool OGLClient::clbkBlt (SURFHANDLE tgt, int tgtx, int tgty, SURFHANDLE src, int
  */
 bool OGLClient::clbkBlt (SURFHANDLE tgt, int tgtx, int tgty, SURFHANDLE src, int srcx, int srcy, int w, int h, int flag) const
 {
-	GLboolean oldBlend = glDisableEx(GL_BLEND);
-	GLboolean oldCull = glDisableEx(GL_CULL_FACE);
-	glDisable(GL_DEPTH_TEST);
-	static int done = 0;
-	//static unsigned int VAO;
-	static GLuint fbo;
-	if(!done) {
-		done = 1;
-		glGenFramebuffers(1, &fbo);
-	}
+	Renderer::PushBool(Renderer::BLEND, false);
+	Renderer::PushBool(Renderer::CULL_FACE, false);
+	Renderer::PushBool(Renderer::DEPTH_TEST, false);
 
 	if(tgt) {
-		GLint oldFB;
-		glGetIntegerv(GL_FRAMEBUFFER_BINDING, &oldFB);
-		GLint oldViewport[4];
-		glGetIntegerv(GL_VIEWPORT, oldViewport);
 		OGLTexture *m_tex = (OGLTexture *)tgt;
-		//ortho_proj = glm::ortho(0.0f, (float)m_tex->m_Width, (float)m_tex->m_Height, 0.0f); //y-flipped
+		Renderer::PushRenderTarget(m_tex);
 		glm::mat4 ortho_proj = glm::ortho(0.0f, (float)m_tex->m_Width, 0.0f, (float)m_tex->m_Height);
-		m_tex->SetAsTarget();
-/*
-		glBindTexture(GL_TEXTURE_2D, m_tex->m_TexId);
-		CheckError("OGLPad glBindTexture");
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		CheckError("OGLPad glTexParameteri");
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-		CheckError("OGLPad glTexParameteri2");
-		glGenerateMipmap(GL_TEXTURE_2D);
-		CheckError("OGLPad glGenerateMipmap");*/
 		static Shader s("Overlay.vs","Overlay.fs");
 
 		static GLuint m_Buffer, m_VAO;
 		static bool init = false;
 		if(!init) {
 			init=true;
-			CheckError("pre glGenVertexArrays");
+			Renderer::CheckError("pre glGenVertexArrays");
 			glGenVertexArrays(1, &m_VAO);
-			CheckError("glGenVertexArrays");
+			Renderer::CheckError("glGenVertexArrays");
 			glBindVertexArray(m_VAO);
-			CheckError("glBindVertexArray");
+			Renderer::CheckError("glBindVertexArray");
 
 			glGenBuffers(1, &m_Buffer);
-			CheckError("glGenBuffers");
+			Renderer::CheckError("glGenBuffers");
 			glBindBuffer(GL_ARRAY_BUFFER, m_Buffer);
-			CheckError("glBindBuffer");
+			Renderer::CheckError("glBindBuffer");
 			glBufferData(GL_ARRAY_BUFFER, 6 * 4 * sizeof(GLfloat), NULL, GL_DYNAMIC_DRAW);
-			CheckError("glBufferSubData");
+			Renderer::CheckError("glBufferSubData");
 			glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, NULL);
-			CheckError("glVertexAttribPointer");
+			Renderer::CheckError("glVertexAttribPointer");
 			glEnableVertexAttribArray(0);
-			CheckError("glEnableVertexAttribArray");
+			Renderer::CheckError("glEnableVertexAttribArray");
 
 			glBindVertexArray(0);
 		}
@@ -1829,16 +1747,14 @@ bool OGLClient::clbkBlt (SURFHANDLE tgt, int tgtx, int tgty, SURFHANDLE src, int
 
 		glBindBuffer(GL_ARRAY_BUFFER, m_Buffer);
 		glBindVertexArray(m_VAO);
-		CheckError("OGLPad::Text glBindBuffer");
+		Renderer::CheckError("OGLPad::Text glBindBuffer");
 		glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertex), vertex);
-		CheckError("OGLPad::Text glBufferSubData");
+		Renderer::CheckError("OGLPad::Text glBufferSubData");
 		glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, NULL);
-		CheckError("OGLPad::Text glVertexAttribPointer");
+		Renderer::CheckError("OGLPad::Text glVertexAttribPointer");
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 		
-//	CheckError("OGLPad::Text glBindBuffer0");
 		glEnableVertexAttribArray(0);
-	//CheckError("OGLPad::Text glEnableVertexAttribArray0");
 		glBindVertexArray(0);
 
 		s.Bind();
@@ -1859,30 +1775,24 @@ bool OGLClient::clbkBlt (SURFHANDLE tgt, int tgtx, int tgty, SURFHANDLE src, int
 			s.SetFloat("color_keyed", 0.0);
 		}
 
-/*
-		GLint whichID;
-		glGetIntegerv(GL_TEXTURE_BINDING_2D, &whichID);
-		assert(whichID==0);
-*/
 		glBindTexture(GL_TEXTURE_2D, ((OGLTexture *)src)->m_TexId);
-		CheckError("glBindTexture");
+		Renderer::CheckError("glBindTexture");
 		if(hasck) {
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		} else {
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		}
 		glBindVertexArray(m_VAO);
-		CheckError("glBindVertexArray");
+		Renderer::CheckError("glBindVertexArray");
 
 		glDrawArrays(GL_TRIANGLES, 0, 6);
-		CheckError("glDrawArrays");
+		Renderer::CheckError("glDrawArrays");
 
 		glBindVertexArray(0);
 		glBindTexture(GL_TEXTURE_2D, 0);
 		s.UnBind();
 
-		glBindFramebuffer(GL_FRAMEBUFFER, oldFB);
-		glViewport(oldViewport[0],oldViewport[1],oldViewport[2],oldViewport[3]);
+		Renderer::PopRenderTarget();
 	} else {
 		glm::mat4 ortho_proj = glm::ortho(0.0f, (float)g_client->GetScene()->GetCamera()->GetWidth(), (float)g_client->GetScene()->GetCamera()->GetHeight(), 0.0f);
 		static Shader s("Overlay.vs","Overlay.fs");
@@ -1892,20 +1802,20 @@ bool OGLClient::clbkBlt (SURFHANDLE tgt, int tgtx, int tgty, SURFHANDLE src, int
 		if(!init) {
 			init=true;
 			glGenVertexArrays(1, &m_VAO);
-			CheckError("glGenVertexArrays");
+			Renderer::CheckError("glGenVertexArrays");
 			glBindVertexArray(m_VAO);
-			CheckError("glBindVertexArray");
+			Renderer::CheckError("glBindVertexArray");
 
 			glGenBuffers(1, &m_Buffer);
-			CheckError("glGenBuffers");
+			Renderer::CheckError("glGenBuffers");
 			glBindBuffer(GL_ARRAY_BUFFER, m_Buffer);
-			CheckError("glBindBuffer");
+			Renderer::CheckError("glBindBuffer");
 			glBufferData(GL_ARRAY_BUFFER, 6 * 4 * sizeof(GLfloat), NULL, GL_DYNAMIC_DRAW);
-			CheckError("glBufferSubData");
+			Renderer::CheckError("glBufferSubData");
 			glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, NULL);
-			CheckError("glVertexAttribPointer");
+			Renderer::CheckError("glVertexAttribPointer");
 			glEnableVertexAttribArray(0);
-			CheckError("glEnableVertexAttribArray");
+			Renderer::CheckError("glEnableVertexAttribArray");
 
 			glBindVertexArray(0);
 		}
@@ -1932,11 +1842,11 @@ bool OGLClient::clbkBlt (SURFHANDLE tgt, int tgtx, int tgty, SURFHANDLE src, int
 		};
 		glBindBuffer(GL_ARRAY_BUFFER, m_Buffer);
 		glBindVertexArray(m_VAO);
-		CheckError("OGLPad::Text glBindBuffer");
+		Renderer::CheckError("OGLPad::Text glBindBuffer");
 		glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertex), vertex);
-		CheckError("OGLPad::Text glBufferSubData");
+		Renderer::CheckError("OGLPad::Text glBufferSubData");
 		glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, NULL);
-		CheckError("OGLPad::Text glVertexAttribPointer");
+		Renderer::CheckError("OGLPad::Text glVertexAttribPointer");
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 		
 //	CheckError("OGLPad::Text glBindBuffer0");
@@ -1967,7 +1877,7 @@ bool OGLClient::clbkBlt (SURFHANDLE tgt, int tgtx, int tgty, SURFHANDLE src, int
 		assert(whichID==0);
 
 		glBindTexture(GL_TEXTURE_2D, ((OGLTexture *)src)->m_TexId);
-		CheckError("glBindTexture");
+		Renderer::CheckError("glBindTexture");
 
 		if(hasck) {
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -1976,10 +1886,10 @@ bool OGLClient::clbkBlt (SURFHANDLE tgt, int tgtx, int tgty, SURFHANDLE src, int
 		}
 
 		glBindVertexArray(m_VAO);
-		CheckError("glBindVertexArray");
+		Renderer::CheckError("glBindVertexArray");
 
 		glDrawArrays(GL_TRIANGLES, 0, 6);
-		CheckError("glDrawArrays");
+		Renderer::CheckError("glDrawArrays");
 
 		glBindVertexArray(0);
 		glBindTexture(GL_TEXTURE_2D, 0);
@@ -1987,8 +1897,8 @@ bool OGLClient::clbkBlt (SURFHANDLE tgt, int tgtx, int tgty, SURFHANDLE src, int
 
 
 	}
-	glRestoreEx(GL_BLEND, oldBlend);
-	glRestoreEx(GL_CULL_FACE, oldCull);
+
+	Renderer::PopBool(3);
 
 	return true;
 }

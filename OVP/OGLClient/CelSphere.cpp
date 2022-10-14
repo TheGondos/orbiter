@@ -17,6 +17,7 @@
 #include "glad.h"
 #include "CelSphere.h"
 #include "OGLCamera.h"
+#include "Renderer.h"
 
 #define NSEG 64 // number of segments in celestial grid lines
 
@@ -45,15 +46,6 @@ CelestialSphere::CelestialSphere ()
 
 CelestialSphere::~CelestialSphere ()
 {
-}
-
-void CheckError(const char *s) {
-	GLenum err;
-	while((err = glGetError()) != GL_NO_ERROR)
-	{
-	// Process/log the error.
-		printf("GLError: %s - 0x%04X\n", s, err);
-	}
 }
 
 // ==============================================================
@@ -145,9 +137,9 @@ void CelestialSphere::LoadStars ()
 		0,                  // stride
 		(void*)0            // array buffer offset
 		);
-		CheckError("glVertexAttribPointer");
+		Renderer::CheckError("glVertexAttribPointer");
 		glEnableVertexAttribArray(0);
-		CheckError("glEnableVertexAttribArray");
+		Renderer::CheckError("glEnableVertexAttribArray");
 		m_starsVAO->UnBind();
 
 		delete[]vbuf;
@@ -191,9 +183,9 @@ void CelestialSphere::LoadConstellationLines ()
 	0,                  // stride
 	(void*)0            // array buffer offset
 	);
-	CheckError("glVertexAttribPointer");
+	Renderer::CheckError("glVertexAttribPointer");
 	glEnableVertexAttribArray(0);
-	CheckError("glEnableVertexAttribArray");
+	Renderer::CheckError("glEnableVertexAttribArray");
 	m_constellationsVAO->UnBind();
 	delete[]cnstvtx;
 }
@@ -208,7 +200,7 @@ void CelestialSphere::RenderStars (OGLCamera *c, VECTOR3 &bgcol)
 	m_starsShader->SetMat4("u_ViewProjection", *vp);
 	m_starsVAO->Bind();
 	glDrawArrays(GL_POINTS, 0, ns);
-	CheckError("glDrawArrays");
+	Renderer::CheckError("glDrawArrays");
 	m_starsVAO->UnBind();
 	m_starsShader->UnBind();
 }
@@ -219,7 +211,7 @@ void CelestialSphere::RenderConstellations (VECTOR3 &col, OGLCamera *c)
 	m_constellationsShader->SetMat4("u_ViewProjection", *vp);
 	m_constellationsVAO->Bind();
 	glDrawArrays(GL_LINES, 0, ncline * 2); // Starting from vertex 0; 3 vertices total -> 1 triangle
-	CheckError("glDrawArrays");
+	Renderer::CheckError("glDrawArrays");
 	m_constellationsVAO->UnBind();
 	m_constellationsShader->UnBind();
 }
@@ -247,9 +239,9 @@ void CelestialSphere::CreateEcliptic()
 	0,                  // stride
 	(void*)0            // array buffer offset
 	);
-	CheckError("glVertexAttribPointer");
+	Renderer::CheckError("glVertexAttribPointer");
 	glEnableVertexAttribArray(0);
-	CheckError("glEnableVertexAttribArray");
+	Renderer::CheckError("glEnableVertexAttribArray");
 	m_eclVAO->UnBind();
 }
 
@@ -260,7 +252,7 @@ void CelestialSphere::RenderEcliptic(OGLCamera *c)
 	m_eclShader->SetMat4("u_ViewProjection", *vp);
 	m_eclVAO->Bind();
 	glDrawArrays(GL_LINE_STRIP, 0, necl);
-	CheckError("glDrawArrays");
+	Renderer::CheckError("glDrawArrays");
 	m_eclVAO->UnBind();
 	m_eclShader->UnBind();
 }

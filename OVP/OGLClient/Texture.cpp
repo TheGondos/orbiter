@@ -20,21 +20,13 @@
 #include <cstring>
 #include "SOIL2/incs/SOIL2.h"
 #include <sys/stat.h>
+#include "Renderer.h"
 extern "C" {
 #include "libnsbmp.h"
 }
 
 using namespace oapi;
-static void CheckError(const char *s) {
-	GLenum err;
-	while((err = glGetError()) != GL_NO_ERROR)
-	{
-	// Process/log the error.
-		printf("GLError: %s - 0x%04X\n", s, err);
-        abort();
-        exit(-1);
-	}
-}
+
 static unsigned char *load_file(const char *path, size_t *data_size)
 {
         FILE *fd;
@@ -155,28 +147,28 @@ static GLuint loadBMPTexture(const char *filename) {
 
       /* Generate texture */
       glGenTextures (1, &res);
-      CheckError("glGenTextures");
+      Renderer::CheckError("glGenTextures");
       glBindTexture (GL_TEXTURE_2D, res);
-      CheckError("glBindTexture");
+      Renderer::CheckError("glBindTexture");
 
       /* Setup some parameters for texture filters and mipmapping */
       glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);//_MIPMAP_LINEAR);
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
-      CheckError("glTexParameteri");
+      Renderer::CheckError("glTexParameteri");
       glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-      CheckError("glTexParameteri2");
+      Renderer::CheckError("glTexParameteri2");
       glGetIntegerv (GL_UNPACK_ALIGNMENT, &alignment);
-      CheckError("glGetIntegerv");
+      Renderer::CheckError("glGetIntegerv");
       glPixelStorei (GL_UNPACK_ALIGNMENT, 1);
-      CheckError("glPixelStorei");
+      Renderer::CheckError("glPixelStorei");
 
       glTexImage2D (GL_TEXTURE_2D, 0, GL_RGB,
 		    bmp.width, bmp.height, 0, GL_RGBA,
 		    GL_UNSIGNED_BYTE, bmp.bitmap);
-      CheckError("glTexImage2D");
+      Renderer::CheckError("glTexImage2D");
 
       glPixelStorei (GL_UNPACK_ALIGNMENT, alignment);
-      CheckError("glPixelStorei");
+      Renderer::CheckError("glPixelStorei");
 
 cleanup:
     /* clean up */
@@ -569,25 +561,25 @@ GLuint texture_loadDDS(const uint8_t *buf, uint32_t nbuf) {
 
         // prepare new incomplete texture
         glGenTextures(1, &tid);
-        CheckError("glGenTextures");
+        Renderer::CheckError("glGenTextures");
         
         // bind the texture
         // make it complete by specifying all needed parameters and ensuring all mipmaps are filled
         glBindTexture(GL_TEXTURE_2D, tid);
-        CheckError("glBindTexture");
+        Renderer::CheckError("glBindTexture");
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
-        CheckError("glTexParameteri");
+        Renderer::CheckError("glTexParameteri");
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, mipMapCount-1); // opengl likes array length of mipmaps
-        CheckError("glTexParameteri");
+        Renderer::CheckError("glTexParameteri");
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        CheckError("glTexParameteri");
+        Renderer::CheckError("glTexParameteri");
         if(mipmaps)
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); // don't forget to enable mipmaping
-        CheckError("glTexParameteri");
+        Renderer::CheckError("glTexParameteri");
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        CheckError("glTexParameteri");
+        Renderer::CheckError("glTexParameteri");
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        CheckError("glTexParameteri");
+        Renderer::CheckError("glTexParameteri");
         
         // prepare some variables
         w = width;
@@ -603,7 +595,7 @@ GLuint texture_loadDDS(const uint8_t *buf, uint32_t nbuf) {
             }
             size = ((w+3)/4) * ((h+3)/4) * blockSize;
             glCompressedTexImage2D(GL_TEXTURE_2D, i, format, w, h, 0, size, buffer + offset);
-            CheckError("glCompressedTexImage2D");
+            Renderer::CheckError("glCompressedTexImage2D");
             offset += size;
             w /= 2;
             h /= 2;
@@ -618,27 +610,27 @@ GLuint texture_loadDDS(const uint8_t *buf, uint32_t nbuf) {
 
         // prepare new incomplete texture
         glGenTextures(1, &tid);
-        CheckError("glGenTextures");
+        Renderer::CheckError("glGenTextures");
         if(tid == 0)
             goto exit;
         
         // bind the texture
         // make it complete by specifying all needed parameters and ensuring all mipmaps are filled
         glBindTexture(GL_TEXTURE_2D, tid);
-        CheckError("glBindTexture");
+        Renderer::CheckError("glBindTexture");
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
-        CheckError("glTexParameteri");
+        Renderer::CheckError("glTexParameteri");
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, mipMapCount-1); // opengl likes array length of mipmaps
-        CheckError("glTexParameteri");
+        Renderer::CheckError("glTexParameteri");
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        CheckError("glTexParameteri");
+        Renderer::CheckError("glTexParameteri");
         if(mipmaps)
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); // don't forget to enable mipmaping
-        CheckError("glTexParameteri");
+        Renderer::CheckError("glTexParameteri");
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        CheckError("glTexParameteri");
+        Renderer::CheckError("glTexParameteri");
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        CheckError("glTexParameteri");
+        Renderer::CheckError("glTexParameteri");
         
         // prepare some variables
         w = width;
@@ -662,7 +654,7 @@ GLuint texture_loadDDS(const uint8_t *buf, uint32_t nbuf) {
                 continue;
             }
             glTexImage2D( GL_TEXTURE_2D, i, internalformat, w, h, 0, GL_BGRA_EXT, type, buffer + offset);
-            CheckError("glTexImage2D");
+            Renderer::CheckError("glTexImage2D");
             offset += w * h * pixelSize;
             w /= 2;
             h /= 2;
@@ -674,10 +666,10 @@ GLuint texture_loadDDS(const uint8_t *buf, uint32_t nbuf) {
     // discard any odd mipmaps, ensure a complete texture
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, mipMapCount-1);
 
-    CheckError("glTexParameteri");
+    Renderer::CheckError("glTexParameteri");
     // unbind
     glBindTexture(GL_TEXTURE_2D, 0);
-    CheckError("glBindTexture");
+    Renderer::CheckError("glBindTexture");
 	
   // easy macro to get out quick and uniform (minus like 15 lines of bulk)
 exit:
@@ -939,7 +931,7 @@ OGLTexture *TextureManager::GetTextureForRendering(int w, int h, int attrib)
     if(attrib & OAPISURFACE_NOALPHA)
         format = GL_RGB;
 
-	CheckError("GetTextureForRendering");
+	Renderer::CheckError("GetTextureForRendering");
 
     glGetIntegerv(GL_FRAMEBUFFER_BINDING, &oldFB);
 
@@ -979,7 +971,7 @@ OGLTexture *TextureManager::GetTextureForRendering(int w, int h, int attrib)
 	glClear(GL_COLOR_BUFFER_BIT);
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, oldFB);
-	CheckError("!GetTextureForRendering");
+	Renderer::CheckError("!GetTextureForRendering");
     return tex;
 }
 
@@ -1068,7 +1060,7 @@ bool OGLTexture::Release()
     if(!m_RefCnt) {
         if(m_TexId) {
             glDeleteTextures(1, &m_TexId);
-			CheckError("glDeleteTextures");
+			Renderer::CheckError("glDeleteTextures");
             m_TexId = 0;
         }
 
@@ -1081,80 +1073,12 @@ bool OGLTexture::Release()
     return false;
 }
 
-void OGLTexture::SetAsTarget(bool checkFB)
-{
-	CheckError("SetAsTarget");
-    if(checkFB) {
-        GLint result;
-        glGetIntegerv(GL_FRAMEBUFFER_BINDING, &result);
-        CheckError("glGetIntegerv(GL_FRAMEBUFFER_BINDING, &result)");
-        assert(result == 0);
-    }
-    if(!m_FBO) {
-        glGenFramebuffers(1, &m_FBO);
-        CheckError("glGenFramebuffers(1, &m_FBO)");
-        glBindFramebuffer(GL_FRAMEBUFFER, m_FBO);
-        CheckError("glBindFramebuffer(GL_FRAMEBUFFER, m_FBO)");
-        glBindTexture(GL_TEXTURE_2D, m_TexId);
-        CheckError("glBindTexture(GL_TEXTURE_2D, m_TexId)");
-
-        // Poor filtering. Needed !
-//        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  //      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-//glGenerateMipmap(GL_TEXTURE_2D);
-        // Set "renderedTexture" as our colour attachement #0
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_TexId, 0);
-	CheckError("SetAsTarget");
-        glBindTexture(GL_TEXTURE_2D, 0);
-	CheckError("SetAsTarget");
-        // Set the list of draw buffers.
-        GLenum DrawBuffers[1] = {GL_COLOR_ATTACHMENT0};
-        glDrawBuffers(1, DrawBuffers); // "1" is the size of DrawBuffers
-	CheckError("SetAsTarget");
-
-        switch(glCheckFramebufferStatus(GL_FRAMEBUFFER))
-        {
-            case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
-                printf("SetAsTarget: glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT\n");
-                abort();
-                exit(-1);
-            case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER:
-                printf("SetAsTarget: glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER\n");
-                abort();
-                exit(-1);
-            case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER:
-                printf("SetAsTarget: glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER\n");
-                abort();
-                exit(-1);
-            case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
-                printf("SetAsTarget: glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT\n");
-                abort();
-                exit(-1);
-            case GL_FRAMEBUFFER_UNSUPPORTED:
-                printf("SetAsTarget: glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_UNSUPPORTED\n");
-                abort();
-                exit(-1);
-            case GL_FRAMEBUFFER_COMPLETE:
-                break;
-        }
-
-    } else {
-	CheckError("SetAsTarget");
-        glBindFramebuffer(GL_FRAMEBUFFER, m_FBO);
-	CheckError("SetAsTarget");
-	}
-	CheckError("SetAsTarget");
-
-    glViewport(0,0,m_Width,m_Height);
-	CheckError("!SetAsTarget");
-}
-
 void OGLTexture::InitSize()
 {
-	CheckError("InitSize");
+	Renderer::CheckError("InitSize");
     glBindTexture(GL_TEXTURE_2D, m_TexId);
     glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &m_Width);
     glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &m_Height);
     glBindTexture(GL_TEXTURE_2D, 0);
-	CheckError("!InitSize");
+	Renderer::CheckError("!InitSize");
 }

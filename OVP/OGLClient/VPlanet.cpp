@@ -27,17 +27,8 @@
 #include "CloudMgr.h"
 #include "HazeMgr.h"
 #include "RingMgr.h"
+#include "Renderer.h"
 #include <cstring>
-
-static void CheckError(const char *s) {
-	GLenum err;
-	while((err = glGetError()) != GL_NO_ERROR)
-	{
-	// Process/log the error.
-		printf("GLError: %s - 0x%04X\n", s, err);
-		abort();
-	}
-}
 
 using namespace oapi;
 
@@ -342,11 +333,13 @@ void vPlanet::RenderZRange (double *nplane, double *fplane)
 
 bool vPlanet::Render ()
 {
+	Renderer::CheckError("Render");
 	if (!active) return false;
 
 	if (renderpix) { // render as 2x2 pixel block
 
 		RenderDot ();
+		Renderer::CheckError("Render");
 
 	} else {             // render as sphere
 
@@ -359,7 +352,7 @@ bool vPlanet::Render ()
 		}
 
 		uint32_t amb = prm.amb0col;
-		bool ringpostrender = false;
+		//bool ringpostrender = false;
 		float fogfactor;
 
 		prm.bFog = prm.bFogEnabled;
@@ -369,20 +362,23 @@ bool vPlanet::Render ()
 		prm.bAddBkg = ((skybg.x + skybg.y + skybg.z > 0) && (hObj != scn->GetCamera()->GetProxyBody()));
 
 		if (ringmgr) {
-			glDisable(GL_CULL_FACE);
+			Renderer::PushBool(Renderer::CULL_FACE, false);
 			ringmgr->Render(scn->GetCamera(), mWorld, false);
-			glEnable(GL_CULL_FACE);
-			//dev->SetRenderState(D3DRS_CULLMODE, D3DCULL_CCW);
+			Renderer::PopBool();
 		}
+		Renderer::CheckError("Render");
 
 		if (prm.bCloud && (prm.cloudvis & 1))
 			RenderCloudLayer (GL_CCW, prm);      // render clouds from below
+		Renderer::CheckError("Render");
+
 		if (hazemgr) hazemgr->Render (scn->GetCamera(), mWorld);       // horizon ring
 
 		if (prm.bAtm) {
 			if (ModLighting (amb))
 				g_client->mRenderContext.ambient = amb;
 		}
+		Renderer::CheckError("Render");
 
 		if (prm.bFog) { // set up distance fog
 			double h = std::max (1.0, cdist-size);
@@ -425,6 +421,7 @@ bool vPlanet::Render ()
 				g_client->mRenderContext.fogDensity = fogfactor;
 			}
 		}
+		Renderer::CheckError("Render");
 
 		if (prm.bTint) {
 			prm.rgbTint = *(VECTOR3*)oapiGetObjectParam (hObj, OBJPRM_PLANET_ATMTINTCOLOUR);
@@ -440,13 +437,18 @@ bool vPlanet::Render ()
 		}
 
 		if (mesh) {
+			Renderer::CheckError("Render");
 			mesh->Render (scn->GetCamera(), mWorld);
+			Renderer::CheckError("Render");
 		} else {
+			Renderer::CheckError("Render");
 			bool using_zbuf;
 			RenderSphere (prm, using_zbuf);            // planet surface
+			Renderer::CheckError("Render");
 		}
 
 		if (nbase) RenderBaseStructures ();
+		Renderer::CheckError("Render");
 
 		if (prm.bAtm) {
 			if (amb != prm.amb0col)
@@ -457,21 +459,18 @@ bool vPlanet::Render ()
 			g_client->mRenderContext.bFog = false;
 		}
 
-		if (ringpostrender) {
-			// reset z-comparison function and disable z-buffer
-			glDepthFunc(GL_LEQUAL);
-			glDisable(GL_DEPTH_TEST);
-		}
-
 		if (prm.bCloud && (prm.cloudvis & 2)) {
-				RenderCloudLayer (GL_CW, prm);	  // render clouds from above
+			RenderCloudLayer (GL_CW, prm);	  // render clouds from above
+			Renderer::CheckError("Render");
 		}
 		if (hazemgr) hazemgr->Render (scn->GetCamera(), mWorld, true); // haze across planet disc
+		Renderer::CheckError("Render");
 
 		if (ringmgr) {
-			glDisable(GL_CULL_FACE);
+			Renderer::PushBool(Renderer::CULL_FACE, false);
 			ringmgr->Render (scn->GetCamera(), mWorld, true);
-			glEnable(GL_CULL_FACE);
+			Renderer::PopBool();
+			Renderer::CheckError("Render");
 		}
 
 		if (!nmlnml) g_client->mRenderContext.normalizeNormals = false;
@@ -490,13 +489,13 @@ void vPlanet::ActivateLabels(bool activate)
 }
 
 // ==============================================================
-/*
-void vPlanet::RenderLabels(OGLCamera *cam, oapi::Sketchpad *skp, oapi::Font **labelfont, int *fontidx)
+
+void vPlanet::RenderLabels(oapi::Sketchpad *skp, oapi::Font **labelfont, int *fontidx)
 {
 	if (surfmgr2 && *(int*)oapiGetObjectParam(hObj, OBJPRM_PLANET_LABELENGINE) == 2)
 		surfmgr2->RenderLabels(skp, labelfont, fontidx);
 }
-*/
+
 // ==============================================================
 
 void vPlanet::RenderDot ()
@@ -530,22 +529,28 @@ void vPlanet::RenderSphere (const RenderPrm &prm, bool &using_zbuf)
 		g_client->mRenderContext.backgroungColor = g_client->GetScene()->GetBgColour();
 //		dev->SetRenderState (D3DRENDERSTATE_TEXTUREFACTOR, bgc);
 	}
+	Renderer::CheckError("RenderSphere");
 
+	//Renderer::PushFrontFace(Renderer::FrontFace::CW);
 	if (surfmgr2) {
 		if (cdist >= 1.3*rad && cdist > 3e6) {
 			surfmgr2->Render (dmWorld, false, prm);
+			Renderer::CheckError("RenderSphere");
 		} else {
-			glEnable(GL_DEPTH_TEST);
-			glDepthMask(GL_TRUE);
+			Renderer::PushBool(Renderer::DEPTH_TEST, true);
+			Renderer::PushDepthMask(true);
 			surfmgr2->Render (dmWorld, true, prm);
-			glDisable(GL_DEPTH_TEST);
-			glDepthMask(GL_FALSE);
-			using_zbuf = true;
+			Renderer::PopDepthMask();
+			Renderer::PopBool();
+			//using_zbuf = true;
+			Renderer::CheckError("RenderSphere");
 		}
 	} else {
 		//mercury, venus, saturn, titan, hyperion, uranus, miranda, ariel, umbriel, titan, oberon, neptune, triton, proteus, nereide 
 		surfmgr->Render (mWorld, dist_scale, patchres, 0.0, prm.bFog); // surface
+		Renderer::CheckError("RenderSphere");
 	}
+	//Renderer::PopFrontFace();
 
 	if (prm.bAddBkg) {
 //		dev->SetTextureStageState (1, D3DTSS_COLOROP, D3DTOP_DISABLE);
@@ -556,7 +561,9 @@ void vPlanet::RenderSphere (const RenderPrm &prm, bool &using_zbuf)
 
 	if (nbase) {
 		RenderBaseSurfaces ();                     // base surfaces
-		RenderBaseShadows (shadowalpha);         // base shadows
+		Renderer::CheckError("RenderSphere");
+		RenderBaseShadows (shadowalpha);         // base 
+		Renderer::CheckError("RenderSphere");
 	}
 /*
 	if (mipmap_mode) {
@@ -570,12 +577,16 @@ void vPlanet::RenderSphere (const RenderPrm &prm, bool &using_zbuf)
 		dev->SetTextureStageState (0, D3DTSS_MAXANISOTROPY, 1);
 	}
 	*/
-	if (prm.bCloudShadow)
+	if (prm.bCloudShadow) {
 		RenderCloudShadows (prm);                // cloud shadows
+		Renderer::CheckError("RenderSphere");
+	}
 
-	if (bVesselShadow && hObj == oapiCameraProxyGbody())
+	if (bVesselShadow && hObj == oapiCameraProxyGbody()) {
 	// cast shadows only on planet closest to camera
 		scn->RenderVesselShadows (hObj, shadowalpha); // vessel shadows
+		Renderer::CheckError("RenderSphere");
+	}
 
 }
 
@@ -583,16 +594,16 @@ void vPlanet::RenderSphere (const RenderPrm &prm, bool &using_zbuf)
 
 void vPlanet::RenderCloudLayer (GLenum cullmode, const RenderPrm &prm)
 {
-	GLint cf;
-	glGetIntegerv(GL_FRONT_FACE, &cf);
-	if (cullmode != cf) glFrontFace(cullmode);
-	glEnable(GL_BLEND);
+	Renderer::CheckError("RenderCloudLayer");
+	Renderer::PushFrontFace((Renderer::FrontFace)cullmode);
+	Renderer::PushBool(Renderer::BLEND, true);
 	if (cloudmgr2)
 		cloudmgr2->Render (dmWorld, false, prm);
 	else
 		clouddata->cloudmgr->Render (clouddata->mWorldC, dist_scale, std::min(patchres,8), clouddata->viewap); // clouds
-	glDisable(GL_BLEND);
-	if (cullmode != cf) glFrontFace(cf);
+	Renderer::PopBool();
+	Renderer::PopFrontFace();
+	Renderer::CheckError("RenderCloudLayer");
 }
 
 // ==============================================================
@@ -612,19 +623,13 @@ void vPlanet::RenderCloudShadows (const RenderPrm &prm)
 		pmat = g_client->mRenderContext.material;
 		g_client->mRenderContext.material = cloudmat;
 
-		GLboolean ablend;
-		glGetBooleanv(GL_BLEND, &ablend);
-
-		if (!ablend)
-			glEnable(GL_BLEND);
-
+		Renderer::PushBool(Renderer::BLEND, true);
 		//dev->SetTextureStageState (0, D3DTSS_ALPHAOP, D3DTOP_MODULATE);
 
 		clouddata->cloudmgr->Render (clouddata->mWorldC0, std::min(patchres,8), (int)clouddata->viewap);
 
 		//dev->SetTextureStageState (0, D3DTSS_ALPHAOP, D3DTOP_SELECTARG1);
-		if (!ablend)
-			glDisable(GL_BLEND);
+		Renderer::PopBool();
 		g_client->mRenderContext.material = pmat;
 	}
 }
@@ -633,26 +638,15 @@ void vPlanet::RenderCloudShadows (const RenderPrm &prm)
 
 void vPlanet::RenderBaseSurfaces ()
 {
-	bool state_check = false;
-	GLboolean alpha;
-
+	Renderer::PushBool(Renderer::BLEND, true);
 	for (int i = 0; i < nbase; i++) {
 		if (vbase[i]) {
-			if (!state_check) {
-				glGetBooleanv(GL_BLEND, &alpha);
-				if (!alpha)
-					glEnable(GL_BLEND);
-				state_check = true;
-			}
 			vbase[i]->RenderSurface ();
 		}
 	}
 
 	// restore render state
-	if (state_check) {
-		if (!alpha)
-			glDisable(GL_BLEND);
-	}
+	Renderer::PopBool();
 }
 
 // ==============================================================
@@ -660,16 +654,11 @@ void vPlanet::RenderBaseSurfaces ()
 void vPlanet::RenderBaseShadows (float depth)
 {
 	// set device parameters
-	int stencilDepth = scn->GetStencilDepth();
-	if (stencilDepth) {
-		glEnable(GL_BLEND);
-		glEnable(GL_STENCIL_TEST);
-		glStencilMask(1);
-		glStencilFunc(GL_NOTEQUAL, 1, 1);
-		glStencilOp(GL_KEEP, GL_REPLACE, GL_REPLACE);
-	} else {
-		depth = 1; // without stencil buffer, use black shadows
-	}
+	Renderer::PushBool(Renderer::BLEND, true);
+	Renderer::PushBool(Renderer::DEPTH_TEST, true);
+	glStencilMask(1);
+	glStencilFunc(GL_NOTEQUAL, 1, 1);
+	glStencilOp(GL_KEEP, GL_REPLACE, GL_REPLACE);
 /*
 	dev->SetTextureStageState (0, D3DTSS_ALPHAARG1, D3DTA_TFACTOR);
 	dev->SetRenderState (D3DRENDERSTATE_TEXTUREFACTOR, D3DRGBA(0,0,0,depth));
@@ -681,11 +670,7 @@ void vPlanet::RenderBaseShadows (float depth)
 			vbase[i]->RenderGroundShadow (depth);
 
 	// reset device parameters
-	if (stencilDepth) {
-		glDisable(GL_STENCIL_TEST);  
-	} else {
-		glEnable(GL_BLEND);
-	}
+	Renderer::PopBool(2);
 /*
 	dev->SetTextureStageState (0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE);
 	dev->SetTextureStageState (0, D3DTSS_COLOROP, D3DTOP_MODULATE);
@@ -697,33 +682,16 @@ void vPlanet::RenderBaseShadows (float depth)
 
 void vPlanet::RenderBaseStructures ()
 {
-	bool zmod = false, zcheck = false;
-	GLboolean bz = 0, bzw = 0;
+	Renderer::PushBool(Renderer::DEPTH_TEST, true);
+	Renderer::PushDepthMask(true);
 
 	for (int i = 0; i < nbase; i++) {
 		if (vbase[i]) {
-			if (!zcheck) { // enable zbuffer
-				glGetBooleanv(GL_DEPTH_TEST, &bz);
-				glGetBooleanv(GL_DEPTH_WRITEMASK, &bzw);
-				if (!bz || !bzw) {
-					glEnable(GL_DEPTH_TEST);
-					glDepthMask(GL_TRUE);
-					//scn->GetCamera()->SetFustrumLimits (1, 1e5);
-					zmod = true;
-				}
-				zcheck = true;
-			}
 			vbase[i]->RenderStructures ();
 		}
 	}
-	if (zmod) {
-		if(bz)
-			glEnable(GL_DEPTH_TEST);
-		else
-			glDisable(GL_DEPTH_TEST);
-		glDepthMask(bzw);
-		//scn->GetCamera()->SetFustrumLimits (10, 1e6);
-	}
+	Renderer::PopDepthMask();
+	Renderer::PopBool();
 }
 
 // ==============================================================

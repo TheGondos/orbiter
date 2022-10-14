@@ -121,11 +121,26 @@ void OGLCamera::Update ()
 	}
 }
 
+static bool Vector3Matrix4Multiply (glm::fvec3 *res, const glm::fvec3 *v, const glm::fmat4 &mat)
+{
+    float x = v->x* mat[0][0] + v->y*mat[1][0] + v->z* mat[2][0] + mat[3][0];
+    float y = v->x* mat[0][1] + v->y*mat[1][1] + v->z* mat[2][1] + mat[3][1];
+    float z = v->x* mat[0][2] + v->y*mat[1][2] + v->z* mat[2][2] + mat[3][2];
+    float w = v->x* mat[0][3] + v->y*mat[1][3] + v->z* mat[2][3] + mat[3][3];
+
+    if (fabs (w) < 1e-5f) return false;
+
+    res->x = x/w;
+    res->y = y/w;
+    res->z = z/w;
+    return true;
+}
+
 bool OGLCamera::Direction2Viewport(const VECTOR3 &dir, int &x, int &y)
 {
-	glm::vec4 homog;
-	glm::vec4 idir = {-dir.x, -dir.y, -dir.z, 1.0};
-	homog = mViewProj * idir;
+	glm::vec3 homog;
+	glm::vec3 idir = {-dir.x, -dir.y, -dir.z};
+	Vector3Matrix4Multiply (&homog, &idir, mViewProj);
 
 	if (homog.x >= -1.0f && homog.y <= 1.0f && homog.z >= 0.0) {
 		if (std::hypot(homog.x, homog.y) < 1e-6) {

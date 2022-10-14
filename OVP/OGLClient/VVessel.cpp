@@ -16,19 +16,9 @@
 #include "OGLMesh.h"
 #include "OGLCamera.h"
 #include "Texture.h"
+#include "Renderer.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <cstring>
-
-static void CheckError(const char *s) {
-	GLenum err;
-	while((err = glGetError()) != GL_NO_ERROR)
-	{
-	// Process/log the error.
-		printf("GLError: %s - 0x%04X\n", s, err);
-		abort();
-		exit(EXIT_FAILURE);
-	}
-}
 
 using namespace oapi;
 
@@ -369,11 +359,13 @@ bool vVessel::Render (bool internalpass)
 				s.SetMat4("u_Model", mWorldTrans);
 
 				glBindTexture(GL_TEXTURE_2D,  ((OGLTexture *)sHUD)->m_TexId);
-				glDisable(GL_DEPTH_TEST);
-				glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+				Renderer::PushBool(Renderer::DEPTH_TEST, false);
+				//glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+				Renderer::PushBlendFunc(GL_SRC_ALPHA, GL_ONE);
 				meshlist[i].mesh->RenderGroup (meshlist[i].mesh->GetGroup(hudspec->ngroup));
-				glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-				glEnable(GL_DEPTH_TEST);
+//				glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+				Renderer::PopBlendFunc();
+				Renderer::PopBool();
 			}
 		}
 	}
@@ -433,7 +425,7 @@ bool vVessel::RenderExhaust ()
 		sizeof(VERTEX_XYZ_TEX),                  // stride
 		(void*)0            // array buffer offset
 		);
-		CheckError("glVertexAttribPointer0");
+		Renderer::CheckError("glVertexAttribPointer0");
 		glEnableVertexAttribArray(0);
 
 		//texcoord
@@ -445,18 +437,12 @@ bool vVessel::RenderExhaust ()
 		sizeof(VERTEX_XYZ_TEX),                  // stride
 		(void*)12            // array buffer offset
 		);
-		CheckError("glVertexAttribPointer");
+		Renderer::CheckError("glVertexAttribPointer");
 		glEnableVertexAttribArray(1);
-		CheckError("glEnableVertexAttribArray1");
+		Renderer::CheckError("glEnableVertexAttribArray1");
 
 		VBA->UnBind();
 	}
-	/*
-	glDepthMask(GL_FALSE);
-	glEnable(GL_DEPTH_TEST);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-*/
 	static Shader s("Exhaust.vs","Exhaust.fs");
 
 	s.Bind();
@@ -464,6 +450,7 @@ bool vVessel::RenderExhaust ()
 	s.SetMat4("u_ViewProjection", *vp);
 	s.SetMat4("u_Model", mWorld);
 
+	Renderer::PushDepthMask(false);
 	for (i = 0; i < nexhaust; i++) {
 		if (!(lvl = vessel->GetExhaustLevel (i))) continue;
 		vessel->GetExhaustSpec (i, &es);
@@ -472,7 +459,6 @@ bool vVessel::RenderExhaust ()
 			MATRIX3 R;
 			vessel->GetRotationMatrix (R);
 			cdir = tmul (R, cpos);
-			glDepthMask(GL_FALSE);
 
 			/*
 			dev->SetMaterial (&engmat);
@@ -516,16 +502,9 @@ bool vVessel::RenderExhaust ()
 	}
 
 	s.UnBind();
-	/*
-	glDepthMask(GL_TRUE);
-	glDisable(GL_DEPTH_TEST);
-	glBindTexture(GL_TEXTURE_2D, 0);
-	*/
-	if (!need_setup) { // reset render state
-		//dev->SetTextureStageState (0, D3DTSS_ALPHAOP, D3DTOP_SELECTARG1);
-		//dev->SetTextureStageState (0, D3DTSS_ALPHAARG2, D3DTA_CURRENT);
-		glDepthMask(GL_TRUE);
-	}
+
+	Renderer::PopDepthMask();
+
 	return true;
 }
 

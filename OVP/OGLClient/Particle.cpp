@@ -20,6 +20,7 @@
 #include "VertexBuffer.h"
 #include "OGLMesh.h"
 #include "OGLCamera.h"
+#include "Renderer.h"
 
 std::unique_ptr<VertexArray> OGLParticleStream::eVBA;
 std::unique_ptr<VertexBuffer> OGLParticleStream::eVBO;
@@ -53,16 +54,6 @@ static PARTICLESTREAMSPEC DefaultParticleStreamSpec = {
 	PARTICLESTREAMSPEC::ATM_PLOG, // mapping from atmosphere to alpha
 	1e-4, 1						  // amin and amax densities for mapping
 };
-static void CheckError(const char *s) {
-	GLenum err;
-	while((err = glGetError()) != GL_NO_ERROR)
-	{
-	// Process/log the error.
-		printf("GLError: %s - 0x%04X\n", s, err);
-		abort();
-		exit(EXIT_FAILURE);
-	}
-}
 
 OGLTexture *OGLParticleStream::deftex = nullptr;
 bool OGLParticleStream::bShadows = false;
@@ -126,7 +117,7 @@ void OGLParticleStream::GlobalInit ()
 	sizeof(NTAVERTEX),                  // stride
 	(void*)0            // array buffer offset
 	);
-	CheckError("glVertexAttribPointer0");
+	Renderer::CheckError("glVertexAttribPointer0");
 	glEnableVertexAttribArray(0);
 
 	//normal
@@ -138,7 +129,7 @@ void OGLParticleStream::GlobalInit ()
 	sizeof(NTAVERTEX),                  // stride
 	(void*)12            // array buffer offset
 	);
-	CheckError("glVertexAttribPointer0");
+	Renderer::CheckError("glVertexAttribPointer0");
 	glEnableVertexAttribArray(1);
 
 
@@ -151,9 +142,9 @@ void OGLParticleStream::GlobalInit ()
 	sizeof(NTAVERTEX),                  // stride
 	(void*)24            // array buffer offset
 	);
-	CheckError("glVertexAttribPointer");
+	Renderer::CheckError("glVertexAttribPointer");
 	glEnableVertexAttribArray(2);
-	CheckError("glEnableVertexAttribArray1");
+	Renderer::CheckError("glEnableVertexAttribArray1");
 
 	//alpha
 	glVertexAttribPointer(
@@ -164,9 +155,9 @@ void OGLParticleStream::GlobalInit ()
 	sizeof(NTAVERTEX),                  // stride
 	(void*)32            // array buffer offset
 	);
-	CheckError("glVertexAttribPointer");
+	Renderer::CheckError("glVertexAttribPointer");
 	glEnableVertexAttribArray(3);
-	CheckError("glEnableVertexAttribArray2");
+	Renderer::CheckError("glEnableVertexAttribArray2");
 
 	IBO = std::make_unique<IndexBuffer>(idx, MAXPARTICLE*6);
 	IBO->Bind();
@@ -185,7 +176,7 @@ void OGLParticleStream::GlobalInit ()
 	sizeof(NTAVERTEX),                  // stride
 	(void*)0            // array buffer offset
 	);
-	CheckError("glVertexAttribPointer0");
+	Renderer::CheckError("glVertexAttribPointer0");
 	glEnableVertexAttribArray(0);
 
 	//normal
@@ -197,7 +188,7 @@ void OGLParticleStream::GlobalInit ()
 	sizeof(NTAVERTEX),                  // stride
 	(void*)12            // array buffer offset
 	);
-	CheckError("glVertexAttribPointer0");
+	Renderer::CheckError("glVertexAttribPointer0");
 	glEnableVertexAttribArray(1);
 
 	//texcoord
@@ -209,9 +200,9 @@ void OGLParticleStream::GlobalInit ()
 	sizeof(NTAVERTEX),                  // stride
 	(void*)24            // array buffer offset
 	);
-	CheckError("glVertexAttribPointer");
+	Renderer::CheckError("glVertexAttribPointer");
 	glEnableVertexAttribArray(2);
-	CheckError("glEnableVertexAttribArray1");
+	Renderer::CheckError("glEnableVertexAttribArray1");
 
 	//alpha
 	glVertexAttribPointer(
@@ -222,9 +213,9 @@ void OGLParticleStream::GlobalInit ()
 	sizeof(NTAVERTEX),                  // stride
 	(void*)32            // array buffer offset
 	);
-	CheckError("glVertexAttribPointer");
+	Renderer::CheckError("glVertexAttribPointer");
 	glEnableVertexAttribArray(3);
-	CheckError("glEnableVertexAttribArray2");
+	Renderer::CheckError("glEnableVertexAttribArray2");
 	IBO->Bind();
 	dVBA->UnBind();
 }
@@ -573,7 +564,7 @@ void OGLParticleStream::RenderDiffuse (OGLCamera *c)
 
 	//dev->SetTextureStageState (0, D3DTSS_ALPHAOP, D3DTOP_MODULATE);
 	//dev->SetTextureStageState (0, D3DTSS_ALPHAARG2, D3DTA_DIFFUSE);
-	glDepthMask(GL_FALSE);
+	Renderer::PushDepthMask(false);
 	static Shader s("Particle.vs","Particle.fs");
 	s.Bind();
 	auto vp = c->GetViewProjectionMatrix();
@@ -613,7 +604,7 @@ void OGLParticleStream::RenderDiffuse (OGLCamera *c)
 
 	//dev->SetTextureStageState (0, D3DTSS_ALPHAOP, D3DTOP_SELECTARG1);
 	//dev->SetTextureStageState (0, D3DTSS_ALPHAARG2, D3DTA_CURRENT);
-	glDepthMask(GL_TRUE);
+	Renderer::PopDepthMask();
 }
 
 void OGLParticleStream::RenderEmissive (OGLCamera *c)
@@ -623,7 +614,7 @@ void OGLParticleStream::RenderEmissive (OGLCamera *c)
 	NTAVERTEX *vtx;
 
 	cam_ref = *g_client->GetScene()->GetCamera()->GetGPos();
-	glDepthMask(GL_FALSE);
+	Renderer::PushDepthMask(false);
 	//glEnable(GL_DEPTH_TEST);
     //glEnable(GL_BLEND);
     //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -659,7 +650,7 @@ void OGLParticleStream::RenderEmissive (OGLCamera *c)
 
 	eVBA->UnBind();
 	s.UnBind();
-	glDepthMask(GL_TRUE);
+	Renderer::PopDepthMask();
 	//glDisable(GL_DEPTH_TEST);
 	//glBindTexture(GL_TEXTURE_2D, 0);
 

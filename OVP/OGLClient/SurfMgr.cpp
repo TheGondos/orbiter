@@ -20,17 +20,9 @@
 #include "Scene.h"
 #include "OGLCamera.h"
 #include <cstring>
+#include "Renderer.h"
 
 using namespace oapi;
-static void CheckError(const char *s) {
-	GLenum err;
-	while((err = glGetError()) != GL_NO_ERROR)
-	{
-	// Process/log the error.
-		printf("GLError: %s - 0x%04X\n", s, err);
-        exit(-1);
-	}
-}
 
 // =======================================================================
 
@@ -139,14 +131,14 @@ if (range.tumin != 0 || range.tumax != 1) {
 
 
     glBindTexture(GL_TEXTURE_2D,  tex->m_TexId);
-	CheckError("SurfaceManager::RenderTile glBindTexture");
+	Renderer::CheckError("SurfaceManager::RenderTile glBindTexture");
 	mesh.va->Bind();
 	glDrawElements(GL_TRIANGLES, mesh.ib->GetCount(), GL_UNSIGNED_SHORT, 0);
-	CheckError("SurfaceManager::RenderTile glDrawElements");
+	Renderer::CheckError("SurfaceManager::RenderTile glDrawElements");
 	mesh.va->UnBind();
 	s.UnBind();
     glBindTexture(GL_TEXTURE_2D,  0);
-	CheckError("SurfaceManager::RenderTile glBindTexture0");
+	Renderer::CheckError("SurfaceManager::RenderTile glBindTexture0");
 	//glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
 	return;
 

@@ -25,6 +25,7 @@
 #include "VVessel.h"
 #include "VBase.h"
 #include "Particle.h"
+#include "Renderer.h"
 #include <cstring>
 //#include "CSphereMgr.h"
 
@@ -64,7 +65,7 @@ Scene::Scene (int w, int h)
 	if (locallight)
 		lightlist = new LIGHTLIST[maxlight];
 	memset (&bg_rgba, 0, sizeof (VECTOR3));
-	//InitGDIResources();
+	InitResources();
 	//cspheremgr = new CSphereManager (_gc, this);
 }
 
@@ -83,7 +84,7 @@ Scene::~Scene ()
 		delete []pstream;
 	}
 	if (locallight) delete []lightlist;
-	//ExitGDIResources();
+	ExitResources();
 }
 
 void Scene::Initialise ()
@@ -95,6 +96,7 @@ void Scene::Initialise ()
 	glDisable(GL_BLEND);
     glFrontFace(GL_CW);
     glEnable(GL_CULL_FACE);
+
     // Set miscellaneous renderstates
 	/*
 	dev->SetRenderState (D3DRENDERSTATE_DITHERENABLE, TRUE);
@@ -389,13 +391,13 @@ void Scene::Render ()
 	glBindTexture(GL_TEXTURE_2D, 0);
 
 	// planetarium mode flags
-	//DWORD plnmode = *(DWORD*)gc->GetConfigParam (CFGPRM_PLANETARIUMFLAG);
+	int plnmode = *(int*)g_client->GetConfigParam (CFGPRM_PLANETARIUMFLAG);
 
 	// render celestial sphere (without z-buffer)
 	//dev->SetTransform (D3DTRANSFORMSTATE_WORLD, &ident);
 	//dev->SetTexture (0,0);
-	glDisable(GL_DEPTH_TEST);
-	glDepthMask(GL_FALSE);
+	Renderer::PushBool(Renderer::DEPTH_TEST, false);
+	Renderer::PushDepthMask(false);
 	//dev->SetRenderState (D3DRENDERSTATE_LIGHTING, FALSE);
 
 	// use explicit colours
@@ -403,27 +405,28 @@ void Scene::Render ()
 	//dev->SetTextureStageState (0, D3DTSS_COLOROP, D3DTOP_SELECTARG1);
 
 	// planetarium mode (celestial sphere elements)
-	/*
 	if (plnmode & PLN_ENABLE) {
-
+		/*
 		DWORD dstblend;
 		dev->GetRenderState (D3DRENDERSTATE_DESTBLEND, &dstblend);
 		dev->SetRenderState (D3DRENDERSTATE_DESTBLEND, D3DBLEND_ONE);
 		dev->SetRenderState (D3DRENDERSTATE_ALPHABLENDENABLE, TRUE);
+		*/
 		double linebrt = 1.0-skybrt;
 
 		// render ecliptic grid
 		if (plnmode & PLN_EGRID) {
 			auto tmp = _V(0,0,0.4)*linebrt;
-			csphere->RenderGrid (dev, tmp, !(plnmode & PLN_ECL));
+			//csphere->RenderGrid (dev, tmp, !(plnmode & PLN_ECL));
 		}
 		if (plnmode & PLN_ECL) {
 			auto tmp = _V(0,0,0.8)*linebrt;
-			csphere->RenderGreatCircle (dev, tmp);
+			//csphere->RenderGreatCircle (dev, tmp);
 		}
 
 		// render celestial grid
 		if (plnmode & (PLN_CGRID|PLN_EQU)) {
+			/*
 			static double obliquity = 0.4092797095927;
 			static double coso = cos(obliquity), sino = sin(obliquity);
 			static D3DMATRIX rot = {1.0f,0.0f,0.0f,0.0f,  0.0f,(float)coso,(float)sino,0.0f,  0.0f,-(float)sino,(float)coso,0.0f,  0.0f,0.0f,0.0f,1.0f};
@@ -437,43 +440,42 @@ void Scene::Render ()
 				csphere->RenderGreatCircle (dev, tmp);
 			}
 			dev->SetTransform (D3DTRANSFORMSTATE_WORLD, &ident);
+			*/
 		}
 
 		// render constellation lines
 		if (plnmode & PLN_CONST) {
 			auto tmp = _V(0.4,0.3,0.2)*linebrt;
-			csphere->RenderConstellations (dev, tmp);
+			csphere->RenderConstellations(tmp, cam);
 		}
-
+/*
 		dev->SetRenderState (D3DRENDERSTATE_DESTBLEND, dstblend);
 		dev->SetRenderState (D3DRENDERSTATE_ALPHABLENDENABLE, FALSE);
-
+*/
 		if (plnmode & PLN_CCMARK) {
 			const GraphicsClient::LABELLIST *list;
-			DWORD n, nlist;
-			HDC hDC = NULL;
-			nlist = gc->GetCelestialMarkers (&list);
+			int n, nlist;
+			oapi::Sketchpad *skp= NULL;
+			nlist = g_client->GetCelestialMarkers (&list);
 			for (n = 0; n < nlist; n++) {
 				if (list[n].active) {
-					if (!hDC) hDC = GetLabelDC (0);
-						//hDC = gc->clbkGetSurfaceDC (0);
-						//SelectObject (hDC, GetStockObject (NULL_BRUSH));
-						//SelectObject (hDC, hLabelFont[0]);
-						//SetTextAlign (hDC, TA_CENTER | TA_BOTTOM);
-						//SetBkMode (hDC, TRANSPARENT);
+					if(!skp) skp = oapiGetSketchpad(nullptr);
+					skp->SetFont(hLabelFont[0]);
+					skp->SetTextAlign(oapi::Sketchpad::CENTER, oapi::Sketchpad::BOTTOM);
+					skp->SetBackgroundMode (oapi::Sketchpad::BK_TRANSPARENT);
 					int size = (int)(viewH/80.0*list[n].size+0.5);
 					int col = list[n].colour;
-					SelectObject (hDC, hLabelPen[col]);
-					SetTextColor (hDC, labelCol[col]);
+					skp->SetPen (hLabelPen[col]);
+					skp->SetTextColor (labelCol[col]);
 					const GraphicsClient::LABELSPEC *ls = list[n].list;
 					for (i = 0; i < list[n].length; i++) {
-						RenderDirectionMarker (hDC, ls[i].pos, ls[i].label[0], ls[i].label[1], list[n].shape, size);
+						RenderDirectionMarker (skp, ls[i].pos, ls[i].label[0], ls[i].label[1], list[n].shape, size);
 					}
 				}
 			}
-			if (hDC) gc->clbkReleaseSurfaceDC (0, hDC);
+			if (skp) g_client->clbkReleaseSketchpad (skp);
 		}
-	}*/
+	}
 
 	// revert to standard colour selection
 	//dev->SetTextureStageState (0, D3DTSS_COLORARG1, D3DTA_TEXTURE);
@@ -505,7 +507,7 @@ void Scene::Render ()
 	for (i = 0; i < np; i++) {
 		OBJHANDLE hObj = plist[i].vo->Object();
 		plist[i].vo->Render ();
-		/*
+		
 		if (plnmode & PLN_ENABLE) {
 			if (plnmode & PLN_CMARK) {
 				VECTOR3 pp;
@@ -514,25 +516,25 @@ void Scene::Render ()
 				oapiGetGlobalPos (hObj, &pp);
 				RenderObjectMarker (0, pp, name, 0, 0, viewH/80);
 			}
+			
 			if ((plnmode & PLN_SURFMARK) && (oapiGetObjectType (hObj) == OBJTP_PLANET)) {
 				int label_format = *(int*)oapiGetObjectParam(hObj, OBJPRM_PLANET_LABELENGINE);
 				if (label_format < 2 && (plnmode & PLN_LMARK)) { // user-defined planetary surface labels
 					double rad = oapiGetSize (hObj);
 					double apprad = rad/(plist[i].dist * cam->GetTanAp());
 					const GraphicsClient::LABELLIST *list;
-					DWORD n, nlist;
-					HDC hDC = NULL;
+					int n, nlist;
+					oapi::Sketchpad *skp= NULL;
 					MATRIX3 prot;
 					VECTOR3 ppos, cpos;
-					nlist = gc->GetSurfaceMarkers (hObj, &list);
+					nlist = g_client->GetSurfaceMarkers (hObj, &list);
 					for (n = 0; n < nlist; n++) {
 						if (list[n].active && apprad*list[n].distfac > LABEL_DISTLIMIT) {
-							if (!hDC) {
-								hDC = gc->clbkGetSurfaceDC (0);
-								SelectObject (hDC, GetStockObject (NULL_BRUSH));
-								SelectObject (hDC, hLabelFont[0]);
-								SetTextAlign (hDC, TA_CENTER | TA_BOTTOM);
-								SetBkMode (hDC, TRANSPARENT);
+							if (!skp) {
+								skp = oapiGetSketchpad(nullptr);
+								skp->SetFont(hLabelFont[0]);
+								skp->SetTextAlign(oapi::Sketchpad::CENTER, oapi::Sketchpad::BOTTOM);
+								skp->SetBackgroundMode (oapi::Sketchpad::BK_TRANSPARENT);
 								oapiGetRotationMatrix (hObj, &prot);
 								oapiGetGlobalPos (hObj, &ppos);
 								const VECTOR3 *cp = cam->GetGPos();
@@ -540,26 +542,25 @@ void Scene::Render ()
 							}
 							int size = (int)(viewH/80.0*list[n].size+0.5);
 							int col = list[n].colour;
-							SelectObject (hDC, hLabelPen[col]);
-							SetTextColor (hDC, labelCol[col]);
+							skp->SetPen (hLabelPen[col]);
+							skp->SetTextColor (labelCol[col]);
 							const GraphicsClient::LABELSPEC *ls = list[n].list;
 							VECTOR3 sp;
 							for (j = 0; j < list[n].length; j++) {
 								if (dotp (ls[j].pos, cpos-ls[j].pos) >= 0.0) { // surface point visible?
 									sp = mul (prot, ls[j].pos) + ppos;
-									RenderObjectMarker (hDC, sp, ls[j].label[0], ls[j].label[1], list[n].shape, size);
+									RenderObjectMarker (skp, sp, ls[j].label[0], ls[j].label[1], list[n].shape, size);
 								}
 							}
 						}
 					}
-					if (hDC) gc->clbkReleaseSurfaceDC (0, hDC);
+					if (skp) g_client->clbkReleaseSketchpad (skp);
 				}
 			}
-		}*/
+		}
 	}
 
 	// render new-style surface markers
-	/*
 	if ((plnmode & PLN_ENABLE) && (plnmode & PLN_LMARK)) {
 		oapi::Sketchpad *skp = 0;
 		int fontidx = -1;
@@ -571,24 +572,24 @@ void Scene::Render ()
 			int label_format = *(int*)oapiGetObjectParam(hObj, OBJPRM_PLANET_LABELENGINE);
 			if (label_format == 2) {
 				if (!skp) {
-					skp = gc->clbkGetSketchpad(0);
+					skp = g_client->clbkGetSketchpad(0);
 					skp->SetPen(label_pen);
 				}
-				((vPlanet*)plist[i].vo)->RenderLabels(dev, skp, label_font, &fontidx);
+				((vPlanet*)plist[i].vo)->RenderLabels(skp, label_font, &fontidx);
 			}
 		}
 		surfLabelsActive = true;
 		if (skp)
-			gc->clbkReleaseSketchpad(skp);
+			g_client->clbkReleaseSketchpad(skp);
 	} else {
 		if (surfLabelsActive)
 			surfLabelsActive = false;
 	}
-*/
+
 
 	// turn z-buffer back on
-	glEnable(GL_DEPTH_TEST);
-	glDepthMask(GL_TRUE);
+	Renderer::PopDepthMask();
+	Renderer::PopBool();
 
 	// render the vessel objects
 	//cam->SetFustrumLimits (1, 1e5);
@@ -600,22 +601,19 @@ void Scene::Render ()
 		if (oapiGetObjectType (hObj) == OBJTP_VESSEL) {
 			pv->vobj->Render ();
 			if (hObj == hFocus) vFocus = (vVessel*)pv->vobj; // remember focus visual
-			/*
+			
 			if ((plnmode & (PLN_ENABLE|PLN_VMARK)) == (PLN_ENABLE|PLN_VMARK)) {
 				VECTOR3 gpos;
 				char name[256];
 				oapiGetGlobalPos (hObj, &gpos);
 				oapiGetObjectName (hObj, name, 256);
 				RenderObjectMarker (0, gpos, name, 0, 0, viewH/80);
-			}*/
+			}
 		}
 	}
 
 	// render static engine exhaust
-	GLboolean ablend;
-	glGetBooleanv(GL_BLEND, &ablend);
-	if (!ablend)
-		glEnable(GL_BLEND);
+	Renderer::PushBool(Renderer::BLEND, true);
 
 	for (pv = vobjFirst; pv; pv = pv->next) {
 		if (!pv->vobj->IsActive()) continue;
@@ -630,8 +628,7 @@ void Scene::Render ()
 		pstream[n]->Render (cam);
 	glBindTexture(GL_TEXTURE_2D, 0);
 
-	if (!ablend)
-		glDisable(GL_BLEND);
+	Renderer::PopBool();
 
 	// render the internal parts of the focus object in a separate render pass
 	if (oapiCameraInternal() && vFocus) {
@@ -676,15 +673,12 @@ void Scene::RenderVesselShadows (OBJHANDLE hPlanet, float depth) const
 	// any vessels actually want to render their shadows
 
 	// set device parameters
-	if (stencilDepth) {
-		glEnable(GL_BLEND);
-		glEnable(GL_STENCIL_TEST);
-		glStencilMask(1);
-		glStencilFunc(GL_NOTEQUAL, 1, 1);
-		glStencilOp(GL_KEEP, GL_REPLACE, GL_REPLACE);
-	} else {
-		depth = 1; // without stencil buffer, use black shadows
-	}
+	Renderer::PushBool(Renderer::BLEND, true);
+	Renderer::PushBool(Renderer::STENCIL_TEST, true);
+	glStencilMask(1);
+	glStencilFunc(GL_NOTEQUAL, 1, 1);
+	glStencilOp(GL_KEEP, GL_REPLACE, GL_REPLACE);
+	Renderer::CheckError("RenderVesselShadows");
 /*
 	dev->SetTextureStageState (0, D3DTSS_ALPHAARG1, D3DTA_TFACTOR);
 	dev->SetRenderState (D3DRENDERSTATE_TEXTUREFACTOR, D3DRGBA(0,0,0,depth));
@@ -695,17 +689,14 @@ void Scene::RenderVesselShadows (OBJHANDLE hPlanet, float depth) const
 	VOBJREC *pv;
 	for (pv = vobjFirst; pv; pv = pv->next) {
 		if (!pv->vobj->IsActive()) continue;
-		if (oapiGetObjectType (pv->vobj->Object()) == OBJTP_VESSEL)
+		if (oapiGetObjectType (pv->vobj->Object()) == OBJTP_VESSEL) {
 			((vVessel*)(pv->vobj))->RenderGroundShadow (hPlanet, depth);
+			Renderer::CheckError("RenderVesselShadows");
+		}
 	}
 
-	// reset device parameters
-	if (stencilDepth) {
-		glDisable(GL_STENCIL_TEST);
-		//glDisable(GL_BLEND);
-	} else {
-		glEnable(GL_BLEND);
-	}
+	Renderer::PopBool(2);
+	Renderer::CheckError("RenderVesselShadows");
 
 	// render particle shadows
 	/*
@@ -717,91 +708,80 @@ void Scene::RenderVesselShadows (OBJHANDLE hPlanet, float depth) const
 //	dev->SetTextureStageState (0, D3DTSS_COLOROP, D3DTOP_MODULATE);
 //	dev->SetTextureStageState (0, D3DTSS_COLORARG1, D3DTA_TEXTURE);
 }
-/*
+
 // ==============================================================
 
-HDC Scene::GetLabelDC (int mode)
+oapi::Sketchpad *Scene::GetLabelSkp (int mode)
 {
-	HDC hDC = gc->clbkGetSurfaceDC (0);
-	SelectObject (hDC, GetStockObject (NULL_BRUSH));
-	SelectObject (hDC, hLabelPen[mode]);
-	SelectObject (hDC, hLabelFont[0]);
-	SetTextAlign (hDC, TA_CENTER | TA_BOTTOM);
-	SetTextColor (hDC, labelCol[mode]);
-	SetBkMode (hDC, TRANSPARENT);
-	return hDC;
+	oapi::Sketchpad *skp = oapiGetSketchpad(nullptr);
+	skp->SetPen(hLabelPen[mode]);
+	skp->SetFont(hLabelFont[0]);
+	skp->SetTextAlign(oapi::Sketchpad::CENTER, oapi::Sketchpad::BOTTOM);
+	skp->SetTextColor (labelCol[mode]);
+	skp->SetBackgroundMode (oapi::Sketchpad::BK_TRANSPARENT);
+	return skp;
 }
 
 // ==============================================================
 
-void Scene::RenderDirectionMarker (HDC hDC, const VECTOR3 &rdir, const char *label1, const char *label2, int mode, int scale)
+void Scene::RenderDirectionMarker (oapi::Sketchpad *skp, const VECTOR3 &rdir, const char *label1, const char *label2, int mode, int scale)
 {
-	bool local_hdc = (hDC == 0);
+	bool local_skp = (skp == nullptr);
 	int x, y;
-	D3DVECTOR homog;
-	D3DVECTOR dir = {(float)-rdir.x, (float)-rdir.y, (float)-rdir.z};
-	D3DMAT_VectorMatrixMultiply (&homog, &dir, cam->GetProjectionViewMatrix());
-	if (homog.x >= -1.0f && homog.x <= 1.0f &&
-		homog.y >= -1.0f && homog.y <= 1.0f &&
-		homog.z >=  0.0f) {
-		if (hypot (homog.x, homog.y) < 1e-6) {
-			x = viewW/2, y = viewH/2;
-		} else {
-			x = (int)(viewW*0.5*(1.0f+homog.x));
-			y = (int)(viewH*0.5*(1.0f-homog.y));
-		}
-		if (local_hdc) hDC = GetLabelDC (mode);
+	
+	if(cam->Direction2Viewport(rdir, x, y)) {
+		if (local_skp) skp = GetLabelSkp (mode);
 
 		switch (mode) {
 		case 0: // box
-			Rectangle (hDC, x-scale, y-scale, x+scale+1, y+scale+1);
+			skp->Rectangle ( x-scale, y-scale, x+scale+1, y+scale+1);
 			break;
 		case 1: // circle
-			Ellipse (hDC, x-scale, y-scale, x+scale+1, y+scale+1);
+			skp->Ellipse ( x-scale, y-scale, x+scale+1, y+scale+1);
 			break;
 		case 2: // diamond
-			MoveToEx (hDC, x, y-scale, NULL);
-			LineTo (hDC, x+scale, y); LineTo (hDC, x, y+scale);
-			LineTo (hDC, x-scale, y); LineTo (hDC, x, y-scale);
+			skp->MoveTo ( x, y-scale);
+			skp->LineTo ( x+scale, y); skp->LineTo ( x, y+scale);
+			skp->LineTo ( x-scale, y); skp->LineTo ( x, y-scale);
 			break;
 		case 3: { // delta
 			int scl1 = (int)(scale*1.1547);
-			MoveToEx (hDC, x, y-scale, NULL);
-			LineTo (hDC, x+scl1, y+scale); LineTo (hDC, x-scl1, y+scale); LineTo (hDC, x, y-scale);
+			skp->MoveTo ( x, y-scale );
+			skp->LineTo ( x+scl1, y+scale); skp->LineTo (x-scl1, y+scale); skp->LineTo (x, y-scale);
 			} break;
 		case 4: { // nabla
 			int scl1 = (int)(scale*1.1547);
-			MoveToEx (hDC, x, y+scale, NULL);
-			LineTo (hDC, x+scl1, y-scale); LineTo (hDC, x-scl1, y-scale); LineTo (hDC, x, y+scale);
+			skp->MoveTo ( x, y+scale);
+			skp->LineTo ( x+scl1, y-scale); skp->LineTo ( x-scl1, y-scale); skp->LineTo ( x, y+scale);
 			} break;
 		case 5: { // cross
 			int scl1 = scale/4;
-			MoveToEx (hDC, x, y-scale, NULL); LineTo (hDC, x, y-scl1);
-			MoveToEx (hDC, x, y+scale, NULL); LineTo (hDC, x, y+scl1);
-			MoveToEx (hDC, x-scale, y, NULL); LineTo (hDC, x-scl1, y);
-			MoveToEx (hDC, x+scale, y, NULL); LineTo (hDC, x+scl1, y);
+			skp->MoveTo ( x, y-scale ); skp->LineTo ( x, y-scl1);
+			skp->MoveTo ( x, y+scale ); skp->LineTo ( x, y+scl1);
+			skp->MoveTo ( x-scale, y ); skp->LineTo ( x-scl1, y);
+			skp->MoveTo ( x+scale, y ); skp->LineTo ( x+scl1, y);
 			} break;
 		case 6: { // X
 			int scl1 = scale/4;
-			MoveToEx (hDC, x-scale, y-scale, NULL); LineTo (hDC, x-scl1, y-scl1);
-			MoveToEx (hDC, x-scale, y+scale, NULL); LineTo (hDC, x-scl1, y+scl1);
-			MoveToEx (hDC, x+scale, y-scale, NULL); LineTo (hDC, x+scl1, y-scl1);
-			MoveToEx (hDC, x+scale, y+scale, NULL); LineTo (hDC, x+scl1, y+scl1);
+			skp->MoveTo ( x-scale, y-scale ); skp->LineTo ( x-scl1, y-scl1);
+			skp->MoveTo ( x-scale, y+scale ); skp->LineTo ( x-scl1, y+scl1);
+			skp->MoveTo ( x+scale, y-scale ); skp->LineTo ( x+scl1, y-scl1);
+			skp->MoveTo ( x+scale, y+scale ); skp->LineTo ( x+scl1, y+scl1);
 			} break;
 		}
-		if (label1) TextOut (hDC, x, y-scale, label1, strlen (label1));
-		if (label2) TextOut (hDC, x, y+scale+labelSize[0], label2, strlen (label2));
-		if (local_hdc) gc->clbkReleaseSurfaceDC (0, hDC);
+		if (label1) skp->Text (x, y-scale, label1, strlen (label1));
+		if (label2) skp->Text (x, y+scale+labelSize[0], label2, strlen (label2));
+		if (local_skp) oapiReleaseSketchpad(skp);
 	}
 }
 
-void Scene::RenderObjectMarker (HDC hDC, const VECTOR3 &gpos, const char *label1, const char *label2, int mode, int scale)
+void Scene::RenderObjectMarker (oapi::Sketchpad *skp, const VECTOR3 &gpos, const char *label1, const char *label2, int mode, int scale)
 {
 	VECTOR3 dp (gpos - *cam->GetGPos());
 	normalise (dp);
-	RenderDirectionMarker (hDC, dp, label1, label2, mode, scale);
+	RenderDirectionMarker (skp, dp, label1, label2, mode, scale);
 }
-*/
+
 void Scene::NewVessel (OBJHANDLE hVessel)
 {
 	CheckVisual (hVessel);
@@ -838,33 +818,34 @@ void Scene::DelParticleStream (int idx)
 	pstream = tmp;
 	nstream--;
 }
-/*
-void Scene::InitGDIResources ()
+
+void Scene::InitResources ()
 {
 	for (int i = 0; i < 6; i++)
-		hLabelPen[i] = CreatePen (PS_SOLID, 0, labelCol[i]);
-	labelSize[0] = std::max (viewH/60, (DWORD)14);
-	hLabelFont[0] = CreateFont (labelSize[0], 0, 0, 0, 400, TRUE, 0, 0, 0, 3, 2, 1, 49, "Arial");
+		hLabelPen[i] = oapiCreatePen (1, 0, labelCol[i]);
+	labelSize[0] = std::max (viewH/60, 14);
+//	hLabelFont[0] = oapiCreateFont (labelSize[0], 0, 0, 0, 400, TRUE, 0, 0, 0, 3, 2, 1, 49, "Arial");
+	hLabelFont[0] = oapiCreateFont (labelSize[0], true, "Arial");
 
 	const int fsize[4] = {12, 16, 20, 26};
 	for (int i = 0; i < 4; i++)
-		label_font[i] = gc->clbkCreateFont(fsize[i], true, "Arial", oapi::Font::BOLD);
-	label_pen = gc->clbkCreatePen(1, 0, RGB(255,255,255));
+		label_font[i] = oapiCreateFont(fsize[i], true, "Arial", FONT_BOLD);
+	label_pen = oapiCreatePen(1, 0, oapiGetColour(255,255,255));
 }
 
-void Scene::ExitGDIResources ()
+void Scene::ExitResources ()
 {
 	int i;
 	for (i = 0; i < 6; i++)
-		DeleteObject (hLabelPen[i]);
+		oapiReleasePen (hLabelPen[i]);
 	for (i = 0; i < 1; i++)
-		DeleteObject (hLabelFont[i]);
+		oapiReleaseFont (hLabelFont[i]);
 
 	for (int i = 0; i < 4; i++)
-		gc->clbkReleaseFont(label_font[i]);
-	gc->clbkReleasePen(label_pen);
+		oapiReleaseFont(label_font[i]);
+	oapiReleasePen(label_pen);
 }
-*/
+
 int distcomp (const void *arg1, const void *arg2)
 {
 	double d1 = ((PList*)arg1)->dist;

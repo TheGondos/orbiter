@@ -125,8 +125,6 @@ if (range.tumin != 0 && range.tumax != 1) {
 	
 	static Shader s("Tile.vs","Tile.fs");
 	
-	glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
-	glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
 	s.Bind();
 	OGLCamera *c = g_client->GetScene()->GetCamera();
 	auto *vpm = c->GetViewProjectionMatrix();
@@ -167,7 +165,6 @@ if (range.tumin != 0 && range.tumax != 1) {
 	mesh.va->UnBind();
 	s.UnBind();
     glBindTexture(GL_TEXTURE_2D,  0);
-	glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
 
 	return;
 

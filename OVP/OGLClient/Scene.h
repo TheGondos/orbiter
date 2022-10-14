@@ -103,7 +103,7 @@ protected:
 	 * \param mode marker mode
 	 * \return Drawing device context
 	 */
-	//HDC GetLabelDC (int mode);
+	oapi::Sketchpad *GetLabelSkp (int mode);
 
 	/**
 	 * \brief Render a single marker for a given direction
@@ -114,7 +114,7 @@ protected:
 	 * \param mode marker shape
 	 * \param scale marker size
 	 */
-	//void RenderDirectionMarker (HDC hDC, const VECTOR3 &rdir, const char *label1, const char *label2, int mode, int scale);
+	void RenderDirectionMarker (oapi::Sketchpad *skp, const VECTOR3 &rdir, const char *label1, const char *label2, int mode, int scale);
 
 	/**
 	 * \brief Render a single marker at a given global position
@@ -125,7 +125,7 @@ protected:
 	 * \param mode marker shape
 	 * \param scale marker size
 	 */
-	//void RenderObjectMarker (HDC hDC, const VECTOR3 &gpos, const char *label1, const char *label2, int mode, int scale);
+	void RenderObjectMarker (oapi::Sketchpad *skp, const VECTOR3 &gpos, const char *label1, const char *label2, int mode, int scale);
 
 	//void AddLocalLight (const LightEmitter *le, const vObject *vo, DWORD idx);
 
@@ -170,15 +170,15 @@ private:
 
 	// GDI resources
 	static COLORREF labelCol[6];
-	//HPEN hLabelPen[6];
-	//HFONT hLabelFont[1];
+	oapi::Pen *hLabelPen[6];
+	oapi::Font *hLabelFont[1];
 	int labelSize[1];
 	oapi::Font *label_font[4];
 	oapi::Pen *label_pen;
-/*
-	void InitGDIResources();
-	void ExitGDIResources();
-*/
+
+	void InitResources();
+	void ExitResources();
+
 	CSphereManager *cspheremgr;
 };
 
