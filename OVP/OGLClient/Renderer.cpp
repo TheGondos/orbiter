@@ -42,29 +42,36 @@ std::vector<bool> lastDepthmasks;
 
 void PushDepthMask(bool value) {
     lastDepthmasks.push_back(current_depthmask);
-    current_depthmask = value;
-    glDepthMask(value ? GL_TRUE : GL_FALSE);
+    if(current_depthmask != value) {
+        current_depthmask = value;
+        glDepthMask(value ? GL_TRUE : GL_FALSE);
+    }
 }
 void PopDepthMask() {
     bool v = lastDepthmasks.back();
     lastDepthmasks.pop_back();
-    current_depthmask = v;
-    glDepthMask(current_depthmask ? GL_TRUE : GL_FALSE);
+    if(current_depthmask != v) {
+        current_depthmask = v;
+        glDepthMask(current_depthmask ? GL_TRUE : GL_FALSE);
+    }
 }
 
 FrontFace current_frontface;
 std::vector<FrontFace> lastFrontFaces;
 void PushFrontFace(FrontFace ff) {
     lastFrontFaces.push_back(current_frontface);
-    current_frontface = ff;
-    glFrontFace(ff);
-
+    if(ff != current_frontface) {
+        current_frontface = ff;
+        glFrontFace(ff);
+    }
 }
 void PopFrontFace() {
     FrontFace v = lastFrontFaces.back();
     lastFrontFaces.pop_back();
-    current_frontface = v;
-    glFrontFace(current_frontface);
+    if(v != current_frontface) {
+        current_frontface = v;
+        glFrontFace(current_frontface);
+    }
 }
 
 struct BlendParamSave {
@@ -77,13 +84,18 @@ std::vector<BlendParamSave> lastblendfunc;
 void PushBlendFunc(GLenum a, GLenum b) {
     BlendParamSave save{a, b};
     lastblendfunc.push_back(current_blendfunc);
-    current_blendfunc = save;
-    glBlendFunc(a, b);
+    if(memcmp(&current_blendfunc, &save, sizeof(save))) {
+        current_blendfunc = save;
+        glBlendFunc(a, b);
+    }
 }
 void PopBlendFunc() {
     BlendParamSave v = lastblendfunc.back();
     lastblendfunc.pop_back();
-    glBlendFunc(current_blendfunc.a, current_blendfunc.b);
+    if(memcmp(&current_blendfunc, &v, sizeof(v))) {
+        current_blendfunc = v;
+        glBlendFunc(current_blendfunc.a, current_blendfunc.b);
+    }
 }
 
 void GlobalInit(int w, int h) {
@@ -131,23 +143,27 @@ void Sync() {
 void PushBool(enum BoolParam param, bool value) {
     BoolParamSave save{param, bpToGL(param), boolParams[param]};
     lastBoolParams.push_back(save);
-    boolParams[param] = value;
-    if(value)
-        glEnable(save.glparam);
-    else
-        glDisable(save.glparam);
+    if(boolParams[param] != value) {
+        boolParams[param] = value;
+        if(value)
+            glEnable(save.glparam);
+        else
+            glDisable(save.glparam);
+    }
 }
 void PopBool(int num) {
     for(int i = 0; i < num; i++) {
         BoolParamSave save = lastBoolParams.back();
         lastBoolParams.pop_back();
-        boolParams[save.param] = save.value;
-        if(save.value) {
-            glEnable(save.glparam);
-        } else {
-            glDisable(save.glparam);
+        if(boolParams[save.param] != save.value) {
+            boolParams[save.param] = save.value;
+            if(save.value) {
+                glEnable(save.glparam);
+            } else {
+                glDisable(save.glparam);
+            }
+            CheckError("PopBool");
         }
-        CheckError("PopBool");
     }
 }
 void SetViewPort(int w, int h) 
