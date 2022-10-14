@@ -86,7 +86,7 @@ void PopBlendFunc() {
     glBlendFunc(current_blendfunc.a, current_blendfunc.b);
 }
 
-void GlobalInit() {
+void GlobalInit(int w, int h) {
     PushBool(DEPTH_TEST, true);
     PushBool(STENCIL_TEST, false);
     PushBool(BLEND, true);
@@ -98,8 +98,8 @@ void GlobalInit() {
     current_fb = 0;
     current_viewport[0] = 0;
     current_viewport[1] = 0;
-    current_viewport[2] = 100;
-    current_viewport[3] = 100;
+    current_viewport[2] = w;
+    current_viewport[3] = h;
 }
 
 static GLenum bpToGL(enum BoolParam param) {
@@ -150,6 +150,12 @@ void PopBool(int num) {
         CheckError("PopBool");
     }
 }
+void SetViewPort(int w, int h) 
+{
+    assert(lastFBParams.size() == 0);
+    current_viewport[2] = w;
+    current_viewport[3] = h;
+}
 
 void PopRenderTarget() {
     FBParamSave save = lastFBParams.back();
@@ -162,7 +168,7 @@ void PopRenderTarget() {
 }
 
 void PushRenderTarget(OGLTexture *tex) {
-    //printf("PushRenderTarget %d - %d %d %d %d\n", current_fb, current_viewport[0],current_viewport[1],current_viewport[2],current_viewport[3]);
+//    printf("PushRenderTarget %d - %d %d %d %d sz=%d\n", current_fb, current_viewport[0],current_viewport[1],current_viewport[2],current_viewport[3],lastFBParams.size());
     assert(tex);
 
     FBParamSave save;

@@ -256,7 +256,7 @@ void Scene::AddLocalLight (const LightEmitter *le, const vObject *vo, DWORD idx)
 void Scene::Update ()
 {
 	cam->Update (); // update camera parameters
-	glViewport(0,0,cam->GetWidth(),cam->GetHeight());
+	Renderer::SetViewPort(cam->GetWidth(),cam->GetHeight());
 
 	//light->Update (); // update light sources
 

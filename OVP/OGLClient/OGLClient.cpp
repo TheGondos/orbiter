@@ -418,7 +418,6 @@ void OGLClient::clbkSetViewportSize(int w, int h) {
 	m_width = w;
 	m_height = h;
 	if(mScene) mScene->GetCamera()->SetSize(w, h);
-	glViewport(0, 0, m_width, m_height);
 }
 
 GLFWwindow *OGLClient::clbkCreateRenderWindow ()
@@ -454,12 +453,10 @@ GLFWwindow *OGLClient::clbkCreateRenderWindow ()
         exit(-1);
     }
 
-	glViewport(0, 0, m_width, m_height);
-
 	mMeshManager = std::make_unique<OGLMeshManager>();
 	mScene = std::make_unique<Scene>(m_width, m_height);
 	mTextureManager = std::make_unique<TextureManager>();
-	Renderer::GlobalInit();
+	Renderer::GlobalInit(m_width, m_height);
 	TileManager::GlobalInit();
 	HazeManager::GlobalInit();
 
