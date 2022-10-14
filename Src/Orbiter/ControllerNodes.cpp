@@ -1531,12 +1531,17 @@ GraphNotification::GraphNotification(ControllerGraph *cg):Node(cg, "Notification
 GraphNotification::GraphNotification(ControllerGraph *cg, const crude_json::value &json):Node(cg, json) {
     strcpy(title, json["title"].get<crude_json::string>().c_str());
     strcpy(content, json["content"].get<crude_json::string>().c_str());
+    if(json.contains("type"))
+        type = (GUIManager::NotifType)std::stoi(json["type"].get<crude_json::string>());
+    else
+        type = GUIManager::Info;
 }
 crude_json::value GraphNotification::ToJSON() {
     crude_json::value ret = Node::ToJSON();
     ret["class"] = "GraphNotification";
     ret["title"] = title;
     ret["content"] = content;
+    ret["type"] = std::to_string(type);
     return ret;
 }
 
