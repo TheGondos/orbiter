@@ -410,6 +410,7 @@ void OGLClient::clbkSetViewportSize(int w, int h) {
 	m_width = w;
 	m_height = h;
 	if(mScene) mScene->GetCamera()->SetSize(w, h);
+	Renderer::SetViewPort(w, h);
 }
 
 GLFWwindow *OGLClient::clbkCreateRenderWindow ()
