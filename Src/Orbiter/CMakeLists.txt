@@ -176,6 +176,10 @@ add_dependencies(Orbiter_server
 	${Orbiter_depends}
 )
 
+install(FILES Orbiter.png
+	DESTINATION ${ORBITER_INSTALL_ROOT_DIR}/Images
+)
+
 # Installation: Orbiter executable (graphics-server versions)
 install(TARGETS
 	Orbiter_server

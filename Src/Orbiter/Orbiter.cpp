@@ -43,6 +43,8 @@
 #include "DlgRecorder.h"
 #include "Select.h"
 #include "PlaybackEd.h"
+#define STB_IMAGE_IMPLEMENTATION
+#include "external/stb_image/stb_image.h"
 
 #include <fenv.h>
 #include <unistd.h>
@@ -319,6 +321,11 @@ void Orbiter::Create ()
 	std::string videoPlugin = std::string("Modules/Plugin/lib") + pConfig->m_videoPlugin + ".so";
 	hVideoModule = oapiModuleLoad(videoPlugin.c_str());
 	CreateRenderWindow();
+
+	GLFWimage icon;
+	icon.pixels = stbi_load("Images/Orbiter.png", &icon.width, &icon.height, 0, 4);
+	glfwSetWindowIcon(m_pGUIManager->hRenderWnd, 1, &icon);
+	stbi_image_free(icon.pixels);
 
 	for (const auto &mod: pConfig->m_actmod) {
 		if(mod == pConfig->m_videoPlugin) continue;
