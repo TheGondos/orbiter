@@ -363,7 +363,10 @@ class HUDCtl : public Node {
         Surface,
         Docking,
         ToggleColour,
-        Intensity
+        Intensity,
+        Out_Orbit = 0,
+        Out_Surface,
+        Out_Docking
     };
     public:
     HUDCtl(ControllerGraph *cg);

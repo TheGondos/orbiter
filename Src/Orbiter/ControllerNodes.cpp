@@ -1450,6 +1450,10 @@ HUDCtl::HUDCtl(ControllerGraph *cg):Node(cg, "HUD") {
     AddInput("Docking", Pin::Trigger);
     AddInput("Change Color", Pin::Trigger);
     AddInput("Brightness", Pin::HalfAxis);
+
+    AddOutput("Orbit", Pin::Button);
+    AddOutput("Surface", Pin::Button);
+    AddOutput("Docking", Pin::Button);
     is_controller = true;
     deletable = false;
 }
@@ -1482,10 +1486,21 @@ void HUDCtl::UpdateOutputs() {
             g_pane->SetHUDIntens(newIntensity);
         }
     }
+    int mode = g_pane->GetHUDMode();
+
+    outputs[Out_Orbit].bVal   = mode == HUD_ORBIT;
+    outputs[Out_Docking].bVal = mode == HUD_DOCKING;
+    outputs[Out_Surface].bVal = mode == HUD_SURFACE;
 }
 
 HUDCtl::HUDCtl(ControllerGraph *cg, const crude_json::value &json):Node(cg, json) {
     deletable = false;
+
+    if(outputs.empty()) {
+        AddOutput("Orbit", Pin::Button);
+        AddOutput("Surface", Pin::Button);
+        AddOutput("Docking", Pin::Button);
+    }
 }
 crude_json::value HUDCtl::ToJSON() {
     crude_json::value ret = Node::ToJSON();
