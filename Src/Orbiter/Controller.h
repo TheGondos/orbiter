@@ -8,6 +8,7 @@
 #include <list>
 #include <functional>
 #include <memory>
+#include <optional>
 
 #include "crude_json.h"
 
