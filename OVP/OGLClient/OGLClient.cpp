@@ -1341,6 +1341,8 @@ bool OGLClient::clbkFillSurface (SURFHANDLE surf, int tgtx, int tgty, int w, int
 		0, 0, (float)tgtx, (float)tgty,
 		0, 0, (float)tgtx+w, (float)tgty+h,
 	};
+	Renderer::PushBool(Renderer::BLEND, false);
+	Renderer::PushBool(Renderer::CULL_FACE, false);
 
 	OGLTexture *m_tex = (OGLTexture *)surf;
 	if(m_tex) {
@@ -1381,7 +1383,7 @@ bool OGLClient::clbkFillSurface (SURFHANDLE surf, int tgtx, int tgty, int w, int
 	if(surf) {
 		Renderer::PopRenderTarget();
 	}
-
+	Renderer::PopBool(2);
     return true;
 }
 
