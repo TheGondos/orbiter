@@ -18,7 +18,7 @@ class Body;
 class VObject;
 class PlanetarySystem;
 
-class Body {
+class Body : public OrbiterObject {
 	friend class PlanetarySystem;
 
 public:

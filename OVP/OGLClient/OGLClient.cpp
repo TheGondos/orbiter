@@ -20,12 +20,6 @@
 #include "stb_image_write.h"
 #include "Renderer.h"
 
-//extern Orbiter *g_pOrbiter;
-/*
-const uint32_t SPEC_DEFAULT = (uint32_t)(-1); // "default" material/texture flag
-const uint32_t SPEC_INHERIT = (uint32_t)(-2); // "inherit" material/texture flag
-*/
-
 // ==============================================================
 // API interface
 // ==============================================================
@@ -285,16 +279,14 @@ void OGLClient::clbkRender2DPanel (SURFHANDLE *hSurf, MESHHANDLE hMesh, MATRIX3 
 		MESHGROUP *grp = oapiMeshGroup (hMesh, i);
 		if (grp->UsrFlag & 2) continue; // skip this group
 
-		if (grp->TexIdx == SPEC_DEFAULT) {//SPEC_DEFAULT) {
+		if (grp->TexIdx == SPEC_DEFAULT) {
 			newsurf = 0;
-		} else if (grp->TexIdx == SPEC_INHERIT) {//SPEC_INHERIT) {
+		} else if (grp->TexIdx == SPEC_INHERIT) {
 			// nothing to do
 		} else if ((unsigned)grp->TexIdx >= (unsigned)TEXIDX_MFD0) {
 			int mfdidx = grp->TexIdx-TEXIDX_MFD0;
 			newsurf = GetMFDSurface (mfdidx);
 			if (!newsurf) continue;
-			//OGLTexture *ttt = (OGLTexture *)newsurf;
-			//printf("MFD surface w=%d h=%d\n", ttt->m_Width, ttt->m_Height);
 		} else if (hSurf) {
 			newsurf = hSurf[grp->TexIdx];
 		} else {

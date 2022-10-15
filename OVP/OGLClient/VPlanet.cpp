@@ -146,7 +146,7 @@ vPlanet::vPlanet (OBJHANDLE _hObj, const Scene *scene): vObject (_hObj, scene)
 	if (surfmgr && surfmgr->GetMaxLevel() == 0) {
 		char cbuf[256];
 		oapiGetObjectName (hObj, cbuf, 256);
-		OBJHANDLE hMesh = oapiLoadMesh (cbuf);
+		MESHHANDLE hMesh = oapiLoadMesh (cbuf);
 		if (hMesh) {
 			mesh = new OGLMesh (hMesh);
 			oapiDeleteMesh (hMesh);

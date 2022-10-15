@@ -1780,7 +1780,7 @@ int Interpreter::v_defset_status (lua_State *L)
 						status.dockinfo[i].ridx = lua_tointeger(L, -1);
 						lua_pop(L, 1);
 						lua_getfield(L, -1, "rvessel");
-						status.dockinfo[i].rvessel = lua_touserdata(L, -1);
+						status.dockinfo[i].rvessel = (OBJHANDLE)(lua_touserdata(L, -1));
 						lua_pop(L, 1);
 						status.ndockinfo++;
 					}

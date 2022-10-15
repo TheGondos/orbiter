@@ -284,7 +284,7 @@ Orbiter::~Orbiter ()
 	
 	CloseApp ();
 
-	oapiModuleUnload(hVideoModule);
+	UnloadModule(hVideoModule);
 }
 //-----------------------------------------------------------------------------
 // Name: Create()
@@ -318,8 +318,7 @@ void Orbiter::Create ()
 
 	// preload active plugin modules
 
-	std::string videoPlugin = std::string("Modules/Plugin/lib") + pConfig->m_videoPlugin + ".so";
-	hVideoModule = oapiModuleLoad(videoPlugin.c_str());
+	hVideoModule = LoadModule("Modules/Plugin", pConfig->m_videoPlugin.c_str(), true, true);
 	CreateRenderWindow();
 
 	GLFWimage icon;
@@ -356,7 +355,12 @@ void Orbiter::CloseApp (bool fast_shutdown)
 	SaveConfig();
 	if(bSession)
 		CloseSession();
-	while (nmodule) UnloadModule (module[nmodule - 1].hMod);
+
+	int nbMod = nmodule;
+	for(int i = nbMod - 1; i >= 0 ; i--) {
+		if(!module[i].bVideoPlugin)
+			UnloadModule (module[i].hMod);
+	}
 
 	if (!fast_shutdown) {
 		if (pConfig)  delete pConfig;
@@ -430,7 +434,7 @@ void Orbiter::LoadFixedModules ()
 // Name: LoadModule()
 // Desc: Load a named plugin DLL
 //-----------------------------------------------------------------------------
-MODULEHANDLE Orbiter::LoadModule (const char *path, const char *name, bool fatal)
+MODULEHANDLE Orbiter::LoadModule (const char *path, const char *name, bool fatal, bool video)
 {
 	char cbuf[256];
 	sprintf (cbuf, "%s/lib%s.so", path, name);
@@ -450,7 +454,9 @@ MODULEHANDLE Orbiter::LoadModule (const char *path, const char *name, bool fatal
 			opcDLLInit(hi);
 
 		module[nmodule].module = (register_module ? register_module : new oapi::Module (hi));
+		module[nmodule].bLocalAlloc = register_module == nullptr;
 		module[nmodule].hMod = hi;
+		module[nmodule].bVideoPlugin = video;
 		module[nmodule].name = new char[strlen(name)+1]; TRACENEW
 		strcpy (module[nmodule].name, name);
 		nmodule++;
@@ -477,7 +483,8 @@ void Orbiter::UnloadModule (MODULEHANDLE hi)
 		if (hi == module[i].hMod) break;
 	if (i == nmodule) return; // not present
 	delete []module[i].name;
-	delete module[i].module;
+	if(module[i].bLocalAlloc)
+		delete module[i].module;
 	dlclose (module[i].hMod);
 	if (nmodule > 1) {
 		tmp = new struct DLLModule[nmodule-1]; TRACENEW

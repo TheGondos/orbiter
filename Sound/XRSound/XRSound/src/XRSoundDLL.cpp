@@ -200,6 +200,7 @@ XRSoundDLL::~XRSoundDLL()
 // states set according to the scenario data) and the render window has been opened (if applicable).
 void XRSoundDLL::clbkSimulationStart(RenderMode mode)
 {
+    bClosing = false;
     // reparse our global (i.e., vessel-independent) config file in case the user dropped to the launchpad and restarted
     XRSoundDLL::ParseGlobalConfigFile();
 
@@ -216,6 +217,7 @@ void XRSoundDLL::clbkSimulationStart(RenderMode mode)
 // This method is called immediately before a simulation session is terminated, and before the render window is closed.
 void XRSoundDLL::clbkSimulationEnd()
 {
+    bClosing = true;
     s_pInstance->UpdateAllVesselsMap();  // in case any vessels were added or deleted since the last time we checked
 
     // Note: *modules* are not loaded or unloaded when the simulation starts or ends: they are only loaded or unloaded via
@@ -289,7 +291,9 @@ void XRSoundDLL::UpdateAllVesselsMap()
     for (auto it = m_allVesselsMap.begin(); it != m_allVesselsMap.end(); it++)
     {
         const OBJHANDLE hVessel = it->first;
-        if (!oapiIsVessel(hVessel)) {
+        // On ending the session, hVessel keys refer to already destroyed objects
+        // so we cannot call oapi functions on them
+        if (bClosing || !oapiIsVessel(hVessel)) {
             deletedVesselHandles.push_back(hVessel);   // we can't modify m_allVesselsMap while we are iterating over it, so we have to make a new list
         }
 #if 0   // DEV DEBUGGING ONLY        

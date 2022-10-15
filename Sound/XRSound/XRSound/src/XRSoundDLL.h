@@ -44,6 +44,7 @@ public:
     // Orbiter callbacks
     virtual void clbkSimulationStart(RenderMode mode) override;
     virtual void clbkSimulationEnd() override;
+    bool bClosing;
     virtual void clbkPreStep(double simt, double simdt, double mjd) override;
     virtual void clbkPause(bool paused) override;
 

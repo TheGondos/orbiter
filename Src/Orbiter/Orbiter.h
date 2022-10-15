@@ -178,7 +178,7 @@ public:
 	void UpdateDeallocationProgress();
 
 	// plugin module loading/unloading
-	MODULEHANDLE LoadModule (const char *path, const char *name, bool fatal = true);   // load a plugin
+	MODULEHANDLE LoadModule (const char *path, const char *name, bool fatal = true, bool video = false);   // load a plugin
 	void UnloadModule (MODULEHANDLE hi); // unload a plugin
 	MODULEHANDLE hVideoModule;
 
@@ -456,6 +456,8 @@ private:
 		MODULEHANDLE hMod;
 		//OPC_Interface *intf;
 		char *name;
+		bool bVideoPlugin;
+		bool bLocalAlloc;         // locally allocated; should be freed by Orbiter core
 	} *module;
 	int nmodule;                  // number of plugins
 

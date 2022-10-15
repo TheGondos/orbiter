@@ -97,6 +97,9 @@ public:
 
     const std::string &GetVesselName()
     {
+        if(!m_csCachedVesselName.empty())
+            return m_csCachedVesselName;
+            
         VESSEL *pVessel = GetVessel();
         if (pVessel)
             m_csCachedVesselName = pVessel->GetName();

@@ -100,43 +100,22 @@ DLLEXPORT int oapiGetObjectCount ()
 
 DLLEXPORT int oapiGetObjectType (OBJHANDLE hObj)
 {
-	int i;
-
-	Body *body = (Body*)hObj;
-
-	// Try for celestial body
-	CelestialBody *cbody = 0;
-	try {
-		cbody = dynamic_cast<CelestialBody*>(body);
+	int type = hObj->Type();
+	if(type == OBJTP_VESSEL) {
+		// Try for vessel. Here we go through the list of current
+		// vessels, to avoid deleted vessels (which may still cast ok)
+		for (int i = 0; i < g_psys->nVessel(); i++) {
+			if (hObj == g_psys->GetVessel(i))
+				return OBJTP_VESSEL;
+		}
+		return OBJTP_INVALID;
 	}
-	catch(...) {
-		cbody = 0;
-	}
-	if (cbody) return body->Type();
-
-	// Try for surface base
-	Base *base = 0;
-	try {
-		base = dynamic_cast<Base*>(body);
-	}
-	catch(...) {
-		base = 0;
-	}
-	if (base) return body->Type();
-
-	// Try for vessel. Here we go through the list of current
-	// vessels, to avoid deleted vessels (which may still cast ok)
-	for (i = 0; i < g_psys->nVessel(); i++) {
-		if (body == g_psys->GetVessel(i))
-			return body->Type();
-	}
-
-	return OBJTP_INVALID;
+	return type;
 }
 
 DLLEXPORT const void *oapiGetObjectParam (OBJHANDLE hObj, int paramtype)
 {
-	switch (((Body*)hObj)->Type()) {
+	switch (hObj->Type()) {
 	case OBJTP_VESSEL:
 		return ((Vessel*)hObj)->GetParam (paramtype);
 	case OBJTP_PLANET:

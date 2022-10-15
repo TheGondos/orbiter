@@ -166,7 +166,12 @@ namespace oapi {
 // ======================================================================
 //@{
 /// \brief Handle for objects (vessels, stations, planets)
-typedef void *OBJHANDLE;
+//typedef void *OBJHANDLE;
+class OrbiterObject {
+	public:
+	virtual int Type() const = 0;
+};
+typedef OrbiterObject *OBJHANDLE;
 
 /// \brief Handle for modules
 typedef void *MODULEHANDLE;
