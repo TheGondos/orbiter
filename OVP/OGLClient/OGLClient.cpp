@@ -1463,10 +1463,12 @@ bool OGLClient::clbkScaleBlt (SURFHANDLE tgt, int tgtx, int tgty, int tgtw, int 
 	float src_w = srcw;
 	float src_h = srch;
 
-	float s0 = 0;
-	float s1 = 1;
-	float t0 = 0;
-	float t1 = 1;
+	OGLTexture *key_tex = (OGLTexture *)src;
+
+	float s0 = (float)srcx / (float)key_tex->m_Width;
+	float s1 = (float)(srcx+(float)src_w) / (float)key_tex->m_Width;
+	float t0 = (float)srcy / (float)key_tex->m_Height;
+	float t1 = (float)(srcy+(float)src_h) / (float)key_tex->m_Height;
 
 	const GLfloat vertex[] = {
 		s1, t1, (float)tgtx+tgt_w, (float)tgty+tgt_h,
@@ -1494,7 +1496,6 @@ bool OGLClient::clbkScaleBlt (SURFHANDLE tgt, int tgtx, int tgty, int tgtw, int 
 	s.Bind();
 	s.SetMat4("projection", ortho_proj);
 
-	OGLTexture *key_tex = (OGLTexture *)src;
 	bool hasck = key_tex->m_colorkey != SURF_NO_CK && key_tex->m_colorkey != 0;
 	if(hasck) {
 		uint32_t ck = key_tex->m_colorkey;
