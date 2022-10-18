@@ -13,17 +13,16 @@
 
 #define STRICT 1
 #define ORBITER_MODULE
-#include "orbitersdk.h"
-#include "resource.h"
+#include "Orbitersdk.h"
+//#include "resource.h"
 #include "Editor.h"
-#include "DlgCtrl.h"
+//#include "DlgCtrl.h"
 
 // ==============================================================
 // Global variables and constants
 // ==============================================================
 
 ScnEditor *g_editor = 0;   // scenario editor instance pointer
-HBITMAP g_hPause;          // "pause" button bitmap
 
 // ==============================================================
 // API interface
@@ -32,36 +31,20 @@ HBITMAP g_hPause;          // "pause" button bitmap
 // ==============================================================
 // Initialise module
 
-DLLCLBK void InitModule (DynamicModule *hDLL)
+DLLCLBK void InitModule (MODULEHANDLE hDLL)
 {
-	INITCOMMONCONTROLSEX cc = {sizeof(INITCOMMONCONTROLSEX),ICC_TREEVIEW_CLASSES};
-	InitCommonControlsEx(&cc);
-	// Windows tree view control registration
-
 	// Create editor instance
-	g_editor = new ScnEditor (hDLL);
-
-	// Register custom dialog controls
-	oapiRegisterCustomControls (hDLL);
-
-	// Load the bitmap for the "pause" title button
-	g_hPause = (HBITMAP)LoadImage (hDLL, MAKEINTRESOURCE (IDB_PAUSE), IMAGE_BITMAP, 15, 30, 0);
+	g_editor = new ScnEditor ();
 }
 
 // ==============================================================
 // Clean up module
 
-DLLCLBK void ExitModule (DynamicModule *hDLL)
+DLLCLBK void ExitModule (MODULEHANDLE hDLL)
 {
 	// Delete editor instance
 	delete g_editor;
 	g_editor = 0;
-
-	// Unregister custom dialog controls
-	oapiUnregisterCustomControls (hDLL);
-
-	// Free bitmap resources
-	DeleteObject (g_hPause);
 }
 
 // ==============================================================

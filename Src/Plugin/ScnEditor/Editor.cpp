@@ -11,16 +11,15 @@
 // derived from ScnEditorTab.
 // ==============================================================
 
-#include "orbitersdk.h"
-#include "resource.h"
+#include "Orbitersdk.h"
 #include "Editor.h"
-#include "DlgCtrl.h"
-#include <commctrl.h>
+#include "font_awesome_5.h"
 #include <stdio.h>
-#include <io.h>
+#include <imgui.h>
+#include <filesystem>
+namespace fs = std::filesystem;
 
 extern ScnEditor *g_editor;
-extern HBITMAP g_hPause;
 
 // ==============================================================
 // Local prototypes
@@ -29,72 +28,427 @@ extern HBITMAP g_hPause;
 void OpenDialog (void *context);
 void Crt2Pol (VECTOR3 &pos, VECTOR3 &vel);
 void Pol2Crt (VECTOR3 &pos, VECTOR3 &vel);
-INT_PTR CALLBACK EditorProc (HWND, UINT, WPARAM, LPARAM);
 
 static double lengthscale[4] = {1.0, 1e-3, 1.0/AU, 1.0};
 static double anglescale[2] = {DEG, 1.0};
-
-static HELPCONTEXT g_hc = {
-	"html/plugin/ScnEditor.chm",
-	0,
-	"html/plugin/ScnEditor.chm::/ScnEditor.hhc",
-	"html/plugin/ScnEditor.chm::/ScnEditor.hhk"
-};
 
 // ==============================================================
 // ScnEditor class definition
 // ==============================================================
 
-ScnEditor::ScnEditor (HINSTANCE hDLL)
+ScnEditor::ScnEditor (): GUIElement("Scenario Editor", "ScnEditor")
 {
-	hInst  = hDLL;
+/*	
 	hEdLib = NULL;
-	hDlg   = NULL;
-
-	imglist = ImageList_Create (16, 16, ILC_COLOR8, 4, 0);
-	treeicon_idx[0] = ImageList_Add (imglist, LoadBitmap (hInst, MAKEINTRESOURCE (IDB_TREEICON_FOLDER1)), 0);
-	treeicon_idx[1] = ImageList_Add (imglist, LoadBitmap (hInst, MAKEINTRESOURCE (IDB_TREEICON_FOLDER2)), 0);
-	treeicon_idx[2] = ImageList_Add (imglist, LoadBitmap (hInst, MAKEINTRESOURCE (IDB_TREEICON_FILE1)), 0);
-	treeicon_idx[3] = ImageList_Add (imglist, LoadBitmap (hInst, MAKEINTRESOURCE (IDB_TREEICON_FILE2)), 0);
-
+*/
 	dwCmd = oapiRegisterCustomCmd (
 		"Scenario Editor",
 		"Create, delete and configure spacecraft",
 		::OpenDialog, this);
+
+	m_preview = nullptr;
+	m_currentVessel = nullptr;
+	frm = FRAME_ECL;
+	memset(m_newVesselName, 0 , sizeof(m_newVesselName));
 }
 
 ScnEditor::~ScnEditor ()
 {
 	CloseDialog();
 	oapiUnregisterCustomCmd (dwCmd);
-	ImageList_Destroy (imglist);
 }
 
 void ScnEditor::OpenDialog ()
 {
-	nTab  = 0;
-	cTab  = NULL;
-	hDlg  = oapiOpenDialogEx (hInst, IDD_EDITOR, EditorProc, 0, this);
+	oapiOpenDialog (this);
 }
 
 void ScnEditor::CloseDialog ()
 {
-	if (hDlg) {
-		oapiCloseDialog (hDlg);
-		hDlg = NULL;
-		cTab = NULL;
-		if (nTab) {
-			for (DWORD i = 0; i < nTab; i++) delete pTab[i];
-			delete []pTab;
-			nTab = 0;
-		}
-	}
+	oapiCloseDialog (this);
+/*
 	if (hEdLib) {
 		FreeLibrary (hEdLib);
 		hEdLib = 0;
 	}
+	*/
 }
 
+void ScnEditor::DrawConfigs(const char *path) {
+    std::vector<fs::path> directories;
+    for (auto &file : fs::directory_iterator(path)) {
+        if(file.path() != "." && file.path() != "..") {
+            if (file.is_directory()) {
+                directories.push_back(file.path());
+            }
+        }
+    }
+
+    std::sort(directories.begin(), directories.end());//, alphanum_sort);
+    for(auto &p: directories) {
+        const bool is_selected = m_SelectedDirectory == p;
+        ImGuiTreeNodeFlags node_flags = ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_OpenOnArrow;//ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
+        if(is_selected) node_flags |= ImGuiTreeNodeFlags_Selected;
+        
+        bool clicked = false;
+        if(ImGui::TreeNodeEx(p.stem().c_str(), node_flags)) {
+            clicked = ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen();
+            DrawConfigs(p.c_str());
+            ImGui::TreePop();
+        } else {
+            clicked = ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen();
+        }
+        if (clicked) {
+            m_SelectedConfig.clear();
+            m_SelectedDirectory = p;
+        }
+    }
+
+    std::vector<fs::path> configs;
+    for (auto &file : fs::directory_iterator(path)) {
+        if(file.path().extension() == ".cfg") {
+            if (file.is_regular_file()) {
+				bool skip = true;
+				FILEHANDLE hFile = oapiOpenFile (file.path().c_str(), FILE_IN);
+				if (hFile) {
+					bool b;
+					skip = (oapiReadItem_bool (hFile, "EditorCreate", b) && !b);
+					oapiCloseFile (hFile, FILE_IN);
+				}
+				if (skip) continue;
+
+                configs.push_back(file.path());
+            }
+        }
+    }
+
+    std::sort(configs.begin(), configs.end());//, alphanum_sort);
+    for(auto &p: configs) {
+        const bool is_selected = m_SelectedConfig == p;
+        ImGuiTreeNodeFlags node_flags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
+        if(is_selected) node_flags |= ImGuiTreeNodeFlags_Selected;
+        char node_text[256];
+        sprintf(node_text, ICON_FA_PAPER_PLANE" %s", p.stem().c_str());
+        ImGui::TreeNodeEx(node_text, node_flags);
+        if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) {
+            m_SelectedConfig = p;
+            m_SelectedDirectory.clear();
+
+			FILEHANDLE hFile = oapiOpenFile (p.c_str(), FILE_IN);
+			if (hFile) {
+				char imagename[256];
+				if (oapiReadItem_string (hFile, "ImageBmp", imagename)) {
+					if(m_preview) {
+						oapiReleaseTexture(m_preview);
+						m_preview = nullptr;
+					}
+					m_preview = oapiLoadTexture(imagename);
+				}
+				if (oapiReadItem_string (hFile, "ClassName", imagename)) {
+					m_classname = imagename;
+				} else {
+					m_classname = p.stem();
+				}
+				oapiCloseFile (hFile, FILE_IN);
+			}
+        }
+    }
+}
+
+void ScnEditor::CreateVessel() {
+	if (oapiGetVesselByName (m_newVesselName)) {
+		oapiAddNotification(OAPINOTIF_ERROR, "Cannot create new vessel", "Vessel name already in use");
+		return;
+	}
+
+	// define an arbitrary status (the user will have to edit this after creation)
+	VESSELSTATUS2 vs;
+	memset (&vs, 0, sizeof(vs));
+	vs.version = 2;
+	vs.rbody = oapiGetGbodyByName ("Earth");
+	if (!vs.rbody) vs.rbody = oapiGetGbodyByIndex (0);
+	double rad = 1.1 * oapiGetSize (vs.rbody);
+	double vel = sqrt (GGRAV * oapiGetMass (vs.rbody) / rad);
+	vs.rpos = _V(rad,0,0);
+	vs.rvel = _V(0,0,vel);
+	m_currentVessel = oapiCreateVesselEx (m_newVesselName, m_classname.c_str(), &vs);
+	oapiSetFocusObject (m_currentVessel);
+//	if (SendDlgItemMessage (hTab, IDC_CAMERA, BM_GETSTATE, 0, 0) == BST_CHECKED)
+	oapiCameraAttach (m_currentVessel, 1);
+	m_newVesselName[0] = '\0';
+}
+
+void ScnEditor::VesselCreatePopup() {
+	ImGui::Text("New vessel");
+	ImGui::InputText("Name", m_newVesselName, IM_ARRAYSIZE(m_newVesselName));
+
+    ImGui::BeginChild("ChildL", ImVec2(ImGui::GetContentRegionAvail().x / 2, ImGui::GetContentRegionAvail().y - 30), true);
+	DrawConfigs("Config/Vessels");
+    ImGui::EndChild();
+	ImGui::SameLine();
+    ImGui::BeginChild("ChildR", ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y - 30), true);
+	if(m_preview) {
+        const ImVec2 uv_min = ImVec2(0.0f, 0.0f);                 // Top-left
+        const ImVec2 uv_max = ImVec2(1.0f, 1.0f);                 // Lower-right
+        const ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);   // No tint
+        const ImVec4 border_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f); // 50% opaque white
+		int w,h;
+        oapiIncrTextureRef(m_preview);
+		oapiGetTextureSize(m_preview, &w, &h);
+		float ratio = (float)h/(float)w;
+        ImGui::ImageButton(m_preview, ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().x * ratio), uv_min, uv_max, 0, tint_col, border_col);
+	}
+    ImGui::EndChild();
+
+	const bool ready = strlen(m_newVesselName) != 0 && !m_SelectedConfig.empty();
+
+	if(!ready)
+		ImGui::BeginDisabled();
+
+	if(ImGui::Button("Create")) {
+		CreateVessel();
+		ImGui::CloseCurrentPopup();
+	}
+	if(!ready)
+		ImGui::EndDisabled();
+
+	ImGui::SameLine();
+	if(ImGui::Button("Cancel")) {
+		ImGui::CloseCurrentPopup();
+	}
+}
+
+void ScnEditor::DrawShipList()
+{
+	if (ImGui::TreeNodeEx("Vessels", ImGuiTreeNodeFlags_DefaultOpen)) {
+		for (int i = 0; i < oapiGetVesselCount(); i++) {
+			OBJHANDLE hV = oapiGetVesselByIndex (i);
+			VESSEL *vessel = oapiGetVesselInterface (hV);
+			const char *name = vessel->GetName();
+			const bool is_selected = m_currentVessel == hV;
+			
+			ImGuiTreeNodeFlags node_flags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
+			if(is_selected) node_flags |= ImGuiTreeNodeFlags_Selected;
+			ImGui::TreeNodeEx(name, node_flags | ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen);
+			if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) {
+				m_currentVessel = hV;
+				ReloadVessel();
+				//Don't do this for now because it can create lots of controller profiles :(
+				//oapiSetFocusObject (m_currentVessel);
+				//oapiCameraAttach (m_currentVessel, 1);
+			}
+		}
+		ImGui::TreePop();
+	}
+}
+
+void ScnEditor::DrawTabs ()
+{
+	const char *tabs[] = {
+		"Orbital elements", "State vectors", "Orientation", "Angular velocity", "Location", "Docking", "Propellant"
+	};
+
+	void (ScnEditor::* func[])() = {
+		&ScnEditor::DrawOrbitalElements, &ScnEditor::DrawStateVectors, &ScnEditor::DrawOrientation,
+		&ScnEditor::DrawAngularVelocity, &ScnEditor::DrawLocation, &ScnEditor::DrawDocking, &ScnEditor::DrawPropellant
+	};
+
+
+	ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_FittingPolicyScroll;
+	if (ImGui::BeginTabBar("MyTabBar", tab_bar_flags))
+	{
+		for(size_t i = 0; i<sizeof(tabs)/sizeof(tabs[0]);i++) {
+			if(ImGui::BeginTabItem(tabs[i])) {
+				(this->*func[i])();
+				ImGui::EndTabItem();
+			}
+		}
+		ImGui::EndTabBar();
+	}
+}
+
+void ScnEditor::ReloadVessel()
+{
+	VESSEL *vessel = oapiGetVesselInterface (m_currentVessel);
+	OBJHANDLE hRef = vessel->GetGravityRef();// oapiGetGbodyByName (m_selectedReference.c_str());
+
+	char cbuf[64];
+	oapiGetObjectName (hRef, cbuf, 64);
+	m_selectedReference = cbuf;
+	vessel->GetElements(hRef, el, &prm, elmjd, frm);
+}
+
+void ScnEditor::DrawCBodies() {
+	std::vector<std::string> bodies;
+	for (int n = 0; n < oapiGetGbodyCount(); n++) {
+		char cbuf[256];
+		oapiGetObjectName (oapiGetGbodyByIndex (n), cbuf, 256);
+		bodies.push_back(cbuf);
+	}
+	std::sort(bodies.begin(), bodies.end());
+
+	if(ImGui::BeginCombo("Orbit reference", m_selectedReference.c_str())) {
+		for (auto &body: bodies) {
+			if (ImGui::Selectable(body.c_str(), body == m_selectedReference)) {
+				m_selectedReference = body;
+			}
+		}
+        ImGui::EndCombo();
+	}
+}
+
+void ScnEditor::DrawOrbitalElements()
+{
+	if(!m_currentVessel) return;
+	DrawCBodies();
+	ImGui::PushItemWidth(100);
+	static int smaUnit;
+	VESSEL *vessel = oapiGetVesselInterface (m_currentVessel);
+	OBJHANDLE hRef = vessel->GetGravityRef();
+	lengthscale[3] = 1.0/oapiGetSize (hRef);
+	el.a*=lengthscale[smaUnit];
+	ImGui::InputDouble("Semi-major Axis [SMa]", &el.a, 0.0, 0.0, "%g");
+	el.a/=lengthscale[smaUnit];
+	ImGui::RadioButton("m", &smaUnit,0); ImGui::SameLine();
+	ImGui::RadioButton("km", &smaUnit,1); ImGui::SameLine();
+	ImGui::RadioButton("AU", &smaUnit,2); ImGui::SameLine();
+	ImGui::RadioButton("Planet radius", &smaUnit,3);
+	ImGui::InputDouble("Eccentricity [Ecc]", &el.e, 0.0, 0.0, "%g");
+	el.i*=DEG;
+	ImGui::InputDouble("Inclination [Inc]°", &el.i, 0.0, 0.0, "%g");
+	el.i/=DEG;
+	el.theta*=DEG;
+	ImGui::InputDouble("Longitude of ascending node [LAN]°", &el.theta, 0.0, 0.0, "%g");
+	el.theta/=DEG;
+	el.omegab*=DEG;
+	ImGui::InputDouble("Longitude of periapsis [LPe]°", &el.omegab, 0.0, 0.0, "%g");
+	el.omegab/=DEG;
+	el.L*=DEG;
+	ImGui::InputDouble("Mean longitude at epoch [eps]°", &el.L, 0.0, 0.0, "%g");
+	el.L/=DEG;
+	ImGui::InputDouble("MJD", &elmjd, 0.0, 0.0, "%g");
+	ImGui::PopItemWidth();
+
+	bool frmChanged = ImGui::RadioButton("FRAME_ECL", &frm, 0); ImGui::SameLine();
+	frmChanged     |= ImGui::RadioButton("FRAME_EQU", &frm, 1);
+
+	if(frmChanged) ReloadVessel();
+
+/* 1.0/oapiGetSize (hRef) */
+
+	bool closed = (el.e < 1.0); // closed orbit?
+
+	ImGui::Text ("Periapsis : %g m", prm.PeD);
+	ImGui::Text ("PeT : %g s", prm.PeT);
+	ImGui::Text ("MnA : %0.3f °", prm.MnA*DEG);
+	ImGui::Text ("TrA : %0.3f °", prm.TrA*DEG);
+	ImGui::Text ("MnL : %0.3f °", prm.MnL*DEG);
+	ImGui::Text ("TrL : %0.3f °", prm.TrL*DEG);
+	if (closed) {
+		ImGui::Text ("Period : %g s", prm.T);
+		ImGui::Text ("Apoapsis : %g m", prm.ApD);
+		ImGui::Text ("ApT : %g s", prm.ApT);
+	}
+
+	if(ImGui::Button("Apply")) {
+		OBJHANDLE hRef = oapiGetGbodyByName (m_selectedReference.c_str());
+		if (hRef) {
+			el.a = fabs (el.a);
+			if (el.e > 1.0) el.a = -el.a;
+			VESSEL *vessel = oapiGetVesselInterface (m_currentVessel);
+
+			if (vessel->SetElements (hRef, el, &prm, elmjd, frm)) {
+				//RefreshSecondaryParams (el, prm);
+			} else {
+				oapiAddNotification(OAPINOTIF_ERROR, "Failed to set orbital elements", "Trajectory is inside the body");
+			}
+		}
+	}
+}
+void ScnEditor::DrawStateVectors()
+{
+
+}
+void ScnEditor::DrawOrientation()
+{
+
+}
+void ScnEditor::DrawAngularVelocity()
+{
+
+}
+void ScnEditor::DrawLocation()
+{
+
+}
+void ScnEditor::DrawDocking()
+{
+
+}
+void ScnEditor::DrawPropellant()
+{
+	
+}
+
+void ScnEditor::Show ()
+{
+    if(!show) return;
+	if(ImGui::Begin("Scenario Editor", &show)) {
+	    ImGui::BeginChild("ChildL", ImVec2(ImGui::GetContentRegionAvail().x / 3, ImGui::GetContentRegionAvail().y), true);
+		if(ImGui::Button("New vessel")) {
+			ImGui::OpenPopup("NewVessel");
+		}
+		ImGui::SameLine();
+		const bool disabled = !m_currentVessel;
+		if(disabled) ImGui::BeginDisabled();
+		if(ImGui::Button("Delete selected")) {
+			if(oapiGetVesselCount()>1) {
+				oapiDeleteVessel (m_currentVessel);
+				m_currentVessel = nullptr;
+			} else {
+				oapiAddNotification(OAPINOTIF_ERROR, "Cannot delete vessel", "One vessel at least must exists");
+			}
+		}
+		ImGui::SameLine();
+		if(ImGui::Button("Focus")) {
+			oapiSetFocusObject (m_currentVessel);
+			oapiCameraAttach (m_currentVessel, 1);
+		}
+		ImGui::SameLine();
+		if(ImGui::Button("Refresh")) {
+			ReloadVessel();
+		}
+		if(disabled) ImGui::EndDisabled();
+		if(ImGui::Button("Date")) {
+			
+		}
+		ImGui::SetNextWindowSize({500,500});
+		if (ImGui::BeginPopup("NewVessel"))
+		{
+			VesselCreatePopup();
+			ImGui::EndPopup();
+		}
+		ImGui::Separator();
+
+		DrawShipList();
+	    ImGui::EndChild();
+		ImGui::SameLine();
+	    ImGui::BeginChild("ChildR", ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y), true);
+		DrawTabs();
+	    ImGui::EndChild();
+	}
+	ImGui::End();
+}
+
+void ScnEditor::VesselDeleted (OBJHANDLE hV)
+{
+	// update editor after vessel has been deleted
+	if (m_currentVessel == hV) { // vessel is currently being edited
+		m_currentVessel = nullptr;
+	}
+}
+
+/*
 void ScnEditor::ScanCBodyList (HWND hDlg, int hList, OBJHANDLE hSelect)
 {
 	// populate a list of celestial bodies
@@ -281,12 +635,12 @@ char *ScnEditor::ExtractVesselName (char *str)
 	str[i] = '\0';
 	return str;
 }
-
+*/
 void ScnEditor::Pause (bool pause)
 {
-	if (hDlg) oapiSetTitleButtonState (hDlg, IDPAUSE, pause ? 1:0);
+//	if (hDlg) oapiSetTitleButtonState (hDlg, IDPAUSE, pause ? 1:0);
 }
-
+/*
 HINSTANCE ScnEditor::LoadVesselLibrary (const VESSEL *vessel)
 {
 	// load vessel-specific editor extensions
@@ -300,12 +654,12 @@ HINSTANCE ScnEditor::LoadVesselLibrary (const VESSEL *vessel)
 
 // ==============================================================
 // nonmember functions
-
+*/
 void OpenDialog (void *context)
 {
 	((ScnEditor*)context)->OpenDialog();
 }
-
+/*
 void Crt2Pol (VECTOR3 &pos, VECTOR3 &vel)
 {
 	// position in polar coordinates
@@ -693,89 +1047,6 @@ bool EditorTab_New::CreateVessel ()
 		oapiCameraAttach (ed->hVessel, 1);
 	//	ed->VesselSelection();
 	return true;
-}
-
-void EditorTab_New::ScanConfigDir (const char *ppath, HTREEITEM hti)
-{
-	// recursively scans a directory tree and adds to the list
-	TV_INSERTSTRUCT tvis;
-	HTREEITEM ht, hts0, ht0;
-	struct _finddata_t fdata;
-	intptr_t fh;
-	char cbuf[256], path[256], *fname;
-
-	strcpy (path, ppath);
-	fname = path + strlen(path);
-
-	tvis.hParent = hti;
-	tvis.item.mask = TVIF_TEXT | TVIF_CHILDREN | TVIF_IMAGE | TVIF_SELECTEDIMAGE;
-	tvis.item.pszText = cbuf;
-
-	// scan for subdirectories
-	strcpy (fname, "*.*");
-	if ((fh = _findfirst (path, &fdata)) != -1) {
-		tvis.hInsertAfter = TVI_SORT;
-		tvis.item.cChildren = 1;
-		tvis.item.iImage = ed->treeicon_idx[0];
-		tvis.item.iSelectedImage = ed->treeicon_idx[0];
-		do {
-			if ((fdata.attrib & _A_SUBDIR) && fdata.name[0] != '.') {
-				strcpy (cbuf, fdata.name);
-				ht = (HTREEITEM)SendDlgItemMessage (hTab, IDC_VESSELTP, TVM_INSERTITEM, 0, (LPARAM)&tvis);
-				strcpy (fname, fdata.name); strcat (fname, "\\");
-				ScanConfigDir (path, ht);
-			}
-		} while (!_findnext (fh, &fdata));
-		_findclose (fh);
-	}
-	hts0 = (HTREEITEM)SendDlgItemMessage (hTab, IDC_VESSELTP, TVM_GETNEXTITEM, TVGN_CHILD, (LPARAM)hti);
-	// the first subdirectory entry in this folder
-
-	// scan for files
-	strcpy (fname, "*.cfg");
-	if ((fh = _findfirst (path, &fdata)) != -1) {
-		tvis.hInsertAfter = TVI_FIRST;
-		tvis.item.cChildren = 0;
-		tvis.item.iImage = ed->treeicon_idx[2];
-		tvis.item.iSelectedImage = ed->treeicon_idx[3];
-		do {
-			bool skip = false;
-			strcpy (fname, fdata.name);
-			FILEHANDLE hFile = oapiOpenFile (path, FILE_IN);
-			if (hFile) {
-				bool b;
-				skip = (oapiReadItem_bool (hFile, "EditorCreate", b) && !b);
-				oapiCloseFile (hFile, FILE_IN);
-			}
-			if (skip) continue;
-
-			strcpy (cbuf, fdata.name);
-			cbuf[strlen(cbuf)-4] = '\0';
-
-			char ch[256];
-			TV_ITEM tvi = {TVIF_HANDLE | TVIF_TEXT, 0, 0, 0, ch, 256};
-
-			ht0 = (HTREEITEM)SendDlgItemMessage (hTab, IDC_VESSELTP, TVM_GETNEXTITEM, TVGN_CHILD, (LPARAM)hti);
-			for (tvi.hItem = ht0; tvi.hItem && tvi.hItem != hts0; tvi.hItem = (HTREEITEM)SendDlgItemMessage (hTab, IDC_VESSELTP, TVM_GETNEXTITEM, TVGN_NEXT, (LPARAM)tvi.hItem)) {
-				SendDlgItemMessage (hTab, IDC_VESSELTP, TVM_GETITEM, 0, (LPARAM)&tvi);
-				if (strcmp (tvi.pszText, cbuf) > 0) break;
-			}
-			if (tvi.hItem) {
-				ht = (HTREEITEM)SendDlgItemMessage (hTab, IDC_VESSELTP, TVM_GETNEXTITEM, TVGN_PREVIOUS, (LPARAM)tvi.hItem);
-				tvis.hInsertAfter = (ht ? ht : TVI_FIRST);
-			} else {
-				tvis.hInsertAfter = (hts0 ? TVI_FIRST : TVI_LAST);
-			}
-			(HTREEITEM)SendDlgItemMessage (hTab, IDC_VESSELTP, TVM_INSERTITEM, 0, (LPARAM)&tvis);
-		} while (!_findnext (fh, &fdata));
-		_findclose (fh);
-	}
-}
-
-void EditorTab_New::RefreshVesselTpList ()
-{
-	SendDlgItemMessage (hTab, IDC_VESSELTP, TVM_DELETEITEM, 0, (LPARAM)TVI_ROOT);
-	ScanConfigDir ("Config\\Vessels\\", NULL);
 }
 
 int EditorTab_New::GetSelVesselTp (char *name, int len)
@@ -1548,10 +1819,10 @@ void EditorTab_Elements::RefreshSecondaryParams (const ELEMENTS &el, const ORBIT
 
 	sprintf (cbuf, "%g m", prm.PeD); SetWindowText (GetDlgItem (hTab, IDC_PERIAPSIS), cbuf);
 	sprintf (cbuf, "%g s", prm.PeT); SetWindowText (GetDlgItem (hTab, IDC_PET), cbuf);
-	sprintf (cbuf, "%0.3f �", prm.MnA*DEG); SetWindowText (GetDlgItem (hTab, IDC_MNANM), cbuf);
-	sprintf (cbuf, "%0.3f �", prm.TrA*DEG); SetWindowText (GetDlgItem (hTab, IDC_TRANM), cbuf);
-	sprintf (cbuf, "%0.3f �", prm.MnL*DEG); SetWindowText (GetDlgItem (hTab, IDC_MNLNG), cbuf);
-	sprintf (cbuf, "%0.3f �", prm.TrL*DEG); SetWindowText (GetDlgItem (hTab, IDC_TRLNG), cbuf);
+	sprintf (cbuf, "%0.3f �", prm.MnA*DEG); SetWindowText (GetDlgItem (hTab, IDC_MNANM), cbuf);
+	sprintf (cbuf, "%0.3f �", prm.TrA*DEG); SetWindowText (GetDlgItem (hTab, IDC_TRANM), cbuf);
+	sprintf (cbuf, "%0.3f �", prm.MnL*DEG); SetWindowText (GetDlgItem (hTab, IDC_MNLNG), cbuf);
+	sprintf (cbuf, "%0.3f �", prm.TrL*DEG); SetWindowText (GetDlgItem (hTab, IDC_TRLNG), cbuf);
 	if (closed) {
 		sprintf (cbuf, "%g s", prm.T);   SetWindowText (GetDlgItem (hTab, IDC_PERIOD), cbuf);
 		sprintf (cbuf, "%g m", prm.ApD); SetWindowText (GetDlgItem (hTab, IDC_APOAPSIS), cbuf);
@@ -3062,3 +3333,4 @@ INT_PTR EditorTab_Custom::DlgProc (HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM l
 	else return pTab->TabProc (hDlg, uMsg, wParam, lParam);
 }
 
+*/

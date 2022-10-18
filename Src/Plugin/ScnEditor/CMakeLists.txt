@@ -12,8 +12,9 @@ target_include_directories(ScnEditor
 )
 
 target_link_libraries(ScnEditor
-	${ORBITER_LIB}
+#	${ORBITER_LIB}
 	${ORBITER_SDK_LIB}
+	imgui
 )
 
 set_target_properties(ScnEditor
@@ -40,11 +41,11 @@ add_dependencies(ScnEditor
 
 # Installation
 install(TARGETS ScnEditor
-	RUNTIME
+	#RUNTIME
 	DESTINATION ${ORBITER_INSTALL_PLUGIN_DIR}
 )
 install(FILES ScnEditorAPI.h
 	DESTINATION ${ORBITER_INSTALL_SDK_DIR}/include
 )
 
-add_subdirectory(Help)
+#add_subdirectory(Help)

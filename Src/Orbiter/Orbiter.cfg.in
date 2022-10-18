@@ -11,4 +11,5 @@ ACTIVE_MODULES
   ExtMFD
   ApolloRTCCMFD
   ProjectApolloMFD
+  ScnEditor
 END_MODULES

@@ -11,7 +11,7 @@
 #define __SCNEDITORAPI_H
 
 #include "OrbiterAPI.h"
-
+/*
 #define WM_SCNEDITOR WM_USER
 
 #define SE_ADDFUNCBUTTON 0x01
@@ -31,5 +31,5 @@ typedef struct {
 	WORD ResId;
 	DLGPROC TabProc;
 } EditorPageSpec;
-
+*/
 #endif // !__SCNEDITORAPI_H

@@ -16,38 +16,73 @@
 
 #include "ScnEditorAPI.h"
 #include "Convert.h"
-#include <commctrl.h>
 
-class ScnEditorTab;
-typedef void (*CustomButtonFunc)(OBJHANDLE);
+//class ScnEditorTab;
+//typedef void (*CustomButtonFunc)(OBJHANDLE);
 
 // ==============================================================
 // class ScnEditor
 // ==============================================================
-
-class ScnEditor {
+class CelestialBody;
+class ScnEditor: public GUIElement {
 public:
-	ScnEditor (HINSTANCE hDLL);
+	ScnEditor ();
 	~ScnEditor ();
+	void Show() override;
+	void VesselDeleted (OBJHANDLE hV);
+	void Pause (bool pause);
 	void OpenDialog ();
 	void CloseDialog ();
+	void DrawConfigs(const char *path);
+	void VesselCreatePopup();
+	void DrawShipList();
+	void CreateVessel();
+	void DrawTabs();
+	void DrawOrbitalElements();
+	void DrawStateVectors();
+	void DrawOrientation();
+	void DrawAngularVelocity();
+	void DrawLocation();
+	void DrawDocking();
+	void DrawPropellant();
+	void DrawDate();
+	void ReloadVessel();
+	void ApplyOrbitalElements();
+	void DrawCBodies();
+	void AddCbodyNode(const CelestialBody *cbody);
+
+	ELEMENTS el;       // orbital elements of edited vessel
+	ORBITPARAM prm;    // additional orbital parameters
+	double elmjd;      // element epoch
+	int frm;
+	std::string m_selectedReference;
+
+	int dwCmd;         // custom command handle
+	OBJHANDLE m_currentVessel;
+	SURFHANDLE m_preview;
+	std::string m_SelectedConfig;
+	std::string m_SelectedDirectory;
+	std::string m_classname;
+	char m_newVesselName[64];
+	MODULEHANDLE hEdLib;    // vessel editor library instance handle
+	MODULEHANDLE LoadVesselLibrary (const VESSEL *vessel);
+
+	/*
 	void InitDialog (HWND hDlg);
-	DWORD AddTab (ScnEditorTab *newTab);
-	void DelCustomTabs ();
+	//DWORD AddTab (ScnEditorTab *newTab);
+	//void DelCustomTabs ();
 	void ShowTab (DWORD t);
 	bool SaveScenario (HWND hDlg);
-	INT_PTR MsgProc (HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
+	//INT_PTR MsgProc (HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
-	HWND DlgHandle () const { return hDlg; }
-	HINSTANCE InstHandle () const { return hInst; }
+	//HWND DlgHandle () const { return hDlg; }
+	//HINSTANCE InstHandle () const { return hInst; }
 
 	void ScanCBodyList (HWND hDlg, int hList, OBJHANDLE hSelect);
 	void ScanPadList (HWND hDlg, int hList, OBJHANDLE hBase);
 	void SetBasePosition (HWND hDlg);
 	void SelectBase (HWND hDlg, int hList, OBJHANDLE hRef, OBJHANDLE hBase);
 	bool CreateVessel (char *name, char *classname);
-	void VesselDeleted (OBJHANDLE hV);
-	void Pause (bool pause);
 	char *ExtractVesselName (char *str);
 	HINSTANCE LoadVesselLibrary (const VESSEL *vessel);
 
@@ -57,17 +92,16 @@ public:
 	int treeicon_idx[4]; // tree view icons
 
 private:
-	DWORD dwCmd;         // custom command handle
 	DWORD nTab;          // total number of main dialog tabs
 	DWORD nTab0;         // number of standard tabs (excluding custom)
 	ScnEditorTab **pTab; // array of tab instances
 	ScnEditorTab *cTab;  // currently displayed tab
 	HWND  hDlg;          // main dialog handle
 	HINSTANCE hInst;     // module instance handle
-	HINSTANCE hEdLib;    // vessel editor library instance handle
+	*/
 };
 
-
+/*
 // ==============================================================
 // class ScnEditorTab
 // ==============================================================
@@ -386,5 +420,5 @@ public:
 private:
 	DLGPROC usrProc;
 };
-
+*/
 #endif // !__SCNEDITOR_H
