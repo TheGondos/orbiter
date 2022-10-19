@@ -300,29 +300,79 @@ void ScnEditor::ReloadVessel()
 	aVel.z*=DEG;
 }
 
-void ScnEditor::DrawCBodies() {
+bool ScnEditor::DrawCBodies(std::string &ref, const char *name) {
+	bool ret = false;
 	std::vector<std::string> bodies;
 	for (int n = 0; n < oapiGetGbodyCount(); n++) {
 		char cbuf[256];
 		oapiGetObjectName (oapiGetGbodyByIndex (n), cbuf, 256);
 		bodies.push_back(cbuf);
 	}
+	if(bodies.empty()) return false;
 	std::sort(bodies.begin(), bodies.end());
+	if(ref.empty()) ref = bodies[0];
 
-	if(ImGui::BeginCombo("Orbit reference", oe.m_selectedReference.c_str())) {
+	if(ImGui::BeginCombo(name, ref.c_str())) {
 		for (auto &body: bodies) {
-			if (ImGui::Selectable(body.c_str(), body == oe.m_selectedReference)) {
-				oe.m_selectedReference = body;
+			if (ImGui::Selectable(body.c_str(), body == ref)) {
+				ref = body;
+				ret = true;
 			}
 		}
         ImGui::EndCombo();
 	}
+	return ret;
 }
+
+bool ScnEditor::DrawBases(OBJHANDLE hPlanet, std::string &ref, const char *name) {
+	bool ret = false;
+	std::vector<std::string> bases;
+	for (int n = 0; n < oapiGetBaseCount(hPlanet); n++) {
+		char cbuf[256];
+		oapiGetObjectName (oapiGetBaseByIndex (hPlanet, n), cbuf, 256);
+		bases.push_back(cbuf);
+	}
+	if(bases.empty()) return false;
+	std::sort(bases.begin(), bases.end());
+	if(ref.empty()) ref = bases[0];
+
+	if(ImGui::BeginCombo(name, ref.c_str())) {
+		for (auto &body: bases) {
+			if (ImGui::Selectable(body.c_str(), body == ref)) {
+				ref = body;
+				ret = true;
+			}
+		}
+        ImGui::EndCombo();
+	}
+	return ret;
+}
+
+bool ScnEditor::DrawPads(OBJHANDLE hBase, std::string &ref) {
+	bool ret = false;
+	int n, npad = oapiGetBasePadCount (hBase);
+	if(ref.empty()) ref = "1";
+	if(npad) {
+		if(ImGui::BeginCombo("Bases", ref.c_str())) {
+			char cbuf[16];
+			for (n = 1; n <= npad; n++) {
+				sprintf (cbuf, "%d", n);
+				if (ImGui::Selectable(cbuf, cbuf == ref)) {
+					ref = cbuf;
+					ret = true;
+				}
+			}
+			ImGui::EndCombo();
+		}
+	}
+	return ret;
+}
+
 
 void ScnEditor::DrawOrbitalElements()
 {
 	if(!m_currentVessel) return;
-	DrawCBodies();
+	DrawCBodies(oe.m_selectedReference, "Orbit reference");
 	ImGui::PushItemWidth(100);
 	static int smaUnit;
 	VESSEL *vessel = oapiGetVesselInterface (m_currentVessel);
@@ -560,9 +610,9 @@ void ScnEditor::DrawAngularVelocity()
 {
 	if(!m_currentVessel) return;
 	ImGui::TextUnformatted("Angular velocity");
-	ImGui::InputDouble("Pitch", &aVel.x, 0.0, 0.0, "%g");
-	ImGui::InputDouble("Yaw", &aVel.y, 0.0, 0.0, "%g");
-	ImGui::InputDouble("Bank", &aVel.z, 0.0, 0.0, "%g");
+	ImGui::InputDouble("Pitch (°/s)", &aVel.x, 0.0, 0.0, "%g");
+	ImGui::InputDouble("Yaw (°/s)", &aVel.y, 0.0, 0.0, "%g");
+	ImGui::InputDouble("Bank (°/s)", &aVel.z, 0.0, 0.0, "%g");
 	if(ImGui::Button("Apply")) {
 		VESSEL *vessel = oapiGetVesselInterface (m_currentVessel);
 		VECTOR3 avel = aVel;
@@ -571,11 +621,64 @@ void ScnEditor::DrawAngularVelocity()
 		avel.z*=RAD;
 		vessel->SetAngularVel (avel);
 	}
-
+	ImGui::SameLine();
+	if(ImGui::Button("Kill rotation")) {
+		VECTOR3 avel{0,0,0};
+		VESSEL *vessel = oapiGetVesselInterface (m_currentVessel);
+		vessel->SetAngularVel (avel);
+	}
 }
 void ScnEditor::DrawLocation()
 {
+	if(DrawCBodies(loc.planet, "Celestial body")) {
+		loc.base.clear();
+	}
+	ImGui::Separator();
+	ImGui::TextUnformatted("Base");
+	if(!loc.planet.empty()) {
+		OBJHANDLE hPlanet = oapiGetObjectByName(loc.planet.c_str());
+		if(DrawBases(hPlanet, loc.base, "Surface base")) {
+			loc.pad.clear();
+		}
+		if(!loc.base.empty()) {
+			OBJHANDLE hBase = oapiGetBaseByName(hPlanet, loc.base.c_str());
+			if(hBase) {
+				DrawPads(hBase, loc.pad);
+			}
+		}
+	}
+	if(ImGui::Button("Set base location")) {
+		if(!loc.base.empty()) {
+			OBJHANDLE hPlanet = oapiGetObjectByName(loc.planet.c_str());
+			OBJHANDLE hBase = oapiGetBaseByName(hPlanet, loc.base.c_str());
+			if (!loc.pad.empty())
+				oapiGetBasePadEquPos (hBase, std::stoi(loc.pad)-1, &loc.longitude, &loc.latitude);
+			else
+				oapiGetBaseEquPos (hBase, &loc.longitude, &loc.latitude);
+			loc.longitude *= DEG;
+			loc.latitude *= DEG;
+		}
+	}
+	ImGui::InputDouble("Longitude", &loc.longitude, 0.0, 0.0, "%f");
+	ImGui::InputDouble("Latitude", &loc.latitude, 0.0, 0.0, "%f");
+	ImGui::InputDouble("Heading (°)", &loc.heading, 0.0, 0.0, "%f");
+	if(ImGui::Button("Apply")) {
+		char cbuf[256];
+		VESSEL *vessel = oapiGetVesselInterface (m_currentVessel);
+		OBJHANDLE hRef = oapiGetGbodyByName (loc.planet.c_str());
+		if (!hRef) return;
+		VESSELSTATUS2 vs;
+		memset (&vs, 0, sizeof(vs));
+		vs.version = 2;
+		vs.rbody = hRef;
+		vs.status = 1; // landed
+		vs.arot.x = 10; // use default touchdown orientation
+		vs.surf_lng = loc.longitude * RAD;
+		vs.surf_lat = loc.latitude * RAD;
+		vs.surf_hdg = loc.heading * RAD;
+		vessel->DefSetStateEx (&vs);
 
+	}
 }
 void ScnEditor::DrawDocking()
 {
@@ -723,8 +826,6 @@ void ScnEditor::InitDialog (HWND _hDlg)
 	AddTab (new EditorTab_Save (this));
 	AddTab (new EditorTab_Edit (this));
 	AddTab (new EditorTab_Landed (this));
-	AddTab (new EditorTab_Orientation (this));
-	AddTab (new EditorTab_AngularVel (this));
 	AddTab (new EditorTab_Propellant (this));
 	AddTab (new EditorTab_Docking (this));
 	AddTab (new EditorTab_Date (this));
@@ -2364,19 +2465,6 @@ void EditorTab_Orientation::Apply ()
 	vessel->SetGlobalOrientation (arot);
 }
 
-void EditorTab_Orientation::ApplyAngularVel ()
-{
-	int i;
-	char cbuf[256];
-	VESSEL *vessel = oapiGetVesselInterface (ed->hVessel);
-	VECTOR3 avel;
-	for (i = 0; i < 3; i++) {
-		GetWindowText (GetDlgItem (hTab, IDC_EDIT4+i), cbuf, 256);
-		sscanf (cbuf, "%lf", &avel.data[i]);
-		avel.data[i] *= RAD;
-	}
-	vessel->SetAngularVel (avel);
-}
 
 void EditorTab_Orientation::Rotate (int axis, double da)
 {

@@ -48,8 +48,10 @@ public:
 	void DrawDate();
 	void ReloadVessel();
 	void ApplyOrbitalElements();
-	void DrawCBodies();
+	bool DrawCBodies(std::string &ref, const char *name);
+	bool DrawBases(OBJHANDLE hPlanet, std::string &ref, const char *name);
 	void AddCbodyNode(const CelestialBody *cbody);
+	bool DrawPads(OBJHANDLE hBase, std::string &ref);
 
 	struct OrbitalElements {
 		ELEMENTS el;       // orbital elements of edited vessel
@@ -70,6 +72,16 @@ public:
 	VectorState vecState;
 	VECTOR3 aRot;
 	VECTOR3 aVel;
+
+	struct Location {
+		std::string planet;
+		std::string base;
+		std::string pad;
+		double longitude;
+		double latitude;
+		double heading;
+	};
+	Location loc;
 
 	int dwCmd;         // custom command handle
 	OBJHANDLE m_currentVessel;
