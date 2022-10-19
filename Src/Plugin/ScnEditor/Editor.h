@@ -68,6 +68,7 @@ public:
 		int crd;
 	};
 	VectorState vecState;
+	VECTOR3 aRot;
 
 	int dwCmd;         // custom command handle
 	OBJHANDLE m_currentVessel;
@@ -265,50 +266,6 @@ private:
 	double mjd;
 	struct tm date;
 	bool bIgnore;
-};
-
-
-// ==============================================================
-// class EditorTab_Elements
-// ==============================================================
-
-class EditorTab_Elements: public ScnEditorTab {
-public:
-	EditorTab_Elements (ScnEditor *editor);
-	void InitTab ();
-	char *HelpTopic ();
-	INT_PTR TabProc (HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
-	static INT_PTR CALLBACK DlgProc (HWND, UINT, WPARAM, LPARAM);
-
-protected:
-	void Apply ();
-	void Refresh ();
-	void RefreshSecondaryParams (const ELEMENTS &el, const ORBITPARAM &prm);
-
-private:
-	ELEMENTS el;       // orbital elements of edited vessel
-	ORBITPARAM prm;    // additional orbital parameters
-	double elmjd;      // element epoch
-};
-
-
-// ==============================================================
-// class EditorTab_Statevec
-// ==============================================================
-
-class EditorTab_Statevec: public ScnEditorTab {
-public:
-	EditorTab_Statevec (ScnEditor *editor);
-	void InitTab ();
-	char *HelpTopic ();
-	INT_PTR TabProc (HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
-	static INT_PTR CALLBACK DlgProc (HWND, UINT, WPARAM, LPARAM);
-
-protected:
-	void ScanVesselList ();
-	void DlgLabels ();
-	void Refresh (OBJHANDLE hV = NULL);
-	void Apply ();
 };
 
 

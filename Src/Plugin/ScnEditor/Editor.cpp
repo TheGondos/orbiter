@@ -52,6 +52,7 @@ ScnEditor::ScnEditor (): GUIElement("Scenario Editor", "ScnEditor")
 	vecState.frm = 0;
 	vecState.crd = 0;
 	memset(m_newVesselName, 0 , sizeof(m_newVesselName));
+	aRot = {0,0,0};
 }
 
 ScnEditor::~ScnEditor ()
@@ -287,6 +288,10 @@ void ScnEditor::ReloadVessel()
 
 	oapiGetPlanetObliquityMatrix (hRef, &vecState.rotFixed);
 	oapiGetRotationMatrix (hRef, &vecState.rotRotating);
+	vessel->GetGlobalOrientation (aRot);
+	aRot.x*=DEG;
+	aRot.y*=DEG;
+	aRot.z*=DEG;
 }
 
 void ScnEditor::DrawCBodies() {
@@ -494,7 +499,7 @@ void ScnEditor::DrawStateVectors()
 		vessel->DefSetState (&vs);
 	}
 	ImGui::SameLine();
-	if(ImGui::Button("Copy...")) {
+	if(ImGui::Button("Set from...")) {
 		ImGui::OpenPopup("CopyVesselSV");
 	}
 	if (ImGui::BeginPopup("CopyVesselSV"))
@@ -531,7 +536,18 @@ void ScnEditor::DrawStateVectors()
 }
 void ScnEditor::DrawOrientation()
 {
-
+	if(!m_currentVessel) return;
+	ImGui::TextUnformatted("Euler angles");
+	ImGui::InputDouble("alpha", &aRot.x, 0.0, 0.0, "%g");
+	ImGui::InputDouble("beta", &aRot.y, 0.0, 0.0, "%g");
+	ImGui::InputDouble("gamma", &aRot.z, 0.0, 0.0, "%g");
+	if(ImGui::Button("Apply")) {
+		VESSEL *vessel = oapiGetVesselInterface (m_currentVessel);
+		aRot.x*=RAD;
+		aRot.y*=RAD;
+		aRot.z*=RAD;
+		vessel->SetGlobalOrientation (aRot);
+	}
 }
 void ScnEditor::DrawAngularVelocity()
 {
