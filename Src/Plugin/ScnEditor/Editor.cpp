@@ -48,7 +48,9 @@ ScnEditor::ScnEditor (): GUIElement("Scenario Editor", "ScnEditor")
 
 	m_preview = nullptr;
 	m_currentVessel = nullptr;
-	frm = FRAME_ECL;
+	oe.frm = FRAME_ECL;
+	vecState.frm = 0;
+	vecState.crd = 0;
 	memset(m_newVesselName, 0 , sizeof(m_newVesselName));
 }
 
@@ -218,21 +220,23 @@ void ScnEditor::VesselCreatePopup() {
 	}
 }
 
-void ScnEditor::DrawShipList()
+bool ScnEditor::DrawShipList(OBJHANDLE &selected)
 {
+	bool ret = false;
 	if (ImGui::TreeNodeEx("Vessels", ImGuiTreeNodeFlags_DefaultOpen)) {
 		for (int i = 0; i < oapiGetVesselCount(); i++) {
 			OBJHANDLE hV = oapiGetVesselByIndex (i);
 			VESSEL *vessel = oapiGetVesselInterface (hV);
 			const char *name = vessel->GetName();
-			const bool is_selected = m_currentVessel == hV;
+			const bool is_selected = selected == hV;
 			
 			ImGuiTreeNodeFlags node_flags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
 			if(is_selected) node_flags |= ImGuiTreeNodeFlags_Selected;
 			ImGui::TreeNodeEx(name, node_flags | ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen);
 			if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) {
-				m_currentVessel = hV;
+				selected = hV;
 				ReloadVessel();
+				ret = true;
 				//Don't do this for now because it can create lots of controller profiles :(
 				//oapiSetFocusObject (m_currentVessel);
 				//oapiCameraAttach (m_currentVessel, 1);
@@ -240,6 +244,7 @@ void ScnEditor::DrawShipList()
 		}
 		ImGui::TreePop();
 	}
+	return ret;
 }
 
 void ScnEditor::DrawTabs ()
@@ -274,8 +279,14 @@ void ScnEditor::ReloadVessel()
 
 	char cbuf[64];
 	oapiGetObjectName (hRef, cbuf, 64);
-	m_selectedReference = cbuf;
-	vessel->GetElements(hRef, el, &prm, elmjd, frm);
+	oe.m_selectedReference = cbuf;
+	vessel->GetElements(hRef, oe.el, &oe.prm, oe.elmjd, oe.frm);
+	
+	oapiGetRelativePos (m_currentVessel, hRef, &vecState.pos);
+	oapiGetRelativeVel (m_currentVessel, hRef, &vecState.vel);
+
+	oapiGetPlanetObliquityMatrix (hRef, &vecState.rotFixed);
+	oapiGetRotationMatrix (hRef, &vecState.rotRotating);
 }
 
 void ScnEditor::DrawCBodies() {
@@ -287,10 +298,10 @@ void ScnEditor::DrawCBodies() {
 	}
 	std::sort(bodies.begin(), bodies.end());
 
-	if(ImGui::BeginCombo("Orbit reference", m_selectedReference.c_str())) {
+	if(ImGui::BeginCombo("Orbit reference", oe.m_selectedReference.c_str())) {
 		for (auto &body: bodies) {
-			if (ImGui::Selectable(body.c_str(), body == m_selectedReference)) {
-				m_selectedReference = body;
+			if (ImGui::Selectable(body.c_str(), body == oe.m_selectedReference)) {
+				oe.m_selectedReference = body;
 			}
 		}
         ImGui::EndCombo();
@@ -306,60 +317,56 @@ void ScnEditor::DrawOrbitalElements()
 	VESSEL *vessel = oapiGetVesselInterface (m_currentVessel);
 	OBJHANDLE hRef = vessel->GetGravityRef();
 	lengthscale[3] = 1.0/oapiGetSize (hRef);
-	el.a*=lengthscale[smaUnit];
-	ImGui::InputDouble("Semi-major Axis [SMa]", &el.a, 0.0, 0.0, "%g");
-	el.a/=lengthscale[smaUnit];
+	oe.el.a*=lengthscale[smaUnit];
+	ImGui::InputDouble("Semi-major Axis [SMa]", &oe.el.a, 0.0, 0.0, "%g");
+	oe.el.a/=lengthscale[smaUnit];
 	ImGui::RadioButton("m", &smaUnit,0); ImGui::SameLine();
 	ImGui::RadioButton("km", &smaUnit,1); ImGui::SameLine();
 	ImGui::RadioButton("AU", &smaUnit,2); ImGui::SameLine();
 	ImGui::RadioButton("Planet radius", &smaUnit,3);
-	ImGui::InputDouble("Eccentricity [Ecc]", &el.e, 0.0, 0.0, "%g");
-	el.i*=DEG;
-	ImGui::InputDouble("Inclination [Inc]°", &el.i, 0.0, 0.0, "%g");
-	el.i/=DEG;
-	el.theta*=DEG;
-	ImGui::InputDouble("Longitude of ascending node [LAN]°", &el.theta, 0.0, 0.0, "%g");
-	el.theta/=DEG;
-	el.omegab*=DEG;
-	ImGui::InputDouble("Longitude of periapsis [LPe]°", &el.omegab, 0.0, 0.0, "%g");
-	el.omegab/=DEG;
-	el.L*=DEG;
-	ImGui::InputDouble("Mean longitude at epoch [eps]°", &el.L, 0.0, 0.0, "%g");
-	el.L/=DEG;
-	ImGui::InputDouble("MJD", &elmjd, 0.0, 0.0, "%g");
+	ImGui::InputDouble("Eccentricity [Ecc]", &oe.el.e, 0.0, 0.0, "%g");
+	oe.el.i*=DEG;
+	ImGui::InputDouble("Inclination [Inc]°", &oe.el.i, 0.0, 0.0, "%g");
+	oe.el.i/=DEG;
+	oe.el.theta*=DEG;
+	ImGui::InputDouble("Longitude of ascending node [LAN]°", &oe.el.theta, 0.0, 0.0, "%g");
+	oe.el.theta/=DEG;
+	oe.el.omegab*=DEG;
+	ImGui::InputDouble("Longitude of periapsis [LPe]°", &oe.el.omegab, 0.0, 0.0, "%g");
+	oe.el.omegab/=DEG;
+	oe.el.L*=DEG;
+	ImGui::InputDouble("Mean longitude at epoch [eps]°", &oe.el.L, 0.0, 0.0, "%g");
+	oe.el.L/=DEG;
+	ImGui::InputDouble("MJD", &oe.elmjd, 0.0, 0.0, "%g");
 	ImGui::PopItemWidth();
 
-	bool frmChanged = ImGui::RadioButton("FRAME_ECL", &frm, 0); ImGui::SameLine();
-	frmChanged     |= ImGui::RadioButton("FRAME_EQU", &frm, 1);
+	bool frmChanged = ImGui::RadioButton("FRAME_ECL", &oe.frm, 0); ImGui::SameLine();
+	frmChanged     |= ImGui::RadioButton("FRAME_EQU", &oe.frm, 1);
 
 	if(frmChanged) ReloadVessel();
 
-/* 1.0/oapiGetSize (hRef) */
+	bool closed = (oe.el.e < 1.0); // closed orbit?
 
-	bool closed = (el.e < 1.0); // closed orbit?
-
-	ImGui::Text ("Periapsis : %g m", prm.PeD);
-	ImGui::Text ("PeT : %g s", prm.PeT);
-	ImGui::Text ("MnA : %0.3f °", prm.MnA*DEG);
-	ImGui::Text ("TrA : %0.3f °", prm.TrA*DEG);
-	ImGui::Text ("MnL : %0.3f °", prm.MnL*DEG);
-	ImGui::Text ("TrL : %0.3f °", prm.TrL*DEG);
+	ImGui::Text ("Periapsis : %g m", oe.prm.PeD);
+	ImGui::Text ("PeT : %g s", oe.prm.PeT);
+	ImGui::Text ("MnA : %0.3f °", oe.prm.MnA*DEG);
+	ImGui::Text ("TrA : %0.3f °", oe.prm.TrA*DEG);
+	ImGui::Text ("MnL : %0.3f °", oe.prm.MnL*DEG);
+	ImGui::Text ("TrL : %0.3f °", oe.prm.TrL*DEG);
 	if (closed) {
-		ImGui::Text ("Period : %g s", prm.T);
-		ImGui::Text ("Apoapsis : %g m", prm.ApD);
-		ImGui::Text ("ApT : %g s", prm.ApT);
+		ImGui::Text ("Period : %g s", oe.prm.T);
+		ImGui::Text ("Apoapsis : %g m", oe.prm.ApD);
+		ImGui::Text ("ApT : %g s", oe.prm.ApT);
 	}
 
 	if(ImGui::Button("Apply")) {
-		OBJHANDLE hRef = oapiGetGbodyByName (m_selectedReference.c_str());
+		OBJHANDLE hRef = oapiGetGbodyByName (oe.m_selectedReference.c_str());
 		if (hRef) {
-			el.a = fabs (el.a);
-			if (el.e > 1.0) el.a = -el.a;
+			oe.el.a = fabs (oe.el.a);
+			if (oe.el.e > 1.0) oe.el.a = -oe.el.a;
 			VESSEL *vessel = oapiGetVesselInterface (m_currentVessel);
 
-			if (vessel->SetElements (hRef, el, &prm, elmjd, frm)) {
-				//RefreshSecondaryParams (el, prm);
-			} else {
+			if (!vessel->SetElements (hRef, oe.el, &oe.prm, oe.elmjd, oe.frm)) {
 				oapiAddNotification(OAPINOTIF_ERROR, "Failed to set orbital elements", "Trajectory is inside the body");
 			}
 		}
@@ -367,7 +374,160 @@ void ScnEditor::DrawOrbitalElements()
 }
 void ScnEditor::DrawStateVectors()
 {
+	if(!m_currentVessel) return;
+	ImGui::Text("Frame");
+	ImGui::RadioButton("Ecliptic", &vecState.frm ,0);
+	ImGui::SameLine();
+	ImGui::RadioButton("Ref. equator (fixed)", &vecState.frm ,1);
+	ImGui::SameLine();
+	ImGui::RadioButton("Ref. equator (rotating)", &vecState.frm ,2);
+	ImGui::Separator();
 
+	ImGui::Text("Coordinates");
+	ImGui::RadioButton("Cartesian", &vecState.crd, 0);
+	ImGui::SameLine();
+	ImGui::RadioButton("Polar", &vecState.crd, 1);
+	ImGui::Separator();
+
+	VESSEL *vessel = oapiGetVesselInterface (m_currentVessel);
+	OBJHANDLE hRef = vessel->GetGravityRef();
+
+	VECTOR3 pos = vecState.pos, vel = vecState.vel;
+	if (vecState.frm) {
+		MATRIX3 rot;
+		if (vecState.frm == 1) rot = vecState.rotFixed;
+		else          rot = vecState.rotRotating;
+		pos = tmul (rot, pos);
+		vel = tmul (rot, vel);
+	}
+	// map cartesian -> polar coordinates
+	if (vecState.crd) {
+		Crt2Pol (pos, vel);
+		pos.data[1] *= DEG; pos.data[2] *= DEG;
+		vel.data[1] *= DEG; vel.data[2] *= DEG;
+	}
+	// in the rotating reference frame we need to subtract the angular
+	// velocity of the planet
+	if (vecState.frm == 2) {
+		double T = oapiGetPlanetPeriod (hRef);
+		if (vecState.crd) {
+			vel.data[1] -= 360.0/T;
+		} else { // map back to cartesian
+			double r   = std::hypot (pos.x, pos.z);
+			double phi = atan2 (pos.z, pos.x);
+			double v   = 2.0*PI*r/T;
+			vel.x     += v*sin(phi);
+			vel.z     -= v*cos(phi);
+		}
+	}
+	if(vecState.crd) {
+		//Polar
+		ImGui::InputDouble("Radius (m)", &pos.x, 0.0, 0.0, "%g");
+		ImGui::InputDouble("Longitude (°)", &pos.y, 0.0, 0.0, "%g");
+		ImGui::InputDouble("Latitude (°)", &pos.z, 0.0, 0.0, "%g");
+
+		ImGui::InputDouble("dRadius/dt (m/s)", &vel.x, 0.0, 0.0, "%g");
+		ImGui::InputDouble("dLongitude/dt (°/s)", &vel.y, 0.0, 0.0, "%g");
+		ImGui::InputDouble("dLatitude/dt (°/s)", &vel.z, 0.0, 0.0, "%g");
+
+	} else {
+		//Cartesian
+		ImGui::InputDouble("x (m)", &pos.x, 0.0, 0.0, "%g");
+		ImGui::InputDouble("y (m)", &pos.y, 0.0, 0.0, "%g");
+		ImGui::InputDouble("z (m)", &pos.z, 0.0, 0.0, "%g");
+
+		ImGui::InputDouble("dx/dt (m/s)", &vel.x, 0.0, 0.0, "%g");
+		ImGui::InputDouble("dy/dt (m/s)", &vel.y, 0.0, 0.0, "%g");
+		ImGui::InputDouble("dz/dt (m/s)", &vel.z, 0.0, 0.0, "%g");
+	}
+
+	// in the rotating reference frame we need to add the angular
+	// velocity of the planet
+	MATRIX3 rot;
+	VECTOR3 refpos, refvel;
+	VESSELSTATUS vs;
+	if (vecState.frm == 2) {
+		double T = oapiGetPlanetPeriod (hRef);
+		if (vecState.crd) {
+			vel.data[1] += 360.0/T;
+		} else { // map back to cartesian
+			double r   = std::hypot (pos.x, pos.z);
+			double phi = atan2 (pos.z, pos.x);
+			double v   = 2.0*PI*r/T;
+			vel.x     -= v*sin(phi);
+			vel.z     += v*cos(phi);
+		}
+	}
+	// map polar -> cartesian coordinates
+	if (vecState.crd) {
+		pos.data[1] *= RAD, pos.data[2] *= RAD;
+		vel.data[1] *= RAD, vel.data[2] *= RAD;
+		Pol2Crt (pos, vel);
+	}
+	// map from celestial/equatorial frame of reference
+	if (vecState.frm) {
+		if (vecState.frm == 1) rot = vecState.rotFixed;
+		else          rot = vecState.rotRotating;
+		pos = mul (rot, pos);
+		vel = mul (rot, vel);
+	}
+	vecState.pos = pos;
+	vecState.vel = vel;
+	if(ImGui::Button("Apply")) {
+		// change reference in case the selected reference object is
+		// not the same as the VESSELSTATUS reference
+		vessel->GetStatus (vs);
+		oapiGetGlobalPos (hRef, &refpos);     pos += refpos;
+		oapiGetGlobalVel (hRef, &refvel);     vel += refvel;
+		oapiGetGlobalPos (vs.rbody, &refpos); pos -= refpos;
+		oapiGetGlobalVel (vs.rbody, &refvel); vel -= refvel;
+		if (vs.status != 0) { // enforce freeflight mode
+			vs.status = 0;
+			vessel->GetRotationMatrix (rot);
+			vs.arot.x = atan2(rot.m23, rot.m33);
+			vs.arot.y = -asin(rot.m13);
+			vs.arot.z = atan2(rot.m12, rot.m11);
+			vessel->GetAngularVel(vs.vrot);
+		}
+		veccpy (vs.rpos, pos);
+		veccpy (vs.rvel, vel);
+		vessel->DefSetState (&vs);
+	}
+	ImGui::SameLine();
+	if(ImGui::Button("Copy...")) {
+		ImGui::OpenPopup("CopyVesselSV");
+	}
+	if (ImGui::BeginPopup("CopyVesselSV"))
+	{
+		OBJHANDLE h;
+		if(DrawShipList(h)) {
+			VESSELSTATUS2 vsSrc;
+			VESSELSTATUS2 vsDst;
+			memset(&vsDst, 0, sizeof(vsDst));
+			memset(&vsSrc, 0, sizeof(vsSrc));
+			vsSrc.version = 2;
+			vsDst.version = 2;
+			VESSEL *vesselSrc = oapiGetVesselInterface (h);
+			vesselSrc->GetStatusEx(&vsSrc);
+			vessel->GetStatusEx(&vsDst);
+
+			vsDst.arot = vsSrc.arot;
+			vsDst.rbody = vsSrc.rbody;
+			vsDst.rpos = vsSrc.rpos;
+			vsDst.rvel = vsSrc.rvel;
+			vsDst.status = vsSrc.status;
+			vsDst.surf_hdg = vsSrc.surf_hdg;
+			vsDst.surf_lat = vsSrc.surf_lat;
+			vsDst.surf_lng = vsSrc.surf_lng;
+			vsDst.vrot = vsSrc.vrot;
+
+			vessel->DefSetStateEx (&vsDst);
+			ReloadVessel();
+
+			ImGui::CloseCurrentPopup();
+		}
+		ImGui::EndPopup();
+	}
 }
 void ScnEditor::DrawOrientation()
 {
@@ -430,7 +590,7 @@ void ScnEditor::Show ()
 		}
 		ImGui::Separator();
 
-		DrawShipList();
+		DrawShipList(m_currentVessel);
 	    ImGui::EndChild();
 		ImGui::SameLine();
 	    ImGui::BeginChild("ChildR", ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y), true);
@@ -526,8 +686,6 @@ void ScnEditor::InitDialog (HWND _hDlg)
 	AddTab (new EditorTab_New (this));
 	AddTab (new EditorTab_Save (this));
 	AddTab (new EditorTab_Edit (this));
-	AddTab (new EditorTab_Elements (this));
-	AddTab (new EditorTab_Statevec (this));
 	AddTab (new EditorTab_Landed (this));
 	AddTab (new EditorTab_Orientation (this));
 	AddTab (new EditorTab_AngularVel (this));
@@ -659,7 +817,7 @@ void OpenDialog (void *context)
 {
 	((ScnEditor*)context)->OpenDialog();
 }
-/*
+
 void Crt2Pol (VECTOR3 &pos, VECTOR3 &vel)
 {
 	// position in polar coordinates
@@ -698,7 +856,7 @@ void Pol2Crt (VECTOR3 &pos, VECTOR3 &vel)
 	vel.data[1] = dydt;
 	vel.data[2] = dzdt;
 }
-
+/*
 INT_PTR CALLBACK EditorProc (HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	return g_editor->MsgProc (hDlg, uMsg, wParam, lParam);
@@ -1101,39 +1259,6 @@ bool EditorTab_New::UpdateVesselBmp ()
 	}
 	DrawVesselBmp();
 	return (hVesselBmp != NULL);
-}
-
-void EditorTab_New::DrawVesselBmp ()
-{
-	HWND hImgWnd = GetDlgItem (hTab, IDC_VESSELBMP);
-	InvalidateRect (hImgWnd, NULL, TRUE);
-	UpdateWindow (hImgWnd);
-	if (hVesselBmp) {
-	    BITMAP bm;
-		RECT r;
-		int dx, dy, h;
-		HDC hDC = GetDC (hImgWnd);
-		HDC hBmpDC = CreateCompatibleDC (hDC);
-		SelectObject (hBmpDC, hVesselBmp);
-		GetClientRect (hImgWnd, &r);
-	    GetObject(hVesselBmp, sizeof(bm), &bm);
-		dx = bm.bmWidth, dy = bm.bmHeight;
-		h = min (imghmax, (r.right*dy)/dx);
-		SetWindowPos (hImgWnd, NULL, 0, 0, r.right, h, SWP_NOMOVE|SWP_NOZORDER);
-		StretchBlt (hDC, 0, 0, r.right, h, hBmpDC, 0, 0, dx, dy, SRCCOPY);
-		DeleteDC (hBmpDC);
-		ReleaseDC (hImgWnd, hDC);
-		ShowWindow (hImgWnd, SW_SHOW);
-	} else {
-		ShowWindow (hImgWnd, SW_HIDE);
-	}
-}
-
-INT_PTR EditorTab_New::DlgProc (HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
-{
-	EditorTab_New *pTab = (EditorTab_New*)TabPointer (hDlg, uMsg, wParam, lParam);
-	if (!pTab) return FALSE;
-	else return pTab->TabProc (hDlg, uMsg, wParam, lParam);
 }
 
 // ==============================================================
@@ -1598,15 +1723,6 @@ INT_PTR EditorTab_Edit::TabProc (HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 	switch (uMsg) {
 	case WM_COMMAND:
 		switch (LOWORD (wParam)) {
-		case IDC_BACK:
-			SwitchTab (0);
-			return TRUE;
-		case IDC_ELEMENTS:
-			SwitchTab (4);
-			return TRUE;
-		case IDC_STATEVEC:
-			SwitchTab (5);
-			return TRUE;
 		case IDC_GROUND:
 			SwitchTab (6);
 			return TRUE;
@@ -1651,330 +1767,6 @@ INT_PTR EditorTab_Edit::TabProc (HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 INT_PTR EditorTab_Edit::DlgProc (HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	EditorTab_Edit *pTab = (EditorTab_Edit*)TabPointer (hDlg, uMsg, wParam, lParam);
-	if (!pTab) return FALSE;
-	else return pTab->TabProc (hDlg, uMsg, wParam, lParam);
-}
-
-
-// ==============================================================
-// EditorTab_Elements class definition
-// ==============================================================
-
-EditorTab_Elements::EditorTab_Elements (ScnEditor *editor) : ScnEditorTab (editor)
-{
-	CreateTab (IDD_TAB_EDIT2, EditorTab_Elements::DlgProc);
-	elmjd = oapiGetSimMJD(); // initial reference date
-}
-
-void EditorTab_Elements::InitTab ()
-{
-	VESSEL *vessel = oapiGetVesselInterface (ed->hVessel);
-	OBJHANDLE hRef = vessel->GetGravityRef();
-	SendDlgItemMessage (hTab, IDC_COMBO1, CB_RESETCONTENT, 0, 0);
-	SendDlgItemMessage (hTab, IDC_COMBO1, CB_ADDSTRING, 0, (LPARAM)"m");
-	SendDlgItemMessage (hTab, IDC_COMBO1, CB_ADDSTRING, 0, (LPARAM)"km");
-	SendDlgItemMessage (hTab, IDC_COMBO1, CB_ADDSTRING, 0, (LPARAM)"AU");
-	SendDlgItemMessage (hTab, IDC_COMBO1, CB_ADDSTRING, 0, (LPARAM)"planet rad.");
-	SendDlgItemMessage (hTab, IDC_COMBO1, CB_SETCURSEL, 0, 0);
-
-	SendDlgItemMessage (hTab, IDC_COMBO2, CB_RESETCONTENT, 0, 0);
-	SendDlgItemMessage (hTab, IDC_COMBO2, CB_ADDSTRING, 0, (LPARAM)"deg");
-	SendDlgItemMessage (hTab, IDC_COMBO2, CB_ADDSTRING, 0, (LPARAM)"rad");
-	SendDlgItemMessage (hTab, IDC_COMBO2, CB_SETCURSEL, 0, 0);
-
-	SendDlgItemMessage (hTab, IDC_COMBO3, CB_RESETCONTENT, 0, 0);
-	SendDlgItemMessage (hTab, IDC_COMBO3, CB_ADDSTRING, 0, (LPARAM)"deg");
-	SendDlgItemMessage (hTab, IDC_COMBO3, CB_ADDSTRING, 0, (LPARAM)"rad");
-	SendDlgItemMessage (hTab, IDC_COMBO3, CB_SETCURSEL, 0, 0);
-
-	SendDlgItemMessage (hTab, IDC_COMBO4, CB_RESETCONTENT, 0, 0);
-	SendDlgItemMessage (hTab, IDC_COMBO4, CB_ADDSTRING, 0, (LPARAM)"deg");
-	SendDlgItemMessage (hTab, IDC_COMBO4, CB_ADDSTRING, 0, (LPARAM)"rad");
-	SendDlgItemMessage (hTab, IDC_COMBO4, CB_SETCURSEL, 0, 0);
-
-	SendDlgItemMessage (hTab, IDC_COMBO5, CB_RESETCONTENT, 0, 0);
-	SendDlgItemMessage (hTab, IDC_COMBO5, CB_ADDSTRING, 0, (LPARAM)"deg");
-	SendDlgItemMessage (hTab, IDC_COMBO5, CB_ADDSTRING, 0, (LPARAM)"rad");
-	SendDlgItemMessage (hTab, IDC_COMBO5, CB_SETCURSEL, 0, 0);
-
-	SendDlgItemMessage (hTab, IDC_COMBO6, CB_RESETCONTENT, 0, 0);
-	SendDlgItemMessage (hTab, IDC_COMBO6, CB_ADDSTRING, 0, (LPARAM)"current");
-	SendDlgItemMessage (hTab, IDC_COMBO6, CB_ADDSTRING, 0, (LPARAM)"MJD");
-	SendDlgItemMessage (hTab, IDC_COMBO6, CB_SETCURSEL, 1, 0);
-
-	SendDlgItemMessage (hTab, IDC_FRM, CB_RESETCONTENT, 0, 0);
-	SendDlgItemMessage (hTab, IDC_FRM, CB_ADDSTRING, 0, (LPARAM)"ecliptic");
-	SendDlgItemMessage (hTab, IDC_FRM, CB_ADDSTRING, 0, (LPARAM)"ref. equator");
-	SendDlgItemMessage (hTab, IDC_FRM, CB_SETCURSEL, 0, 0);
-
-	ed->ScanCBodyList (hTab, IDC_REF, hRef);
-
-	char cbuf[256];
-	sprintf (cbuf, "%0.5f", elmjd);
-	SetWindowText (GetDlgItem (hTab, IDC_EDIT7), cbuf);
-
-	Refresh ();
-}
-
-char *EditorTab_Elements::HelpTopic ()
-{
-	return "/Elements.htm";
-}
-
-void EditorTab_Elements::Apply ()
-{
-	const double eps = 1e-7;
-	char cbuf[256];
-	int i;
-	double mjd;
-	GetWindowText (GetDlgItem (hTab, IDC_REF), cbuf, 256);
-	VESSEL *vessel = oapiGetVesselInterface (ed->hVessel);
-	OBJHANDLE hRef = oapiGetGbodyByName (cbuf);
-	if (hRef) {
-		int frm = SendDlgItemMessage (hTab, IDC_FRM, CB_GETCURSEL, 0, 0);
-		int epc = SendDlgItemMessage (hTab, IDC_COMBO6, CB_GETCURSEL, 0, 0);
-		if (!epc) mjd = 0;
-		else {
-			GetWindowText (GetDlgItem (hTab, IDC_EDIT7), cbuf, 256);
-			sscanf (cbuf, "%lf", &elmjd);
-			mjd = (elmjd ? elmjd : 1e-10);
-		}
-		GetWindowText (GetDlgItem (hTab, IDC_EDIT1), cbuf, 256);
-		sscanf (cbuf, "%lf", &el.a);
-		i = SendDlgItemMessage (hTab, IDC_COMBO1, CB_GETCURSEL, 0, 0);
-		el.a /= lengthscale[i];
-		GetWindowText (GetDlgItem (hTab, IDC_EDIT2), cbuf, 256);
-		sscanf (cbuf, "%lf", &el.e);
-		if (el.e >= 1 && el.e < 1+eps) el.e = 1+eps; // e=1 causes problems
-		GetWindowText (GetDlgItem (hTab, IDC_EDIT3), cbuf, 256);
-		sscanf (cbuf, "%lf", &el.i);
-		i = SendDlgItemMessage (hTab, IDC_COMBO2, CB_GETCURSEL, 0, 0);
-		el.i /= anglescale[i];
-		GetWindowText (GetDlgItem (hTab, IDC_EDIT4), cbuf, 256);
-		sscanf (cbuf, "%lf", &el.theta);
-		i = SendDlgItemMessage (hTab, IDC_COMBO3, CB_GETCURSEL, 0, 0);
-		el.theta /= anglescale[i];
-		GetWindowText (GetDlgItem (hTab, IDC_EDIT5), cbuf, 256);
-		sscanf (cbuf, "%lf", &el.omegab);
-		i = SendDlgItemMessage (hTab, IDC_COMBO4, CB_GETCURSEL, 0, 0);
-		el.omegab /= anglescale[i];
-		GetWindowText (GetDlgItem (hTab, IDC_EDIT6), cbuf, 256);
-		sscanf (cbuf, "%lf", &el.L);
-		i = SendDlgItemMessage (hTab, IDC_COMBO5, CB_GETCURSEL, 0, 0);
-		el.L /= anglescale[i];
-		el.a = fabs (el.a);
-		if (el.e > 1.0) el.a = -el.a;
-		if (vessel->SetElements (hRef, el, &prm, mjd, frm))
-			RefreshSecondaryParams (el, prm);
-		else
-			MessageBeep (-1);
-		Refresh ();
-	}
-}
-
-void EditorTab_Elements::Refresh ()
-{
-	char cbuf[256];
-	double scale, mjd;
-	GetWindowText (GetDlgItem (hTab, IDC_REF), cbuf, 256);
-	VESSEL *vessel = oapiGetVesselInterface (ed->hVessel);
-	OBJHANDLE hRef = oapiGetGbodyByName (cbuf);
-	if (!hRef) return;
-	int frm = SendDlgItemMessage (hTab, IDC_FRM, CB_GETCURSEL, 0, 0);
-	int epc = SendDlgItemMessage (hTab, IDC_COMBO6, CB_GETCURSEL, 0, 0);
-	if (!epc) mjd = 0;
-	else {
-		GetWindowText (GetDlgItem (hTab, IDC_EDIT7), cbuf, 256);
-		sscanf (cbuf, "%lf", &elmjd);
-		mjd = (elmjd ? elmjd : 1e-10);
-	}
-	if (!vessel->GetElements (hRef, el, &prm, mjd, frm)) return;
-	bool closed = (el.e < 1.0);
-	int prec = (closed ? 6:10);
-	lengthscale[3] = 1.0/oapiGetSize (hRef);
-	scale = lengthscale[SendDlgItemMessage (hTab, IDC_COMBO1, CB_GETCURSEL, 0, 0)];
-	sprintf (cbuf, "%0.10g", el.a*scale);
-	SetWindowText (GetDlgItem (hTab, IDC_EDIT1), cbuf);
-	sprintf (cbuf, "%0.*g", prec, el.e);
-	SetWindowText (GetDlgItem (hTab, IDC_EDIT2), cbuf);
-	scale = anglescale[SendDlgItemMessage (hTab, IDC_COMBO2, CB_GETCURSEL, 0, 0)];
-	sprintf (cbuf, "%0.*g", prec, el.i*scale);
-	SetWindowText (GetDlgItem (hTab, IDC_EDIT3), cbuf);
-	scale = anglescale[SendDlgItemMessage (hTab, IDC_COMBO3, CB_GETCURSEL, 0, 0)];
-	sprintf (cbuf, "%0.*g", prec, el.theta*scale);
-	SetWindowText (GetDlgItem (hTab, IDC_EDIT4), cbuf);
-	scale = anglescale[SendDlgItemMessage (hTab, IDC_COMBO4, CB_GETCURSEL, 0, 0)];
-	sprintf (cbuf, "%0.*g", prec, el.omegab*scale);
-	SetWindowText (GetDlgItem (hTab, IDC_EDIT5), cbuf);
-	scale = anglescale[SendDlgItemMessage (hTab, IDC_COMBO5, CB_GETCURSEL, 0, 0)];
-	sprintf (cbuf, "%0.*g", prec, el.L*scale);
-	SetWindowText (GetDlgItem (hTab, IDC_EDIT6), cbuf);
-	RefreshSecondaryParams (el, prm);
-}
-
-void EditorTab_Elements::RefreshSecondaryParams (const ELEMENTS &el, const ORBITPARAM &prm)
-{
-	char cbuf[256];
-	bool closed = (el.e < 1.0); // closed orbit?
-
-	sprintf (cbuf, "%g m", prm.PeD); SetWindowText (GetDlgItem (hTab, IDC_PERIAPSIS), cbuf);
-	sprintf (cbuf, "%g s", prm.PeT); SetWindowText (GetDlgItem (hTab, IDC_PET), cbuf);
-	sprintf (cbuf, "%0.3f �", prm.MnA*DEG); SetWindowText (GetDlgItem (hTab, IDC_MNANM), cbuf);
-	sprintf (cbuf, "%0.3f �", prm.TrA*DEG); SetWindowText (GetDlgItem (hTab, IDC_TRANM), cbuf);
-	sprintf (cbuf, "%0.3f �", prm.MnL*DEG); SetWindowText (GetDlgItem (hTab, IDC_MNLNG), cbuf);
-	sprintf (cbuf, "%0.3f �", prm.TrL*DEG); SetWindowText (GetDlgItem (hTab, IDC_TRLNG), cbuf);
-	if (closed) {
-		sprintf (cbuf, "%g s", prm.T);   SetWindowText (GetDlgItem (hTab, IDC_PERIOD), cbuf);
-		sprintf (cbuf, "%g m", prm.ApD); SetWindowText (GetDlgItem (hTab, IDC_APOAPSIS), cbuf);
-		sprintf (cbuf, "%g s", prm.ApT); SetWindowText (GetDlgItem (hTab, IDC_APT), cbuf);
-	} else {
-		SetWindowText (GetDlgItem (hTab, IDC_PERIOD), "N/A");
-		SetWindowText (GetDlgItem (hTab, IDC_APOAPSIS), "N/A");
-		SetWindowText (GetDlgItem (hTab, IDC_APT), "N/A");
-	}
-}
-INT_PTR EditorTab_Elements::TabProc (HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
-{
-	char cbuf[256];
-	int i;
-
-	switch (uMsg) {
-	case WM_COMMAND:
-		switch (LOWORD (wParam)) {
-		case IDC_BACK:
-			SwitchTab (3);
-			return TRUE;
-		case IDC_APPLY:
-			Apply ();
-			return TRUE;
-		case IDC_REFRESH:
-			Refresh ();
-			return TRUE;
-		case IDC_REF:
-			if (HIWORD (wParam) == CBN_SELCHANGE || HIWORD (wParam) == CBN_EDITCHANGE) {
-				PostMessage (hDlg, WM_COMMAND, IDC_REFRESH, 0);
-				return TRUE;
-			}
-			break;
-		case IDC_FRM:
-			if (HIWORD (wParam) == CBN_SELCHANGE) {
-				PostMessage (hDlg, WM_COMMAND, IDC_REFRESH, 0);
-				return TRUE;
-			}
-			break;
-		case IDC_COMBO1:
-			if (HIWORD (wParam) == CBN_SELCHANGE) {
-				i = SendDlgItemMessage (hDlg, IDC_COMBO1, CB_GETCURSEL, 0, 0);
-				sprintf (cbuf, "%g", el.a * lengthscale[i]);
-				SetWindowText (GetDlgItem (hDlg, IDC_EDIT1), cbuf);
-				return TRUE;
-			}
-			break;
-		case IDC_COMBO2:
-			if (HIWORD (wParam) == CBN_SELCHANGE) {
-				i = SendDlgItemMessage (hDlg, IDC_COMBO2, CB_GETCURSEL, 0, 0);
-				sprintf (cbuf, "%g", el.i * anglescale[i]);
-				SetWindowText (GetDlgItem (hDlg, IDC_EDIT3), cbuf);
-				return TRUE;
-			}
-			break;
-		case IDC_COMBO3:
-			if (HIWORD (wParam) == CBN_SELCHANGE) {
-				i = SendDlgItemMessage (hDlg, IDC_COMBO3, CB_GETCURSEL, 0, 0);
-				sprintf (cbuf, "%g", el.theta * anglescale[i]);
-				SetWindowText (GetDlgItem (hDlg, IDC_EDIT4), cbuf);
-				return TRUE;
-			}
-			break;
-		case IDC_COMBO4:
-			if (HIWORD (wParam) == CBN_SELCHANGE) {
-				i = SendDlgItemMessage (hDlg, IDC_COMBO4, CB_GETCURSEL, 0, 0);
-				sprintf (cbuf, "%g", el.omegab * anglescale[i]);
-				SetWindowText (GetDlgItem (hDlg, IDC_EDIT5), cbuf);
-				return TRUE;
-			}
-			break;
-		case IDC_COMBO5:
-			if (HIWORD (wParam) == CBN_SELCHANGE) {
-				i = SendDlgItemMessage (hDlg, IDC_COMBO5, CB_GETCURSEL, 0, 0);
-				sprintf (cbuf, "%g", el.L * anglescale[i]);
-				SetWindowText (GetDlgItem (hDlg, IDC_EDIT6), cbuf);
-				return TRUE;
-			}
-			break;
-		case IDC_COMBO6:
-			if (HIWORD (wParam) == CBN_SELCHANGE) {
-				i = SendDlgItemMessage (hDlg, IDC_COMBO6, CB_GETCURSEL, 0, 0);
-				EnableWindow (GetDlgItem (hDlg, IDC_EDIT7), i != 0);
-				return TRUE;
-			}
-			break;
-		}
-		break;
-	case WM_NOTIFY:
-		if (((NMHDR*)lParam)->code == UDN_DELTAPOS) {
-			NMUPDOWN *nmud = (NMUPDOWN*)lParam;
-			switch (((NMHDR*)lParam)->idFrom) {
-			case IDC_SPIN1:
-				el.a *= (1.0 - nmud->iDelta*1e-4);
-				i = SendDlgItemMessage (hDlg, IDC_COMBO1, CB_GETCURSEL, 0, 0);
-				sprintf (cbuf, "%g", el.a * lengthscale[i]);
-				SetWindowText (GetDlgItem (hDlg, IDC_EDIT1), cbuf);
-				Apply ();
-				return TRUE;
-			case IDC_SPIN2:
-				el.e *= (1.0 - nmud->iDelta*0.001);
-				if (el.e < 0.0) el.e = 0.0;
-				sprintf (cbuf, "%g", el.e);
-				SetWindowText (GetDlgItem (hDlg, IDC_EDIT2), cbuf);
-				Apply ();
-				return TRUE;
-			case IDC_SPIN3:
-				el.i -= nmud->iDelta*RAD*0.1;
-				if      (el.i >  PI) el.i -= 2.0*PI;
-				else if (el.i < -PI) el.i += 2.0*PI;
-				i = SendDlgItemMessage (hDlg, IDC_COMBO2, CB_GETCURSEL, 0, 0);
-				sprintf (cbuf, "%g", el.i * anglescale[i]);
-				SetWindowText (GetDlgItem (hDlg, IDC_EDIT3), cbuf);
-				Apply ();
-				return TRUE;
-			case IDC_SPIN4:
-				el.theta -= nmud->iDelta*RAD*0.1;
-				if      (el.theta >= 2.0*PI) el.theta -= 2.0*PI;
-				else if (el.theta <  0.0)    el.theta += 2.0*PI;
-				i = SendDlgItemMessage (hDlg, IDC_COMBO3, CB_GETCURSEL, 0, 0);
-				sprintf (cbuf, "%g", el.theta * anglescale[i]);
-				SetWindowText (GetDlgItem (hDlg, IDC_EDIT4), cbuf);
-				Apply ();
-				return TRUE;
-			case IDC_SPIN5:
-				el.omegab -= nmud->iDelta*RAD*0.1;
-				if      (el.omegab >= 2.0*PI) el.omegab -= 2.0*PI;
-				else if (el.omegab <  0.0)    el.omegab += 2.0*PI;
-				i = SendDlgItemMessage (hDlg, IDC_COMBO4, CB_GETCURSEL, 0, 0);
-				sprintf (cbuf, "%g", el.omegab * anglescale[i]);
-				SetWindowText (GetDlgItem (hDlg, IDC_EDIT5), cbuf);
-				Apply ();
-				return TRUE;
-			case IDC_SPIN6:
-				el.L -= nmud->iDelta*RAD*0.1;
-				if      (el.L >= 2.0*PI) el.L -= 2.0*PI;
-				else if (el.L <  0.0)    el.L += 2.0*PI;
-				i = SendDlgItemMessage (hDlg, IDC_COMBO5, CB_GETCURSEL, 0, 0);
-				sprintf (cbuf, "%g", el.L * anglescale[i]);
-				SetWindowText (GetDlgItem (hDlg, IDC_EDIT6), cbuf);
-				Apply ();
-				return TRUE;
-			}
-		}
-		break;
-	}
-	return ScnEditorTab::TabProc (hDlg, uMsg, wParam, lParam);
-}
-
-INT_PTR EditorTab_Elements::DlgProc (HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
-{
-	EditorTab_Elements *pTab = (EditorTab_Elements*)TabPointer (hDlg, uMsg, wParam, lParam);
 	if (!pTab) return FALSE;
 	else return pTab->TabProc (hDlg, uMsg, wParam, lParam);
 }
@@ -2151,141 +1943,6 @@ INT_PTR EditorTab_Statevec::TabProc (HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM
 		break;
 	}
 	return ScnEditorTab::TabProc (hDlg, uMsg, wParam, lParam);
-}
-
-void EditorTab_Statevec::Refresh (OBJHANDLE hV)
-{
-	if (!hV) hV = ed->hVessel;
-	char cbuf[256];
-	GetWindowText (GetDlgItem (hTab, IDC_REF), cbuf, 256);
-	VESSEL *vessel = oapiGetVesselInterface (hV);
-	OBJHANDLE hRef = oapiGetGbodyByName (cbuf);
-	if (!hRef) return;
-	int frm = SendDlgItemMessage (hTab, IDC_FRM, CB_GETCURSEL, 0, 0);
-	int crd = SendDlgItemMessage (hTab, IDC_CRD, CB_GETCURSEL, 0, 0);
-	VECTOR3 pos, vel;
-	oapiGetRelativePos (hV, hRef, &pos);
-	oapiGetRelativeVel (hV, hRef, &vel);
-	// map ecliptic -> equatorial frame
-	if (frm) {
-		MATRIX3 rot;
-		if (frm == 1) oapiGetPlanetObliquityMatrix (hRef, &rot);
-		else          oapiGetRotationMatrix (hRef, &rot);
-		pos = tmul (rot, pos);
-		vel = tmul (rot, vel);
-	}
-	// map cartesian -> polar coordinates
-	if (crd) {
-		Crt2Pol (pos, vel);
-		pos.data[1] *= DEG; pos.data[2] *= DEG;
-		vel.data[1] *= DEG; vel.data[2] *= DEG;
-	}
-	// in the rotating reference frame we need to subtract the angular
-	// velocity of the planet
-	if (frm == 2) {
-		double T = oapiGetPlanetPeriod (hRef);
-		if (crd) {
-			vel.data[1] -= 360.0/T;
-		} else { // map back to cartesian
-			double r   = _hypot (pos.x, pos.z);
-			double phi = atan2 (pos.z, pos.x);
-			double v   = 2.0*PI*r/T;
-			vel.x     += v*sin(phi);
-			vel.z     -= v*cos(phi);
-		}
-	}
-	sprintf (cbuf, "%0.1f", pos.x); SetWindowText (GetDlgItem (hTab, IDC_EDIT1), cbuf);
-	sprintf (cbuf, "%0.*f", (crd?6:1), pos.y); SetWindowText (GetDlgItem (hTab, IDC_EDIT2), cbuf);
-	sprintf (cbuf, "%0.*f", (crd?6:1), pos.z); SetWindowText (GetDlgItem (hTab, IDC_EDIT3), cbuf);
-	sprintf (cbuf, "%0.2f", vel.x); SetWindowText (GetDlgItem (hTab, IDC_EDIT4), cbuf);
-	sprintf (cbuf, "%0.*f", (crd?7:2), vel.y); SetWindowText (GetDlgItem (hTab, IDC_EDIT5), cbuf);
-	sprintf (cbuf, "%0.*f", (crd?7:2), vel.z); SetWindowText (GetDlgItem (hTab, IDC_EDIT6), cbuf);
-}
-
-void EditorTab_Statevec::Apply ()
-{
-	char cbuf[256];
-	GetWindowText (GetDlgItem (hTab, IDC_REF), cbuf, 256);
-	VESSEL *vessel = Vessel();
-	OBJHANDLE hRef = oapiGetGbodyByName (cbuf);
-	if (hRef) {
-		bool needrefresh = false;
-		MATRIX3 rot;
-		VECTOR3 pos, vel, refpos, refvel;
-		VESSELSTATUS vs;
-		GetWindowText (GetDlgItem (hTab, IDC_EDIT1), cbuf, 256);
-		sscanf (cbuf, "%lf", &pos.x);
-		GetWindowText (GetDlgItem (hTab, IDC_EDIT2), cbuf, 256);
-		sscanf (cbuf, "%lf", &pos.y);
-		GetWindowText (GetDlgItem (hTab, IDC_EDIT3), cbuf, 256);
-		sscanf (cbuf, "%lf", &pos.z);
-		GetWindowText (GetDlgItem (hTab, IDC_EDIT4), cbuf, 256);
-		sscanf (cbuf, "%lf", &vel.x);
-		GetWindowText (GetDlgItem (hTab, IDC_EDIT5), cbuf, 256);
-		sscanf (cbuf, "%lf", &vel.y);
-		GetWindowText (GetDlgItem (hTab, IDC_EDIT6), cbuf, 256);
-		sscanf (cbuf, "%lf", &vel.z);
-		int frm = SendDlgItemMessage (hTab, IDC_FRM, CB_GETCURSEL, 0, 0);
-		int crd = SendDlgItemMessage (hTab, IDC_CRD, CB_GETCURSEL, 0, 0);
-		// in the rotating reference frame we need to add the angular
-		// velocity of the planet
-		if (frm == 2) {
-			double T = oapiGetPlanetPeriod (hRef);
-			if (crd) {
-				vel.data[1] += 360.0/T;
-			} else { // map back to cartesian
-				double r   = _hypot (pos.x, pos.z);
-				double phi = atan2 (pos.z, pos.x);
-				double v   = 2.0*PI*r/T;
-				vel.x     -= v*sin(phi);
-				vel.z     += v*cos(phi);
-			}
-		}
-		// map polar -> cartesian coordinates
-		if (crd) {
-			pos.data[1] *= RAD, pos.data[2] *= RAD;
-			vel.data[1] *= RAD, vel.data[2] *= RAD;
-			Pol2Crt (pos, vel);
-		}
-		// map from celestial/equatorial frame of reference
-		if (frm) {
-			if (frm == 1) oapiGetPlanetObliquityMatrix (hRef, &rot);
-			else          oapiGetRotationMatrix (hRef, &rot);
-			pos = mul (rot, pos);
-			vel = mul (rot, vel);
-		}
-		// change reference in case the selected reference object is
-		// not the same as the VESSELSTATUS reference
-		vessel->GetStatus (vs);
-		oapiGetGlobalPos (hRef, &refpos);     pos += refpos;
-		oapiGetGlobalVel (hRef, &refvel);     vel += refvel;
-		oapiGetGlobalPos (vs.rbody, &refpos); pos -= refpos;
-		oapiGetGlobalVel (vs.rbody, &refvel); vel -= refvel;
-		if (vs.status != 0) { // enforce freeflight mode
-			vs.status = 0;
-			vessel->GetRotationMatrix (rot);
-			vs.arot.x = atan2(rot.m23, rot.m33);
-			vs.arot.y = -asin(rot.m13);
-			vs.arot.z = atan2(rot.m12, rot.m11);
-			vessel->GetAngularVel(vs.vrot);
-		}
-#ifdef UNDEF
-		// sanity check
-		double rad = length(pos);
-		double rad0 = oapiGetSize (vs.rbody) + vessel->GetCOG_elev();
-		if (rad < rad0) {
-			Crt2Pol (pos, vel);
-			pos.x = rad0;
-			vel.x = 0.0;
-			Pol2Crt (pos, vel);
-			needrefresh = true;
-		}
-#endif
-		veccpy (vs.rpos, pos);
-		veccpy (vs.rvel, vel);
-		vessel->DefSetState (&vs);
-		if (needrefresh) Refresh();
-	}
 }
 
 INT_PTR EditorTab_Statevec::DlgProc (HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)

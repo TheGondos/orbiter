@@ -35,7 +35,7 @@ public:
 	void CloseDialog ();
 	void DrawConfigs(const char *path);
 	void VesselCreatePopup();
-	void DrawShipList();
+	bool DrawShipList(OBJHANDLE &selected);
 	void CreateVessel();
 	void DrawTabs();
 	void DrawOrbitalElements();
@@ -51,11 +51,23 @@ public:
 	void DrawCBodies();
 	void AddCbodyNode(const CelestialBody *cbody);
 
-	ELEMENTS el;       // orbital elements of edited vessel
-	ORBITPARAM prm;    // additional orbital parameters
-	double elmjd;      // element epoch
-	int frm;
-	std::string m_selectedReference;
+	struct OrbitalElements {
+		ELEMENTS el;       // orbital elements of edited vessel
+		ORBITPARAM prm;    // additional orbital parameters
+		double elmjd;      // element epoch
+		int frm;
+		std::string m_selectedReference;
+	};
+	OrbitalElements oe;
+	struct VectorState {
+		VECTOR3 pos;
+		VECTOR3 vel;
+		MATRIX3 rotFixed;
+		MATRIX3 rotRotating;
+		int frm;
+		int crd;
+	};
+	VectorState vecState;
 
 	int dwCmd;         // custom command handle
 	OBJHANDLE m_currentVessel;
