@@ -53,6 +53,7 @@ ScnEditor::ScnEditor (): GUIElement("Scenario Editor", "ScnEditor")
 	vecState.crd = 0;
 	memset(m_newVesselName, 0 , sizeof(m_newVesselName));
 	aRot = {0,0,0};
+	aVel = {0,0,0};
 }
 
 ScnEditor::~ScnEditor ()
@@ -292,6 +293,11 @@ void ScnEditor::ReloadVessel()
 	aRot.x*=DEG;
 	aRot.y*=DEG;
 	aRot.z*=DEG;
+
+	vessel->GetAngularVel (aVel);
+	aVel.x*=DEG;
+	aVel.y*=DEG;
+	aVel.z*=DEG;
 }
 
 void ScnEditor::DrawCBodies() {
@@ -543,14 +549,28 @@ void ScnEditor::DrawOrientation()
 	ImGui::InputDouble("gamma", &aRot.z, 0.0, 0.0, "%g");
 	if(ImGui::Button("Apply")) {
 		VESSEL *vessel = oapiGetVesselInterface (m_currentVessel);
-		aRot.x*=RAD;
-		aRot.y*=RAD;
-		aRot.z*=RAD;
-		vessel->SetGlobalOrientation (aRot);
+		VECTOR3 arot = aRot;
+		arot.x*=RAD;
+		arot.y*=RAD;
+		arot.z*=RAD;
+		vessel->SetGlobalOrientation (arot);
 	}
 }
 void ScnEditor::DrawAngularVelocity()
 {
+	if(!m_currentVessel) return;
+	ImGui::TextUnformatted("Angular velocity");
+	ImGui::InputDouble("Pitch", &aVel.x, 0.0, 0.0, "%g");
+	ImGui::InputDouble("Yaw", &aVel.y, 0.0, 0.0, "%g");
+	ImGui::InputDouble("Bank", &aVel.z, 0.0, 0.0, "%g");
+	if(ImGui::Button("Apply")) {
+		VESSEL *vessel = oapiGetVesselInterface (m_currentVessel);
+		VECTOR3 avel = aVel;
+		avel.x*=RAD;
+		avel.y*=RAD;
+		avel.z*=RAD;
+		vessel->SetAngularVel (avel);
+	}
 
 }
 void ScnEditor::DrawLocation()

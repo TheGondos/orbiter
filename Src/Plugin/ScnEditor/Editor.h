@@ -69,6 +69,7 @@ public:
 	};
 	VectorState vecState;
 	VECTOR3 aRot;
+	VECTOR3 aVel;
 
 	int dwCmd;         // custom command handle
 	OBJHANDLE m_currentVessel;
