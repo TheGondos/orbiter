@@ -682,7 +682,173 @@ void ScnEditor::DrawLocation()
 }
 void ScnEditor::DrawDocking()
 {
+	if(!m_currentVessel) return;
+	VESSEL *vessel = oapiGetVesselInterface (m_currentVessel);
+	int ndock = vessel->DockCount();
+	if(ndock == 0) {
+		ImGui::TextUnformatted("Vessel has no docking ports");
+		return;
+	}
 
+	static int mode = 1;
+	ImGui::RadioButton("Teleport the target vessel", &mode, 1);
+	ImGui::SameLine();
+	ImGui::RadioButton("Teleport the current vessel", &mode, 2);
+
+	if (ImGui::BeginTable("Docking Ports", 5, ImGuiTableFlags_Borders))
+	{
+		ImGui::TableSetupColumn("Port");
+		ImGui::TableSetupColumn("IDS enabled");
+		ImGui::TableSetupColumn("Frequency");
+		ImGui::TableSetupColumn("Status");
+		ImGui::TableSetupColumn("Action");
+		ImGui::TableHeadersRow();
+		for(int i = 0; i < ndock; i++) {
+			ImGui::PushID(i);
+			DOCKHANDLE hDock = vessel->GetDockHandle (i);
+			NAVHANDLE hIDS = vessel->GetIDS (hDock);
+			float freq = -1;
+			if (hIDS) {
+				freq = oapiGetNavFreq (hIDS);
+			}
+			bool b = freq != -1;
+			ImGui::TableNextColumn(); ImGui::Text("%d", i + 1);
+			ImGui::TableNextColumn(); 
+			if(ImGui::Checkbox("##IDS", &b)) {
+				vessel->EnableIDS(hDock, b);
+			}
+			if (hIDS) {
+				ImGui::TableNextColumn();
+				if(ImGui::InputFloat("##Frequency", &freq, 0, 0, "%.2f")) {
+					int ch = (int)((freq-108.0)*20.0+0.5);
+					int dch  = 0;
+					ch = std::max(0, std::min (639, ch+dch));
+
+					vessel->SetIDSChannel(hDock, ch);
+				}
+			} else {
+				ImGui::TableNextColumn(); ImGui::Text("<none>");
+			}
+
+			OBJHANDLE hMate = vessel->GetDockStatus (hDock);
+			if (hMate) { // dock is engaged
+				char cbuf[128];
+				oapiGetObjectName (hMate, cbuf, sizeof(cbuf));
+				ImGui::TableNextColumn(); ImGui::Text("Docked with %s", cbuf);
+				ImGui::TableNextColumn();
+				if(ImGui::Button("Undock")) {
+					vessel->Undock (i);
+				}
+			} else {
+				ImGui::TableNextColumn(); ImGui::Text("Free");
+				ImGui::TableNextColumn();
+				if(ImGui::Button("Dock with...")) {
+					ImGui::OpenPopup("DockWith");
+				}
+				if (ImGui::BeginPopup("DockWith"))
+				{
+
+
+
+					if (ImGui::TreeNodeEx("Vessels", ImGuiTreeNodeFlags_DefaultOpen)) {
+						for (int v = 0; v < oapiGetVesselCount(); v++) {
+							OBJHANDLE hV = oapiGetVesselByIndex (v);
+							if(hV == m_currentVessel) continue;
+							VESSEL *vesselTgt = oapiGetVesselInterface (hV);
+							int ndock = vesselTgt->DockCount();
+							if(ndock == 0) continue;
+							const char *name = vesselTgt->GetName();
+							//const bool is_selected = selected == hV;
+							
+							ImGuiTreeNodeFlags node_flags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
+							//if(is_selected) node_flags |= ImGuiTreeNodeFlags_Selected;
+							if(ImGui::TreeNodeEx(name)) {//, node_flags);
+								for(int d = 0; d < ndock ; d++) {
+									char cbuf[16];
+									sprintf(cbuf,"Port %d",d+1);
+									ImGuiTreeNodeFlags node_flags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
+									DOCKHANDLE hDock = vesselTgt->GetDockHandle (d);
+									OBJHANDLE hMate = vesselTgt->GetDockStatus (hDock);
+									if(hMate) ImGui::BeginDisabled();
+									ImGui::TreeNodeEx(cbuf, node_flags);
+									if(hMate) ImGui::EndDisabled();
+									if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) {
+
+
+
+										int res = vessel->Dock (hV, i, d, mode);
+
+
+										//selected = hV;
+										//ReloadVessel();
+										//ret = true;
+										//Don't do this for now because it can create lots of controller profiles :(
+										//oapiSetFocusObject (m_currentVessel);
+										//oapiCameraAttach (m_currentVessel, 1);
+									}
+								}
+								ImGui::TreePop();
+							}
+						}
+						ImGui::TreePop();
+					}
+
+					ImGui::EndPopup();
+				}
+			}
+
+			ImGui::TableNextRow();
+			ImGui::PopID();
+		}
+		ImGui::EndTable();
+	}
+/*
+void EditorTab_Docking::Refresh ()
+{
+	static const int dockitem[7] = {IDC_DOCK, IDC_COMBO1, IDC_EDIT4, IDC_STATIC3, IDC_SPIN3, IDC_RADIO1, IDC_RADIO2};
+	static const int undockitem[2] = {IDC_UNDOCK, IDC_EDIT3};
+
+	VESSEL *vessel = Vessel();
+	char cbuf[256];
+	int i;
+	DWORD n, ndock = vessel->DockCount();
+	SetWindowText (GetDlgItem (hTab, IDC_ERRMSG), "");
+
+	sprintf (cbuf, "of %d", vessel->DockCount());
+	SetWindowText (GetDlgItem (hTab, IDC_STATIC1), cbuf);
+
+	GetWindowText (GetDlgItem (hTab, IDC_EDIT1), cbuf, 256);
+	if (!sscanf (cbuf, "%d", &n)) n = 0;
+	if (n < 1 || n > ndock) {
+		n = max (1, min (ndock, n));
+		sprintf (cbuf, "%d", n);
+		SetWindowText (GetDlgItem (hTab, IDC_EDIT1), cbuf);
+	}
+	n--; // zero-based
+
+	DOCKHANDLE hDock = vessel->GetDockHandle (n);
+	NAVHANDLE hIDS = vessel->GetIDS (hDock);
+	if (hIDS) sprintf (cbuf, "%0.2f", oapiGetNavFreq (hIDS));
+	else      strcpy (cbuf, "<none>");
+	SetWindowText (GetDlgItem (hTab, IDC_EDIT2), cbuf);
+	SendDlgItemMessage (hTab, IDC_IDS, BM_SETCHECK, hIDS ? BST_CHECKED : BST_UNCHECKED, 0);
+	EnableWindow (GetDlgItem (hTab, IDC_EDIT2), hIDS ? TRUE:FALSE);
+	EnableWindow (GetDlgItem (hTab, IDC_SPIN2), hIDS ? TRUE:FALSE);
+
+	OBJHANDLE hMate = vessel->GetDockStatus (hDock);
+	if (hMate) { // dock is engaged
+		SetWindowText (GetDlgItem (hTab, IDC_STATIC2), "Currently docked to");
+		for (i = 0; i < 7; i++) ShowWindow (GetDlgItem (hTab, dockitem[i]), SW_HIDE);
+		for (i = 0; i < 2; i++) ShowWindow (GetDlgItem (hTab, undockitem[i]), SW_SHOW);
+		oapiGetObjectName (hMate, cbuf, 256);
+		SetWindowText (GetDlgItem (hTab, IDC_EDIT3), cbuf);
+	} else { // dock is free
+		SetWindowText (GetDlgItem (hTab, IDC_STATIC2), "Establish docking connection with");
+		for (i = 0; i < 2; i++) ShowWindow (GetDlgItem (hTab, undockitem[i]), SW_HIDE);
+		for (i = 0; i < 7; i++) ShowWindow (GetDlgItem (hTab, dockitem[i]), SW_SHOW);
+	}
+}
+*/
 }
 void ScnEditor::DrawPropellant()
 {
