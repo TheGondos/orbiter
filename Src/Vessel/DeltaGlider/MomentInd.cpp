@@ -36,6 +36,7 @@ AngRateIndicator::AngRateIndicator (VESSEL3 *v, SURFHANDLE blitsrc)
 	w0 = &w0_2D;
 	cost = &cost_2D;
 	sint = &sint_2D;
+	upt = 0.0;
 }
 
 AngRateIndicator::~AngRateIndicator ()
