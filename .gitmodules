@@ -41,3 +41,6 @@
 [submodule "Extern/SDL_GameControllerDB"]
 	path = Extern/SDL_GameControllerDB
 	url = https://github.com/gabomdq/SDL_GameControllerDB
+[submodule "Extern/imgui-knobs"]
+	path = Extern/imgui-knobs
+	url = https://github.com/altschuler/imgui-knobs.git

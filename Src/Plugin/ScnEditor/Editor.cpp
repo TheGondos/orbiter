@@ -16,6 +16,7 @@
 #include "font_awesome_5.h"
 #include <stdio.h>
 #include <imgui.h>
+#include <imgui-knobs.h>
 #include <filesystem>
 namespace fs = std::filesystem;
 
@@ -252,12 +253,13 @@ bool ScnEditor::DrawShipList(OBJHANDLE &selected)
 void ScnEditor::DrawTabs ()
 {
 	const char *tabs[] = {
-		"Orbital elements", "State vectors", "Orientation", "Angular velocity", "Location", "Docking", "Propellant"
+		ICON_FA_SATELLITE" Orbital elements", ICON_FA_LOCATION_ARROW" State vectors", ICON_FA_COMPASS" Rotation",
+		ICON_FA_MAP_MARKER_ALT" Location", ICON_FA_LIFE_RING" Docking", ICON_FA_GAS_PUMP" Propellant"
 	};
 
 	void (ScnEditor::* func[])() = {
-		&ScnEditor::DrawOrbitalElements, &ScnEditor::DrawStateVectors, &ScnEditor::DrawOrientation,
-		&ScnEditor::DrawAngularVelocity, &ScnEditor::DrawLocation, &ScnEditor::DrawDocking, &ScnEditor::DrawPropellant
+		&ScnEditor::DrawOrbitalElements, &ScnEditor::DrawStateVectors, &ScnEditor::DrawRotation,
+		&ScnEditor::DrawLocation, &ScnEditor::DrawDocking, &ScnEditor::DrawPropellant
 	};
 
 
@@ -282,6 +284,8 @@ void ScnEditor::ReloadVessel()
 	char cbuf[64];
 	oapiGetObjectName (hRef, cbuf, 64);
 	oe.m_selectedReference = cbuf;
+	vecState.m_selectedReference = cbuf;
+	loc.planet = cbuf;
 	vessel->GetElements(hRef, oe.el, &oe.prm, oe.elmjd, oe.frm);
 	
 	oapiGetRelativePos (m_currentVessel, hRef, &vecState.pos);
@@ -312,6 +316,7 @@ bool ScnEditor::DrawCBodies(std::string &ref, const char *name) {
 	std::sort(bodies.begin(), bodies.end());
 	if(ref.empty()) ref = bodies[0];
 
+	ImGui::PushItemWidth(100);
 	if(ImGui::BeginCombo(name, ref.c_str())) {
 		for (auto &body: bodies) {
 			if (ImGui::Selectable(body.c_str(), body == ref)) {
@@ -321,31 +326,55 @@ bool ScnEditor::DrawCBodies(std::string &ref, const char *name) {
 		}
         ImGui::EndCombo();
 	}
+	ImGui::PopItemWidth();
 	return ret;
 }
 
-bool ScnEditor::DrawBases(OBJHANDLE hPlanet, std::string &ref, const char *name) {
-	bool ret = false;
+void ScnEditor::DrawBases(OBJHANDLE hPlanet, std::string &ref) {
 	std::vector<std::string> bases;
 	for (int n = 0; n < oapiGetBaseCount(hPlanet); n++) {
 		char cbuf[256];
 		oapiGetObjectName (oapiGetBaseByIndex (hPlanet, n), cbuf, 256);
 		bases.push_back(cbuf);
 	}
-	if(bases.empty()) return false;
+	if(bases.empty()) return;
 	std::sort(bases.begin(), bases.end());
 	if(ref.empty()) ref = bases[0];
 
-	if(ImGui::BeginCombo(name, ref.c_str())) {
+	ImGui::BeginGroupPanel("Surface bases");
+	ImGui::PushItemWidth(150);
+	if(ImGui::BeginCombo("##surfacebase", ref.c_str())) {
 		for (auto &body: bases) {
 			if (ImGui::Selectable(body.c_str(), body == ref)) {
 				ref = body;
-				ret = true;
+				loc.pad.clear();
 			}
 		}
         ImGui::EndCombo();
 	}
-	return ret;
+	ImGui::PopItemWidth();
+	if(!loc.base.empty()) {
+		OBJHANDLE hBase = oapiGetBaseByName(hPlanet, loc.base.c_str());
+		if(hBase) {
+			DrawPads(hBase, loc.pad);
+		}
+	}
+
+	ImGui::SameLine();
+	if(ImGui::Button("Preset position")) {
+		if(!loc.base.empty()) {
+			OBJHANDLE hPlanet = oapiGetObjectByName(loc.planet.c_str());
+			OBJHANDLE hBase = oapiGetBaseByName(hPlanet, loc.base.c_str());
+			if (!loc.pad.empty())
+				oapiGetBasePadEquPos (hBase, std::stoi(loc.pad)-1, &loc.longitude, &loc.latitude);
+			else
+				oapiGetBaseEquPos (hBase, &loc.longitude, &loc.latitude);
+			loc.longitude *= DEG;
+			loc.latitude *= DEG;
+		}
+	}
+
+	ImGui::EndGroupPanel();
 }
 
 bool ScnEditor::DrawPads(OBJHANDLE hBase, std::string &ref) {
@@ -353,7 +382,11 @@ bool ScnEditor::DrawPads(OBJHANDLE hBase, std::string &ref) {
 	int n, npad = oapiGetBasePadCount (hBase);
 	if(ref.empty()) ref = "1";
 	if(npad) {
-		if(ImGui::BeginCombo("Bases", ref.c_str())) {
+		ImGui::SameLine();
+		ImGui::Text("Pad : ");
+		ImGui::SameLine();
+		ImGui::PushItemWidth(100);
+		if(ImGui::BeginCombo("##Pads", ref.c_str())) {
 			char cbuf[16];
 			for (n = 1; n <= npad; n++) {
 				sprintf (cbuf, "%d", n);
@@ -364,6 +397,7 @@ bool ScnEditor::DrawPads(OBJHANDLE hBase, std::string &ref) {
 			}
 			ImGui::EndCombo();
 		}
+		ImGui::PopItemWidth();
 	}
 	return ret;
 }
@@ -372,53 +406,74 @@ bool ScnEditor::DrawPads(OBJHANDLE hBase, std::string &ref) {
 void ScnEditor::DrawOrbitalElements()
 {
 	if(!m_currentVessel) return;
-	DrawCBodies(oe.m_selectedReference, "Orbit reference");
-	ImGui::PushItemWidth(100);
+	ImGui::BeginGroupPanel("Reference");
+		ImGui::BeginGroupPanel("Orbit", ImVec2(ImGui::GetContentRegionAvail().x * 0.33f, 0));
+		DrawCBodies(oe.m_selectedReference, "##Orbit");
+		ImGui::EndGroupPanel();
+		ImGui::SameLine();
+		ImGui::BeginGroupPanel("Frame", ImVec2(ImGui::GetContentRegionAvail().x * 0.5f, 0));
+		bool frmChanged = ImGui::RadioButton("Ecliptic", &oe.frm, 0); ImGui::SameLine();
+		frmChanged     |= ImGui::RadioButton("Equatorial", &oe.frm, 1);
+		if(frmChanged) ReloadVessel();
+		ImGui::EndGroupPanel();
+		ImGui::SameLine();
+		ImGui::BeginGroupPanel("Epoch");
+		ImGui::PushItemWidth(100);
+		ImGui::InputDouble("MJD", &oe.elmjd, 0.0, 0.0, "%g");
+		ImGui::PopItemWidth();
+		ImGui::EndGroupPanel();
+
+	ImGui::EndGroupPanel();
+
 	static int smaUnit;
 	VESSEL *vessel = oapiGetVesselInterface (m_currentVessel);
 	OBJHANDLE hRef = vessel->GetGravityRef();
 	lengthscale[3] = 1.0/oapiGetSize (hRef);
-	oe.el.a*=lengthscale[smaUnit];
-	ImGui::InputDouble("Semi-major Axis [SMa]", &oe.el.a, 0.0, 0.0, "%g");
-	oe.el.a/=lengthscale[smaUnit];
-	ImGui::RadioButton("m", &smaUnit,0); ImGui::SameLine();
-	ImGui::RadioButton("km", &smaUnit,1); ImGui::SameLine();
-	ImGui::RadioButton("AU", &smaUnit,2); ImGui::SameLine();
-	ImGui::RadioButton("Planet radius", &smaUnit,3);
-	ImGui::InputDouble("Eccentricity [Ecc]", &oe.el.e, 0.0, 0.0, "%g");
-	oe.el.i*=DEG;
-	ImGui::InputDouble("Inclination [Inc]°", &oe.el.i, 0.0, 0.0, "%g");
-	oe.el.i/=DEG;
-	oe.el.theta*=DEG;
-	ImGui::InputDouble("Longitude of ascending node [LAN]°", &oe.el.theta, 0.0, 0.0, "%g");
-	oe.el.theta/=DEG;
-	oe.el.omegab*=DEG;
-	ImGui::InputDouble("Longitude of periapsis [LPe]°", &oe.el.omegab, 0.0, 0.0, "%g");
-	oe.el.omegab/=DEG;
-	oe.el.L*=DEG;
-	ImGui::InputDouble("Mean longitude at epoch [eps]°", &oe.el.L, 0.0, 0.0, "%g");
-	oe.el.L/=DEG;
-	ImGui::InputDouble("MJD", &oe.elmjd, 0.0, 0.0, "%g");
-	ImGui::PopItemWidth();
 
-	bool frmChanged = ImGui::RadioButton("FRAME_ECL", &oe.frm, 0); ImGui::SameLine();
-	frmChanged     |= ImGui::RadioButton("FRAME_EQU", &oe.frm, 1);
+	ImGuiWindowFlags window_flags = ImGuiWindowFlags_HorizontalScrollbar;
+	ImGui::BeginGroupPanel("Osculating elements", ImVec2(ImGui::GetContentRegionAvail().x * 0.5f, 0));
+		ImGui::BeginGroupPanel("Unit");
+		ImGui::RadioButton("m", &smaUnit,0); ImGui::SameLine();
+		ImGui::RadioButton("km", &smaUnit,1); ImGui::SameLine();
+		ImGui::RadioButton("AU", &smaUnit,2); ImGui::SameLine();
+		ImGui::RadioButton("Planet radius", &smaUnit,3);
+		ImGui::EndGroupPanel();
 
-	if(frmChanged) ReloadVessel();
+		ImGui::PushItemWidth(100);
+		oe.el.a*=lengthscale[smaUnit];
+		ImGui::InputDouble("Semi-major Axis [SMa]", &oe.el.a, 0.0, 0.0, "%g");
+		oe.el.a/=lengthscale[smaUnit];
+		ImGui::InputDouble("Eccentricity [Ecc]", &oe.el.e, 0.0, 0.0, "%g");
+		oe.el.i*=DEG;
+		ImGui::InputDouble("Inclination [Inc]°", &oe.el.i, 0.0, 0.0, "%g");
+		oe.el.i/=DEG;
+		oe.el.theta*=DEG;
+		ImGui::InputDouble("Longitude of ascending node [LAN]°", &oe.el.theta, 0.0, 0.0, "%g");
+		oe.el.theta/=DEG;
+		oe.el.omegab*=DEG;
+		ImGui::InputDouble("Longitude of periapsis [LPe]°", &oe.el.omegab, 0.0, 0.0, "%g");
+		oe.el.omegab/=DEG;
+		oe.el.L*=DEG;
+		ImGui::InputDouble("Mean longitude at epoch [eps]°", &oe.el.L, 0.0, 0.0, "%g");
+		oe.el.L/=DEG;
+		ImGui::PopItemWidth();
+	ImGui::EndGroupPanel();
+	ImGui::SameLine();
+	ImGui::BeginGroupPanel("Secondary parameters", ImVec2(ImGui::GetContentRegionAvail().x, 0));
+		bool closed = (oe.el.e < 1.0); // closed orbit?
 
-	bool closed = (oe.el.e < 1.0); // closed orbit?
-
-	ImGui::Text ("Periapsis : %g m", oe.prm.PeD);
-	ImGui::Text ("PeT : %g s", oe.prm.PeT);
-	ImGui::Text ("MnA : %0.3f °", oe.prm.MnA*DEG);
-	ImGui::Text ("TrA : %0.3f °", oe.prm.TrA*DEG);
-	ImGui::Text ("MnL : %0.3f °", oe.prm.MnL*DEG);
-	ImGui::Text ("TrL : %0.3f °", oe.prm.TrL*DEG);
-	if (closed) {
-		ImGui::Text ("Period : %g s", oe.prm.T);
-		ImGui::Text ("Apoapsis : %g m", oe.prm.ApD);
-		ImGui::Text ("ApT : %g s", oe.prm.ApT);
-	}
+		ImGui::Text ("Periapsis : %g m", oe.prm.PeD);
+		ImGui::Text ("PeT : %g s", oe.prm.PeT);
+		ImGui::Text ("MnA : %0.3f °", oe.prm.MnA*DEG);
+		ImGui::Text ("TrA : %0.3f °", oe.prm.TrA*DEG);
+		ImGui::Text ("MnL : %0.3f °", oe.prm.MnL*DEG);
+		ImGui::Text ("TrL : %0.3f °", oe.prm.TrL*DEG);
+		if (closed) {
+			ImGui::Text ("Period : %g s", oe.prm.T);
+			ImGui::Text ("Apoapsis : %g m", oe.prm.ApD);
+			ImGui::Text ("ApT : %g s", oe.prm.ApT);
+		}
+	ImGui::EndGroupPanel();
 
 	if(ImGui::Button("Apply")) {
 		OBJHANDLE hRef = oapiGetGbodyByName (oe.m_selectedReference.c_str());
@@ -436,22 +491,30 @@ void ScnEditor::DrawOrbitalElements()
 void ScnEditor::DrawStateVectors()
 {
 	if(!m_currentVessel) return;
-	ImGui::Text("Frame");
-	ImGui::RadioButton("Ecliptic", &vecState.frm ,0);
-	ImGui::SameLine();
-	ImGui::RadioButton("Ref. equator (fixed)", &vecState.frm ,1);
-	ImGui::SameLine();
-	ImGui::RadioButton("Ref. equator (rotating)", &vecState.frm ,2);
-	ImGui::Separator();
+	ImGui::BeginGroupPanel("Reference");
+		ImGui::BeginGroupPanel("Orbit", ImVec2(ImGui::GetContentRegionAvail().x * 0.25f, 0));
+		DrawCBodies(vecState.m_selectedReference, "##Orbit");
+		ImGui::EndGroupPanel();
 
-	ImGui::Text("Coordinates");
-	ImGui::RadioButton("Cartesian", &vecState.crd, 0);
-	ImGui::SameLine();
-	ImGui::RadioButton("Polar", &vecState.crd, 1);
-	ImGui::Separator();
+		ImGui::SameLine();
+		ImGui::BeginGroupPanel("Frame", ImVec2(ImGui::GetContentRegionAvail().x * 0.5f, 0));
+		ImGui::RadioButton("Ecliptic", &vecState.frm ,0);
+		ImGui::SameLine();
+		ImGui::RadioButton("Equator (fixed)", &vecState.frm ,1);
+		ImGui::SameLine();
+		ImGui::RadioButton("Equator (rotating)", &vecState.frm ,2);
+		ImGui::EndGroupPanel();
+
+		ImGui::SameLine();
+		ImGui::BeginGroupPanel("Coordinates");	
+		ImGui::RadioButton("Cartesian", &vecState.crd, 0);
+		ImGui::SameLine();
+		ImGui::RadioButton("Polar", &vecState.crd, 1);
+		ImGui::EndGroupPanel();
+	ImGui::EndGroupPanel();
 
 	VESSEL *vessel = oapiGetVesselInterface (m_currentVessel);
-	OBJHANDLE hRef = vessel->GetGravityRef();
+	OBJHANDLE hRef = oapiGetObjectByName(vecState.m_selectedReference.c_str());
 
 	VECTOR3 pos = vecState.pos, vel = vecState.vel;
 	if (vecState.frm) {
@@ -483,23 +546,38 @@ void ScnEditor::DrawStateVectors()
 	}
 	if(vecState.crd) {
 		//Polar
+		ImGui::BeginGroupPanel("Position", ImVec2(ImGui::GetContentRegionAvail().x * 0.5f, 0));
+		ImGui::PushItemWidth(100);
 		ImGui::InputDouble("Radius (m)", &pos.x, 0.0, 0.0, "%g");
 		ImGui::InputDouble("Longitude (°)", &pos.y, 0.0, 0.0, "%g");
 		ImGui::InputDouble("Latitude (°)", &pos.z, 0.0, 0.0, "%g");
-
+		ImGui::PopItemWidth();
+		ImGui::EndGroupPanel();
+		ImGui::SameLine();
+		ImGui::BeginGroupPanel("Velocity");
+		ImGui::PushItemWidth(100);
 		ImGui::InputDouble("dRadius/dt (m/s)", &vel.x, 0.0, 0.0, "%g");
 		ImGui::InputDouble("dLongitude/dt (°/s)", &vel.y, 0.0, 0.0, "%g");
 		ImGui::InputDouble("dLatitude/dt (°/s)", &vel.z, 0.0, 0.0, "%g");
-
+		ImGui::PopItemWidth();
+		ImGui::EndGroupPanel();
 	} else {
 		//Cartesian
+		ImGui::BeginGroupPanel("Position", ImVec2(ImGui::GetContentRegionAvail().x * 0.5f, 0));
+		ImGui::PushItemWidth(100);
 		ImGui::InputDouble("x (m)", &pos.x, 0.0, 0.0, "%g");
 		ImGui::InputDouble("y (m)", &pos.y, 0.0, 0.0, "%g");
 		ImGui::InputDouble("z (m)", &pos.z, 0.0, 0.0, "%g");
-
+		ImGui::PopItemWidth();
+		ImGui::EndGroupPanel();
+		ImGui::SameLine();
+		ImGui::BeginGroupPanel("Velocity");
+		ImGui::PushItemWidth(100);
 		ImGui::InputDouble("dx/dt (m/s)", &vel.x, 0.0, 0.0, "%g");
 		ImGui::InputDouble("dy/dt (m/s)", &vel.y, 0.0, 0.0, "%g");
 		ImGui::InputDouble("dz/dt (m/s)", &vel.z, 0.0, 0.0, "%g");
+		ImGui::PopItemWidth();
+		ImGui::EndGroupPanel();
 	}
 
 	// in the rotating reference frame we need to add the angular
@@ -590,13 +668,16 @@ void ScnEditor::DrawStateVectors()
 		ImGui::EndPopup();
 	}
 }
+/*
 void ScnEditor::DrawOrientation()
 {
 	if(!m_currentVessel) return;
-	ImGui::TextUnformatted("Euler angles");
+	ImGui::BeginGroupPanel("Euler angles");
 	ImGui::InputDouble("alpha", &aRot.x, 0.0, 0.0, "%g");
 	ImGui::InputDouble("beta", &aRot.y, 0.0, 0.0, "%g");
 	ImGui::InputDouble("gamma", &aRot.z, 0.0, 0.0, "%g");
+	ImGui::EndGroupPanel();
+
 	if(ImGui::Button("Apply")) {
 		VESSEL *vessel = oapiGetVesselInterface (m_currentVessel);
 		VECTOR3 arot = aRot;
@@ -605,21 +686,37 @@ void ScnEditor::DrawOrientation()
 		arot.z*=RAD;
 		vessel->SetGlobalOrientation (arot);
 	}
-}
-void ScnEditor::DrawAngularVelocity()
+}*/
+void ScnEditor::DrawRotation()
 {
 	if(!m_currentVessel) return;
-	ImGui::TextUnformatted("Angular velocity");
+	ImGui::PushItemWidth(100);
+	ImGui::BeginGroupPanel("Euler angles", ImVec2(ImGui::GetContentRegionAvail().x * 0.5f, 0));
+	ImGui::InputDouble("alpha", &aRot.x, 0.0, 0.0, "%g");
+	ImGui::InputDouble("beta", &aRot.y, 0.0, 0.0, "%g");
+	ImGui::InputDouble("gamma", &aRot.z, 0.0, 0.0, "%g");
+	ImGui::EndGroupPanel();
+	ImGui::SameLine();
+	ImGui::BeginGroupPanel("Angular velocity");
 	ImGui::InputDouble("Pitch (°/s)", &aVel.x, 0.0, 0.0, "%g");
 	ImGui::InputDouble("Yaw (°/s)", &aVel.y, 0.0, 0.0, "%g");
 	ImGui::InputDouble("Bank (°/s)", &aVel.z, 0.0, 0.0, "%g");
+	ImGui::EndGroupPanel();
+	ImGui::PopItemWidth();
+
 	if(ImGui::Button("Apply")) {
 		VESSEL *vessel = oapiGetVesselInterface (m_currentVessel);
 		VECTOR3 avel = aVel;
+		VECTOR3 arot = aRot;
 		avel.x*=RAD;
 		avel.y*=RAD;
 		avel.z*=RAD;
 		vessel->SetAngularVel (avel);
+
+		arot.x*=RAD;
+		arot.y*=RAD;
+		arot.z*=RAD;
+		vessel->SetGlobalOrientation (arot);
 	}
 	ImGui::SameLine();
 	if(ImGui::Button("Kill rotation")) {
@@ -630,38 +727,21 @@ void ScnEditor::DrawAngularVelocity()
 }
 void ScnEditor::DrawLocation()
 {
-	if(DrawCBodies(loc.planet, "Celestial body")) {
+	ImGui::BeginGroupPanel("Celestial body");
+	if(DrawCBodies(loc.planet, "##Celestial body")) {
 		loc.base.clear();
 	}
-	ImGui::Separator();
-	ImGui::TextUnformatted("Base");
+	ImGui::EndGroupPanel();
 	if(!loc.planet.empty()) {
 		OBJHANDLE hPlanet = oapiGetObjectByName(loc.planet.c_str());
-		if(DrawBases(hPlanet, loc.base, "Surface base")) {
-			loc.pad.clear();
-		}
-		if(!loc.base.empty()) {
-			OBJHANDLE hBase = oapiGetBaseByName(hPlanet, loc.base.c_str());
-			if(hBase) {
-				DrawPads(hBase, loc.pad);
-			}
-		}
+		DrawBases(hPlanet, loc.base);
 	}
-	if(ImGui::Button("Set base location")) {
-		if(!loc.base.empty()) {
-			OBJHANDLE hPlanet = oapiGetObjectByName(loc.planet.c_str());
-			OBJHANDLE hBase = oapiGetBaseByName(hPlanet, loc.base.c_str());
-			if (!loc.pad.empty())
-				oapiGetBasePadEquPos (hBase, std::stoi(loc.pad)-1, &loc.longitude, &loc.latitude);
-			else
-				oapiGetBaseEquPos (hBase, &loc.longitude, &loc.latitude);
-			loc.longitude *= DEG;
-			loc.latitude *= DEG;
-		}
-	}
+
+	ImGui::BeginGroupPanel("Position");
 	ImGui::InputDouble("Longitude", &loc.longitude, 0.0, 0.0, "%f");
 	ImGui::InputDouble("Latitude", &loc.latitude, 0.0, 0.0, "%f");
 	ImGui::InputDouble("Heading (°)", &loc.heading, 0.0, 0.0, "%f");
+	ImGui::EndGroupPanel();
 	if(ImGui::Button("Apply")) {
 		char cbuf[256];
 		VESSEL *vessel = oapiGetVesselInterface (m_currentVessel);
@@ -677,7 +757,6 @@ void ScnEditor::DrawLocation()
 		vs.surf_lat = loc.latitude * RAD;
 		vs.surf_hdg = loc.heading * RAD;
 		vessel->DefSetStateEx (&vs);
-
 	}
 }
 void ScnEditor::DrawDocking()
@@ -736,20 +815,17 @@ void ScnEditor::DrawDocking()
 				oapiGetObjectName (hMate, cbuf, sizeof(cbuf));
 				ImGui::TableNextColumn(); ImGui::Text("Docked with %s", cbuf);
 				ImGui::TableNextColumn();
-				if(ImGui::Button("Undock")) {
+				if(ImGui::Button(ICON_FA_UNLINK" Undock")) {
 					vessel->Undock (i);
 				}
 			} else {
 				ImGui::TableNextColumn(); ImGui::Text("Free");
 				ImGui::TableNextColumn();
-				if(ImGui::Button("Dock with...")) {
+				if(ImGui::Button(ICON_FA_LINK" Dock with...")) {
 					ImGui::OpenPopup("DockWith");
 				}
 				if (ImGui::BeginPopup("DockWith"))
 				{
-
-
-
 					if (ImGui::TreeNodeEx("Vessels", ImGuiTreeNodeFlags_DefaultOpen)) {
 						for (int v = 0; v < oapiGetVesselCount(); v++) {
 							OBJHANDLE hV = oapiGetVesselByIndex (v);
@@ -758,11 +834,8 @@ void ScnEditor::DrawDocking()
 							int ndock = vesselTgt->DockCount();
 							if(ndock == 0) continue;
 							const char *name = vesselTgt->GetName();
-							//const bool is_selected = selected == hV;
-							
-							ImGuiTreeNodeFlags node_flags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
-							//if(is_selected) node_flags |= ImGuiTreeNodeFlags_Selected;
-							if(ImGui::TreeNodeEx(name)) {//, node_flags);
+
+							if(ImGui::TreeNodeEx(name)) {
 								for(int d = 0; d < ndock ; d++) {
 									char cbuf[16];
 									sprintf(cbuf,"Port %d",d+1);
@@ -773,18 +846,21 @@ void ScnEditor::DrawDocking()
 									ImGui::TreeNodeEx(cbuf, node_flags);
 									if(hMate) ImGui::EndDisabled();
 									if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) {
-
-
-
 										int res = vessel->Dock (hV, i, d, mode);
-
-
-										//selected = hV;
-										//ReloadVessel();
-										//ret = true;
-										//Don't do this for now because it can create lots of controller profiles :(
-										//oapiSetFocusObject (m_currentVessel);
-										//oapiCameraAttach (m_currentVessel, 1);
+										switch(res) {
+											case 1:
+												oapiAddNotification(OAPINOTIF_ERROR, "Docking failed","Docking port on the vessel already in use");
+												break;
+											case 2:
+												oapiAddNotification(OAPINOTIF_ERROR, "Docking failed","Docking port on the target vessel already in use");
+												break;
+											case 3:
+												oapiAddNotification(OAPINOTIF_ERROR, "Docking failed","Target vessel already part of the vessel's superstructure");
+												break;
+											default:
+												break;
+										}
+										ImGui::CloseCurrentPopup();
 									}
 								}
 								ImGui::TreePop();
@@ -792,67 +868,97 @@ void ScnEditor::DrawDocking()
 						}
 						ImGui::TreePop();
 					}
-
 					ImGui::EndPopup();
 				}
 			}
-
 			ImGui::TableNextRow();
 			ImGui::PopID();
 		}
 		ImGui::EndTable();
 	}
-/*
-void EditorTab_Docking::Refresh ()
-{
-	static const int dockitem[7] = {IDC_DOCK, IDC_COMBO1, IDC_EDIT4, IDC_STATIC3, IDC_SPIN3, IDC_RADIO1, IDC_RADIO2};
-	static const int undockitem[2] = {IDC_UNDOCK, IDC_EDIT3};
-
-	VESSEL *vessel = Vessel();
-	char cbuf[256];
-	int i;
-	DWORD n, ndock = vessel->DockCount();
-	SetWindowText (GetDlgItem (hTab, IDC_ERRMSG), "");
-
-	sprintf (cbuf, "of %d", vessel->DockCount());
-	SetWindowText (GetDlgItem (hTab, IDC_STATIC1), cbuf);
-
-	GetWindowText (GetDlgItem (hTab, IDC_EDIT1), cbuf, 256);
-	if (!sscanf (cbuf, "%d", &n)) n = 0;
-	if (n < 1 || n > ndock) {
-		n = max (1, min (ndock, n));
-		sprintf (cbuf, "%d", n);
-		SetWindowText (GetDlgItem (hTab, IDC_EDIT1), cbuf);
-	}
-	n--; // zero-based
-
-	DOCKHANDLE hDock = vessel->GetDockHandle (n);
-	NAVHANDLE hIDS = vessel->GetIDS (hDock);
-	if (hIDS) sprintf (cbuf, "%0.2f", oapiGetNavFreq (hIDS));
-	else      strcpy (cbuf, "<none>");
-	SetWindowText (GetDlgItem (hTab, IDC_EDIT2), cbuf);
-	SendDlgItemMessage (hTab, IDC_IDS, BM_SETCHECK, hIDS ? BST_CHECKED : BST_UNCHECKED, 0);
-	EnableWindow (GetDlgItem (hTab, IDC_EDIT2), hIDS ? TRUE:FALSE);
-	EnableWindow (GetDlgItem (hTab, IDC_SPIN2), hIDS ? TRUE:FALSE);
-
-	OBJHANDLE hMate = vessel->GetDockStatus (hDock);
-	if (hMate) { // dock is engaged
-		SetWindowText (GetDlgItem (hTab, IDC_STATIC2), "Currently docked to");
-		for (i = 0; i < 7; i++) ShowWindow (GetDlgItem (hTab, dockitem[i]), SW_HIDE);
-		for (i = 0; i < 2; i++) ShowWindow (GetDlgItem (hTab, undockitem[i]), SW_SHOW);
-		oapiGetObjectName (hMate, cbuf, 256);
-		SetWindowText (GetDlgItem (hTab, IDC_EDIT3), cbuf);
-	} else { // dock is free
-		SetWindowText (GetDlgItem (hTab, IDC_STATIC2), "Establish docking connection with");
-		for (i = 0; i < 2; i++) ShowWindow (GetDlgItem (hTab, undockitem[i]), SW_HIDE);
-		for (i = 0; i < 7; i++) ShowWindow (GetDlgItem (hTab, dockitem[i]), SW_SHOW);
-	}
-}
-*/
 }
 void ScnEditor::DrawPropellant()
 {
-	
+	if(!m_currentVessel) return;
+	VESSEL *vessel = oapiGetVesselInterface (m_currentVessel);
+	int ntank = ntank = vessel->GetPropellantCount();
+	if(ntank == 0) {
+		ImGui::TextUnformatted("Vessel has no fuel tanks");
+		return;
+	}
+	if (ImGui::BeginTable("Fuel tanks", ntank, ImGuiTableFlags_Borders, ImVec2(0.0f, 0.0f), 60.0f))
+	{
+		for(int tank = 0; tank < ntank; tank++) {
+			PROPELLANT_HANDLE hP = vessel->GetPropellantHandleByIndex (tank);
+			double m0 = vessel->GetPropellantMaxMass (hP);
+			double m  = vessel->GetPropellantMass (hP);
+
+			ImGui::TableNextColumn();
+			if(m0 == 0.0) continue;
+
+			float ratio = m / m0 * 100.0f;
+
+			char cbuf[32];
+			sprintf(cbuf, "Tank %d", tank + 1);
+
+			if (ImGuiKnobs::Knob(cbuf, &ratio, 0.0f, 100.0f, 1.0f, "%.2f%%", ImGuiKnobVariant_WiperOnly, 50.0, ImGuiKnobFlags_DragHorizontal)) {
+				// value was changed
+				m = m0 * ratio / 100.0;
+				vessel->SetPropellantMass(hP, m);
+			}
+		}
+		ImGui::TableNextRow();
+		for(int tank = 0; tank < ntank; tank++) {
+			ImGui::TableNextColumn();
+			PROPELLANT_HANDLE hP = vessel->GetPropellantHandleByIndex (tank);
+			double m0 = vessel->GetPropellantMaxMass (hP);
+			if(m0 == 0.0) continue;
+			double m  = vessel->GetPropellantMass (hP);
+
+			ImGui::SetNextItemWidth(60);
+			ImGui::PushID(tank);
+			if(ImGui::InputDouble("##fuelmass", &m, 0.0, 0.0, "%.1f")) {
+				m = std::clamp(m, 0.0, m0);
+				vessel->SetPropellantMass(hP, m);
+			}
+			ImGui::PopID();
+			ImGui::SameLine();
+			ImGui::Text("/%.1fkg", m0);
+		}
+		ImGui::EndTable();
+	}
+	/*
+void EditorTab_Propellant::SetLevel (double level, bool setall)
+{
+	char cbuf[256];
+	int i, j;
+	DWORD n, k, k0, k1;
+	double m0;
+	VESSEL *vessel = oapiGetVesselInterface (ed->hVessel);
+	ntank = vessel->GetPropellantCount();
+	if (!ntank) return;
+	GetWindowText (GetDlgItem (hTab, IDC_EDIT1), cbuf, 256);
+	i = sscanf (cbuf, "%d", &n);
+	if (!i || --n >= ntank) return;
+	if (setall) k0 = 0, k1 = ntank;
+	else        k0 = n, k1 = n+1;
+	for (k = k0; k < k1; k++) {
+		PROPELLANT_HANDLE hP = vessel->GetPropellantHandleByIndex (k);
+		m0 = vessel->GetPropellantMaxMass (hP);
+		vessel->SetPropellantMass (hP, level*m0);
+		if (k == n) {
+			sprintf (cbuf, "%f", level);
+			SetWindowText (GetDlgItem (hTab, IDC_EDIT2), cbuf);
+			sprintf (cbuf, "%0.2f", level*m0);
+			SetWindowText (GetDlgItem (hTab, IDC_EDIT3), cbuf);
+			i = oapiGetGaugePos (GetDlgItem (hTab, IDC_PROPLEVEL));
+			j = (int)(level*100.0+0.5);
+			if (i != j) oapiSetGaugePos (GetDlgItem (hTab, IDC_PROPLEVEL), j);
+		}
+	}
+	RefreshTotals();
+}
+	*/
 }
 
 void ScnEditor::Show ()

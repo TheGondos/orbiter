@@ -139,6 +139,7 @@ target_include_directories(imgui
         "${GLAD_INC_PATH}"
 )
 
+# node editor
 set(IMGUI_NODE_EDITOR_LIB_NAME "Extern/imgui-node-editor")
 set(IMGUI_NODE_EDITOR_SOURCES
 	"${IMGUI_NODE_EDITOR_LIB_NAME}/imgui_node_editor.cpp"
@@ -168,6 +169,37 @@ target_include_directories(imgui-node-editor
 	"${IMGUI_NODE_EDITOR_INC_PATH}"
 	"${IMGUI_NODE_EDITOR_LIB_NAME}/examples/blueprints-example/"
 )
+
+# imgui-knobs
+set(IMGUI_KNOBS_LIB_NAME "Extern/imgui-knobs")
+
+set(IMGUI_KNOBS_SOURCES
+    "${IMGUI_KNOBS_LIB_NAME}/imgui-knobs.cpp"
+)
+
+set(IMGUI_KNOBS_HEADERS
+    "${IMGUI_KNOBS_LIB_NAME}/imgui-knobs.h"
+)
+
+set(IMGUI_KNOBS_INC_PATH "${IMGUI_KNOBS_LIB_NAME}/")
+
+add_library(imgui-knobs
+    STATIC
+        ${IMGUI_KNOBS_SOURCES}
+        ${IMGUI_KNOBS_HEADERS}
+)
+
+#target_compile_definitions(imgui-knobs
+#    PRIVATE
+#        IMGUI_IMPL_OPENGL_LOADER_GLAD=1
+#)
+
+target_include_directories(imgui-knobs
+    PUBLIC
+        "${IMGUI_INC_PATH}"
+        "${IMGUI_KNOBS_INC_PATH}"
+)
+
 
 # We don't query Qt with find_package because we need the 64-bit version here
 set(Qt5_x64_DIR

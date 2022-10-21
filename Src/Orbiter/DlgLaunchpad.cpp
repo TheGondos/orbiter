@@ -415,9 +415,10 @@ More information can be found on the [Orbiter forum](https://www.orbiter-forum.c
 ## Credits
 * [Orbiter](https://github.com/orbitersim/orbiter) : *a spaceflight simulator based on Newtonian mechanics* by Dr Martin Schweiger
 * [Dear ImGui](https://github.com/ocornut/imgui) : *a bloat-free graphical user interface library for C++* by Omar Cornut
-* [md4c](https://github.com/mity/md4c) : Markdown for C by Martin Mitáš
-* [imgui_md](https://github.com/mekhontsev/imgui_md) : Markdown renderer for Dear ImGui by Dmitry Mekhontsev
+* [md4c](https://github.com/mity/md4c) : *Markdown for C* by Martin Mitáš
+* [imgui_md](https://github.com/mekhontsev/imgui_md) : *Markdown renderer for Dear ImGui* by Dmitry Mekhontsev
 * [imgui-node-editor](https://github.com/thedmd/imgui-node-editor) : *Node Editor in ImGui* by Michał Cichoń
+* [imgui-knobs](https://github.com/altschuler/imgui-knobs) : knobs widget by Simon Altschuler
 * [libnsbmp](https://www.netsurf-browser.org/projects/libnsbmp/) : *BMP Decoding Library* from the [NetSurf](https://www.netsurf-browser.org/) project
 * [GLFW](https://www.glfw.org/) : *An OpenGL Library*
 * [imgui-notify](https://github.com/patrickcjk/imgui-notify) : *a (very) simple notification wrapper for Dear ImGui* by Deathstroke aka patrickcjk

@@ -168,6 +168,7 @@ target_link_libraries(Orbiter_server
 	glfw
 	imgui
 	imgui-node-editor
+	imgui-knobs
 	z
 	lua::lib
 )

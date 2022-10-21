@@ -40,8 +40,8 @@ public:
 	void DrawTabs();
 	void DrawOrbitalElements();
 	void DrawStateVectors();
-	void DrawOrientation();
-	void DrawAngularVelocity();
+	void DrawRotation();
+	//void DrawAngularVelocity();
 	void DrawLocation();
 	void DrawDocking();
 	void DrawPropellant();
@@ -49,7 +49,7 @@ public:
 	void ReloadVessel();
 	void ApplyOrbitalElements();
 	bool DrawCBodies(std::string &ref, const char *name);
-	bool DrawBases(OBJHANDLE hPlanet, std::string &ref, const char *name);
+	void DrawBases(OBJHANDLE hPlanet, std::string &ref);
 	void AddCbodyNode(const CelestialBody *cbody);
 	bool DrawPads(OBJHANDLE hBase, std::string &ref);
 
@@ -68,6 +68,7 @@ public:
 		MATRIX3 rotRotating;
 		int frm;
 		int crd;
+		std::string m_selectedReference;
 	};
 	VectorState vecState;
 	VECTOR3 aRot;
