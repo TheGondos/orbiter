@@ -1488,7 +1488,7 @@ void HUD_Orbit::UpdateMesh (int &ivtx, int &iidx)
 		Vector Z0 (-c*a, -c*b, a*a+b*b); // projection of vessel forward direction into orbital plane
 		if (Z0.x || Z0.y || Z0.z) {
 			Z0.unify();
-			double cosa = dotp (Vrel, Z0);
+			double cosa = std::clamp(dotp (Vrel, Z0), -1.0, 1.0);
 			double phi = acos(cosa);
 			Vector VV (Vrel.y*c - Vrel.z*b, Vrel.z*a - Vrel.x*c, Vrel.x*b - Vrel.y*a); // Vector perpendicular to V in orbital plane
 			if (dotp (Z0, VV) > 0.0) phi = Pi2-phi;

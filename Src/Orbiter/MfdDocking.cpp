@@ -518,7 +518,7 @@ void Instrument_Docking::UpdateDraw (oapi::Sketchpad *skp)
 	if (dstold >= 0.0) {
 		double cvel = (dstold-dst)/dt;
 		double avel = fabs (cvel);
-		double lvel = log10 (avel);
+		double lvel = avel > 0.001 ? log10 (avel) : 0.0;
 		if (lvel >= lvel_min) {
 			if (lvel > lvel_max) lvel = lvel_max;
 			y0 = (int)((lvel-lvel_min)/(lvel_max-lvel_min)*barh);
