@@ -86,6 +86,11 @@ public:
 	};
 	Location loc;
 
+	double mjd;
+	struct tm date;
+	int OrbitalMode;
+	int SOrbitalMode;
+
 	int dwCmd;         // custom command handle
 	OBJHANDLE m_currentVessel;
 	SURFHANDLE m_preview;

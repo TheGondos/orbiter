@@ -54,6 +54,8 @@ ScnEditor::ScnEditor (): GUIElement("Scenario Editor", "ScnEditor")
 	aRot = {0,0,0};
 	aVel = {0,0,0};
 	m_customTabs = nullptr;
+	OrbitalMode = PROP_ORBITAL_FIXEDSTATE;
+	SOrbitalMode = PROP_SORBITAL_FIXEDSTATE;
 }
 
 ScnEditor::~ScnEditor ()
@@ -64,6 +66,8 @@ ScnEditor::~ScnEditor ()
 
 void ScnEditor::OpenDialog ()
 {
+	mjd = oapiGetSimMJD();
+	date = *mjddate(mjd);
 	oapiOpenDialog (this);
 }
 
@@ -672,25 +676,7 @@ void ScnEditor::DrawStateVectors()
 		ImGui::EndPopup();
 	}
 }
-/*
-void ScnEditor::DrawOrientation()
-{
-	if(!m_currentVessel) return;
-	ImGui::BeginGroupPanel("Euler angles");
-	ImGui::InputDouble("alpha", &aRot.x, 0.0, 0.0, "%g");
-	ImGui::InputDouble("beta", &aRot.y, 0.0, 0.0, "%g");
-	ImGui::InputDouble("gamma", &aRot.z, 0.0, 0.0, "%g");
-	ImGui::EndGroupPanel();
 
-	if(ImGui::Button("Apply")) {
-		VESSEL *vessel = oapiGetVesselInterface (m_currentVessel);
-		VECTOR3 arot = aRot;
-		arot.x*=RAD;
-		arot.y*=RAD;
-		arot.z*=RAD;
-		vessel->SetGlobalOrientation (arot);
-	}
-}*/
 void ScnEditor::DrawRotation()
 {
 	if(!m_currentVessel) return;
@@ -970,42 +956,150 @@ void ScnEditor::Show ()
     if(!show) return;
 	if(ImGui::Begin("Scenario Editor", &show)) {
 	    ImGui::BeginChild("ChildL", ImVec2(ImGui::GetContentRegionAvail().x / 3, ImGui::GetContentRegionAvail().y), true);
-		if(ImGui::Button("New vessel")) {
-			ImGui::OpenPopup("NewVessel");
-		}
-		ImGui::SameLine();
-		const bool disabled = !m_currentVessel;
-		if(disabled) ImGui::BeginDisabled();
-		if(ImGui::Button("Delete selected")) {
-			if(oapiGetVesselCount()>1) {
-				oapiDeleteVessel (m_currentVessel);
-				m_currentVessel = nullptr;
-			} else {
-				oapiAddNotification(OAPINOTIF_ERROR, "Cannot delete vessel", "One vessel at least must exists");
+		if(ImGui::CollapsingHeader("Date")) {
+			int year = date.tm_year + 1900;
+			int month = date.tm_mon;
+			int day = date.tm_mday;
+			int hour = date.tm_hour;
+			int minute = date.tm_min;
+			int second = date.tm_sec;
+			bool changed = false;
+
+			ImGui::BeginGroupPanel("Universal time DD/MM/YYYY hh:mm:ss");
+			ImGui::PushItemWidth(30);
+			changed |= ImGui::InputInt("##DD", &day, 0, 0, ImGuiInputTextFlags_CharsDecimal);
+			ImGui::SameLine();
+			changed |= ImGui::InputInt("##MM", &month, 0, 0, ImGuiInputTextFlags_CharsDecimal);
+			ImGui::SameLine();
+			ImGui::PushItemWidth(40);
+			changed |= ImGui::InputInt("##YYYY", &year, 0, 0, ImGuiInputTextFlags_CharsDecimal);
+			ImGui::PopItemWidth();
+			ImGui::SameLine();
+			
+			changed |= ImGui::InputInt("##HH", &hour, 0, 0, ImGuiInputTextFlags_CharsDecimal);
+			ImGui::SameLine();
+			changed |= ImGui::InputInt("##Min", &minute, 0, 0, ImGuiInputTextFlags_CharsDecimal);
+			ImGui::SameLine();
+			changed |= ImGui::InputInt("##Sec", &second, 0, 0, ImGuiInputTextFlags_CharsDecimal);
+			ImGui::SameLine();
+			ImGui::PopItemWidth();
+			
+			ImGui::EndGroupPanel();
+
+			if(changed) {
+				date.tm_year = year - 1900;
+				date.tm_mon  = std::clamp(month, 1, 12);
+				date.tm_mday = std::clamp(day, 1, 31);
+				date.tm_hour = std::clamp(hour, 0, 23);
+				date.tm_min  = std::clamp(minute, 0, 59);
+				date.tm_sec  = std::clamp(second, 0, 60);
+
+				mjd = date2mjd (&date);
+			}
+			changed = false;
+
+			ImGui::BeginGroupPanel("Modified Julian Date (MJD)");
+			ImGui::SetNextItemWidth(100);
+			changed |= ImGui::InputDouble("##MJD", &mjd, 0, 0, "%f");
+			ImGui::EndGroupPanel();
+
+			ImGui::BeginGroupPanel("Julian Date (JD)");
+			ImGui::SetNextItemWidth(100);
+			double jd = mjd + 2400000.5;
+			if(ImGui::InputDouble("##JD", &jd, 0, 0, "%f")) {
+				changed = true;
+				mjd = jd - 2400000.5;
+			}
+			ImGui::EndGroupPanel();
+
+			ImGui::BeginGroupPanel("Julian Century (JC)");
+			ImGui::SetNextItemWidth(100);
+			double jc = MJD2JC(mjd);
+			if(ImGui::InputDouble("##JC", &jc, 0, 0, "%f")) {
+				changed = true;
+				mjd = JC2MJD(jc);
+			}
+			ImGui::EndGroupPanel();
+
+			ImGui::BeginGroupPanel("Epoch");
+			ImGui::SetNextItemWidth(100);
+			double epoch = MJD2Jepoch(mjd);
+			if(ImGui::InputDouble("##Epoch", &epoch, 0, 0, "%f")) {
+				changed = true;
+				mjd = Jepoch2MJD(epoch);
+			}
+			ImGui::EndGroupPanel();
+
+
+			ImGui::BeginGroupPanel("Orbital propagation");
+			ImGui::RadioButton("Fixed", &OrbitalMode, PROP_ORBITAL_FIXEDSTATE);ImGui::SameLine();
+			ImGui::RadioButton("Rotate", &OrbitalMode, PROP_ORBITAL_FIXEDSURF);ImGui::SameLine();
+			ImGui::RadioButton("Propagate", &OrbitalMode, PROP_ORBITAL_ELEMENTS);
+			ImGui::EndGroupPanel();
+
+			ImGui::BeginGroupPanel("Suborbital propagation");
+			ImGui::RadioButton("Fixed##sub", &SOrbitalMode, PROP_SORBITAL_FIXEDSTATE);ImGui::SameLine();
+			ImGui::RadioButton("Rotate##sub", &SOrbitalMode, PROP_SORBITAL_FIXEDSURF);ImGui::SameLine();
+			ImGui::RadioButton("Propagate##sub", &SOrbitalMode, PROP_SORBITAL_ELEMENTS);
+			ImGui::RadioButton("Destroy##sub", &SOrbitalMode, PROP_SORBITAL_DESTROY);
+			ImGui::EndGroupPanel();
+
+
+			if(ImGui::Button("Now")) {
+				mjd = oapiGetSysMJD();
+				changed = true;
+			}
+			if(changed)
+				date = *mjddate (mjd);
+
+			ImGui::SameLine();
+			if(ImGui::Button("Apply")) {
+				oapiSetSimMJD (mjd, OrbitalMode | SOrbitalMode);
+			}
+			ImGui::SameLine();
+			if(ImGui::Button("Refresh")) {
+				mjd = oapiGetSimMJD();
+				date = *mjddate(mjd);
 			}
 		}
-		ImGui::SameLine();
-		if(ImGui::Button("Focus")) {
-			oapiSetFocusObject (m_currentVessel);
-			oapiCameraAttach (m_currentVessel, 1);
-		}
-		ImGui::SameLine();
-		if(ImGui::Button("Refresh")) {
-			ReloadVessel();
-		}
-		if(disabled) ImGui::EndDisabled();
-		if(ImGui::Button("Date")) {
-			
-		}
-		ImGui::SetNextWindowSize({500,500});
-		if (ImGui::BeginPopup("NewVessel"))
-		{
-			VesselCreatePopup();
-			ImGui::EndPopup();
-		}
-		ImGui::Separator();
 
-		DrawShipList(m_currentVessel);
+		if(ImGui::CollapsingHeader("Vessels")) {
+			if(ImGui::Button("New")) {
+				ImGui::OpenPopup("NewVessel");
+			}
+			ImGui::SameLine();
+			const bool disabled = !m_currentVessel;
+			if(disabled) ImGui::BeginDisabled();
+			if(ImGui::Button("Delete selected")) {
+				if(oapiGetVesselCount()>1) {
+					oapiDeleteVessel (m_currentVessel);
+					m_currentVessel = nullptr;
+				} else {
+					oapiAddNotification(OAPINOTIF_ERROR, "Cannot delete vessel", "One vessel at least must exists");
+				}
+			}
+			ImGui::SameLine();
+			if(ImGui::Button("Focus")) {
+				oapiSetFocusObject (m_currentVessel);
+				oapiCameraAttach (m_currentVessel, 1);
+			}
+			ImGui::SameLine();
+			if(ImGui::Button("Refresh")) {
+				ReloadVessel();
+			}
+			if(disabled) ImGui::EndDisabled();
+
+			ImGui::SetNextWindowSize({500,500});
+			if (ImGui::BeginPopup("NewVessel"))
+			{
+				VesselCreatePopup();
+				ImGui::EndPopup();
+			}
+			ImGui::Separator();
+
+			DrawShipList(m_currentVessel);
+
+		}
 	    ImGui::EndChild();
 		ImGui::SameLine();
 	    ImGui::BeginChild("ChildR", ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y), true);
@@ -1221,7 +1315,7 @@ MODULEHANDLE ScnEditor::LoadVesselLibrary (const VESSEL *vessel)
 		m_customTabs = nullptr;
 	}
 	if (vessel->GetEditorModule (cbuf)) {
-		char path[256];
+		char path[280];
 		sprintf (path, "lib%s.so", cbuf);
 
 		hEdLib = oapiModuleLoad (path);
