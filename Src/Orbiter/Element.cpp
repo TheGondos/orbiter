@@ -202,10 +202,10 @@ double Elements::EccAnomaly (double ma) const
 	double res, E;
 	int i;
 
-	E = (fabs (ma-priv_ma0) < 1e-2 ? priv_ea0 : ma);
-	// initial guess for E: use previous calculation or mean anomaly
-
 	if (e < 1.0) { // closed orbit: solve M = E - e sin E
+		E = (fabs (ma-priv_ma0) < 1e-2 ? priv_ea0 : ma);
+		// initial guess for E: use previous calculation or mean anomaly
+
 		res = ma - E + e * sin(E);
 		if (fabs (res) > fabs (ma))
 			E = 0.0, res = ma;
@@ -215,9 +215,8 @@ double Elements::EccAnomaly (double ma) const
 			res = ma - E + e * sin(E);
 		}
 	} else {       // open orbit : solve M = e sinh E - E
-		res = ma - e * sinh(E) + E;
-		if (fabs (res) > fabs (ma)) // bad choice of initial E
-			E = 0.0, res = ma;      // last resort
+		E = priv_ea0, res = 1.0;
+
 		for (i = 0; fabs(res) > tol && i < niter; i++) {
 			E += (max (-1.0, min (1.0, res/(e * cosh(E) - 1.0))));
 			// limit step size to avoid numerical instabilities
@@ -235,7 +234,6 @@ double Elements::EccAnomaly (double ma) const
 	}
 	sprintf (DBG_MSG, "res_max_closed=%g, res_max_open=%g", res_max_closed, res_max_open);
 #endif
-
 	priv_ma0 = ma;
 	priv_ea0 = E;  // store value to initialise next calculation
 	return E;
