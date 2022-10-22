@@ -22,12 +22,11 @@
 #include "DockingSubsys.h"
 #include "AvionicsSubsys.h"
 #include "MfdSubsys.h"
-//#include "ScnEditorAPI.h"
+#include "ScnEditorAPI.h"
 #include "PressureSubsys.h"
 #include "ThermalSubsys.h"
 #include "LightSubsys.h"
 #include "FailureSubsys.h"
-#include "resource.h"
 #include "meshres.h"
 #include "meshres_vc.h"
 #include "meshres_p0.h"
@@ -36,6 +35,7 @@
 #include <time.h>
 #include <algorithm>
 #include <imgui/imgui.h>
+#include "font_awesome_5.h"
 
 // ==============================================================
 // Global parameters
@@ -64,95 +64,104 @@ static void DrawState(const AnimState2 &state, const char *closed, const char *c
 
 }
 
-static void DrawNewLine(const char *txt) {
-	ImGui::TableNextRow();
-	ImGui::TableSetColumnIndex(0);
-	ImGui::TextUnformatted(txt);
-	ImGui::TableSetColumnIndex(1);
+static void DrawDGControls(DeltaGlider *dg) {
+	const ImVec2 button_sz(ImVec2(60, 20));
+	ImGui::BeginGroupPanel("Landing Gear", ImVec2(ImGui::GetContentRegionAvail().x * 0.5f, 0));
+	if(ImGui::Button("Up###lgearup", button_sz)) { dg->SubsysGear()->RaiseGear(); }
+	DrawState(dg->SubsysGear()->GearState(), "Raised", "Raising", "Lowering", "Lowered");
+	if(ImGui::Button("Down###lgeardown", button_sz)) { dg->SubsysGear()->LowerGear(); }
+	ImGui::EndGroupPanel();
+	ImGui::SameLine();
+	ImGui::BeginGroupPanel("Retro Doors");
+	if(ImGui::Button("Close###rdoorsc", button_sz)) { dg->SubsysMainRetro()->CloseRetroCover(); }
+	DrawState(dg->SubsysMainRetro()->RetroCoverState(), "Closed", "Closing", "Opening", "Opened");
+	if(ImGui::Button("Open###rdoorso", button_sz)) { dg->SubsysMainRetro()->OpenRetroCover(); }
+	ImGui::EndGroupPanel();
+
+	ImGui::BeginGroupPanel("Airbrake", ImVec2(ImGui::GetContentRegionAvail().x * 0.5f, 0));
+	if(ImGui::Button("Retract###airbraker", button_sz)) { dg->SubsysAerodyn()->RetractAirbrake(); }
+	DrawState(dg->SubsysAerodyn()->AirbrakeSubsys()->State(), "Retracted", "Retracting", "Extending", "Extended");
+	if(ImGui::Button("Extend###airbrakee", button_sz)) { dg->SubsysAerodyn()->ExtendAirbrake(); }
+	ImGui::EndGroupPanel();
+	ImGui::SameLine();
+	ImGui::BeginGroupPanel("Top Hatch");
+	if(ImGui::Button("Close###tophatchc", button_sz)) { dg->SubsysPressure()->CloseHatch(); }
+	DrawState(dg->SubsysPressure()->HatchState(), "Closed", "Closing", "Opening", "Opened");
+	if(ImGui::Button("Open###tophatcho", button_sz)) { dg->SubsysPressure()->OpenHatch(); }
+	ImGui::EndGroupPanel();
+
+	ImGui::BeginGroupPanel("Inner Airlock", ImVec2(ImGui::GetContentRegionAvail().x * 0.5f, 0));
+	if(ImGui::Button("Close###ilockc", button_sz)) { dg->SubsysPressure()->CloseInnerAirlock(); }
+	DrawState(dg->SubsysPressure()->ILockState(), "Closed", "Closing", "Opening", "Opened");
+	if(ImGui::Button("Open###ilocko", button_sz)) { dg->SubsysPressure()->OpenInnerAirlock(); }
+	ImGui::EndGroupPanel();
+	ImGui::SameLine();
+	ImGui::BeginGroupPanel("Outer Airlock");
+	if(ImGui::Button("Close###olockc", button_sz)) { dg->SubsysPressure()->CloseOuterAirlock(); }
+	DrawState(dg->SubsysPressure()->OLockState(), "Closed", "Closing", "Opening", "Opened");
+	if(ImGui::Button("Open###olocko", button_sz)) { dg->SubsysPressure()->OpenOuterAirlock(); }
+	ImGui::EndGroupPanel();
+
+	ImGui::BeginGroupPanel("Nose Cone", ImVec2(ImGui::GetContentRegionAvail().x * 0.5f, 0));
+	if(ImGui::Button("Close###nconec", button_sz)) { dg->SubsysDocking()->CloseNcone(); }
+	DrawState(dg->SubsysDocking()->NconeState(), "Closed", "Closing", "Opening", "Opened");
+	if(ImGui::Button("Open###nconeo", button_sz)) { dg->SubsysDocking()->OpenNcone(); }
+	ImGui::EndGroupPanel();
+	ImGui::SameLine();
+	ImGui::BeginGroupPanel("Escape Ladder");
+	if(ImGui::Button("Stow###eladders", button_sz)) { dg->SubsysDocking()->RetractLadder(); }
+	DrawState(dg->SubsysDocking()->LadderState(), "Stowed", "Stowing", "Extending", "Extended");
+	if(ImGui::Button("Extend###eladdere", button_sz)) { dg->SubsysDocking()->ExtendLadder(); }
+	ImGui::EndGroupPanel();
+
+	ImGui::BeginGroupPanel("Radiator");
+	if(ImGui::Button("Stow###radiators", button_sz)) { dg->SubsysThermal()->CloseRadiator(); }
+	DrawState(dg->SubsysThermal()->RadiatorState(), "Stowed", "Stowing", "Extending", "Extended");
+	if(ImGui::Button("Extend###radiatore", button_sz)) { dg->SubsysThermal()->OpenRadiator(); }
+	ImGui::EndGroupPanel();
+
+	ImGui::Separator();
+	ImGui::BeginGroupPanel("Lights");
+	bool instrument_light = dg->SubsysLights()->InstrumentlightSubsys()->GetLight();
+	if(ImGui::Checkbox("Instruments", &instrument_light)) {
+		dg->SubsysLights()->InstrumentlightSubsys()->SetLight(instrument_light);
+	}
+	ImGui::SameLine();
+	bool strobe_light = dg->SubsysLights()->StrobelightSubsys()->GetLight();
+	if(ImGui::Checkbox("Strobe", &strobe_light)) {
+		dg->SubsysLights()->StrobelightSubsys()->SetLight(strobe_light);
+	}
+	ImGui::SameLine();
+	bool navigation_light = dg->SubsysLights()->NavlightSubsys()->GetLight();
+	if(ImGui::Checkbox("Navigation", &navigation_light)) {
+		dg->SubsysLights()->NavlightSubsys()->SetLight(navigation_light);
+	}
+
+	ImGui::BeginGroupPanel("Landing / Docking");
+	int ld_light = dg->SubsysLights()->LandDocklightSubsys()->GetLight();
+	ImGui::RadioButton("Off###ldlightoff", &ld_light, 0); ImGui::SameLine();
+	ImGui::RadioButton("Docking", &ld_light, 1); ImGui::SameLine();
+	ImGui::RadioButton("Landing", &ld_light, 2);
+	dg->SubsysLights()->LandDocklightSubsys()->SetLight(ld_light);
+	ImGui::EndGroupPanel();
+
+	ImGui::BeginGroupPanel("Flood Light");
+	int flood_light = dg->SubsysLights()->CockpitlightSubsys()->GetLight();
+	ImGui::RadioButton("Off###floodlightoff", &flood_light, 0); ImGui::SameLine();
+	ImGui::RadioButton("White", &flood_light, 1); ImGui::SameLine();
+	ImGui::RadioButton("Red", &flood_light, 2);
+	dg->SubsysLights()->CockpitlightSubsys()->SetLight(flood_light);
+	ImGui::EndGroupPanel();
+	ImGui::EndGroupPanel();
+
 }
+
 
 void DlgDGControls::Show() {
 	if(show) {
 		ImGui::Begin(name.c_str(), &show);
-		const ImVec2 button_sz(ImVec2(60, 20));
-		if (ImGui::BeginTable("table DlgDGControls", 2, ImGuiTableFlags_SizingFixedFit)) {
-			DrawNewLine("Landing Gear");
-			if(ImGui::Button("Up###lgearup", button_sz)) { m_dg->SubsysGear()->RaiseGear(); }
-			DrawState(m_dg->SubsysGear()->GearState(), "Raised", "Raising", "Lowering", "Lowered");
-			if(ImGui::Button("Down###lgeardown", button_sz)) { m_dg->SubsysGear()->LowerGear(); }
 
-			DrawNewLine("Retro Doors");
-			if(ImGui::Button("Close###rdoorsc", button_sz)) { m_dg->SubsysMainRetro()->CloseRetroCover(); }
-			DrawState(m_dg->SubsysMainRetro()->RetroCoverState(), "Closed", "Closing", "Opening", "Opened");
-			if(ImGui::Button("Open###rdoorso", button_sz)) { m_dg->SubsysMainRetro()->OpenRetroCover(); }
-
-			DrawNewLine("Airbrake");
-			if(ImGui::Button("Retract###airbraker", button_sz)) { m_dg->SubsysAerodyn()->RetractAirbrake(); }
-			DrawState(m_dg->SubsysAerodyn()->AirbrakeSubsys()->State(), "Retracted", "Retracting", "Extending", "Extended");
-			if(ImGui::Button("Extend###airbrakee", button_sz)) { m_dg->SubsysAerodyn()->ExtendAirbrake(); }
-
-			DrawNewLine("Top Hatch");
-			if(ImGui::Button("Close###tophatchc", button_sz)) { m_dg->SubsysPressure()->CloseHatch(); }
-			DrawState(m_dg->SubsysPressure()->HatchState(), "Closed", "Closing", "Opening", "Opened");
-			if(ImGui::Button("Open###tophatcho", button_sz)) { m_dg->SubsysPressure()->OpenHatch(); }
-
-			DrawNewLine("Inner Airlock");
-			if(ImGui::Button("Close###ilockc", button_sz)) { m_dg->SubsysPressure()->CloseInnerAirlock(); }
-			DrawState(m_dg->SubsysPressure()->ILockState(), "Closed", "Closing", "Opening", "Opened");
-			if(ImGui::Button("Open###ilocko", button_sz)) { m_dg->SubsysPressure()->OpenInnerAirlock(); }
-
-			DrawNewLine("Outer Airlock");
-			if(ImGui::Button("Close###olockc", button_sz)) { m_dg->SubsysPressure()->CloseOuterAirlock(); }
-			DrawState(m_dg->SubsysPressure()->OLockState(), "Closed", "Closing", "Opening", "Opened");
-			if(ImGui::Button("Open###olocko", button_sz)) { m_dg->SubsysPressure()->OpenOuterAirlock(); }
-
-			DrawNewLine("Nose Cone");
-			if(ImGui::Button("Close###nconec", button_sz)) { m_dg->SubsysDocking()->CloseNcone(); }
-			DrawState(m_dg->SubsysDocking()->NconeState(), "Closed", "Closing", "Opening", "Opened");
-			if(ImGui::Button("Open###nconeo", button_sz)) { m_dg->SubsysDocking()->OpenNcone(); }
-
-			DrawNewLine("Escape Ladder");
-			if(ImGui::Button("Stow###eladders", button_sz)) { m_dg->SubsysDocking()->RetractLadder(); }
-			DrawState(m_dg->SubsysDocking()->LadderState(), "Stowed", "Stowing", "Extending", "Extended");
-			if(ImGui::Button("Extend###eladdere", button_sz)) { m_dg->SubsysDocking()->ExtendLadder(); }
-
-			DrawNewLine("Radiator");
-			if(ImGui::Button("Stow###radiators", button_sz)) { m_dg->SubsysThermal()->CloseRadiator(); }
-			DrawState(m_dg->SubsysThermal()->RadiatorState(), "Stowed", "Stowing", "Extending", "Extended");
-			if(ImGui::Button("Extend###radiatore", button_sz)) { m_dg->SubsysThermal()->OpenRadiator(); }
-
-			ImGui::EndTable();
-		}
-		ImGui::Separator();
-		ImGui::TextUnformatted("Lights");
-		bool instrument_light = m_dg->SubsysLights()->InstrumentlightSubsys()->GetLight();
-		if(ImGui::Checkbox("Instruments", &instrument_light)) {
-			m_dg->SubsysLights()->InstrumentlightSubsys()->SetLight(instrument_light);
-		}
-		bool strobe_light = m_dg->SubsysLights()->StrobelightSubsys()->GetLight();
-		if(ImGui::Checkbox("Strobe", &strobe_light)) {
-			m_dg->SubsysLights()->StrobelightSubsys()->SetLight(strobe_light);
-		}
-		bool navigation_light = m_dg->SubsysLights()->NavlightSubsys()->GetLight();
-		if(ImGui::Checkbox("Navigation", &navigation_light)) {
-			m_dg->SubsysLights()->NavlightSubsys()->SetLight(navigation_light);
-		}
-
-		ImGui::Separator();
-		ImGui::TextUnformatted("Landing / Docking");
-        int ld_light = m_dg->SubsysLights()->LandDocklightSubsys()->GetLight();
-        ImGui::RadioButton("Off###ldlightoff", &ld_light, 0); ImGui::SameLine();
-        ImGui::RadioButton("Docking", &ld_light, 1); ImGui::SameLine();
-        ImGui::RadioButton("Landing", &ld_light, 2);
-		m_dg->SubsysLights()->LandDocklightSubsys()->SetLight(ld_light);
-
-		ImGui::Separator();
-		ImGui::TextUnformatted("Flood Light");
-        int flood_light = m_dg->SubsysLights()->CockpitlightSubsys()->GetLight();
-        ImGui::RadioButton("Off###floodlightoff", &flood_light, 0); ImGui::SameLine();
-        ImGui::RadioButton("White", &flood_light, 1); ImGui::SameLine();
-        ImGui::RadioButton("Red", &flood_light, 2);
-		m_dg->SubsysLights()->CockpitlightSubsys()->SetLight(flood_light);
+		DrawDGControls(m_dg);
 
 		ImGui::End();
 	}
@@ -1761,106 +1770,7 @@ void UpdateDamage (HWND hTab, DeltaGlider *dg)
 	oapiSetGaugePos (GetDlgItem (hTab, IDC_RIGHTWING_SLIDER), i);
 }
 */
-// --------------------------------------------------------------
-// Message procedure for editor page 1 (animation settings)
-// --------------------------------------------------------------
 /*
-INT_PTR CALLBACK EdPg1Proc (HWND hTab, UINT uMsg, WPARAM wParam, LPARAM lParam)
-{
-	switch (uMsg) {
-	case WM_COMMAND:
-		switch (LOWORD (wParam)) {
-		case IDC_GEAR_UP:
-			GetDG(hTab)->SubsysGear()->RaiseGear();
-			return TRUE;
-		case IDC_GEAR_DOWN:
-			GetDG(hTab)->SubsysGear()->LowerGear();
-			return TRUE;
-		case IDC_RETRO_CLOSE:
-			GetDG(hTab)->SubsysMainRetro()->CloseRetroCover();
-			return TRUE;
-		case IDC_RETRO_OPEN:
-			GetDG(hTab)->SubsysMainRetro()->OpenRetroCover();
-			return TRUE;
-		case IDC_OLOCK_CLOSE:
-			GetDG(hTab)->SubsysPressure()->CloseOuterAirlock();
-			return TRUE;
-		case IDC_OLOCK_OPEN:
-			GetDG(hTab)->SubsysPressure()->OpenOuterAirlock();
-			return TRUE;
-		case IDC_ILOCK_CLOSE:
-			GetDG(hTab)->SubsysPressure()->CloseInnerAirlock();
-			return TRUE;
-		case IDC_ILOCK_OPEN:
-			GetDG(hTab)->SubsysPressure()->OpenInnerAirlock();
-			return TRUE;
-		case IDC_NCONE_CLOSE:
-			GetDG(hTab)->SubsysDocking()->CloseNcone();
-			return TRUE;
-		case IDC_NCONE_OPEN:
-			GetDG(hTab)->SubsysDocking()->OpenNcone();
-			return TRUE;
-		case IDC_LADDER_RETRACT:
-			GetDG(hTab)->SubsysDocking()->RetractLadder();
-			return TRUE;
-		case IDC_LADDER_EXTEND:
-			GetDG(hTab)->SubsysDocking()->ExtendLadder();
-			return TRUE;
-		case IDC_HATCH_CLOSE:
-			GetDG(hTab)->SubsysPressure()->CloseHatch();
-			return TRUE;
-		case IDC_HATCH_OPEN:
-			GetDG(hTab)->SubsysPressure()->OpenHatch();
-			return TRUE;
-		case IDC_RADIATOR_RETRACT:
-			GetDG(hTab)->SubsysThermal()->CloseRadiator();
-			return TRUE;
-		case IDC_RADIATOR_EXTEND:
-			GetDG(hTab)->SubsysThermal()->OpenRadiator();
-			return TRUE;
-		}
-		break;
-	}
-	return FALSE;
-}
-
-// --------------------------------------------------------------
-// Message procedure for editor page 2 (passengers)
-// --------------------------------------------------------------
-INT_PTR CALLBACK EdPg2Proc (HWND hTab, UINT uMsg, WPARAM wParam, LPARAM lParam)
-{
-	DeltaGlider *dg;
-	int i;
-
-	switch (uMsg) {
-	case WM_INITDIALOG: {
-		char cbuf[256];
-		dg = (DeltaGlider*)oapiGetVesselInterface ((OBJHANDLE)lParam);
-		for (i = 0; i < 4; i++)
-			SendDlgItemMessage (hTab, IDC_CHECK1+i, BM_SETCHECK, dg->psngr[i] ? BST_CHECKED : BST_UNCHECKED, 0);
-		sprintf (cbuf, "%0.2f kg", dg->GetMass());
-		SetWindowText (GetDlgItem (hTab, IDC_MASS), cbuf);
-		} break;
-	case WM_COMMAND:
-		switch (LOWORD (wParam)) {
-		case IDC_CHECK1:
-		case IDC_CHECK2:
-		case IDC_CHECK3:
-		case IDC_CHECK4: {
-			char cbuf[256];
-			i = SendDlgItemMessage (hTab, LOWORD(wParam), BM_GETCHECK, 0, 0);
-			dg = GetDG(hTab);
-			dg->psngr[LOWORD(wParam)-IDC_CHECK1] = (i ? true:false);
-			dg->SetPassengerVisuals();
-			dg->SetEmptyMass();
-			sprintf (cbuf, "%0.2f kg", dg->GetMass());
-			SetWindowText (GetDlgItem (hTab, IDC_MASS), cbuf);
-			} break;
-		}
-		break;
-	}
-	return FALSE;
-}
 
 // --------------------------------------------------------------
 // Message procedure for editor page 3 (damage)
@@ -1910,60 +1820,49 @@ INT_PTR CALLBACK EdPg3Proc (HWND hTab, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	}
 	return FALSE;
 }
-
+*/
 // --------------------------------------------------------------
 // Add vessel-specific pages into scenario editor
 // --------------------------------------------------------------
-DLLCLBK void secInit (HWND hEditor, OBJHANDLE hVessel)
-{
+
+static void DrawScnEditorTabs(OBJHANDLE hVessel) {
 	DeltaGlider *dg = (DeltaGlider*)oapiGetVesselInterface (hVessel);
 
-	EditorPageSpec eps1 = {"Animations", g_Param.hDLL, IDD_EDITOR_PG1, EdPg1Proc};
-	SendMessage (hEditor, WM_SCNEDITOR, SE_ADDPAGEBUTTON, (LPARAM)&eps1);
-	EditorPageSpec eps2 = {"Passengers", g_Param.hDLL, IDD_EDITOR_PG2, EdPg2Proc};
-	SendMessage (hEditor, WM_SCNEDITOR, SE_ADDPAGEBUTTON, (LPARAM)&eps2);
+	if(ImGui::BeginTabItem(ICON_FA_DRAFTING_COMPASS" Animations")) {
+		DrawDGControls(dg);
+		ImGui::EndTabItem();
+	}
+	if(ImGui::BeginTabItem(ICON_FA_USER_ASTRONAUT" Passengers")) {
+		ImGui::BeginGroupPanel("Placement", ImVec2(ImGui::GetContentRegionAvail().x * 0.5f, 0));
+		ImGui::BeginGroup();
+		ImGui::Checkbox("Front left",  &dg->psngr[0]);
+		ImGui::Checkbox("Rear left",   &dg->psngr[1]);
+		ImGui::EndGroup();
+		ImGui::SameLine();
+		ImGui::BeginGroup();
+		ImGui::Checkbox("Front right", &dg->psngr[2]);
+		ImGui::Checkbox("Rear right",  &dg->psngr[3]);
+		ImGui::EndGroup();
+		ImGui::EndGroupPanel();
+		ImGui::SameLine();
+		dg->SetPassengerVisuals();
+		dg->SetEmptyMass();
+
+		ImGui::BeginGroupPanel("Total mass");
+		ImGui::Text("%0.2f kg", dg->GetMass());
+		ImGui::EndGroupPanel();
+
+		ImGui::EndTabItem();
+	}
+
 	if (dg->bDamageEnabled) {
-		EditorPageSpec eps3 = {"Damage", g_Param.hDLL, IDD_EDITOR_PG3, EdPg3Proc};
-		SendMessage (hEditor, WM_SCNEDITOR, SE_ADDPAGEBUTTON, (LPARAM)&eps3);
-	}
-}
-*/
-// ==============================================================
-// Message callback function for damage dialog box
-// ==============================================================
-
-#ifdef UNDEF
-INT_PTR CALLBACK Damage_DlgProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
-{
-	DeltaGlider *dg = (uMsg == WM_INITDIALOG ? (DeltaGlider*)lParam : (DeltaGlider*)oapiGetDialogContext (hWnd));
-	// pointer to vessel instance was passed as dialog context
-
-	switch (uMsg) {
-	case WM_INITDIALOG:
-		return FALSE;
-	case WM_COMMAND:
-		switch (LOWORD(wParam)) {
-		case IDCANCEL:
-			oapiCloseDialog (hWnd);
-			return TRUE;
-		case IDC_REPAIR:
-			dg->RepairDamage();
-			return 0;
+		if(ImGui::BeginTabItem("Damage")) {
+			ImGui::EndTabItem();
 		}
-		break;
 	}
-	return oapiDefDialogProc (hWnd, uMsg, wParam, lParam);
 }
 
-void UpdateDamageDialog (DeltaGlider *dg, HWND hWnd)
+DLLCLBK ScnDrawCustomTabs secInit ()
 {
-	if (!hWnd) hWnd = oapiFindDialog (g_Param.hDLL, IDD_DAMAGE);
-	if (!hWnd) return;
-
-	char cbuf[16];
-	sprintf (cbuf, "%0.0f %%", dg->lwingstatus*100.0);
-	SetWindowText (GetDlgItem (hWnd, IDC_LEFTWING_STATUS), cbuf);
-	sprintf (cbuf, "%0.0f %%", dg->rwingstatus*100.0);
-	SetWindowText (GetDlgItem (hWnd, IDC_RIGHTWING_STATUS), cbuf);
+	return DrawScnEditorTabs;
 }
-#endif

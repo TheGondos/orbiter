@@ -39,9 +39,7 @@ static double anglescale[2] = {DEG, 1.0};
 
 ScnEditor::ScnEditor (): GUIElement("Scenario Editor", "ScnEditor")
 {
-/*	
-	hEdLib = NULL;
-*/
+	hEdLib = nullptr;
 	dwCmd = oapiRegisterCustomCmd (
 		"Scenario Editor",
 		"Create, delete and configure spacecraft",
@@ -55,6 +53,7 @@ ScnEditor::ScnEditor (): GUIElement("Scenario Editor", "ScnEditor")
 	memset(m_newVesselName, 0 , sizeof(m_newVesselName));
 	aRot = {0,0,0};
 	aVel = {0,0,0};
+	m_customTabs = nullptr;
 }
 
 ScnEditor::~ScnEditor ()
@@ -71,12 +70,12 @@ void ScnEditor::OpenDialog ()
 void ScnEditor::CloseDialog ()
 {
 	oapiCloseDialog (this);
-/*
+
 	if (hEdLib) {
-		FreeLibrary (hEdLib);
-		hEdLib = 0;
+		oapiModuleUnload (hEdLib);
+		hEdLib = nullptr;
+		m_customTabs = nullptr;
 	}
-	*/
 }
 
 void ScnEditor::DrawConfigs(const char *path) {
@@ -272,6 +271,9 @@ void ScnEditor::DrawTabs ()
 				ImGui::EndTabItem();
 			}
 		}
+		if(m_customTabs && m_currentVessel)
+			m_customTabs(m_currentVessel);
+
 		ImGui::EndTabBar();
 	}
 }
@@ -302,6 +304,8 @@ void ScnEditor::ReloadVessel()
 	aVel.x*=DEG;
 	aVel.y*=DEG;
 	aVel.z*=DEG;
+
+	LoadVesselLibrary(vessel);
 }
 
 bool ScnEditor::DrawCBodies(std::string &ref, const char *name) {
@@ -1207,18 +1211,33 @@ void ScnEditor::Pause (bool pause)
 {
 //	if (hDlg) oapiSetTitleButtonState (hDlg, IDPAUSE, pause ? 1:0);
 }
-/*
-HINSTANCE ScnEditor::LoadVesselLibrary (const VESSEL *vessel)
+
+MODULEHANDLE ScnEditor::LoadVesselLibrary (const VESSEL *vessel)
 {
 	// load vessel-specific editor extensions
 	char cbuf[256];
-	if (hEdLib) FreeLibrary (hEdLib); // remove previous library
-	if (vessel->GetEditorModule (cbuf))
-		hEdLib = LoadLibrary (cbuf);
-	else hEdLib = 0;
+	if (hEdLib) {
+		oapiModuleUnload (hEdLib); // remove previous library
+		m_customTabs = nullptr;
+	}
+	if (vessel->GetEditorModule (cbuf)) {
+		char path[256];
+		sprintf (path, "lib%s.so", cbuf);
+
+		hEdLib = oapiModuleLoad (path);
+		// now load vessel-specific interface
+		if (hEdLib) {
+			typedef ScnDrawCustomTabs (*SEC_Init)(void);
+			SEC_Init secInit = (SEC_Init)oapiModuleGetProcAddress(hEdLib, "secInit");
+			if (secInit) {
+				m_customTabs = secInit ();
+			}
+		}
+	}
+	else hEdLib = nullptr;
 	return hEdLib;
 }
-
+/*
 // ==============================================================
 // nonmember functions
 */

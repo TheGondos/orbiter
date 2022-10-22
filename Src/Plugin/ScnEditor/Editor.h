@@ -53,6 +53,8 @@ public:
 	void AddCbodyNode(const CelestialBody *cbody);
 	bool DrawPads(OBJHANDLE hBase, std::string &ref);
 
+	ScnDrawCustomTabs m_customTabs;
+
 	struct OrbitalElements {
 		ELEMENTS el;       // orbital elements of edited vessel
 		ORBITPARAM prm;    // additional orbital parameters

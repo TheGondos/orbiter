@@ -32,4 +32,6 @@ typedef struct {
 	DLGPROC TabProc;
 } EditorPageSpec;
 */
+typedef void (*ScnDrawCustomTabs)(OBJHANDLE);
+
 #endif // !__SCNEDITORAPI_H

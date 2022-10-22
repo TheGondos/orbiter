@@ -44,6 +44,7 @@ target_link_libraries(ShuttleA
 #	${ORBITER_LIB}
 	${ORBITER_SDK_LIB}
 	lua::lib
+	imgui
 )
 
 add_dependencies(ShuttleA
