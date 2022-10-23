@@ -56,6 +56,7 @@ ScnEditor::ScnEditor (): GUIElement("Scenario Editor", "ScnEditor")
 	m_customTabs = nullptr;
 	OrbitalMode = PROP_ORBITAL_FIXEDSTATE;
 	SOrbitalMode = PROP_SORBITAL_FIXEDSTATE;
+	loc.last_desc = &loc.pad_desc;
 }
 
 ScnEditor::~ScnEditor ()
@@ -356,7 +357,8 @@ void ScnEditor::DrawBases(OBJHANDLE hPlanet, std::string &ref) {
 		for (auto &body: bases) {
 			if (ImGui::Selectable(body.c_str(), body == ref)) {
 				ref = body;
-				loc.pad.clear();
+				loc.pad_desc.clear();
+				loc.runway_desc.clear();
 			}
 		}
         ImGui::EndCombo();
@@ -365,19 +367,25 @@ void ScnEditor::DrawBases(OBJHANDLE hPlanet, std::string &ref) {
 	if(!loc.base.empty()) {
 		OBJHANDLE hBase = oapiGetBaseByName(hPlanet, loc.base.c_str());
 		if(hBase) {
-			DrawPads(hBase, loc.pad);
+//			DrawPads(hBase, loc.pad);
+//			DrawRunways(hBase, loc.runway, loc.runway_endpoint);
+			DrawBaseLocations(hBase);
 		}
 	}
 
-	ImGui::SameLine();
-	if(ImGui::Button("Preset position")) {
-		if(!loc.base.empty()) {
+	if(!loc.base.empty()) {
+		ImGui::SameLine();
+		if(ImGui::Button("Preset position")) {
 			OBJHANDLE hPlanet = oapiGetObjectByName(loc.planet.c_str());
 			OBJHANDLE hBase = oapiGetBaseByName(hPlanet, loc.base.c_str());
-			if (!loc.pad.empty())
-				oapiGetBasePadEquPos (hBase, std::stoi(loc.pad)-1, &loc.longitude, &loc.latitude);
-			else
+			if(loc.pad != -1) {
+				oapiGetBasePadEquPos (hBase, loc.pad, &loc.longitude, &loc.latitude);
+			} else if(loc.runway != -1) {
+				oapiGetBaseRwyEquPos(hBase, loc.runway, loc.runway_endpoint, &loc.heading, &loc.longitude, &loc.latitude);
+				loc.heading *= DEG;
+			} else {
 				oapiGetBaseEquPos (hBase, &loc.longitude, &loc.latitude);
+			}
 			loc.longitude *= DEG;
 			loc.latitude *= DEG;
 		}
@@ -386,6 +394,106 @@ void ScnEditor::DrawBases(OBJHANDLE hPlanet, std::string &ref) {
 	ImGui::EndGroupPanel();
 }
 
+void ScnEditor::DrawBaseLocations(OBJHANDLE hBase) {
+	int nrwy = oapiGetBaseRwyCount (hBase);
+	int npad = oapiGetBasePadCount (hBase);
+	if(nrwy + npad == 0) return;
+
+	if(ImGui::BeginCombo("##Locations", loc.last_desc->c_str())) {
+		ImGui::PushItemWidth(100);
+		if(nrwy) {
+			char cbuf[16];
+			for (int n = 0; n < nrwy; n++) {
+				sprintf (cbuf, "%d", n + 1);
+				double dummy;
+				double dir1;
+				double dir2;
+				oapiGetBaseRwyEquPos (hBase, n, 1, &dir1, &dummy, &dummy);
+				oapiGetBaseRwyEquPos (hBase, n, 2, &dir2, &dummy, &dummy);
+				int appr1 = (int)(dir1 * DEG * 0.1) % 36;
+				int appr2 = (int)(dir2 * DEG * 0.1) % 36;
+				char cbuf1[16];
+				char cbuf2[16];
+				sprintf(cbuf1, "Runway %d", appr1);
+				sprintf(cbuf2, "Runway %d", appr2);
+
+				if (ImGui::Selectable(cbuf1, *loc.last_desc == cbuf1)) {
+					loc.runway = n;
+					loc.runway_endpoint = 1;
+					loc.runway_desc = cbuf1;
+					loc.last_desc = &loc.runway_desc;
+					loc.pad = -1;
+				}
+				if (ImGui::Selectable(cbuf2, *loc.last_desc == cbuf2)) {
+					loc.runway = n;
+					loc.runway_endpoint = 2;
+					loc.runway_desc = cbuf2;
+					loc.last_desc = &loc.runway_desc;
+					loc.pad = -1;
+				}
+			}
+		}
+		
+		if(npad) {
+			char cbuf[16];
+			for (int n = 0; n < npad; n++) {
+				sprintf (cbuf, "Pad %d", n + 1);
+				if (ImGui::Selectable(cbuf, *loc.last_desc == cbuf)) {
+					loc.pad_desc = cbuf;
+					loc.pad = n;
+					loc.last_desc = &loc.pad_desc;
+					loc.runway = -1;
+				}
+			}
+		}
+		ImGui::PopItemWidth();
+		ImGui::EndCombo();
+	}
+}
+/*
+bool ScnEditor::DrawRunways(OBJHANDLE hBase, std::string &ref, int &endpoint) {
+	bool ret = false;
+	int n, nrwy = oapiGetBaseRwyCount (hBase);
+	if(nrwy) {
+		if(ref.empty()) ref = "1";
+		ImGui::Text("Runway : ");
+		ImGui::SameLine();
+		ImGui::PushItemWidth(100);
+		if(ImGui::BeginCombo("##Runways", ref.c_str())) {
+			char cbuf[16];
+			for (n = 0; n < nrwy; n++) {
+				sprintf (cbuf, "%d", n + 1);
+				double dummy;
+				double dir1;
+				double dir2;
+				oapiGetBaseRwyEquPos (hBase, n, 1, &dir1, &dummy, &dummy);
+				oapiGetBaseRwyEquPos (hBase, n, 2, &dir2, &dummy, &dummy);
+				dir1*=(DEG * 0.1);
+				dir2*=(DEG * 0.1);
+				int appr1 = dir1;
+				int appr2 = dir2;
+				char cbuf1[8];
+				char cbuf2[8];
+				sprintf(cbuf1, "Runway %d", appr1);
+				sprintf(cbuf2, "Runway %d", appr2);
+
+				if (ImGui::Selectable(cbuf1, cbuf == ref && endpoint == 1)) {
+					endpoint = 1;
+					ref = cbuf;
+					ret = true;
+				}
+				if (ImGui::Selectable(cbuf2, cbuf == ref && endpoint == 2)) {
+					endpoint = 2;
+					ref = cbuf;
+					ret = true;
+				}
+			}
+			ImGui::EndCombo();
+		}
+		ImGui::PopItemWidth();
+	}
+	return ret;
+}
 bool ScnEditor::DrawPads(OBJHANDLE hBase, std::string &ref) {
 	bool ret = false;
 	int n, npad = oapiGetBasePadCount (hBase);
@@ -410,7 +518,7 @@ bool ScnEditor::DrawPads(OBJHANDLE hBase, std::string &ref) {
 	}
 	return ret;
 }
-
+*/
 
 void ScnEditor::DrawOrbitalElements()
 {

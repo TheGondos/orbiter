@@ -51,7 +51,9 @@ public:
 	bool DrawCBodies(std::string &ref, const char *name);
 	void DrawBases(OBJHANDLE hPlanet, std::string &ref);
 	void AddCbodyNode(const CelestialBody *cbody);
-	bool DrawPads(OBJHANDLE hBase, std::string &ref);
+//	bool DrawPads(OBJHANDLE hBase, std::string &ref);
+//	bool DrawRunways(OBJHANDLE hBase, std::string &ref, int &endpoint);
+	void DrawBaseLocations(OBJHANDLE hBase);
 
 	ScnDrawCustomTabs m_customTabs;
 
@@ -79,7 +81,12 @@ public:
 	struct Location {
 		std::string planet;
 		std::string base;
-		std::string pad;
+		int pad;
+		std::string pad_desc;
+		int runway;
+		int runway_endpoint;
+		std::string runway_desc;
+		std::string *last_desc;
 		double longitude;
 		double latitude;
 		double heading;
