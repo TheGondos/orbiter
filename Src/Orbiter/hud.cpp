@@ -1173,6 +1173,7 @@ bool HUD::GlobalToHUD (const Vector &dir, int &x, int &y) const
 		if (ldir.z <= 0.0) vis = false;
 		else {
 			double fac = HUDofs.z/ldir.z;
+			if(fabs(fac) > 10000.0) return false;
 			x = spec.CX + (int)(fac * ldir.x);
 			y = spec.CY - (int)(fac * ldir.y);
 			vis = (x >= 0 && x < spec.W && y >= 0 && y < spec.H);
