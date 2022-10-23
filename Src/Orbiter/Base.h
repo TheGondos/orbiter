@@ -76,6 +76,9 @@ public:
 	inline const LpadSpec *PadStatus (int padno) const { return lspec+padno; }
 	// number of landing pads and pad status
 
+	void Rwy_EquPos (int rwyno, int endpoint, double &_lng, double &_lat, double &_dir) const;
+	// Return equatorial coordinates of runway endpoint (1/2)
+
 	inline int nRwy() const { return nrwy; }
 	inline RwySpec *RwyStatus (int rwyno) { return rwy+rwyno; }
 	inline const RwySpec *RwyStatus (int rwyno) const { return rwy+rwyno; }

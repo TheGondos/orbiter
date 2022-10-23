@@ -583,6 +583,23 @@ void Base::Pad_EquPos (int padno, double &_lng, double &_lat) const
 	}
 }
 
+void Base::Rwy_EquPos (int rwyno, int endpoint, double &_lng, double &_lat, double &_dir) const
+{
+	//_lng = lng;
+	//_lat = lat;
+	if (rwyno < nrwy) {
+		if(endpoint == 1) {
+			_lng = rwy[rwyno].lng1;
+			_lat = rwy[rwyno].lat1;
+			_dir = rwy[rwyno].appr1;
+		} else {
+			_lng = rwy[rwyno].lng2;
+			_lat = rwy[rwyno].lat2;
+			_dir = fmod(rwy[rwyno].appr1 + PI, PI * 2.0);
+		}
+	}
+}
+
 bool Base::GetGenericTexture (uint64_t id, SURFHANDLE &daytex, SURFHANDLE &nighttex) const
 {
 	for (int i = 0; i < ngenerictex; i++)

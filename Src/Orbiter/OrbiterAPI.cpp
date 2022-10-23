@@ -1172,6 +1172,19 @@ DLLEXPORT int oapiGetBasePadCount (OBJHANDLE hBase)
 	return ((Base*)hBase)->nPad();
 }
 
+DLLEXPORT int oapiGetBaseRwyCount (OBJHANDLE hBase)
+{
+	return ((Base*)hBase)->nRwy();
+}
+
+DLLEXPORT bool oapiGetBaseRwyEquPos (OBJHANDLE hBase, int rwy, int endpoint, double *dir, double *lng, double *lat, double *rad) {
+	Base *base = (Base*)hBase;
+	if (rwy >= base->nRwy()) return false;
+	base->Rwy_EquPos (rwy, endpoint, *lng, *lat, *dir);
+	if (rad) *rad = base->RefPlanet()->Size(); // for now
+	return true;
+}
+
 DLLEXPORT bool oapiGetBasePadEquPos (OBJHANDLE hBase, int pad, double *lng, double *lat, double *rad)
 {
 	Base *base = (Base*)hBase;

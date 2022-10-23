@@ -4103,6 +4103,15 @@ OAPIFUNC void oapiGetBaseEquPos (OBJHANDLE hBase, double *lng, double *lat, doub
 OAPIFUNC int oapiGetBasePadCount (OBJHANDLE hBase);
 
 	/**
+	* \brief Returns the number of runways pads owned by the base.
+	* \param hBase surface base handle
+	* \return Number of runways
+	* \note hBase must be a valid base handle (e.g. from oapiGetBaseByName())
+	* \note This function only counts runways.
+	*/
+OAPIFUNC int oapiGetBaseRwyCount (OBJHANDLE hBase);
+
+	/**
 	* \brief Returns the equatorial coordinates (longitude, latitude and radius)
 	*  of the location of a VTOL landing pad.
 	* \param hBase surface base handle
@@ -4117,6 +4126,24 @@ OAPIFUNC int oapiGetBasePadCount (OBJHANDLE hBase);
 	* \note The radius pointer can be omitted if not required.
 	*/
 OAPIFUNC bool oapiGetBasePadEquPos (OBJHANDLE hBase, int pad, double *lng, double *lat, double *rad = 0);
+
+	/**
+	* \brief Returns the equatorial coordinates (longitude, latitude and radius)
+	*  and the direcection of a runway.
+	* \param hBase surface base handle
+	* \param rwy runway index
+	* \param endpoint runway endpoint [1,2]
+	* \param dir pointer to variable to receive direction [rad]
+	* \param lng pointer to variable to receive longitude value [rad]
+	* \param lat pointer to variable to receive latitude value [rad]
+	* \param rad pointer to variable to receive radius value [m]
+	* \return \e false indicates failure (rwy index out of range). 
+	*  In that case, the return values are undefined.
+	* \note hBase must be a valid base handle (e.g. from oapiGetBaseByName())
+	* \note 0 <= rwy < oapiGetBaseRwyCount() is required.
+	* \note The radius pointer can be omitted if not required.
+	*/
+OAPIFUNC bool oapiGetBaseRwyEquPos (OBJHANDLE hBase, int rwy, int endpoint, double *dir, double *lng, double *lat, double *rad = 0);
 
 	/**
 	* \brief Returns the status of a VTOL landing pad (free, occupied or cleared).
