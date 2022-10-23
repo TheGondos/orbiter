@@ -76,7 +76,9 @@ void vVessel::clbkEvent (visevent msg, visevent_data content)
 		DelMesh (content.meshidx);
 		break;
 	case EVENT_VESSEL_MESHVISMODE:
-		// todo
+		if (content.meshidx < nmesh) {
+			meshlist[content.meshidx].vismode = vessel->GetMeshVisibilityMode(content.meshidx);
+		}
 		break;
 	case EVENT_VESSEL_MESHOFS: {
 		int idx = content.meshidx;
