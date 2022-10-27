@@ -59,7 +59,8 @@ Elements::Elements (const Elements &el)
 Elements::Elements (char *fname)
 {
 	double epoch;
-	priv_ma0  = 1e10;
+	priv_ma0 = 1e10;
+	priv_ea0 = 0;
 	ifstream ifs (g_pOrbiter->ConfigPath (fname));
 	if (!GetItemReal (ifs, "Epoch", epoch))           epoch  = 2000.0;
 	mjd_epoch = Jepoch2MJD (epoch);
