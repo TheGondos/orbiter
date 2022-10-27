@@ -140,7 +140,8 @@ bool OGLCamera::Direction2Viewport(const VECTOR3 &dir, int &x, int &y)
 {
 	glm::vec3 homog;
 	glm::vec3 idir = {-dir.x, -dir.y, -dir.z};
-	Vector3Matrix4Multiply (&homog, &idir, mViewProj);
+	if(!Vector3Matrix4Multiply (&homog, &idir, mViewProj))
+		return false;
 
 	if (homog.x >= -1.0f && homog.y <= 1.0f && homog.z >= 0.0) {
 		if (std::hypot(homog.x, homog.y) < 1e-6) {
