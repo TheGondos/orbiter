@@ -53,6 +53,8 @@
 #define _putenv putenv
 #define _getcwd getcwd
 #define _execl execl
+#include <filesystem>
+namespace fs = std::filesystem;
 
 using namespace std;
 using namespace oapi;
@@ -1176,7 +1178,12 @@ bool Orbiter::SaveScenario (const char *fname, const char *desc)
 {
 	pState->Update (desc);
 
-	ofstream ofs (ScnPath (fname));
+	fs::path path = ScnPath (fname);
+	fs::path dirname = path.parent_path();
+	if(!fs::exists(dirname)) {
+		fs::create_directory(dirname);
+	}
+	ofstream ofs (path);
 	if (ofs) {
 		// save scenario state
 		pState->Write (ofs, pConfig->CfgDebugPrm.bSaveExitScreen ? "CurrentState_img" : "CurrentState");
@@ -1193,9 +1200,13 @@ bool Orbiter::SaveScenario (const char *fname, const char *desc)
 				ofs << "END" << endl;
 			}
 		}
+		oapiAddNotification(OAPINOTIF_SUCCESS, "Scenario saved", fname);
 		return true;
 
-	} else return false;
+	} else {
+		oapiAddNotification(OAPINOTIF_ERROR, "Failed to save scenario", fname);
+		return false;
+	}
 }
 
 //-----------------------------------------------------------------------------
