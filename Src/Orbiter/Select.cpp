@@ -64,12 +64,13 @@ void Select::DrawMenu(std::list<SelectEntry> &entries) {
                     }
                 }
             }
+            i++;
         } else {
             if(ImGui::MenuItem(e.m_Text.c_str())) {
                 m_cbEnter(this, i, e.m_Text.c_str(), m_UserData);
             }
+            i++;
         }
-        i++;
     }
 }
 
