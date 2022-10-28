@@ -153,11 +153,11 @@ void ScnEditor::DrawConfigs(const char *path) {
 					}
 					m_preview = oapiLoadTexture(imagename);
 				}
-				if (oapiReadItem_string (hFile, "ClassName", imagename)) {
-					m_classname = imagename;
-				} else {
+				//if (oapiReadItem_string (hFile, "ClassName", imagename)) {
+				//	m_classname = imagename;
+				//} else {
 					m_classname = p.stem();
-				}
+				//}
 				oapiCloseFile (hFile, FILE_IN);
 			}
         }
