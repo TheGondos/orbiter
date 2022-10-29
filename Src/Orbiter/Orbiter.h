@@ -180,6 +180,7 @@ public:
 	// plugin module loading/unloading
 	MODULEHANDLE LoadModule (const char *path, const char *name, bool fatal = true, bool video = false);   // load a plugin
 	void UnloadModule (MODULEHANDLE hi); // unload a plugin
+	void UnloadModule (const char *name); // unload a plugin
 	MODULEHANDLE hVideoModule;
 
 	Vessel *SetFocusObject (Vessel *vessel, bool setview = true);

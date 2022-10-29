@@ -394,10 +394,21 @@ void DlgLaunchpad::DrawModules() {
         bool checked = pCfg->HasModule(filename.c_str());
 
         if(ImGui::Checkbox(filename.c_str(), &checked)) {
-            if(checked)
+            if(checked) {
                 pCfg->AddModule(filename.c_str());
-            else
+				if(filename.c_str() == pCfg->m_videoPlugin) {
+					oapiAddNotification(OAPINOTIF_INFO, "Changing video plugin requires a restart",filename.c_str());
+				} else {
+					g_pOrbiter->LoadModule ("Modules/Plugin", filename.c_str(), false);
+				}
+			} else {
                 pCfg->DelModule(filename.c_str());
+				if(filename.c_str() == pCfg->m_videoPlugin) {
+					oapiAddNotification(OAPINOTIF_INFO, "Changing video plugin requires a restart",filename.c_str());
+				} else {
+					g_pOrbiter->UnloadModule (filename.c_str());
+				}
+			}
         }
     }
 }

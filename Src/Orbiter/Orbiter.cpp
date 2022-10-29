@@ -497,7 +497,26 @@ void Orbiter::UnloadModule (MODULEHANDLE hi)
 	module = tmp;
 	nmodule--;
 }
-
+void Orbiter::UnloadModule (const char *name)
+{
+	int i, j, k;
+	struct DLLModule *tmp;
+	for (i = 0; i < nmodule; i++)
+		if (!strcmp(name, module[i].name)) break;
+	if (i == nmodule) return; // not present
+	delete []module[i].name;
+	if(module[i].bLocalAlloc)
+		delete module[i].module;
+	dlclose (module[i].hMod);
+	if (nmodule > 1) {
+		tmp = new struct DLLModule[nmodule-1]; TRACENEW
+		for (j = k = 0; j < nmodule; j++)
+			if (j != i) tmp[k++] = module[j];
+	} else tmp = 0;
+	delete []module;
+	module = tmp;
+	nmodule--;
+}
 //-----------------------------------------------------------------------------
 // Name: FindModuleProc()
 // Desc: Returns address of a procedure in a plugin module
