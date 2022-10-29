@@ -311,6 +311,8 @@ void Orbiter::Create ()
 
 	script = new ScriptInterface (this); TRACENEW
 
+	m_DlgLaunchpad = std::make_unique<DlgLaunchpad>("Launchpad");
+
 	// preload fixed plugin modules
 	LoadFixedModules ();
 
@@ -683,7 +685,6 @@ void Orbiter::CreateRenderWindow ()
 	m_DlgFocus     = std::make_unique<DlgFocus>("Ship");
 	m_DlgFunction  = std::make_unique<DlgFunction>("Custom Functions");
 	m_DlgVishelper = std::make_unique<DlgVishelper>("Visual Helpers");
-	m_DlgLaunchpad = std::make_unique<DlgLaunchpad>("Launchpad");
 	m_DlgSelect    = std::make_unique<Select>("Select");
 	m_DlgInputBox  = std::make_unique<InputBox>("InputBox");
 	m_DlgRecorder  = std::make_unique<DlgRecorder>("Recorder");

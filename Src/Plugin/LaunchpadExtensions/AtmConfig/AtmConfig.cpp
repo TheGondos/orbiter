@@ -5,374 +5,171 @@
 #define ORBITER_MODULE
 
 #include "Orbitersdk.h"
-#include "resource.h"
-//#include <io.h>
 #include <unistd.h>
-#define _access access
-#define _stricmp strcasecmp
+#include <cstring>
+#include <filesystem>
+#include <regex>
+#include <imgui.h>
 
-using namespace std;
+namespace fs = std::filesystem;
 
 class AtmConfig;
 
 const char *CelbodyDir = "Modules/Celbody";
-char *ModuleItem = "MODULE_ATM";
+const char *ModuleItem = "MODULE_ATM";
 
-struct {
-	MODULEHANDLE hInst;
-	AtmConfig *item;
-} gParams;
+AtmConfig *gItem;
 
-class AtmConfig: public LaunchpadItem {
-public:
-	AtmConfig();
-	~AtmConfig();
-	char *Name() { return "Atmosphere Configuration"; }
-	char *Description();
-	void Read (const char *celbody);
-	void Write(const char *celbody);
-	bool clbkOpen (HWND hLaunchpad);
-	void InitDialog (HWND hWnd);
-	void UpdateData (HWND hWnd);
-	void Apply (HWND hWnd);
-	void OpenHelp (HWND hWnd);
-	static INT_PTR CALLBACK DlgProc (HWND, UINT, WPARAM, LPARAM);
-
-protected:
-	// scan the 'Modules\Celbody' folder for directories, and
-	// 'atmosphere' directories in these.
-	void ScanCelbodies (HWND hWnd);
-
-	// scan the 'Modules\Celbody\<Name>\Atmosphere' folder for
-	// atmosphere plugin modules
-	void ScanModules (const char *celbody);
-
-	void ClearModules ();
-
-	// Populate celbody list and atmosphere model list
-	void ListCelbodies (HWND hWnd);
-	void ListModules (HWND hWnd);
-
-	void CelbodyChanged (HWND hWnd);
-	void ModelChanged (HWND hWnd);
-
-	char celbody[256];
-
-	struct MODULESPEC {
-		char module_name[256];
-		char model_name[256];
-		char model_desc[512];
-		MODULESPEC *next;
-	} *module_first, *module_curr;
-	
-};
-
-AtmConfig::AtmConfig(): LaunchpadItem()
-{
-	module_first = module_curr = 0;
-	celbody[0] = '\0';
-}
-
-AtmConfig::~AtmConfig ()
-{
-	ClearModules ();
-}
-
-void AtmConfig::ClearModules ()
-{
-	while (module_first) {
-		MODULESPEC *ms = module_first;
-		module_first = module_first->next;
-		delete ms;
-	}
-	module_curr = 0;
-}
-
-char *AtmConfig::Description()
-{
-	static char *desc = "Configure atmospheric parameters for celestial bodies.";
-	return desc;
-}
-
-void AtmConfig::Read (const char *celbody)
-{
+static std::string GetAtmModule(const char *celbody) {
 	char cfgname[256];
-	strcpy (cfgname, celbody); strcat (cfgname, "\\Atmosphere.cfg");
+	std::string ret;
+	strcpy (cfgname, celbody); strcat (cfgname, "/Atmosphere.cfg");
 	FILEHANDLE hFile = oapiOpenFile (cfgname, FILE_IN, CONFIG);
 	if (hFile) {
 		char name[256];
 		oapiReadItem_string (hFile, ModuleItem, name);
-		for (module_curr = module_first; module_curr; module_curr = module_curr->next)
-			if (!_stricmp (module_curr->module_name, name)) break;
+		ret = name;
 		oapiCloseFile (hFile, FILE_IN);
 	}
+	return ret;
 }
 
-void AtmConfig::Write (const char *celbody)
-{
+static void SetAtmModule(const char *celbody, const char *module) {
 	char cfgname[256];
-	strcpy (cfgname, celbody); strcat (cfgname, "\\Atmosphere.cfg");
+	strcpy (cfgname, celbody); strcat (cfgname, "/Atmosphere.cfg");
 	FILEHANDLE hFile = oapiOpenFile (cfgname, FILE_OUT, CONFIG);
 	if (hFile) {
-		if (module_curr && module_curr->module_name[0])
-			oapiWriteItem_string (hFile, ModuleItem, module_curr->module_name);
-		else
-			oapiWriteItem_string (hFile, ModuleItem, "[None]");
+		oapiWriteItem_string (hFile, ModuleItem, module);
 		oapiCloseFile (hFile, FILE_OUT);
 	}
 }
-
-bool AtmConfig::clbkOpen (HWND hLaunchpad)
-{
-	// respond to user double-clicking the item in the list
-	return OpenDialog (gParams.hInst, hLaunchpad, IDD_CONFIG, DlgProc);
-}
-
-void AtmConfig::InitDialog (HWND hWnd)
-{
-	ListCelbodies (hWnd);
-}
-
-void AtmConfig::ListCelbodies (HWND hWnd)
-{
-	ScanCelbodies (hWnd);
-	if (!SendDlgItemMessage (hWnd, IDC_COMBO2, CB_GETCOUNT, 0, 0)) return;
-	int idx = SendDlgItemMessage (hWnd, IDC_COMBO2, CB_FINDSTRINGEXACT, -1, (LPARAM)"Earth");
-	if (idx == CB_ERR) idx = 0;
-	SendDlgItemMessage (hWnd, IDC_COMBO2, CB_SETCURSEL, idx, 0);
-	CelbodyChanged (hWnd);
-}
-
-void AtmConfig::ListModules (HWND hWnd)
-{
-	SendDlgItemMessage (hWnd, IDC_COMBO1, CB_RESETCONTENT, 0, 0);
-	SendDlgItemMessage (hWnd, IDC_COMBO1, CB_ADDSTRING, 0, (LPARAM)"[None]");
-
-	if (!celbody[0]) return; // nothing to do
-
-	ScanModules (celbody);
-	Read (celbody);
-
-	MODULESPEC *ms = module_first;
-	while (ms) {
-		SendDlgItemMessage (hWnd, IDC_COMBO1, CB_ADDSTRING, 0, (LPARAM)ms->model_name);
-		ms = ms->next;
-	}
-	int idx = 0;
-	if (module_curr) {
-		MODULESPEC *ms = module_first;
-		for (idx = 0; ms && ms != module_curr; ms = ms->next, idx++);
-		idx++;
-	}
-	SendDlgItemMessage (hWnd, IDC_COMBO1, CB_SETCURSEL, idx, 0);
-	ModelChanged (hWnd);
-}
-
-void AtmConfig::UpdateData (HWND hWnd)
-{
-	int i, model = (int)SendDlgItemMessage (hWnd, IDC_COMBO1, CB_GETCURSEL, 0, 0);
-	if (!model) {
-		module_curr = 0;
-	} else {
-		for (module_curr = module_first, i = 1; module_curr && i < model; module_curr = module_curr->next, i++);
-	}
-}
-
-void AtmConfig::CelbodyChanged (HWND hWnd)
-{
-	int idx = SendDlgItemMessage (hWnd, IDC_COMBO2, CB_GETCURSEL, 0, 0);
-	SendDlgItemMessage (hWnd, IDC_COMBO2, CB_GETLBTEXT, idx, (LPARAM)celbody);
-	ListModules (hWnd);
-}
-
-void AtmConfig::ModelChanged (HWND hWnd)
-{
-	int i, model = (int)SendDlgItemMessage (hWnd, IDC_COMBO1, CB_GETCURSEL, 0, 0);
-	if (!model) {
-		SetWindowText (GetDlgItem (hWnd, IDC_EDIT1), "Atmosphere effects disabled.");
-	} else {
-		MODULESPEC *ms = module_first;
-		for (i = 1; i < model && ms; i++)
-			ms = ms->next;
-		if (ms) SetWindowText (GetDlgItem (hWnd, IDC_EDIT1), ms->model_desc);
-	}
-}
-
-void AtmConfig::Apply (HWND hWnd)
-{
-	UpdateData (hWnd);
-	Write (celbody);
-}
-
-void AtmConfig::OpenHelp (HWND hWnd)
-{
-	HELPCONTEXT hc = {
-		"html/Orbiter.chm",
-		"extra_atmconfig",
-		0, 0
-	};
-	oapiOpenLaunchpadHelp (&hc);
-}
-
-void AtmConfig::ScanCelbodies (HWND hWnd)
-{
-	SendDlgItemMessage (hWnd, IDC_COMBO2, CB_RESETCONTENT, 0, 0);
-	fprintf(stderr,"FIXME: AtmConfig::ScanCelbodies\n");
-	return;
-	/*
-	DIR *dir = opendir(CelbodyDir);
-	if (dir != NULL) {
-		struct dirent * dp = NULL;
-		while ((dp = readdir(dir)) != NULL) {
-			fprintf(stderr,"found '%s'\n",dp->d_name);
-			if(dp->d_type == DT_DIR) {
-				if(!strcmp(dp->d_name, ".") || !strcmp(dp->d_name,".."))
-					continue;
-				char spath[256];
-				sprintf (spath, "%s/%s", CelbodyDir, dp->d_name);
-				fprintf(stderr,"found '%s'\n", spath);
-
-				struct stat s;
-				if( stat(path,&s) == 0 )
-				{
-					if( s.st_mode & S_IFDIR )
-					{
-						SendDlgItemMessage (hWnd, IDC_COMBO2, CB_ADDSTRING, 0, (LPARAM)info.name);
-					}
-				}
-			}
-		}
-		closedir(dir);
-	} else {
-		fprintf(stderr,"AtmConfig::ScanCelbodies Cannot find %s\n", CelbodyDir);
-	}
-	*/
-}
 /*
-void AtmConfig::ScanCelbodies (HWND hWnd)
+void AtmConfig::Write (const char *celbody)
 {
-	SendDlgItemMessage (hWnd, IDC_COMBO2, CB_RESETCONTENT, 0, 0);
-
-	char filespec[256];
-	sprintf (filespec, "%s\\*.*", CelbodyDir);
-	_finddata_t info, subinfo;
-	intptr_t id = _findfirst (filespec, &info);
-	if (id >= 0) {
-		intptr_t res;
-		do {
-			if (info.attrib & _A_SUBDIR) {
-				sprintf (filespec, "%s\\%s\\atmosphere", CelbodyDir, info.name);
-				intptr_t id2 = _findfirst (filespec, &subinfo);
-				if (id2 >= 0 && (subinfo.attrib & _A_SUBDIR)) {
-					SendDlgItemMessage (hWnd, IDC_COMBO2, CB_ADDSTRING, 0, (LPARAM)info.name);
-				}
-				_findclose (id2);
-			}
-			res = _findnext (id, &info);
-		} while (!res);
-	}
-	_findclose (id);
 }
 */
-void AtmConfig::ScanModules (const char *celbody)
+class AtmConfig: public LaunchpadItem {
+public:
+	AtmConfig();
+	~AtmConfig();
+	const char *Name() override { return "Atmosphere Configuration"; }
+	const char *Description() override;
+	void Read (const char *celbody);
+	void Write(const char *celbody);
+	int clbkWriteConfig () override;
+	void Draw() override;
+
+private:
+	struct atmModules {
+		std::string celbody;
+		std::list<std::tuple<std::string,std::string,std::string>> modules;
+		std::string currentModule;
+		std::string currentModuleDesc;
+	};
+
+	std::vector<atmModules> modules;
+};
+
+AtmConfig::AtmConfig(): LaunchpadItem()
 {
-	ClearModules ();
+	for (auto &dir : fs::directory_iterator(CelbodyDir)) {
+        if(dir.path() != "." && dir.path() != "..") {
+            if (dir.is_directory()) {
+				if(fs::exists(dir.path() / "Atmosphere")) {
+					std::list<std::tuple<std::string,std::string,std::string>> mods;
 
-	fprintf(stderr, "FIXME: AtmConfig::ScanModules %s\n", celbody);
-	return;
-	/*
-	char filespec[256];
-	sprintf (filespec, "%s\\%s\\Atmosphere\\*.dll", CelbodyDir, celbody);
-	_finddata_t info;
-	intptr_t id = _findfirst (filespec, &info);
-	if (id >= 0) {
-		int res;
-		MODULESPEC *module_last = 0;
-		do {
-			info.name[strlen(info.name)-4] = '\0'; // cut off '.dll' extension
-			char path[256];
-			sprintf (path, "%s\\%s\\Atmosphere\\%s", CelbodyDir, celbody, info.name);
-			char *model_name = 0;
-			MODULESPEC *ms = new MODULESPEC;
-			if (module_last) module_last->next = ms;
-			else             module_first = ms;
-			module_last = ms;
-			strncpy (ms->module_name, info.name, 255);
-			strncpy (ms->model_name, info.name, 255);
-			ms->model_desc[0] = '\0';
-			ms->next = 0;
+				    for (auto &module : fs::directory_iterator(dir.path() / "Atmosphere")) {
+						MODULEHANDLE hMod = oapiModuleLoad(module.path().c_str());
 
-			// get info from the module
-			HINSTANCE hModule = LoadLibrary (path);
-			if (hModule) {
-				char *(*name_func)() = (char*(*)())GetProcAddress (hModule, "ModelName");
-				if (name_func) strncpy (ms->model_name, name_func(), 255);
-				char *(*desc_func)() = (char*(*)())GetProcAddress (hModule, "ModelDesc");
-				if (desc_func) strncpy (ms->model_desc, desc_func(), 511);
-				FreeLibrary (hModule);
-			}
-			res = _findnext (id, &info);
-		} while (!res);
-	}
-	_findclose (id);
-	*/
+						const char *(*name_func)() = (const char*(*)())oapiModuleGetProcAddress (hMod, "ModelName");
+						const char *(*desc_func)() = (const char*(*)())oapiModuleGetProcAddress (hMod, "ModelDesc");
+
+						if(name_func && desc_func) {
+							std::regex re(".*lib(\\w+)\\.so");
+						    std::smatch match;
+							const std::string s = module.path().string();
+
+						    if (std::regex_search(s.begin(), s.end(), match, re)) {
+								mods.push_back({match[1], std::string(name_func()), std::string(desc_func())});
+							}
+						}
+
+						oapiModuleUnload(hMod);
+					}
+
+					if(!mods.empty()) {
+						auto currentModule = GetAtmModule(dir.path().stem().c_str());
+						modules.push_back({dir.path().stem(), mods, currentModule});
+					}
+				}
+            }
+        }
+    }
 }
 
-INT_PTR CALLBACK AtmConfig::DlgProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+AtmConfig::~AtmConfig ()
 {
-	switch (uMsg) {
-	case WM_INITDIALOG:
-		SetWindowLongPtr (hWnd, DWLP_USER, (LONG)lParam); // store class instance for later reference
-		((AtmConfig*)lParam)->InitDialog (hWnd);
-		break;
-	case WM_COMMAND:
-		switch (LOWORD (wParam)) {
-		case IDOK:
-			((AtmConfig*)GetWindowLongPtr (hWnd, DWLP_USER))->Apply (hWnd);
-			//EndDialog (hWnd, 0);
-			return 0;
-		case IDCANCEL:
-			EndDialog (hWnd, 0);
-			return 0;
-		case IDC_BUTTON1:
-			((AtmConfig*)GetWindowLongPtr (hWnd, DWLP_USER))->OpenHelp (hWnd);
-			return 0;
-		case IDC_COMBO1:
-			if (HIWORD (wParam) == CBN_SELCHANGE)
-				((AtmConfig*)GetWindowLongPtr (hWnd, DWLP_USER))->ModelChanged (hWnd);
-			return 0;
-		case IDC_COMBO2:
-			if (HIWORD (wParam) == CBN_SELCHANGE)
-				((AtmConfig*)GetWindowLongPtr (hWnd, DWLP_USER))->CelbodyChanged (hWnd);
-			return 0;
+}
+
+void AtmConfig::Draw ()
+{
+	for(auto &module: modules) {
+		ImGui::BeginGroupPanel(module.celbody.c_str(), ImVec2(0,0));
+		ImGui::PushItemWidth(150);
+		ImGui::PushID(module.celbody.c_str());
+		if(ImGui::BeginCombo("##combo", module.currentModule.c_str())) {
+			for (auto &mod: module.modules) {
+				if (ImGui::Selectable(std::get<0>(mod).c_str(), module.currentModule == std::get<0>(mod))) {
+					module.currentModule = std::get<0>(mod);
+				}
+				if (ImGui::IsItemHovered()) {
+					ImGui::BeginTooltip();
+					ImGui::TextUnformatted(std::get<1>(mod).c_str());
+					ImGui::Separator();
+					ImGui::PushTextWrapPos(ImGui::GetFontSize() * 30.0f);
+					ImGui::TextWrapped("%s",std::get<2>(mod).c_str());
+					ImGui::PopTextWrapPos();
+					ImGui::EndTooltip();
+				}
+			}
+			ImGui::EndCombo();
 		}
-		break;
+		ImGui::PopID();
+		ImGui::PopItemWidth();
+		ImGui::EndGroupPanel();
+	}
+}
+int AtmConfig::clbkWriteConfig ()
+{
+	for(auto &module: modules) {
+		SetAtmModule(module.celbody.c_str(), module.currentModule.c_str());
 	}
 	return 0;
+}
+
+const char *AtmConfig::Description()
+{
+	return "Configure atmospheric parameters for celestial bodies.";
 }
 
 // ==============================================================
 // The DLL entry point
 // ==============================================================
 
-DLLCLBK void InitModule (DynamicModule *hDLL)
+DLLCLBK void InitModule (MODULEHANDLE hDLL)
 {
-	gParams.hInst = hDLL;
-	gParams.item = new AtmConfig;
+	gItem = new AtmConfig;
 	// create the new config item
-	//LAUNCHPADITEM_HANDLE root = oapiFindLaunchpadItem ("Celestial body configuration");
-	// find the config root entry provided by orbiter
-	//oapiRegisterLaunchpadItem (gParams.item, root);
-	// register the DG config entry
+	oapiRegisterLaunchpadItem (gItem, "Celestial body configuration");
 }
 
 // ==============================================================
 // The DLL exit point
 // ==============================================================
 
-DLLCLBK void ExitModule (DynamicModule *hDLL)
+DLLCLBK void ExitModule (MODULEHANDLE hDLL)
 {
 	// Unregister the launchpad items
-	//oapiUnregisterLaunchpadItem (gParams.item);
-	delete gParams.item;
+	oapiUnregisterLaunchpadItem (gItem);
+	delete gItem;
 }

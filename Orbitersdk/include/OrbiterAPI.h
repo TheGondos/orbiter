@@ -6116,7 +6116,7 @@ OAPIFUNC bool oapiReadItem_vec (FILEHANDLE f, const char *item, VECTOR3 &vec);
 	*  Use the oapiWriteLine function.
 	* \sa oapiReadItem_string
 	*/
-OAPIFUNC void oapiWriteItem_string (FILEHANDLE f, const char *item, char *string);
+OAPIFUNC void oapiWriteItem_string (FILEHANDLE f, const char *item, const char *string);
 
 	/**
 	* \brief Write a tag and its value to a configuration file.

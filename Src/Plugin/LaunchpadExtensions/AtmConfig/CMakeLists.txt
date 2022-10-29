@@ -5,7 +5,6 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${ORBITER_BINARY_STARTUP_DIR})
 
 add_library(AtmConfig SHARED
 	AtmConfig.cpp
-	AtmConfig.rc
 )
 
 target_include_directories(AtmConfig
@@ -14,13 +13,15 @@ target_include_directories(AtmConfig
 )
 
 target_link_libraries(AtmConfig
-	${ORBITER_LIB}
+#	${ORBITER_LIB}
 	${ORBITER_SDK_LIB}
+	imgui
 )
 
 add_dependencies(AtmConfig
 	${OrbiterTgt}
 	Orbitersdk
+	imgui
 )
 
 set_target_properties(AtmConfig
@@ -30,6 +31,6 @@ set_target_properties(AtmConfig
 
 # Installation
 install(TARGETS AtmConfig
-	RUNTIME
+#	RUNTIME
 	DESTINATION ${ORBITER_INSTALL_MODULE_DIR}/Startup
 )

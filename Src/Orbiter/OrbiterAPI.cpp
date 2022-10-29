@@ -2184,7 +2184,7 @@ DLLEXPORT bool oapiReadScenario_nextline (FILEHANDLE file, char *&line)
 	return true;
 }
 
-DLLEXPORT void oapiWriteItem_string (FILEHANDLE file, const char *item, char *string)
+DLLEXPORT void oapiWriteItem_string (FILEHANDLE file, const char *item, const char *string)
 {
 	ofstream &ofs = *(ofstream*)file;
 	ofs << item << " = " << string << endl;
