@@ -96,14 +96,52 @@ DlgLaunchpad::DlgLaunchpad(const std::string &name) : GUIElement(name, "DlgLaunc
 void DlgLaunchpad::DrawVideo() {
     ImGui::Text("DrawVideo");
 }
+
 void DlgLaunchpad::DrawExtra() {
-    ImGui::Text("DrawExtra");
+    ImGuiWindowFlags window_flags = ImGuiWindowFlags_HorizontalScrollbar;
+    ImGui::BeginChild("ChildL", ImVec2(ImGui::GetContentRegionAvail().x * 0.3f, ImGui::GetContentRegionAvail().y), true, window_flags);
+
+	LaunchpadItem *lpi = nullptr;
+
+	for(auto kv = m_extraItems.begin(); kv != m_extraItems.end(); kv = m_extraItems.upper_bound(kv->first)) {
+		const char *category = kv->first.c_str();
+		if(category[0] == '\0')
+			category = "Misc";
+
+		if(ImGui::CollapsingHeader(category)) {
+			auto items = m_extraItems.equal_range(kv->first);
+			for (auto &it = items.first; it != items.second; ++it) {
+				const char *name = it->second->Name();
+				const bool is_selected = m_extraSelected == name;
+                if (ImGui::Selectable(name, is_selected))
+                    m_extraSelected = name;
+				const char *desc = it->second->Description();
+				if (strlen(desc) > 0 && ImGui::IsItemHovered())
+                	ImGui::SetTooltip("%s", desc);
+
+				if(is_selected)
+					lpi = it->second;
+			}
+		}
+	}
+    ImGui::EndChild();
+    ImGui::SameLine();
+    ImGui::BeginChild("ChildR", ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y), true, window_flags);
+	if(lpi) {
+		lpi->Draw();
+		if(ImGui::Button("Save"))
+			lpi->clbkWriteConfig();
+	}
+    ImGui::EndChild();
+
 }
 
 void DlgLaunchpad::Show() {
 	if(show) {
         const char *tabs[] = {
-            ICON_FA_GLOBE" Scenarios", ICON_FA_TOOLS" Parameters", ICON_FA_TACHOMETER_ALT" Visual Effects", ICON_FA_PUZZLE_PIECE" Modules", ICON_FA_DESKTOP" Video", ICON_FA_GAMEPAD" Joystick", "Extra", ICON_FA_QUESTION_CIRCLE" About"
+            ICON_FA_GLOBE" Scenarios", ICON_FA_TOOLS" Parameters", ICON_FA_TACHOMETER_ALT" Visual Effects",
+			ICON_FA_PUZZLE_PIECE" Modules", ICON_FA_DESKTOP" Video", ICON_FA_GAMEPAD" Joystick", ICON_FA_TASKS" Extra",
+			ICON_FA_QUESTION_CIRCLE" About"
         };
 
         void (DlgLaunchpad::* func[])() = {
@@ -466,4 +504,23 @@ Addons present as submodules may be licensed under different terms so beware : i
 	s_printer.print(aboutText, aboutText + sizeof(aboutText));
 
     ImGui::EndChild();
+}
+
+bool DlgLaunchpad::RegisterExtraItem(LaunchpadItem *item, const char *category) {
+	m_extraItems.emplace(std::make_pair(std::string(category), item));
+	return true;
+}
+bool DlgLaunchpad::UnregisterExtraItem(LaunchpadItem *item) {
+	for(auto &kv: m_extraItems) {
+		auto items = m_extraItems.equal_range(kv.first);
+		for (auto it = items.first; it != items.second; ) {
+			if (it->second == item) {
+				it = m_extraItems.erase(it);
+				return true;
+			} else {
+				++it;
+			}
+		}
+	}
+	return false;
 }

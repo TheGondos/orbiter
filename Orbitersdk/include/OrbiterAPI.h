@@ -230,9 +230,6 @@ typedef void *NAVHANDLE;
 /// \brief Handle for animation components
 typedef void *ANIMATIONCOMPONENT_HANDLE;
 
-/// \brief Handle for custom items added to Launchpad "Extra" list
-typedef void *LAUNCHPADITEM_HANDLE;
-
 /// \brief Handle for onscreen annotation objects
 typedef void *NOTEHANDLE;
 
@@ -2255,17 +2252,17 @@ class OAPIFUNC LaunchpadItem {
 public:
 
 	/** \brief Constructor. Creates a new launchpad item. */
-	LaunchpadItem ();
+	LaunchpadItem () {}
 
 	/** \brief Destructor. Destroys the launchpad item. */
-	virtual ~LaunchpadItem ();
+	virtual ~LaunchpadItem () {}
 
 	/**
 	* \brief Derived classes should return a pointer to the string to appear in the Launchpad "Extra" list.
 	* \return Pointer to the item label in the list.
 	* \n\n <b>Default action:</b> Returns NULL (no entry in the list).
 	*/
-	virtual char *Name ();
+	virtual const char *Name () = 0;
 
 	/**
 	* \brief Derived classes should return a pointer to the the string containing a description of the
@@ -2275,35 +2272,12 @@ public:
 	* \note Line breaks can be inserted into the description with a carriage
 	*  return/newline sequence (\\r\\n).
 	*/
-	virtual char *Description ();
+	virtual const char *Description () { return ""; };
 	
 	/**
-	* \brief Opens a dialog box associated with the launchpad item.
-	* \param hInst module instance handle
-	* \param hLaunchpad launchpad window handle
-	* \param resId integer resource ID of the dialog box
-	* \param pDlg dialog box message handler
-	* \return Currently this function always returns \e true.
-	* \note This function is usually called in the body of LaunchpadItem::clbkOpen().
-	* \note It is an alternative to the standard Windows DialogBox function. It has the
-	*  advantage that a pointer to the LaunchpadItem instance is passed as lParam
-	*  to the message handler with the \c WM_INITDIALOG message. In all
-	*  subsequent calls to the handler, the LaunchpadItem instance pointer can be
-	*  obtained with a call to <i>GetWindowLongPtr (hWnd, DWLP_USER)</i>, where hWnd
-	*  is the dialog box handle passed to the message handler.
+	* \brief Draw the content of the iten
 	*/
-	//virtual bool OpenDialog (HINSTANCE hInst, HWND hLaunchpad, int resId, DLGPROC pDlg);
-
-	/**
-	* \brief This method is called whenever the user opens the item by double-clicking on the list or
-	*  clicking the "Edit" button below the list.
-	* \param hLaunchpad The window handle of the Launchpad dialog
-	* \return Currently ignored. Should be \e true if the derived class processes this callback function.
-	* \n\n <b>Default action:</b> Nothing; returns false.
-	* \note The derived class can use this function to open a dialog box or some other
-	*  means of allowing the user to set addon-specific parameters.
-	*/
-	//virtual bool clbkOpen (HWND hLaunchpad);
+	virtual void Draw () = 0;
 
 	/**
 	* \brief This method is called whenever the item should write its current state to a file.
@@ -2324,9 +2298,7 @@ public:
 	*  settings should then be stored in class member variables, and modified by
 	*  user interaction.
 	*/
-	virtual int clbkWriteConfig ();
-
-	LAUNCHPADITEM_HANDLE hItem;
+	virtual int clbkWriteConfig () = 0;
 };
 
 
@@ -5811,26 +5783,21 @@ OAPIFUNC void       oapiVCRegisterHUD (const VCHUDSPEC *spec);
 	/**
 	* \brief Register a new item in the parameter list of the "Extra" tab of the Orbiter Launchpad dialog.
 	* \param item pointer to LaunchpadItem structure (see notes)
-	* \param parent parent item, or NULL for root item
-	* \return Handle for the new item
+	* \param category category group, or nullptr if no category
+	* \return value \e true if item coub be registered, \e false if another item with the same
+	*  name has already been registered
 	* \note The "Extra" list of the Launchpad dialog is customisable and can be used by
 	*  modules to allow user selection of global parameters and settings. Data can
 	*  be written to/read from file and therefore persist across Orbiter sessions.
 	* \note Item is a pointer to a class instance derived from LaunchpadItem.
 	*  It defines what is displayed in the list, and how the user accesses the item.
-	* \note Items can be arranged in a hierarchy. Child items can be defined by passing
-	*  the handle of a previous item as the parent parameter.
-	* \note If an entry with the same name as item->Name() already exists, no new
-	*  entry is generated, and the handle of the existing entry is returned.
-	* \note Because double-clicking on an item both activates it and expands the child
-	*  list of parent items, parent items should be inert (i.e. should not define their
-	*  clbkOpen method) to avoid ambiguities.
+	* \note Items can be grouped in a categories.
 	* \note oapiRegisterLaunchpadItem() should usually be called during the DLL
 	*  initialisation function. A matching oapiUnregisterLaunchpadItem() should be
 	*  called during the DLL exit function.
-	* \sa oapiUnregisterLaunchpadItem, oapiFindLaunchpadItem
+	* \sa oapiUnregisterLaunchpadItem
 	*/
-OAPIFUNC LAUNCHPADITEM_HANDLE oapiRegisterLaunchpadItem (LaunchpadItem *item, LAUNCHPADITEM_HANDLE parent = 0);
+OAPIFUNC bool oapiRegisterLaunchpadItem (LaunchpadItem *item, const char *category = "");
 
 	/**
 	* \brief Unregister a previously registered entry in the "Extra" tab of the Orbiter Launchpad dialog.
@@ -5839,23 +5806,9 @@ OAPIFUNC LAUNCHPADITEM_HANDLE oapiRegisterLaunchpadItem (LaunchpadItem *item, LA
 	* \note A module must unregister all the launchpad items it has registered before it
 	* is unloaded, at the latest during ExitModule. Failing to do so will leave stale
 	* items in the parameter list of the Extra tab, leading to undefined behaviour.
-	* \sa oapiRegisterLaunchpadItem, oapiFindLaunchpadItem
+	* \sa oapiRegisterLaunchpadItem
 	*/
-OAPIFUNC bool       oapiUnregisterLaunchpadItem (LaunchpadItem *item);
-
-	/**
-	* \brief Returns a handle for an existing entry in the Extra parameter list.
-	* \param name the name of the item in the list (or 0 for first entry)
-	* \param parent the parent item below which to search (or 0 for root)
-	* \return value Item handle if found, or 0 otherwise.
-	* \note This method allows to retrieve the handle of an already existing entry in the
-	*  Extra list. It is useful for placing new items below a parent that wasn't defined by the module itself.
-	* \note It can be used iteratively to search for lower-level entries.
-	* \note If name is not set, the first child entry of parent is returned (or the first root entry, if parent==0).
-	* \note You should only attach children to items that don't themselves define an activation method.
-	* \sa oapiRegisterLaunchpadItem, oapiUnregisterLaunchpadItem
-	*/
-OAPIFUNC LAUNCHPADITEM_HANDLE oapiFindLaunchpadItem (const char *name = 0, LAUNCHPADITEM_HANDLE parent = 0);
+OAPIFUNC bool oapiUnregisterLaunchpadItem (LaunchpadItem *item);
 
 typedef void (*CustomFunc)(void *context);
 

@@ -19,6 +19,7 @@
 #include "Log.h"
 #include "Mesh.h"
 #include "MenuInfoBar.h"
+#include "DlgLaunchpad.h"
 
 #include "zlib.h"
 
@@ -1975,24 +1976,16 @@ DLLEXPORT bool oapiAcceptDelayedKey (char key, double interval)
 	lastkeytime = td.SysT0;
 	return true;
 }
-/*
-DLLEXPORT LAUNCHPADITEM_HANDLE oapiRegisterLaunchpadItem (LaunchpadItem *item, LAUNCHPADITEM_HANDLE parent)
+
+DLLEXPORT bool oapiRegisterLaunchpadItem (LaunchpadItem *item, const char *category) 
 {
-	return NULL;
-	//return (LAUNCHPADITEM_HANDLE)g_pOrbiter->Launchpad()->RegisterExtraParam (item, (HTREEITEM)parent);
+	return g_pOrbiter->m_DlgLaunchpad->RegisterExtraItem(item, category);
 }
 
 DLLEXPORT bool oapiUnregisterLaunchpadItem (LaunchpadItem *item)
 {
-	return NULL;
-	//return g_pOrbiter->Launchpad()->UnregisterExtraParam (item);
+	return g_pOrbiter->m_DlgLaunchpad->UnregisterExtraItem(item);
 }
-
-DLLEXPORT LAUNCHPADITEM_HANDLE oapiFindLaunchpadItem (const char *name, LAUNCHPADITEM_HANDLE parent)
-{
-	return NULL;
-	//return g_pOrbiter->Launchpad()->FindExtraParam (name, (HTREEITEM)parent);
-}*/
 
 DLLEXPORT int oapiRegisterCustomCmd (const char *label, const char *desc, CustomFunc func, void *context)
 {

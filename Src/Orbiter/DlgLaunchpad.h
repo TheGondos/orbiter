@@ -1,6 +1,8 @@
 #pragma once
 
 #include "OrbiterAPI.h"
+#include <string>
+#include <map>
 
 class DlgLaunchpad : public GUIElement {
 public:
@@ -19,7 +21,12 @@ public:
 
     std::string GetScenarioDescription();
 
+    bool RegisterExtraItem(LaunchpadItem *item, const char *category);
+    bool UnregisterExtraItem(LaunchpadItem *item);
+
     std::string m_SelectedScenario;
     std::string m_SelectedDirectory;
     static const std::string etype;
+    std::multimap<std::string, LaunchpadItem *> m_extraItems;
+    std::string m_extraSelected;
 };
