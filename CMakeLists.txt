@@ -1,5 +1,7 @@
 # Copyright (c) Martin Schweiger
 # Licensed under the MIT License
+### manjaro : pacman -Syu cmake gcc make glfw-x11 freetype2 openal libsndfile fontconfig glm
+
 
 #cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=$HOME/xxx ..
 
@@ -213,6 +215,8 @@ if(MSVC)
   set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} /we4311")
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /NODEFAULTLIB:\"LIBCMTD\"")
 endif()
+#set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -fvisibility=hidden")
+set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -fno-gnu-unique")
 
 # Copy data and binary assets from source to binary tree to provide a working Orbiter environment
 add_custom_target(CopyData ALL
