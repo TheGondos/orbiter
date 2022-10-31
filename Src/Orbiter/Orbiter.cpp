@@ -487,6 +487,11 @@ void Orbiter::UnloadModule (MODULEHANDLE hi)
 	for (i = 0; i < nmodule; i++)
 		if (hi == module[i].hMod) break;
 	if (i == nmodule) return; // not present
+
+	void (*opcDLLExit)(MODULEHANDLE) = (void(*)(MODULEHANDLE))oapiModuleGetProcAddress(hi, "opcDLLExit");
+	if(opcDLLExit)
+		opcDLLExit(hi);
+
 	delete []module[i].name;
 	if(module[i].bLocalAlloc)
 		delete module[i].module;
@@ -507,6 +512,11 @@ void Orbiter::UnloadModule (const char *name)
 	for (i = 0; i < nmodule; i++)
 		if (!strcmp(name, module[i].name)) break;
 	if (i == nmodule) return; // not present
+
+	void (*opcDLLExit)(MODULEHANDLE) = (void(*)(MODULEHANDLE))oapiModuleGetProcAddress(module[i].hMod, "opcDLLExit");
+	if(opcDLLExit)
+		opcDLLExit(module[i].hMod);
+
 	delete []module[i].name;
 	if(module[i].bLocalAlloc)
 		delete module[i].module;
