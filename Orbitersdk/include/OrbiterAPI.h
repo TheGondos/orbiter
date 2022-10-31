@@ -50,10 +50,14 @@ struct lua_State;
 #define OAPIFUNC DLLIMPORT
 #endif
 #else
-#define DLLEXPORT
+#define DLLEXPORT __attribute__((visibility("default")))
 #define DLLIMPORT
-#define DLLCLBK extern "C"
-#define OAPIFUNC
+#define DLLCLBK  extern "C" DLLEXPORT
+#ifdef OAPI_IMPLEMENTATION
+#define OAPIFUNC DLLEXPORT
+#else
+#define OAPIFUNC DLLIMPORT
+#endif
 #endif
 
 

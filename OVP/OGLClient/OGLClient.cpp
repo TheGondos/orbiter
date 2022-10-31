@@ -462,7 +462,7 @@ GLFWwindow *OGLClient::clbkCreateRenderWindow ()
 	glEnable( GL_LINE_SMOOTH );
 	glHint( GL_LINE_SMOOTH_HINT, GL_NICEST );
 
-    ImGui_ImplGlfw_InitForOpenGL(hRenderWnd, true);
+	oapiInitGlfw(hRenderWnd);
 	ImGui_ImplOpenGL3_Init("#version 330");
 
 	return hRenderWnd;

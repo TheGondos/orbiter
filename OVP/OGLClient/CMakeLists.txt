@@ -12,7 +12,7 @@ install(FILES ${OGL_SHADERS}
 #
 add_library(OGLClient SHARED
 Shader.cpp CelSphere.cpp Renderer.cpp VertexBuffer.cpp Scene.cpp imgui_impl_opengl3.cpp
-OGLCamera.cpp OGLMesh.cpp MeshManager.cpp VObject.cpp VVessel.cpp Texture.cpp VPlanet.cpp VStar.cpp
+OGLCamera.cpp OGLMesh.cpp MeshManager.cpp VObject.cpp VVessel.cpp Texture.cpp VPlanet.cpp VStar.cpp ztreemgr.cpp
 TileMgr.cpp SurfMgr.cpp RingMgr.cpp HazeMgr.cpp CloudMgr.cpp tilemgr2.cpp surfmgr2.cpp tilelabel.cpp
 VBase.cpp cloudmgr2.cpp OGLClient.cpp Particle.cpp CSphereMgr.cpp spherepatch.cpp OGLPad.cpp  nanovg/src/nanovg.c
 SOIL2/srcs/etc1_utils.c SOIL2/srcs/image_DXT.c SOIL2/srcs/image_helper.c SOIL2/srcs/SOIL2.c

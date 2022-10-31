@@ -481,12 +481,8 @@ public:
 	void MakeContextCurrent(bool);
 private:
 	oapi::GraphicsClient *gclient;       // external graphics client (renderer)
-	OrbiterGraphics *oclient;            // inline graphics client
 
 public:
-	inline OrbiterGraphics *GetInlineGraphicsClient() { return oclient; }
-	// (to access special inline graphics features. Eventually this should no longer
-	// be necessary)
 	void KeyCallback(int key, char state);
 
 };

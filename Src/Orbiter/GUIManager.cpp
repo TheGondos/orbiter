@@ -11,7 +11,7 @@ extern Orbiter *g_pOrbiter;
 extern Camera          *g_camera;         // observer camera
 extern Pane            *g_pane;           // 2D output surface
 
-ImGuiContext*   GImGui = NULL;
+DLLEXPORT ImGuiContext*   GImGui = NULL;
 
 const ImWchar*  GetGlyphRangesOrbiter()
 {

@@ -1805,6 +1805,7 @@ private:
  * \return true if client was registered successfully
  */
 OAPIFUNC bool oapiRegisterGraphicsClient (oapi::GraphicsClient *gc);
+OAPIFUNC void oapiInitGlfw(GLFWwindow* window);
 
 OAPIFUNC bool oapiUnregisterGraphicsClient (oapi::GraphicsClient *gc);
 OAPIFUNC void oapiMakeContextCurrent (bool);

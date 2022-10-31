@@ -12,6 +12,7 @@
 #include "Util.h"
 #include "cryptstring.h"
 #include <unistd.h>
+#include "imgui_impl_glfw.h"
 
 extern Orbiter *g_pOrbiter;
 extern PlanetarySystem *g_psys;
@@ -593,6 +594,10 @@ DLLEXPORT LRESULT CALLBACK WndProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
 
 // ======================================================================
 // API interface: register/unregister the graphics client
+DLLEXPORT void oapiInitGlfw(GLFWwindow* window)
+{
+	ImGui_ImplGlfw_InitForOpenGL(window, true);
+}
 
 DLLEXPORT bool oapiRegisterGraphicsClient (GraphicsClient *gc)
 {

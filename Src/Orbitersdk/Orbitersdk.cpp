@@ -12,12 +12,6 @@
 #include <cassert>
 #include "ModuleAPI.h"
 
-#define DLLCLBK extern "C"
-#define OAPIFUNC
-/*
-#define DLLCLBK extern "C" __declspec(dllexport)
-#define OAPIFUNC __declspec(dllimport)
-*/
 static MODULEHANDLE myModule;
 static void (*myExit)(MODULEHANDLE);
 
