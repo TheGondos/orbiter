@@ -70,6 +70,23 @@ private:
 	std::vector<atmModules> modules;
 };
 
+static std::string ExtractModuleName(const char *s)
+{
+	size_t slen = strlen(s);
+	const char *ptr = s + slen;
+	size_t mlen = 0;
+	while(*ptr != '/') {
+		ptr--;
+		mlen++;
+	}
+	ptr+=4;   //remove /lib
+	mlen-=4;
+
+	mlen-=3;  //remove .so
+
+	return std::string(ptr, mlen);
+}
+
 AtmConfig::AtmConfig(): LaunchpadItem()
 {
 	for (auto &dir : fs::directory_iterator(CelbodyDir)) {
@@ -85,13 +102,8 @@ AtmConfig::AtmConfig(): LaunchpadItem()
 						const char *(*desc_func)() = (const char*(*)())oapiModuleGetProcAddress (hMod, "ModelDesc");
 
 						if(name_func && desc_func) {
-							std::regex re(".*lib(\\w+)\\.so");
-						    std::smatch match;
-							const std::string s = module.path().string();
-
-						    if (std::regex_search(s.begin(), s.end(), match, re)) {
-								mods.push_back({match[1], std::string(name_func()), std::string(desc_func())});
-							}
+							auto match = ExtractModuleName(module.path().c_str());
+							mods.push_back({match, std::string(name_func()), std::string(desc_func())});
 						}
 
 						oapiModuleUnload(hMod);

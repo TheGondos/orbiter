@@ -278,7 +278,6 @@ Orbiter::~Orbiter ()
 	m_pGUIManager->UnregisterCtrl(m_DlgFocus.get());
 	m_pGUIManager->UnregisterCtrl(m_DlgFunction.get());
 	m_pGUIManager->UnregisterCtrl(m_DlgVishelper.get());
-	m_pGUIManager->UnregisterCtrl(m_DlgLaunchpad.get());
 	m_pGUIManager->UnregisterCtrl(m_DlgSelect.get());
 	m_pGUIManager->UnregisterCtrl(m_DlgInputBox.get());
 	m_pGUIManager->UnregisterCtrl(m_DlgPlaybackEditor.get());
@@ -287,6 +286,8 @@ Orbiter::~Orbiter ()
 	CloseApp ();
 
 	UnloadModule(hVideoModule);
+
+	m_pGUIManager->UnregisterCtrl(m_DlgLaunchpad.get());
 }
 //-----------------------------------------------------------------------------
 // Name: Create()
@@ -313,9 +314,6 @@ void Orbiter::Create ()
 
 	m_DlgLaunchpad = std::make_unique<DlgLaunchpad>("Launchpad");
 
-	// preload fixed plugin modules
-	LoadFixedModules ();
-
 	// preload modules from command line requests
 	for (auto &plugin: pConfig->CfgCmdlinePrm.LoadPlugins)
 		LoadModule("Modules/Plugin", plugin.c_str());
@@ -329,6 +327,9 @@ void Orbiter::Create ()
 	icon.pixels = stbi_load("Images/Orbiter.png", &icon.width, &icon.height, 0, 4);
 	glfwSetWindowIcon(m_pGUIManager->hRenderWnd, 1, &icon);
 	stbi_image_free(icon.pixels);
+
+	// preload fixed plugin modules
+	LoadFixedModules ();
 
 	for (const auto &mod: pConfig->m_actmod) {
 		if(mod == pConfig->m_videoPlugin) continue;
