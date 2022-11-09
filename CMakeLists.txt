@@ -221,6 +221,7 @@ set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -fno-gnu-unique")
 
 # Copy data and binary assets from source to binary tree to provide a working Orbiter environment
 add_custom_target(CopyData ALL
+	COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/Orbitersdk/include
 	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/BinAssets/ ${CMAKE_BINARY_DIR}
 	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/Scenarios/ ${CMAKE_BINARY_DIR}/Scenarios
 	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/Textures/ ${ORBITER_BINARY_TEXTURES_DIR}
