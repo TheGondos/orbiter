@@ -6729,7 +6729,8 @@ OAPIFUNC void oapiTriggerRedrawArea (int panel_id, int vc_id, int area_id);
 #define OAPI_LKEY_DlgSelectVessel  100 ///< open vessel selection dialog
 #define OAPI_LKEY_SelectPrevVessel 101 ///< switch focus to previous vessel
 #define OAPI_LKEY_DlgCapture       102 ///< open screen capture dialog
-#define LKEY_COUNT 103                 ///< number of logical key definitions
+#define OAPI_LKEY_ToggleFullscreen 103 ///< toggle fullscreen on/off
+#define LKEY_COUNT 104                 ///< number of logical key definitions
 //@}
 
 // ======================================================================

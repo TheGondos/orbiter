@@ -159,6 +159,7 @@ public:
     void Pause (bool bPause);
 	void Freeze (bool bFreeze);
 	inline void TogglePause () { Pause (bRunning); }
+	void ToggleFullscreen();
 	bool Timejump (double _mjd, int pmode);
 	void Suspend (void); // elapsed time between Suspend() and Resume() is ignored
 	void Resume (void); // A Suspend/Resume pair must be closed within a time step

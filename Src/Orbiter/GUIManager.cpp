@@ -463,6 +463,18 @@ void GUIManager::key_callback(GLFWwindow* window, int gkey, int scancode, int ac
 	g_pOrbiter->KeyCallback(key, down);
 }
 
+void GUIManager::ToggleFullscreen()
+{
+	if(glfwGetWindowMonitor(hRenderWnd)) { // fullscreen
+		glfwSetWindowMonitor(hRenderWnd, NULL, win_xpos, win_ypos, win_width, win_height, 0);
+	} else { // windowed
+		const GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+		const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+		glfwGetWindowPos(hRenderWnd, &win_xpos, &win_ypos);
+		glfwGetWindowSize(hRenderWnd, &win_width, &win_height);
+		glfwSetWindowMonitor(hRenderWnd, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
+	}
+}
 
 void GUIManager::framebuffer_size_callback(GLFWwindow *window, int width, int height)
 {

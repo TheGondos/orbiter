@@ -37,7 +37,7 @@ class GUIManager {
 		void DisableMouseCursor() { glfwSetInputMode(hRenderWnd, GLFW_CURSOR, GLFW_CURSOR_DISABLED); }
 		void EnableMouseCursor() { glfwSetInputMode(hRenderWnd, GLFW_CURSOR, GLFW_CURSOR_NORMAL); }
 		void SetupCallbacks();
-
+        void ToggleFullscreen();
 
         GUIManager();
 		void RenderGUI();
@@ -78,4 +78,9 @@ class GUIManager {
         void HideCtrl() { auto e = GetCtrl<T>(); if(e) e->show = false; }
         template<class T>
         void ToggleCtrl() { auto e = GetCtrl<T>(); if(e) e->show = !e->show; }
+
+        int win_xpos;
+        int win_ypos;
+        int win_width;
+        int win_height;
 };

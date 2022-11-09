@@ -290,6 +290,12 @@ Orbiter::~Orbiter ()
 
 	m_pGUIManager->UnregisterCtrl(m_DlgLaunchpad.get());
 }
+
+void Orbiter::ToggleFullscreen()
+{
+	m_pGUIManager->ToggleFullscreen();
+}
+
 //-----------------------------------------------------------------------------
 // Name: Create()
 //-----------------------------------------------------------------------------
@@ -1968,6 +1974,7 @@ void Orbiter::KbdInputImmediate_OnRunning (char *kstate)
 void Orbiter::KbdInputBuffered_System (char *kstate, int key)
 {
 		if      (keymap.IsLogicalKey (key, kstate, OAPI_LKEY_Pause))                TogglePause();
+		else if (keymap.IsLogicalKey (key, kstate, OAPI_LKEY_ToggleFullscreen))     ToggleFullscreen();
 		else if (keymap.IsLogicalKey (key, kstate, OAPI_LKEY_Quicksave))            Quicksave();
 		else if (keymap.IsLogicalKey (key, kstate, OAPI_LKEY_StepIncFOV))           SetFOV (ceil((g_camera->Aperture()*DEG+1e-6)/5.0)*5.0*RAD);
 		else if (keymap.IsLogicalKey (key, kstate, OAPI_LKEY_StepDecFOV))           SetFOV (floor((g_camera->Aperture()*DEG-1e-6)/5.0)*5.0*RAD);
