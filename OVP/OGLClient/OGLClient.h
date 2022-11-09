@@ -578,6 +578,7 @@ public:
 	 * \sa clbkCreateSurface, clbkIncrSurfaceRef
 	 */
 	virtual bool clbkReleaseSurface (SURFHANDLE surf);
+	virtual bool clbkUpdateSurface (SURFHANDLE surf, int x, int y, int w, int h, const unsigned char* data);
 
 	/**
 	 * \brief Return the width and height of a surface

@@ -5445,6 +5445,7 @@ OAPIFUNC SURFHANDLE oapiCreateTextureSurface (int width, int height);
 	* \param surf surface handle
 	*/
 OAPIFUNC void       oapiDestroySurface (SURFHANDLE surf);
+OAPIFUNC void 		oapiUpdateSurface (SURFHANDLE surf, int x, int y, int w, int h, const unsigned char* data);
 
 OAPIFUNC void       oapiClearSurface (SURFHANDLE surf, uint32_t col = 0);
 

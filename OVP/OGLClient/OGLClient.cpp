@@ -1046,6 +1046,25 @@ bool OGLClient::clbkReleaseSurface (SURFHANDLE surf)
     return true;
 }
 
+bool OGLClient::clbkUpdateSurface (SURFHANDLE surf, int x, int y, int w, int h, const unsigned char* data)
+{
+	OGLTexture *tex = ((OGLTexture *)surf);
+	glBindTexture(GL_TEXTURE_2D, tex->m_TexId);
+
+	glPixelStorei(GL_UNPACK_ALIGNMENT,1);
+	glPixelStorei(GL_UNPACK_ROW_LENGTH, tex->m_Width);
+	glPixelStorei(GL_UNPACK_SKIP_PIXELS, x);
+	glPixelStorei(GL_UNPACK_SKIP_ROWS, y);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, x,y, w,h, GL_RGBA, GL_UNSIGNED_BYTE, data);
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+	glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+	glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
+	glPixelStorei(GL_UNPACK_SKIP_ROWS, 0);
+
+	glBindTexture(GL_TEXTURE_2D, 0);
+	return true;
+}
+
 /**
  * \brief Release a drawing object.
  * \param sp pointer to drawing object

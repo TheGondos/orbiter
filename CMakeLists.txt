@@ -227,7 +227,25 @@ add_custom_target(CopyData ALL
 	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/Script/ ${CMAKE_BINARY_DIR}/Script
 	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/Config/ ${CMAKE_BINARY_DIR}/Config
 	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/Flights/ ${CMAKE_BINARY_DIR}/Flights
-	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/Orbitersdk/include/ ${CMAKE_BINARY_DIR}/Orbitersdk/include
+#	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/Orbitersdk/include/ ${CMAKE_BINARY_DIR}/Orbitersdk/include
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/Orbitersdk/include/CamAPI.h ${CMAKE_BINARY_DIR}/Orbitersdk/include
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/Orbitersdk/include/CelBodyAPI.h ${CMAKE_BINARY_DIR}/Orbitersdk/include
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/Orbitersdk/include/DrawAPI.h ${CMAKE_BINARY_DIR}/Orbitersdk/include
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/Orbitersdk/include/font_awesome_5.h ${CMAKE_BINARY_DIR}/Orbitersdk/include
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/Orbitersdk/include/GraphicsAPI.h ${CMAKE_BINARY_DIR}/Orbitersdk/include
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/Orbitersdk/include/imgui_impl_glfw.h ${CMAKE_BINARY_DIR}/Orbitersdk/include
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/Orbitersdk/include/MFDAPI.h ${CMAKE_BINARY_DIR}/Orbitersdk/include
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/Orbitersdk/include/ModuleAPI.h ${CMAKE_BINARY_DIR}/Orbitersdk/include
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/Orbitersdk/include/OrbiterAPI.h ${CMAKE_BINARY_DIR}/Orbitersdk/include
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/Orbitersdk/include/Orbitersdk.h ${CMAKE_BINARY_DIR}/Orbitersdk/include
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/Orbitersdk/include/resource_video.h ${CMAKE_BINARY_DIR}/Orbitersdk/include
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/Orbitersdk/include/VesselAPI.h ${CMAKE_BINARY_DIR}/Orbitersdk/include
+
+
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/Extern/imgui/imgui.h ${CMAKE_BINARY_DIR}/Orbitersdk/include
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/Extern/imgui/imconfig.h ${CMAKE_BINARY_DIR}/Orbitersdk/include
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/Extern/imgui/imgui_stacklayout.h ${CMAKE_BINARY_DIR}/Orbitersdk/include
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/Extern/imgui-knobs/imgui-knobs.h ${CMAKE_BINARY_DIR}/Orbitersdk/include
 	
 #	COMMAND ${CMAKE_COMMAND} -E make_directory ${ORBITER_BINARY_SDK_DIR}/lib/Lua
 #	COMMAND ${CMAKE_COMMAND} -E copy ${LUA_DLL_DIR}/lua5.1.lib ${ORBITER_BINARY_SDK_DIR}/lib/Lua/

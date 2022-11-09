@@ -44,3 +44,6 @@
 [submodule "Extern/imgui-knobs"]
 	path = Extern/imgui-knobs
 	url = https://github.com/altschuler/imgui-knobs.git
+[submodule "Addons/Orb42S"]
+	path = Addons/Orb42S
+	url = git@github.com:TheGondos/Orb42S.git

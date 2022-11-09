@@ -1844,6 +1844,12 @@ DLLEXPORT SURFHANDLE oapiCreateSurface (int width, int height)
 	return (gc ? gc->clbkCreateSurface (width, height) : NULL);
 }
 
+DLLEXPORT void oapiUpdateSurface (SURFHANDLE surf, int x, int y, int w, int h, const unsigned char* data)
+{
+	oapi::GraphicsClient *gc = g_pOrbiter->GetGraphicsClient();
+	if(gc) gc->clbkUpdateSurface (surf, x, y, w, h, data);
+}
+
 DLLEXPORT SURFHANDLE oapiCreateSurfaceEx (int width, int height, int attrib)
 {
 	oapi::GraphicsClient *gc = g_pOrbiter->GetGraphicsClient();

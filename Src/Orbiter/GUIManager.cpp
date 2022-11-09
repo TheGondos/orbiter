@@ -19,6 +19,10 @@ const ImWchar*  GetGlyphRangesOrbiter()
     {
         0x0020, 0x00FF, // Basic Latin + Latin Supplement
         0x00A0, 0x02D9, // Polish characters 
+        0x0393, 0x03C2, // Greek characters
+        0x221A, 0x221A, // √
+        0x222B, 0x222B, // ∫
+        0x2260, 0x2264, // ≠ ≤ ≥
         0,
     };
     return &ranges[0];

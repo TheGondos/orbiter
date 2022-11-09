@@ -5,6 +5,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${ORBITER_BINARY_PLUGIN_DIR})
 set(MODULE_COMMON_DIR ${CMAKE_CURRENT_SOURCE_DIR}/Common)
 
 # The subdirectories with individual plugin implementations
+add_subdirectory(Calculator)
 add_subdirectory(ExtMFD)
 #add_subdirectory(FlightData)
 #add_subdirectory(Framerate)
