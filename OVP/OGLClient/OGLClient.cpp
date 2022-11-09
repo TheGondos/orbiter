@@ -1551,6 +1551,27 @@ bool OGLClient::clbkScaleBlt (SURFHANDLE tgt, int tgtx, int tgty, int tgtw, int 
 	return true;
 }
 
+bool OGLClient::clbkSetSurfaceParam (SURFHANDLE surf, int param, int val) {
+	OGLTexture *tex = (OGLTexture *)surf;
+	glBindTexture(GL_TEXTURE_2D, tex->m_TexId);
+	switch(param) {
+		case SURFPARAM_FILTERING:
+			switch(val) {
+				case SURFPARAM_FILTERING_NEAREST:
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+					break;
+				case SURFPARAM_FILTERING_LINEAR:
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+					break;
+			}
+			break;
+		default:
+			assert(false);
+			break;
+	}
+	glBindTexture(GL_TEXTURE_2D, 0);
+}
+
 /**
  * \brief Copy one surface into an area of another one.
  * \param tgt target surface handle

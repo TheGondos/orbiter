@@ -942,8 +942,8 @@ public:
 	 */
 	virtual SURFHANDLE clbkCreateSurface (int w, int h, SURFHANDLE hTemplate = NULL)
 	{ return NULL; }
-
 	virtual bool clbkUpdateSurface (SURFHANDLE surf, int x, int y, int w, int h, const unsigned char* data) {return false;}
+	virtual bool clbkSetSurfaceParam (SURFHANDLE surf, int param, int val)  {return false;}
 
 	/**
 	 * \brief Create a texture for rendering

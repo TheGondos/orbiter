@@ -5444,10 +5444,15 @@ OAPIFUNC SURFHANDLE oapiCreateTextureSurface (int width, int height);
 	* \brief Destroy a surface previously created with oapiCreateSurface.
 	* \param surf surface handle
 	*/
-OAPIFUNC void       oapiDestroySurface (SURFHANDLE surf);
-OAPIFUNC void 		oapiUpdateSurface (SURFHANDLE surf, int x, int y, int w, int h, const unsigned char* data);
+OAPIFUNC void oapiDestroySurface (SURFHANDLE surf);
+OAPIFUNC void oapiUpdateSurface (SURFHANDLE surf, int x, int y, int w, int h, const unsigned char* data);
+#define SURFPARAM_FILTERING 0
+#define SURFPARAM_FILTERING_NEAREST 0
+#define SURFPARAM_FILTERING_LINEAR 1
 
-OAPIFUNC void       oapiClearSurface (SURFHANDLE surf, uint32_t col = 0);
+OAPIFUNC void oapiSetSurfaceParam (SURFHANDLE surf, int param, int val);
+
+OAPIFUNC void oapiClearSurface (SURFHANDLE surf, uint32_t col = 0);
 
 	/**
 	* \brief Define a colour key for a surface to allow transparent blitting.

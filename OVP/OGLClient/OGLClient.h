@@ -577,8 +577,9 @@ public:
 	 *   surface reference counter and release the surface if required.
 	 * \sa clbkCreateSurface, clbkIncrSurfaceRef
 	 */
-	virtual bool clbkReleaseSurface (SURFHANDLE surf);
-	virtual bool clbkUpdateSurface (SURFHANDLE surf, int x, int y, int w, int h, const unsigned char* data);
+	virtual bool clbkReleaseSurface (SURFHANDLE surf) override;
+	virtual bool clbkUpdateSurface (SURFHANDLE surf, int x, int y, int w, int h, const unsigned char* data) override;
+	virtual bool clbkSetSurfaceParam (SURFHANDLE surf, int param, int val) override;
 
 	/**
 	 * \brief Return the width and height of a surface
