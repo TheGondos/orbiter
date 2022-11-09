@@ -8,20 +8,18 @@ add_library(AtmConfig SHARED
 )
 
 target_include_directories(AtmConfig
-	PUBLIC ${ORBITER_SOURCE_SDK_INCLUDE_DIR}
+	PUBLIC ${ORBITER_BINARY_SDK_DIR}/include
 	PUBLIC ${MODULE_COMMON_DIR}
 )
 
 target_link_libraries(AtmConfig
 #	${ORBITER_LIB}
 	${ORBITER_SDK_LIB}
-	imgui
 )
 
 add_dependencies(AtmConfig
 	${OrbiterTgt}
 	Orbitersdk
-	imgui
 )
 
 set_target_properties(AtmConfig

@@ -35,7 +35,7 @@ set_target_properties(ShuttleA
 )
 
 target_include_directories(ShuttleA
-	PUBLIC ${ORBITER_SOURCE_SDK_INCLUDE_DIR}
+	PUBLIC ${ORBITER_BINARY_SDK_DIR}/include
 	PUBLIC ${VESSEL_COMMON_DIR}
 	PUBLIC ${ORBITER_SOURCE_MODULE_DIR}/ScnEditor      # for ScnEditorAPI.h
 )
@@ -44,7 +44,6 @@ target_link_libraries(ShuttleA
 #	${ORBITER_LIB}
 	${ORBITER_SDK_LIB}
 	lua::lib
-	imgui
 )
 
 add_dependencies(ShuttleA

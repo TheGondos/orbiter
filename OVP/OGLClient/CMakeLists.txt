@@ -26,7 +26,7 @@ target_compile_definitions(OGLClient
 
 #OGL_OBJS=$(foreach src, $(OGL_SRC), OVP/OGLClient/$(src:.cpp=.o)) OVP/OGLClient/glad.o Extern/SOIL2/libSOIL2.a
 target_include_directories(OGLClient
-	PUBLIC ${ORBITER_SOURCE_SDK_INCLUDE_DIR}
+	PUBLIC ${ORBITER_BINARY_SDK_DIR}/include
     PUBLIC SOIL2/incs
 	PUBLIC ${EXTERN_DIR}/libnsbmp/include
 	PUBLIC ${FREETYPE_INCLUDE_DIRS}
@@ -35,7 +35,6 @@ target_include_directories(OGLClient
 target_link_libraries(OGLClient
 #	${ORBITER_LIB}
 	${ORBITER_SDK_LIB}
-	imgui
 	Fontconfig::Fontconfig
 	GL
 #    ${OPENGL_LIBRARY}
