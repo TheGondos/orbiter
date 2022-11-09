@@ -15,7 +15,11 @@ namespace Renderer
         CCW = GL_CCW
     };
 
+#ifdef DEBUG
     void CheckError(const char *s);
+#else
+    void CheckError(const char *s) {}
+#endif
     void GlobalInit(int w, int h);
     void PushBool(BoolParam param, bool value);
     void PopBool(int num = 1);

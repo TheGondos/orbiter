@@ -151,8 +151,9 @@ int _matherr(struct _exception *except )
 
 int main(int argc, const char *argv[])
 {
+#ifdef DEBUG
 	feenableexcept (FE_INVALID|FE_DIVBYZERO|FE_OVERFLOW);
-
+#endif
 	glfwInitHint(GLFW_JOYSTICK_HAT_BUTTONS, GLFW_FALSE);
 
 	if (!glfwInit()) {

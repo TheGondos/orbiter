@@ -8,7 +8,7 @@
 
 namespace Renderer
 {
-
+#ifdef DEBUG
 void CheckError(const char *s) {
     GLenum err;
     while((err = glGetError()) != GL_NO_ERROR)
@@ -19,6 +19,7 @@ void CheckError(const char *s) {
         exit(-1);
     }
 }
+#endif
 
 struct FBParamSave {
     GLint fb;
