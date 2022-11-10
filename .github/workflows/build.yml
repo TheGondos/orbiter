@@ -43,7 +43,7 @@ jobs:
       run: cmake --install . --prefix  ${{ github.workspace }}/out/install
 
   build-linux-ubuntu-gcc-10:
-    name: Build on ubuntu
+    name: Build on ubuntu with gcc 10
     strategy:
       fail-fast: false
 
