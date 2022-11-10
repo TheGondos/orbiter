@@ -267,6 +267,9 @@ private:
 	void FreeResources ();
 	// Free GDI resources
 
+	void UpdateResources();
+	// Update resources when resizing
+
 	oapi::GraphicsClient *gc; // client instance
 	int W, H, BPP;            // pane dimensions
 	int scaleW;

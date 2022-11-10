@@ -103,8 +103,8 @@ public:
 
 	uint32_t m_Height;
     float rotationRadians = 0;
-    std::string facename;
-    std::string fontfile;
+    std::string m_facename;
+    std::string m_fontfile;
 };
 
 

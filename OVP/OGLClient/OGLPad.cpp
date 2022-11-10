@@ -14,9 +14,12 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #include <cstring>
 #include <fontconfig/fontconfig.h>
 #include "Renderer.h"
+#include <map>
 
 #define NANOVG_GL3_IMPLEMENTATION
 #include "nanovg/src/nanovg_gl.h"
+
+static std::map<std::string,std::string> fontCache;
 
 static NVGcolor nvgCol(uint32_t col)
 {
@@ -190,9 +193,9 @@ int OGLPad::GetCharSize ()
 {
 	int height;
 	if (cfont) {
-		if(nvgFindFont(s_nvg, cfont->facename.c_str()) == -1) nvgCreateFont(s_nvg, cfont->facename.c_str(), cfont->fontfile.c_str());
+		if(nvgFindFont(s_nvg, cfont->m_facename.c_str()) == -1) nvgCreateFont(s_nvg, cfont->m_facename.c_str(), cfont->m_fontfile.c_str());
 		nvgFontSize(s_nvg, cfont->m_Height);
-		nvgFontFace(s_nvg, cfont->facename.c_str());
+		nvgFontFace(s_nvg, cfont->m_facename.c_str());
 		nvgTextAlign(s_nvg, NVGalign::NVG_ALIGN_TOP|NVGalign::NVG_ALIGN_LEFT);
 		float bounds[4];
 		nvgTextBounds(s_nvg, 0, 0, "A", nullptr, bounds);
@@ -210,9 +213,9 @@ int OGLPad::GetTextWidth (const char *str, int len)
 	}
 
 	if (cfont) {
-		if(nvgFindFont(s_nvg, cfont->facename.c_str()) == -1) nvgCreateFont(s_nvg, cfont->facename.c_str(), cfont->fontfile.c_str());
+		if(nvgFindFont(s_nvg, cfont->m_facename.c_str()) == -1) nvgCreateFont(s_nvg, cfont->m_facename.c_str(), cfont->m_fontfile.c_str());
 		nvgFontSize(s_nvg, cfont->m_Height);
-		nvgFontFace(s_nvg, cfont->facename.c_str());
+		nvgFontFace(s_nvg, cfont->m_facename.c_str());
 		nvgTextAlign(s_nvg, NVGalign::NVG_ALIGN_TOP|NVGalign::NVG_ALIGN_LEFT);
 		float bounds[4];
 		nvgTextBounds(s_nvg, 0, 0, str, str+len, bounds);
@@ -235,11 +238,11 @@ void OGLPad::GetOrigin (int *x, int *y) const
 
 bool OGLPad::Text (int x, int y, const char *str, int len)
 {
-	if(nvgFindFont(s_nvg, cfont->facename.c_str()) == -1) {
-		nvgCreateFont(s_nvg, cfont->facename.c_str(), cfont->fontfile.c_str());
+	if(nvgFindFont(s_nvg, cfont->m_facename.c_str()) == -1) {
+		nvgCreateFont(s_nvg, cfont->m_facename.c_str(), cfont->m_fontfile.c_str());
 	}
     nvgFontSize(s_nvg, cfont->m_Height);
-    nvgFontFace(s_nvg, cfont->facename.c_str());
+    nvgFontFace(s_nvg, cfont->m_facename.c_str());
     nvgTextAlign(s_nvg, m_TextAlign);
 
     nvgResetTransform(s_nvg);
@@ -380,16 +383,25 @@ void OGLPad::PolyPolyline (const oapi::IVECTOR2 *pt, const int *npt, const int n
 OGLFont::OGLFont (int height, bool prop, const char *face, Style style, int orientation): oapi::Font (height, prop, face, style, orientation)
 {
 	rotationRadians = -3.1415926535898/180.0 * (orientation * 0.1f);
-    facename = face;
+    m_facename = face;
     m_Height = abs(height);
 
 	//fontconfig fails to deliver a mono font if the family is not found -> force default font for monospace
-	if(!prop) facename="monospace";
-	if(style & Font::BOLD) facename+=":bold";
-	if(style & Font::ITALIC) facename+=":italic";
+	if(!prop) m_facename="monospace";
+	if(style & Font::BOLD) m_facename+=":bold";
+	if(style & Font::ITALIC) m_facename+=":italic";
+
+	std::string facename = m_facename;
+	facename+=height;
+
+	if(auto n = fontCache.find(facename); n!=fontCache.end()) {
+		m_fontfile = n->second;
+		return;
+	}
 
 	FcConfig* config = FcInitLoadConfigAndFonts();
-	FcPattern* pat = FcNameParse((const FcChar8*)facename.c_str());
+	FcPattern* pat = FcNameParse((const FcChar8*)m_facename.c_str());
+	m_facename+=height;
 	FcConfigSubstitute(config, pat, FcMatchPattern);
 	FcDefaultSubstitute(pat);
 
@@ -402,13 +414,13 @@ OGLFont::OGLFont (int height, bool prop, const char *face, Style style, int orie
 
 		if (FcPatternGetString(font, FC_FILE, 0, &file) == FcResultMatch)
 		{
-			fontfile = (char*)file;
+			m_fontfile = (char*)file;
+			fontCache[m_facename] = m_fontfile;
 		}
 	}
 	FcPatternDestroy(font);
 	FcPatternDestroy(pat);
 	FcConfigDestroy(config);
-	facename+=height;
 }
 
 OGLFont::~OGLFont ()

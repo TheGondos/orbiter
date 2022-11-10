@@ -108,8 +108,8 @@ void Pane::Resize(int width, int height)
 {
 	W = width;
 	H = height;
-	FreeResources();
-	InitResources();
+
+	UpdateResources();
 	if (mibar)    delete mibar;
 	if (gc) mibar = new MenuInfoBar (this);
 	SetPanelMode(panelmode, true);
@@ -724,6 +724,33 @@ void Pane::TriggerVCRedrawArea (int vcid, int aid)
 	if (vcockpit && ((vcid < 0) || (vcockpit->GetId () == vcid))) {
 		int idx = vcockpit->AreaIndex (aid);
 		vcockpit->RedrawArea (idx, PANEL_REDRAW_USER);
+	}
+}
+
+void Pane::UpdateResources ()
+{
+	for (int i = 0; i < 2; i++) gc->clbkReleaseFont (hudfont[i]);
+
+	oapi::Sketchpad *skp = gc->clbkGetSketchpad(NULL);
+	int h = H/50;
+	f2H = max(12, min(20, H/50));
+	hudfont[0] = gc->clbkCreateFont (-h, false, "Fixed");
+	hudfont[1] = gc->clbkCreateFont (f2H, true, "Sans");
+
+	int charsize;
+	if (skp) {
+		skp->SetFont (hudfont[0]);
+		charsize = skp->GetCharSize ();
+		f1W = (charsize>>16)&0xffff;
+		f1H = charsize&0xffff;
+		scaleW = f1W * 10;
+		skp->SetFont (hudfont[1]);
+		charsize = skp->GetCharSize ();
+		f2W = (charsize>>16)&0xffff;
+		f2H = charsize&0xffff;
+		gc->clbkReleaseSketchpad (skp);
+	} else {
+		f1W = f1H = 0;
 	}
 }
 

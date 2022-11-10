@@ -768,6 +768,7 @@ void Orbiter::CloseSession ()
 
 		if (g_pane) { delete g_pane;   g_pane = 0; }
 		Instrument::GlobalExit (gclient);
+		MenuInfoBar::GlobalExit ();
 		meshmanager.Flush(); // destroy buffered meshes
 		DestroyWorld ();     // destroy logical objects
 		if (gclient)
@@ -821,6 +822,7 @@ void Orbiter::GetRenderParameters ()
 void Orbiter::BroadcastGlobalInit ()
 {
 	Instrument::GlobalInit (gclient);
+	MenuInfoBar::GlobalInit();
 //	DlgMap::GlobalInit();
 }
 

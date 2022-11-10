@@ -383,6 +383,26 @@ ExtraInfoBar *ExtraInfoBar::Create (MenuInfoBar *_mibar, int side, int mode)
 // class MenuInfoBar
 // =======================================================================
 
+void MenuInfoBar::GlobalInit()
+{
+	const int itemN = 12;
+	const int itemW = 48;
+	const int menuW = itemN*itemW;
+	const int menuH = 54;
+
+	auto gc = g_pOrbiter->GetGraphicsClient();
+	menuSrc = gc->clbkLoadTexture ("main_menu.dds", 0x4);
+	menuTgt = gc->clbkLoadTexture ("main_menu_tgt.dds", 0x4);
+	dASSERT(menuSrc && menuTgt, "MenuInfoBar: main_menu.dds or main_menu_tgt.dds could not be loaded from Textures directory.");
+	gc->clbkBlt (menuTgt, 0, tgtTexH-menuH, menuSrc, 0, 23+menuH, menuW, menuH);
+}
+void MenuInfoBar::GlobalExit()
+{
+	auto gc = g_pOrbiter->GetGraphicsClient();
+	gc->clbkReleaseSurface (menuSrc);
+	gc->clbkReleaseTexture (menuTgt);
+}
+
 MenuInfoBar::MenuInfoBar (const Pane *_pane)
 {
 	pane = _pane;
@@ -421,10 +441,6 @@ MenuInfoBar::MenuInfoBar (const Pane *_pane)
 	scrollpos = (menumode == 0 ? scrollrange : 0.0);
 	scrollpos_info = (infomode == 0 ? menuH : 0.0);
 	scrolldir = scrolldir_info = 0;
-	menuSrc = gc->clbkLoadTexture ("main_menu.dds", 0x4);
-	menuTgt = gc->clbkLoadTexture ("main_menu_tgt.dds", 0x4);
-	dASSERT(menuSrc && menuTgt, "MenuInfoBar: main_menu.dds or main_menu_tgt.dds could not be loaded from Textures directory.");
-	gc->clbkBlt (menuTgt, 0, tgtTexH-menuH, menuSrc, 0, 23+menuH, menuW, menuH);
 	int yofs = (menumode == 0 ? -menuH+scrollrange:-menuH);
 	int yofs_info = (infomode == 0 ? 0:-menuH);
 	int miniW = 100, miniH = menuH/3;
@@ -504,8 +520,6 @@ MenuInfoBar::~MenuInfoBar ()
 {
 	for (int i = 0; i < 2; i++)
 		if (eibar[i]) delete eibar[i];
-	gc->clbkReleaseSurface (menuSrc);
-	gc->clbkReleaseTexture (menuTgt);
 }
 
 void MenuInfoBar::Update (double t)

@@ -49,7 +49,8 @@ public:
 	void SetAuxInfobar (int which, int idx);
 	inline int GetMenuMode() const { return menumode; }
 	inline int GetInfoMode() const { return infomode; }
-
+	static void GlobalInit();
+	static void GlobalExit();
 protected:
 	int TexBltString (const char *str, int tgtx, int tgty, int cleantox, char *curstr = 0, int maxn=1024);
 	void UpdateMeshVertices ();
@@ -80,7 +81,7 @@ private:
 	bool show_action;
 	bool action_blink;
 	double action_time;
-	SURFHANDLE menuSrc, menuTgt;
+	static inline SURFHANDLE menuSrc, menuTgt;
 	Mesh barMesh, miniMesh, flagMesh;
 	char datestr[30], mjdstr[30], timestr[30];
 	char tgtstr[64], dststr[30], camstr[64], recstr[2];
