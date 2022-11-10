@@ -42,6 +42,42 @@ jobs:
       working-directory: ${{ github.workspace }}/out/build
       run: cmake --install . --prefix  ${{ github.workspace }}/out/install
 
+  build-linux-ubuntu-gcc-10:
+    name: Build on ubuntu
+    strategy:
+      fail-fast: false
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Install build dependencies
+      run: sudo apt-get -y install gcc-10 g++-10 libglfw3-dev libfreetype-dev libopenal-dev libfontconfig1-dev libsndfile1-dev libglm-dev
+
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        submodules: recursive
+
+    - name: Create directories
+      run: |
+        mkdir -p ${{ github.workspace }}/out/build
+        mkdir ${{ github.workspace }}/out/install
+    - name: Configure
+      working-directory: ${{ github.workspace }}/out/build
+      run: cmake -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/out/install ../..
+      env:
+        CC:   gcc-10
+        CXX:  g++-10
+    - name: Build
+      working-directory: ${{ github.workspace }}/out/build
+      run: cmake --build . --config RelWithDebInfo
+      env:
+        CC:   gcc-10
+        CXX:  g++-10
+    - name: Install
+      working-directory: ${{ github.workspace }}/out/build
+      run: cmake --install . --prefix  ${{ github.workspace }}/out/install
+
 #  build:
 #    name: Build with CMake
 #    strategy:
