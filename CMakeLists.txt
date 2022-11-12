@@ -124,8 +124,7 @@ set(IMGUI_HEADERS
 
 set(IMGUI_INC_PATH "${IMGUI_LIB_NAME}/")
 
-add_library(imgui
-    STATIC
+add_library(imgui OBJECT
         ${IMGUI_SOURCES}
         ${IMGUI_HEADERS}
 )
@@ -161,8 +160,7 @@ set(IMGUI_NODE_EDITOR_HEADERS
 
 set(IMGUI_NODE_EDITOR_INC_PATH "${IMGUI_NODE_EDITOR_LIB_NAME}/")
 
-add_library(imgui-node-editor
-    STATIC
+add_library(imgui-node-editor OBJECT
         ${IMGUI_NODE_EDITOR_SOURCES}
         ${IMGUI_NODE_EDITOR_HEADERS}
 )
@@ -186,8 +184,7 @@ set(IMGUI_KNOBS_HEADERS
 
 set(IMGUI_KNOBS_INC_PATH "${IMGUI_KNOBS_LIB_NAME}/")
 
-add_library(imgui-knobs
-    STATIC
+add_library(imgui-knobs OBJECT
         ${IMGUI_KNOBS_SOURCES}
         ${IMGUI_KNOBS_HEADERS}
 )
