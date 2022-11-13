@@ -162,6 +162,8 @@ GUIManager::GUIManager()
 //	io.Fonts->AddFontFromMemoryTTF((void*)fa_solid_900, sizeof(fa_solid_900), 30.0, &icons_config, icons_ranges);
 
 	fontSmall = io.Fonts->AddFontFromFileTTF("Roboto-Medium.ttf", 11.0f, &config, GetGlyphRangesOrbiter());
+
+	io.Fonts->Build();
 }
 
 void GUIManager::Notify(enum NotifType type, const char *title, const char *content)
