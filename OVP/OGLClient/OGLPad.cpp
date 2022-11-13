@@ -384,7 +384,7 @@ OGLFont::OGLFont (int height, bool prop, const char *face, Style style, int orie
 {
 	rotationRadians = -3.1415926535898/180.0 * (orientation * 0.1f);
     m_facename = face;
-    m_Height = abs(height);
+    m_Height = height;
 
 	//fontconfig fails to deliver a mono font if the family is not found -> force default font for monospace
 	if(!prop) m_facename="monospace";

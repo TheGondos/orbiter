@@ -101,7 +101,7 @@ public:
 	OGLFont (int height, bool prop, const char *face, Style style=NORMAL, int orientation=0);
 	~OGLFont ();
 
-	uint32_t m_Height;
+	int m_Height;
     float rotationRadians = 0;
     std::string m_facename;
     std::string m_fontfile;

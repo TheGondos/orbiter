@@ -1570,6 +1570,7 @@ bool OGLClient::clbkSetSurfaceParam (SURFHANDLE surf, int param, int val) {
 			break;
 	}
 	glBindTexture(GL_TEXTURE_2D, 0);
+	return true;
 }
 
 /**
