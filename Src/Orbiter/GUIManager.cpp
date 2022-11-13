@@ -137,8 +137,7 @@ GUIManager::GUIManager()
 	//ImGui::StyleColorsDark();
 	ImGui::StyleColorsClassic();
 
-
-    ImGuiSetStyle();
+	ImGuiSetStyle();
 
 	ImFontConfig config;
 
@@ -161,6 +160,8 @@ GUIManager::GUIManager()
 
 	fontH3 = io.Fonts->AddFontFromFileTTF("Roboto-Medium.ttf", 30.0f, &config, GetGlyphRangesOrbiter());
 //	io.Fonts->AddFontFromMemoryTTF((void*)fa_solid_900, sizeof(fa_solid_900), 30.0, &icons_config, icons_ranges);
+
+	fontSmall = io.Fonts->AddFontFromFileTTF("Roboto-Medium.ttf", 11.0f, &config, GetGlyphRangesOrbiter());
 }
 
 void GUIManager::Notify(enum NotifType type, const char *title, const char *content)
@@ -469,10 +470,12 @@ void GUIManager::ToggleFullscreen()
 		glfwSetWindowMonitor(hRenderWnd, NULL, win_xpos, win_ypos, win_width, win_height, 0);
 	} else { // windowed
 		GLFWmonitor* monitor = glfwGetPrimaryMonitor();
-		const GLFWvidmode* mode = glfwGetVideoMode(monitor);
-		glfwGetWindowPos(hRenderWnd, &win_xpos, &win_ypos);
-		glfwGetWindowSize(hRenderWnd, &win_width, &win_height);
-		glfwSetWindowMonitor(hRenderWnd, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
+		if(monitor) {
+			const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+			glfwGetWindowPos(hRenderWnd, &win_xpos, &win_ypos);
+			glfwGetWindowSize(hRenderWnd, &win_width, &win_height);
+			glfwSetWindowMonitor(hRenderWnd, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
+		}
 	}
 }
 

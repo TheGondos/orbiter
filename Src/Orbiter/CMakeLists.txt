@@ -175,6 +175,9 @@ target_link_libraries(Orbiter_server
 
 add_dependencies(Orbiter_server
 	${Orbiter_depends}
+	imgui-knobs
+	imgui
+	imgui-node-editor
 )
 
 install(FILES Orbiter.png

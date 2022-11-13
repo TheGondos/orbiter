@@ -18,6 +18,7 @@ class GUIManager {
 		ImFont *fontH2;
 		ImFont *fontH3;
 		ImFont *fontBold;
+		ImFont *fontSmall;
 		void UpdateCursor(float dx, float dy);
         void GetCursorPos(double *x, double *y);
 		void LeftClick(bool click);
