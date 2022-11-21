@@ -33,7 +33,7 @@ class OGLPen;
 class OGLBrush;
 class OGLCLIENTEXPORT OGLPad: public oapi::Sketchpad {
 public:
-	OGLPad (SURFHANDLE s);
+	OGLPad (SURFHANDLE s, bool antialiased = true);
 	~OGLPad ();
 	oapi::Font *SetFont (oapi::Font *font) const;
 	oapi::Pen *SetPen (oapi::Pen *pen) const;
@@ -71,8 +71,10 @@ private:
 	mutable OGLFont *cfont; // currently selected font (NULL if none)
 	mutable OGLPen *cpen;   // currently selected pen (NULL if none)
 	mutable OGLBrush *cbrush; // currently selected brush (NULL if none)
-    static NVGcontext *s_nvg_fb;
-    static NVGcontext *s_nvg_mfd;
+    static NVGcontext *s_nvg_normal;
+    static NVGcontext *s_nvg_flipped;
+    static NVGcontext *s_nvg_normal_aa;
+    static NVGcontext *s_nvg_flipped_aa;
 	NVGcontext *s_nvg;
 
 	uint32_t height;

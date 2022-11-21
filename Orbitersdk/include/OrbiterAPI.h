@@ -5295,7 +5295,7 @@ OAPIFUNC void oapiSetPanelBlink (VECTOR3 v[4]);
  *   be avoided.
  * \sa oapiReleaseSketchpad
  */
-OAPIFUNC oapi::Sketchpad *oapiGetSketchpad (SURFHANDLE surf);
+OAPIFUNC oapi::Sketchpad *oapiGetSketchpad (SURFHANDLE surf, bool antialiased = true);
 
 /**
  * \brief Release a drawing device context instance.

@@ -1189,7 +1189,7 @@ public:
 	 *   primitives.
 	 * \sa Sketchpad, clbkReleaseSketchpad
 	 */
-	virtual Sketchpad *clbkGetSketchpad (SURFHANDLE surf) { return NULL; }
+	virtual Sketchpad *clbkGetSketchpad (SURFHANDLE surf, bool antialiased = true) { return NULL; }
 
 	/**
 	 * \brief Release a drawing object.

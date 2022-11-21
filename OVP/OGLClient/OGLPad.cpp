@@ -61,20 +61,26 @@ static NVGalign toNvgAlign(oapi::Sketchpad::TAlign_vertical tav)
     return NVGalign::NVG_ALIGN_BASELINE; 
 }
 
-NVGcontext *OGLPad::s_nvg_fb;
-NVGcontext *OGLPad::s_nvg_mfd;
+NVGcontext *OGLPad::s_nvg_normal;
+NVGcontext *OGLPad::s_nvg_flipped;
+NVGcontext *OGLPad::s_nvg_normal_aa;
+NVGcontext *OGLPad::s_nvg_flipped_aa;
 /////////////////// SKETCHPAD STUFF ////////////////////////////
 void OGLPad::GlobalInit() {
-    s_nvg_fb  = nvgCreateGL3(NVG_STENCIL_STROKES);
-    s_nvg_mfd = nvgCreateGL3(NVG_STENCIL_STROKES | NVG_YFLIP);
+    s_nvg_normal  = nvgCreateGL3(NVG_STENCIL_STROKES );
+    s_nvg_flipped = nvgCreateGL3(NVG_STENCIL_STROKES | NVG_YFLIP );
+    s_nvg_normal_aa  = nvgCreateGL3(NVG_STENCIL_STROKES | NVG_ANTIALIAS);
+    s_nvg_flipped_aa = nvgCreateGL3(NVG_STENCIL_STROKES | NVG_YFLIP | NVG_ANTIALIAS);
 }
 
 void OGLPad::GlobalExit() {
-    nvgDeleteGL3(s_nvg_fb);
-    nvgDeleteGL3(s_nvg_mfd);
+    nvgDeleteGL3(s_nvg_normal);
+    nvgDeleteGL3(s_nvg_flipped);
+    nvgDeleteGL3(s_nvg_normal_aa);
+    nvgDeleteGL3(s_nvg_flipped_aa);
 }
 
-OGLPad::OGLPad (SURFHANDLE s):oapi::Sketchpad(s)
+OGLPad::OGLPad (SURFHANDLE s, bool antialiased):oapi::Sketchpad(s)
 {
 	cfont = nullptr;
 	cpen = nullptr;
@@ -95,13 +101,13 @@ OGLPad::OGLPad (SURFHANDLE s):oapi::Sketchpad(s)
 	if(s)
 	{
 		Renderer::PushRenderTarget(m_tex);
-		s_nvg = s_nvg_mfd;
+		s_nvg = antialiased ? s_nvg_flipped_aa : s_nvg_flipped;
 		height = m_tex->m_Height;
 		width = m_tex->m_Width;
 	}
 	else
 	{
-		s_nvg = s_nvg_fb;
+		s_nvg = antialiased ? s_nvg_normal_aa : s_nvg_normal;
 		height = g_client->GetScene()->GetCamera()->GetHeight();
 		width = g_client->GetScene()->GetCamera()->GetWidth();
 		Renderer::PushBool(Renderer::CULL_FACE, false);

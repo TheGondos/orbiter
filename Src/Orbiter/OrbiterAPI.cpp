@@ -1776,11 +1776,11 @@ DLLEXPORT void oapiVCSetAreaClickmode_Quadrilateral (int id, const VECTOR3 &p1, 
 	g_pane->SetVCAreaClickmode_Quadrilateral (id, Vector(p1.x, p1.y, p1.z), Vector(p2.x,p2.y,p2.z), Vector(p3.x,p3.y,p3.z), Vector(p4.x,p4.y,p4.z));
 }
 
-DLLEXPORT oapi::Sketchpad *oapiGetSketchpad (SURFHANDLE surf)
+DLLEXPORT oapi::Sketchpad *oapiGetSketchpad (SURFHANDLE surf, bool antialiased)
 {
 	oapi::GraphicsClient *gc = g_pOrbiter->GetGraphicsClient();
 	oapi::Sketchpad *skp = NULL;
-	if (gc) skp = gc->clbkGetSketchpad (surf);
+	if (gc) skp = gc->clbkGetSketchpad (surf, antialiased);
 	return skp;
 }
 

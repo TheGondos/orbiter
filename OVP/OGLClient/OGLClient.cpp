@@ -476,8 +476,6 @@ GLFWwindow *OGLClient::clbkCreateRenderWindow ()
 	splashFont = oapiCreateFont(splashSize, true, "Tahoma", FONT_NORMAL);
 	splashTex = clbkLoadTexture ("Images/Splash.jpg", 4);
 
-
-
 	Renderer::GlobalInit(m_width, m_height);
 	TileManager::GlobalInit();
 	HazeManager::GlobalInit();
@@ -1157,9 +1155,9 @@ bool OGLClient::clbkSetSurfaceColourKey (SURFHANDLE surf, uint32_t ckey)
  *   primitives.
  * \sa Sketchpad, clbkReleaseSketchpad
  */
-oapi::Sketchpad *OGLClient::clbkGetSketchpad (SURFHANDLE surf)
+oapi::Sketchpad *OGLClient::clbkGetSketchpad (SURFHANDLE surf, bool antialiased)
 {
-	return new OGLPad(surf);
+	return new OGLPad(surf, antialiased);
 }
 
 /**
