@@ -230,8 +230,8 @@ void Instrument_OPlaneAlign::UpdateDraw (oapi::Sketchpad *skp)
 		if(tt < 1.0) trd_valid = false;
 	}
 
-	double maa;
-	double mad;
+	double maa = 0.0;
+	double mad = 0.0;
 
 	if(!tra_valid) {
 		maa = shpel->MeanAnomaly_from_TrueAnomaly(trd);
