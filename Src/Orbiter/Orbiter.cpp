@@ -43,8 +43,6 @@
 #include "DlgRecorder.h"
 #include "Select.h"
 #include "PlaybackEd.h"
-#define STB_IMAGE_IMPLEMENTATION
-#include "external/stb_image/stb_image.h"
 
 #include <fenv.h>
 #include <unistd.h>
@@ -154,13 +152,6 @@ int main(int argc, const char *argv[])
 #ifdef DEBUG
 	feenableexcept (FE_INVALID|FE_DIVBYZERO|FE_OVERFLOW);
 #endif
-	glfwInitHint(GLFW_JOYSTICK_HAT_BUTTONS, GLFW_FALSE);
-
-	if (!glfwInit()) {
-		printf("glfwInit failed\n");
-		exit(EXIT_FAILURE);
-	}
-
 	g_pOrbiter = new Orbiter; // application instance
 
 	// Parse command line
@@ -329,11 +320,6 @@ void Orbiter::Create ()
 
 	hVideoModule = LoadModule("Modules/Plugin", pConfig->m_videoPlugin.c_str(), true, true);
 	CreateRenderWindow();
-
-	GLFWimage icon;
-	icon.pixels = stbi_load("Images/Orbiter.png", &icon.width, &icon.height, 0, 4);
-	glfwSetWindowIcon(m_pGUIManager->hRenderWnd, 1, &icon);
-	stbi_image_free(icon.pixels);
 
 	// preload fixed plugin modules
 	LoadFixedModules ();
@@ -682,13 +668,6 @@ void Orbiter::StartSession (Config *pCfg, const char *scenario)
 //-----------------------------------------------------------------------------
 void Orbiter::CreateRenderWindow ()
 {
-	/* Initialize the library */
-    glfwWindowHint(GLFW_DOUBLEBUFFER , 1);
-    glfwWindowHint(GLFW_DEPTH_BITS, 24);
-    glfwWindowHint(GLFW_STENCIL_BITS, 8);
-	glfwWindowHint(GLFW_FOCUS_ON_SHOW, false);
-	//	glfwWindowHint(GLFW_SAMPLES, 4);
-
 	m_pGUIManager  = std::make_unique<GUIManager>();
 
 	GetRenderParameters ();
@@ -812,8 +791,7 @@ void Orbiter::GetRenderParameters ()
 	gclient->clbkGetViewportSize (&viewW, &viewH);
 	viewBPP = (gclient->clbkGetRenderParam (RP_COLOURDEPTH, &val) ? val:0);
 	bFullscreen = gclient->clbkFullscreenMode();
-	bUseStencil = (pConfig->CfgDevPrm.bTryStencil && 
-		gclient->clbkGetRenderParam (RP_STENCILDEPTH, &val) && val >= 1);
+	bUseStencil = gclient->clbkGetRenderParam (RP_STENCILDEPTH, &val) && val >= 1;
 }
 
 // =======================================================================
@@ -895,7 +873,7 @@ int Orbiter::Run ()
 	m_pGUIManager->SetupCallbacks();
 
 	while (!m_pGUIManager->ShouldCloseWindow()) {
-		glfwPollEvents();
+		m_pGUIManager->PollEvents();
 	
 		if (bSession) {
 			if (bAllowInput) bActive = true, bAllowInput = false;
@@ -951,7 +929,7 @@ void Orbiter::SingleFrame ()
 void Orbiter::TerminateOnError ()
 {
 	LogOut (">>> TERMINATING <<<");
-	glfwTerminate();
+	m_pGUIManager->Terminate();
 	printf ("Terminating after critical error. See Orbiter.log for details.");
 	exit (EXIT_FAILURE);
 }

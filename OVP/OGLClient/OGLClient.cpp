@@ -423,12 +423,31 @@ GLFWwindow *OGLClient::clbkCreateRenderWindow ()
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 
+	glfwWindowHint(GLFW_AUTO_ICONIFY, GLFW_FALSE);
 //	glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
 
     /* Create a windowed mode window and its OpenGL context */
-    hRenderWnd = glfwCreateWindow(1280, 800, "xorbiter", NULL, NULL);
-	m_width = 1280;
-	m_height = 800;
+	VIDEODATA *videoData = GetVideoData();
+	switch(videoData->mode) {
+		case 0: // windowed
+		    hRenderWnd = glfwCreateWindow(videoData->winw, videoData->winh, "xorbiter", NULL, NULL);
+			m_width = videoData->winw;
+			m_height = videoData->winh;
+			break;
+		case 2: // fullscreen exclusive
+			glfwWindowHint(GLFW_AUTO_ICONIFY, GLFW_TRUE);
+			// fallthrough
+		case 1: // fullscreen desktop
+			glfwWindowHint(GLFW_RED_BITS, videoData->videomode->redBits);
+			glfwWindowHint(GLFW_GREEN_BITS, videoData->videomode->greenBits);
+			glfwWindowHint(GLFW_BLUE_BITS, videoData->videomode->blueBits);
+			glfwWindowHint(GLFW_REFRESH_RATE, videoData->videomode->refreshRate);
+		    hRenderWnd = glfwCreateWindow(videoData->videomode->width, videoData->videomode->height, "xorbiter", videoData->monitor, NULL);
+			m_width = videoData->videomode->width;
+			m_height = videoData->videomode->height;
+			break;
+	}
+
     if (!hRenderWnd)
     {
 		printf("!hRenderWnd\n");

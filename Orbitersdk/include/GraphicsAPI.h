@@ -225,6 +225,14 @@ typedef uint32_t COLORREF;
 #define BLT_TGTCOLORKEY 0x2 ///< Use target surface colour key for transparency
 /// @}
 
+/// \defgroup window mode
+/// note : VIDEODATA_FULLSCREEN_EXCLUSIVE is not supported, it's not stable enough
+/// @{
+#define VIDEODATA_WINDOWED 0
+#define VIDEODATA_FULLSCREEN_DESKTOP 1
+#define VIDEODATA_FULLSCREEN_EXCLUSIVE 2
+/// @}
+
 const unsigned int TEXIDX_MFD0 = (unsigned int)(-1) - MAXMFD;
 
 struct StarRenderPrm {
@@ -702,16 +710,22 @@ public:
 	 * \brief Structure containing default video options, as stored in
 	 *   Orbiter.cfg.
 	 */
+
 	struct VIDEODATA {
-		bool fullscreen; ///< fullscreen mode flag
-		bool forceenum;  ///< enforce device enumeration flag
-		bool trystencil; ///< stencil buffer flag
-		bool novsync;    ///< no vsync flag
-		bool pageflip;   ///< allow page flipping in fullscreen
-		int deviceidx;   ///< video device index
-		int modeidx;     ///< video mode index
+//		bool fullscreen; ///< fullscreen mode flag
+		int mode;
+		std::string monitorDesc;
+		std::string modeDesc;
+//		bool forceenum;  ///< enforce device enumeration flag
+//		bool trystencil; ///< stencil buffer flag
+//		bool novsync;    ///< no vsync flag
+//		bool pageflip;   ///< allow page flipping in fullscreen
+//		int deviceidx;   ///< video device index
+//		int modeidx;     ///< video mode index
 		int winw;        ///< window width
 		int winh;        ///< window height
+		GLFWmonitor *monitor;
+		const GLFWvidmode *videomode;
 	};
 
 	/**

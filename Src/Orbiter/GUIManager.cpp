@@ -6,12 +6,32 @@
 #include "fa_solid_900.h"
 #include "Camera.h"
 #include "Pane.h"
+#define STB_IMAGE_IMPLEMENTATION
+#include "external/stb_image/stb_image.h"
 
 extern Orbiter *g_pOrbiter;
 extern Camera          *g_camera;         // observer camera
 extern Pane            *g_pane;           // 2D output surface
 
 DLLEXPORT ImGuiContext*   GImGui = NULL;
+struct monitorRatio {
+	float ratio;
+	const char *name;
+};
+
+constexpr monitorRatio ratios[] = {
+	4.0/3.0, "4:3",
+	5.0/4.0, "5:4",
+	3.0/2.0, "3:2",
+	1.0/1.0, "1:1",
+	4.0/1.0, "4:1",
+	16.0/9.0, "16:9",
+	16.0/10.0, "16:10",
+	17.0/9.0, "17:9",
+	21.0/9.0, "21:9",
+	32.0/9.0, "32:9",
+	256/135.0, "256:135"
+};
 
 const ImWchar*  GetGlyphRangesOrbiter()
 {
@@ -23,11 +43,29 @@ const ImWchar*  GetGlyphRangesOrbiter()
         0x221A, 0x221A, // √
         0x222B, 0x222B, // ∫
         0x2260, 0x2264, // ≠ ≤ ≥
+		0x02DD, 0x02DD, // ˝
         0,
     };
     return &ranges[0];
 }
 
+
+static void GetVideoModeDesc(const GLFWvidmode *mode, char *cbuf) {
+	sprintf(cbuf, "%dx%d@%dHz", mode->width, mode->height, mode->refreshRate);
+}
+
+const char *ratioName(int width, int height) {
+	int closest = 0;
+	float diff = 1000.0;
+	for(int i = 0; i < sizeof(ratios)/sizeof(ratios[0]); i++) {
+		float ratio = (float)width / (float)height;
+		if(fabs(ratios[i].ratio - ratio) < diff) {
+			diff = fabs(ratios[i].ratio - ratio);
+			closest = i;
+		}
+	}
+	return ratios[closest].name;
+}
 
 static void ImGuiSetStyle()
 {
@@ -120,9 +158,60 @@ static void ImGuiSetStyle()
 	}
 #endif
 }
+static void GetMonitorDesc(GLFWmonitor *monitor, char *cbuf) {
+	GLFWmonitor *primary = glfwGetPrimaryMonitor();
+	const char *name = glfwGetMonitorName(monitor);
+
+	bool isPrimary = monitor == primary;
+
+	int widthMM, heightMM;
+	glfwGetMonitorPhysicalSize 	(monitor, &widthMM, &heightMM);
+	float diag = sqrt(widthMM*widthMM + heightMM*heightMM)/25.4;
+
+	sprintf(cbuf, "%s - %.1f˝ %s%s", name, diag, ratioName(widthMM, heightMM), isPrimary?" (Primary)":"");
+}
+static GLFWmonitor *GetMonitorFromStr(const char *str) {
+	int count;
+	GLFWmonitor **monitors = glfwGetMonitors(&count);
+	for(int i = 0; i < count; i++) {
+		char desc[256];
+		GetMonitorDesc(monitors[i], desc);
+
+		if(!strcmp(str, desc)) {
+			return monitors[i];
+		}
+	}
+	return glfwGetPrimaryMonitor();
+}
+static const GLFWvidmode *GetVideoModeFromStr(GLFWmonitor *monitor, const char *str) {
+	char cbuf[128];
+	int nModes;
+	const GLFWvidmode *modes = glfwGetVideoModes(monitor, &nModes);
+	for(int i = 0; i < nModes; i++) {
+		GetVideoModeDesc(&modes[i], cbuf);
+		if(!strcmp(cbuf, str)) {
+			return &modes[i];
+		}
+	}
+	return glfwGetVideoMode(monitor);
+}
 
 GUIManager::GUIManager()
 {
+	/* Initialize the library */
+    glfwWindowHint(GLFW_DOUBLEBUFFER , 1);
+    glfwWindowHint(GLFW_DEPTH_BITS, 24);
+    glfwWindowHint(GLFW_STENCIL_BITS, 8);
+	glfwWindowHint(GLFW_FOCUS_ON_SHOW, false);
+	//	glfwWindowHint(GLFW_SAMPLES, 4);
+	glfwInitHint(GLFW_JOYSTICK_HAT_BUTTONS, GLFW_FALSE);
+	glfwWindowHint(GLFW_AUTO_ICONIFY, GLFW_FALSE);
+
+	if (!glfwInit()) {
+		printf("glfwInit failed\n");
+		exit(EXIT_FAILURE);
+	}
+
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 	ImGuiIO& io = ImGui::GetIO();
@@ -131,8 +220,28 @@ GUIManager::GUIManager()
 //	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
 //	io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
+	oapi::GraphicsClient::VIDEODATA *videoData = g_pOrbiter->GetGraphicsClient()->GetVideoData();
+	GLFWmonitor *selectedMonitor = GetMonitorFromStr(videoData->monitorDesc.c_str());
+	const GLFWvidmode *selectedVideoMode = GetVideoModeFromStr(selectedMonitor, videoData->modeDesc.c_str());
+	videoData->monitor = selectedMonitor;
+	videoData->videomode = selectedVideoMode;
+
+	// If the selected monitor/mode is no longer available, we need to refresh videoData
+	// with the new defaults (primary monitor, current screen resolution)
+	char cbuf[256];
+	GetMonitorDesc(selectedMonitor, cbuf);
+	videoData->monitorDesc = cbuf;
+
+	GetVideoModeDesc(selectedVideoMode, cbuf);
+	videoData->modeDesc = cbuf;
+
 	hRenderWnd = g_pOrbiter->GetGraphicsClient()->clbkCreateRenderWindow();
-	
+
+	GLFWimage icon;
+	icon.pixels = stbi_load("Images/Orbiter.png", &icon.width, &icon.height, 0, 4);
+	glfwSetWindowIcon(hRenderWnd, 1, &icon);
+	stbi_image_free(icon.pixels);
+
 	// Setup Dear ImGui style
 	//ImGui::StyleColorsDark();
 	ImGui::StyleColorsClassic();
@@ -515,4 +624,171 @@ void GUIManager::SetupCallbacks()
 	prev_scroll_callback = glfwSetScrollCallback(hRenderWnd, g_scroll_callback);
 	glfwSetFramebufferSizeCallback(hRenderWnd, g_framebuffer_size_callback);
 	glfwSetJoystickCallback(InputController::JoystickCallback);
+}
+
+// Video tab
+
+static bool ComboVideoMode(GLFWmonitor *monitor, const GLFWvidmode *selectedMode) {
+	bool ret = false;
+	int nModes;
+	char cbuf[128];
+
+	const GLFWvidmode *currentMode = glfwGetVideoMode(monitor);
+	const GLFWvidmode *modes = glfwGetVideoModes(monitor, &nModes);
+	
+	GetVideoModeDesc(selectedMode, cbuf);
+
+	ImGui::PushID(monitor);
+
+	ImGui::PushItemWidth(200);
+	if(ImGui::BeginCombo("##Video mode", cbuf)) {
+		for(int j = 0; j < nModes; j++) {
+			char cbuf[128];
+			GetVideoModeDesc(&modes[j], cbuf);
+			if(!memcmp(&modes[j], currentMode, sizeof(GLFWvidmode))) {
+				strcat(cbuf, " (current)");
+			}
+
+			bool selected = false;
+			if(!memcmp(&modes[j], selectedMode, sizeof(GLFWvidmode))) {
+				selected = true;
+			}
+
+			if(ImGui::Selectable(cbuf, selected )) {
+				memcpy((void *)selectedMode, &modes[j], sizeof(GLFWvidmode));
+				ret = true;
+			}
+		}
+		ImGui::EndCombo();
+	}
+	ImGui::PopItemWidth();
+
+	ImGui::PopID();
+	return ret;
+}
+
+
+static bool ComboMonitors(GLFWmonitor **selectedMonitor) {
+	char desc[256];
+	bool ret = false;
+	int count;
+	GLFWmonitor **monitors = glfwGetMonitors(&count);
+
+	GetMonitorDesc(*selectedMonitor, desc);
+
+	ImGui::PushItemWidth(200);
+	
+	if(ImGui::BeginCombo("##Monitor", desc)) {
+		for(int i = 0; i < count; i++) {
+			GetMonitorDesc(monitors[i], desc);
+
+			if(ImGui::Selectable(desc, false)) {
+				*selectedMonitor = monitors[i];
+				ret = true;
+			}
+
+		}
+		ImGui::EndCombo();
+	}
+	ImGui::PopItemWidth();
+	return ret;
+}
+
+
+void GUIManager::VideoTab() {
+	auto videoData = g_pOrbiter->GetGraphicsClient()->GetVideoData();
+
+	constexpr int panelWidth = 500;
+
+	ImGui::BeginGroupPanel("Video mode", ImVec2(panelWidth,0));
+    ImGui::RadioButton("Windowed", &videoData->mode, 0); ImGui::SameLine();
+    ImGui::RadioButton("Fullscreen desktop", &videoData->mode, 1); ImGui::SameLine();
+//    ImGui::RadioButton("Fullscreen exclusive", &videoData->mode, 2);
+	ImGui::EndGroupPanel();
+
+	if(videoData->mode != 0) ImGui::BeginDisabled();
+	ImGui::PushItemWidth(200);
+	ImGui::BeginGroupPanel("Starting window size", ImVec2(panelWidth,0));
+	if(ImGui::InputInt("Width", &videoData->winw)) {
+		videoData->winw = std::clamp(videoData->winw, 0, 4096);
+	}
+	ImGui::SameLine();
+	if(ImGui::InputInt("Height", &videoData->winh)) {
+		videoData->winh = std::clamp(videoData->winh, 0, 4096);
+	}
+	ImGui::EndGroupPanel();
+	ImGui::PopItemWidth();
+	if(videoData->mode != 0) ImGui::EndDisabled();
+
+	ImGui::BeginGroupPanel("Monitor", ImVec2(panelWidth,0));
+	if(videoData->mode == 0) ImGui::BeginDisabled();
+	GLFWmonitor *selectedMonitor = GetMonitorFromStr(videoData->monitorDesc.c_str());
+	const GLFWvidmode *selectedVideoMode = GetVideoModeFromStr(selectedMonitor, videoData->modeDesc.c_str());
+	{
+		// If the selected monitor/mode is no longer available, we need to refresh videoData
+		// with the new defaults (primary monitor, current screen resolution)
+		char cbuf[256];
+		GetMonitorDesc(selectedMonitor, cbuf);
+		videoData->monitorDesc = cbuf;
+		videoData->monitor = selectedMonitor;
+
+		GetVideoModeDesc(selectedVideoMode, cbuf);
+		videoData->modeDesc = cbuf;
+		videoData->videomode = selectedVideoMode;
+	}
+
+	bool monitorChanged = ComboMonitors(&selectedMonitor); ImGui::SameLine();
+	if(monitorChanged) {
+		char cbuf[256];
+		GetMonitorDesc(selectedMonitor, cbuf);
+		videoData->monitorDesc = cbuf;
+		videoData->monitor = selectedMonitor;
+
+		selectedVideoMode = glfwGetVideoMode(selectedMonitor);
+		GetVideoModeDesc(selectedVideoMode, cbuf);
+		videoData->modeDesc = cbuf;
+		videoData->videomode = selectedVideoMode;
+	}
+	if(videoData->mode == 1) ImGui::BeginDisabled();
+	bool modeChanged = ComboVideoMode(selectedMonitor, selectedVideoMode);
+	if(modeChanged) {
+		char cbuf[256];
+		GetVideoModeDesc(selectedVideoMode, cbuf);
+		videoData->modeDesc = cbuf;
+		videoData->videomode = selectedVideoMode;
+	}
+	if(videoData->mode == 1) ImGui::EndDisabled();
+	if(videoData->mode == 0) ImGui::EndDisabled();
+	ImGui::EndGroupPanel();
+
+	if(ImGui::Button("Apply")) {
+		auto cfg = g_pOrbiter->Cfg();
+		cfg->CfgDevPrm.mode = videoData->mode;
+		cfg->CfgDevPrm.monitorDesc = videoData->monitorDesc;
+		cfg->CfgDevPrm.videoModeDesc = videoData->modeDesc;
+		cfg->CfgDevPrm.WinW = videoData->winw;
+		cfg->CfgDevPrm.WinH = videoData->winh;
+		cfg->Write();
+
+		switch(videoData->mode) {
+			case 0: // windowed mode
+				if(GLFWmonitor *mon = glfwGetWindowMonitor(hRenderWnd)) {
+					// we were in fullscreen -> change to windowed via glfwSetWindowMonitor
+					int xpos, ypos;
+					glfwGetMonitorPos(mon, &xpos, &ypos);
+					// Place the window at a virtual screen position corresponding to the original monitor
+					glfwSetWindowMonitor(hRenderWnd, NULL, xpos, ypos, videoData->winw, videoData->winh, 0);
+				} else {
+					// we were already windowed -> just resize
+					glfwSetWindowSize(hRenderWnd, videoData->winw, videoData->winh);
+				}
+				break;
+			case 1: // fullscreen desktop
+//			case 2:
+				{
+					glfwSetWindowMonitor(hRenderWnd, videoData->monitor, 0, 0, videoData->videomode->width, videoData->videomode->height, videoData->videomode->refreshRate);
+				}
+				break;
+		}
+	}
 }

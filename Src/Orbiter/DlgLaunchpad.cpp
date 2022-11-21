@@ -6,6 +6,7 @@
 #include "Controller.h"
 #include "font_awesome_5.h"
 #include "imgui_md.h"
+#include "GUIManager.h"
 
 #include <filesystem>
 
@@ -94,7 +95,7 @@ DlgLaunchpad::DlgLaunchpad(const std::string &name) : GUIElement(name, "DlgLaunc
 }
 
 void DlgLaunchpad::DrawVideo() {
-    ImGui::Text("DrawVideo");
+	g_pOrbiter->m_pGUIManager->VideoTab();
 }
 
 void DlgLaunchpad::DrawExtra() {

@@ -172,6 +172,10 @@ CFG_RECPLAYPRM CfgRecPlayPrm_default = {
 };
 
 CFG_DEVPRM CfgDevPrm_default = {
+	VIDEODATA_WINDOWED,
+	"",
+	"",
+/*
 	-1,			// Device_idx (-1=undefined)
 	0,			// Device_mode
 	true,		// bForceEnum (enumerate devices at each simulation start)
@@ -180,8 +184,9 @@ CFG_DEVPRM CfgDevPrm_default = {
 	false,		// bNoVsync (enable vsync)
 	false,		// bTryStencil (don't enable stencil buffering)
 	true,		// bPageflip (allow page flipping in fullscreen)
-	800,		// WinW (render window width - will be overridden with screen width
-	600			// WinH (render window height - will be overridden with screen height
+	*/
+	1280,		// WinW (render window width - will be overridden with screen width
+	800			// WinH (render window height - will be overridden with screen height
 };
 
 CFG_JOYSTICKPRM CfgJoystickPrm_default = {
@@ -504,6 +509,19 @@ bool Config::Load(const char *fname)
 	strcpy (scnpath, CfgDirPrm.ScnDir); scnlen = strlen (scnpath);
 
 	// Device information
+
+	GetInt  (ifs, "DeviceMode", CfgDevPrm.mode);
+	if (GetString (ifs, "DeviceMonitor", cbuf)) {
+		CfgDevPrm.monitorDesc = cbuf;
+	} else {
+		CfgDevPrm.monitorDesc.clear();
+	}
+	if (GetString (ifs, "DeviceVideoMode", cbuf)) {
+		CfgDevPrm.videoModeDesc = cbuf;
+	} else {
+		CfgDevPrm.videoModeDesc.clear();
+	}
+	/*
 	GetInt  (ifs, "DeviceIndex", CfgDevPrm.Device_idx);
 	if (GetInt (ifs, "ModeIndex", i)) CfgDevPrm.Device_mode = i;
 	GetBool (ifs, "DeviceForceEnum", CfgDevPrm.bForceEnum);
@@ -512,6 +530,7 @@ bool Config::Load(const char *fname)
 	GetBool (ifs, "NoVSync", CfgDevPrm.bNoVsync);
 	GetBool (ifs, "StencilBuffer", CfgDevPrm.bTryStencil);
 	GetBool (ifs, "FullscreenPageflip", CfgDevPrm.bPageflip);
+	*/
 	if (GetInt (ifs, "WindowWidth", i))  CfgDevPrm.WinW = i;
 	if (GetInt (ifs, "WindowHeight", i)) CfgDevPrm.WinH = i;
 
@@ -825,16 +844,11 @@ void Config::SetDefaults ()
 	bEchoAll = bEchoAll_default;
 	memset (&rLaunchpad, 0, sizeof(RECT));
 
-//	RECT r;
-//	GetWindowRect (GetDesktopWindow(), &r);
-//	CfgDevPrm_default.WinW = r.right-r.left;
-//	CfgDevPrm_default.WinH = r.bottom-r.top;
-
-	GLFWmonitor *pMon = glfwGetPrimaryMonitor();
-	glfwGetMonitorWorkarea(pMon, nullptr, nullptr,
-		&CfgDevPrm_default.WinW, &CfgDevPrm_default.WinH 
-	);
-	// use the screen size as the default render window size
+	CfgDevPrm_default.mode = VIDEODATA_WINDOWED;
+	CfgDevPrm_default.monitorDesc.clear();
+	CfgDevPrm_default.videoModeDesc.clear();
+	CfgDevPrm_default.WinW = 1280;
+	CfgDevPrm_default.WinH = 800;
 
 	AmbientColour = 0x0c0c0c0c;
 
@@ -1203,6 +1217,13 @@ bool Config::Write (const char *fname) const
 			ofs << "HUDColIdx = " << CfgCameraPrm.HUDCol << endl;
 	}
 
+	ofs << "\n; === Device settings ===\n";
+	ofs << "DeviceMode = " << CfgDevPrm.mode << '\n';
+	if(!CfgDevPrm.monitorDesc.empty())
+		ofs << "DeviceMonitor = " << CfgDevPrm.monitorDesc << '\n';
+	if(!CfgDevPrm.videoModeDesc.empty())
+		ofs << "DeviceVideoMode = " << CfgDevPrm.videoModeDesc << '\n';
+/*
 	if (CfgDevPrm.Device_idx >= 0) { // otherwise undefined
 		ofs << "\n; === Device settings ===\n";
 		ofs << "DeviceIndex = " << CfgDevPrm.Device_idx << '\n';
@@ -1219,11 +1240,12 @@ bool Config::Write (const char *fname) const
 			ofs << "StencilBuffer = " << BoolStr (CfgDevPrm.bTryStencil) << '\n';
 		if (CfgDevPrm.bPageflip != CfgDevPrm_default.bPageflip || bEchoAll)
 			ofs << "FullscreenPageflip = " << BoolStr (CfgDevPrm.bPageflip) << '\n';
+*/
 		if (CfgDevPrm.WinW != CfgDevPrm_default.WinW || bEchoAll)
 			ofs << "WindowWidth = " << CfgDevPrm.WinW << '\n';
 		if (CfgDevPrm.WinH != CfgDevPrm_default.WinH || bEchoAll)
 			ofs << "WindowHeight = " << CfgDevPrm.WinH << '\n';
-	}
+	//}
 
 	if (memcmp (&CfgJoystickPrm, &CfgJoystickPrm_default, sizeof(CFG_JOYSTICKPRM)) || bEchoAll) {
 		ofs << "\n; === Joystick parameters ===\n";

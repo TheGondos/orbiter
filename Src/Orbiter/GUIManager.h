@@ -39,9 +39,13 @@ class GUIManager {
 		void EnableMouseCursor() { glfwSetInputMode(hRenderWnd, GLFW_CURSOR, GLFW_CURSOR_NORMAL); }
 		void SetupCallbacks();
         void ToggleFullscreen();
+        void PollEvents() { glfwPollEvents(); }
+        void Terminate() { glfwTerminate(); }
 
         GUIManager();
 		void RenderGUI();
+        void VideoTab();
+
 		void Notify(enum NotifType, const char *title, const char *content);
         void RegisterCtrl(GUIElement *ctrl) {
             for(auto &e: m_GUICtrls) {

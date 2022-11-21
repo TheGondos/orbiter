@@ -1,6 +1,7 @@
 #pragma once
 
 #include "OrbiterAPI.h"
+#include "GraphicsAPI.h"
 #include <string>
 #include <map>
 

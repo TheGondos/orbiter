@@ -25,28 +25,17 @@ using namespace oapi;
 
 GraphicsClient::GraphicsClient (MODULEHANDLE hInstance): Module (hInstance)
 {
-	VideoData.fullscreen = false;
-	VideoData.forceenum = true;
-	VideoData.trystencil = false;
-	VideoData.novsync = true;
-	VideoData.pageflip = true;
-	VideoData.deviceidx = -1;
-	VideoData.modeidx = 0;
+//	VideoData.fullscreen = false;
+//	VideoData.forceenum = true;
+//	VideoData.trystencil = false;
+//	VideoData.novsync = true;
+//	VideoData.pageflip = true;
+//	VideoData.deviceidx = -1;
+//	VideoData.modeidx = 0;
 	VideoData.winw = 1280;
 	VideoData.winh = 800;
 	surfBltTgt = RENDERTGT_NONE;
 	splashFont = 0;
-/*
-    // Create WIC factory for formatted image output
-    HRESULT hr = CoCreateInstance (
-        CLSID_WICImagingFactory,
-        NULL,
-        CLSCTX_INPROC_SERVER,
-        IID_PPV_ARGS(&m_pIWICFactory)
-    );
-	if (hr != S_OK)
-		m_pIWICFactory = NULL;
-		*/
 }
 
 // ======================================================================
@@ -62,13 +51,16 @@ bool GraphicsClient::clbkInitialise ()
 {
 	// set default parameters from config data
 	Config *cfg = g_pOrbiter->Cfg();
-	VideoData.fullscreen = cfg->CfgDevPrm.bFullscreen;
-	VideoData.forceenum  = cfg->CfgDevPrm.bForceEnum;
-	VideoData.trystencil = cfg->CfgDevPrm.bTryStencil;
-	VideoData.novsync    = cfg->CfgDevPrm.bNoVsync;
-	VideoData.pageflip   = cfg->CfgDevPrm.bPageflip;
-	VideoData.deviceidx  = cfg->CfgDevPrm.Device_idx;
-	VideoData.modeidx    = (int)cfg->CfgDevPrm.Device_mode;
+	VideoData.mode        = cfg->CfgDevPrm.mode;
+	VideoData.monitorDesc = cfg->CfgDevPrm.monitorDesc;
+	VideoData.modeDesc    = cfg->CfgDevPrm.videoModeDesc;
+//	VideoData.fullscreen = cfg->CfgDevPrm.bFullscreen;
+//	VideoData.forceenum  = cfg->CfgDevPrm.bForceEnum;
+//	VideoData.trystencil = cfg->CfgDevPrm.bTryStencil;
+//	VideoData.novsync    = cfg->CfgDevPrm.bNoVsync;
+//	VideoData.pageflip   = cfg->CfgDevPrm.bPageflip;
+//	VideoData.deviceidx  = cfg->CfgDevPrm.Device_idx;
+//	VideoData.modeidx    = (int)cfg->CfgDevPrm.Device_mode;
 	VideoData.winw       = (int)cfg->CfgDevPrm.WinW;
 	VideoData.winh       = (int)cfg->CfgDevPrm.WinH;
 

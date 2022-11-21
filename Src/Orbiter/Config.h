@@ -211,6 +211,10 @@ struct CFG_RECPLAYPRM {
 };
 
 struct CFG_DEVPRM {
+	int mode;
+	std::string monitorDesc;
+	std::string videoModeDesc;
+/*
 	int    Device_idx;			// index of default device
 	int  Device_mode;			// index of default fullscreen mode
 	bool   bForceEnum;			// force enumeration, bypass device.dat
@@ -219,6 +223,7 @@ struct CFG_DEVPRM {
 	bool   bNoVsync;			// no vertical sync (fullscreen only)
 	bool   bTryStencil;			// try stencil buffers when available
 	bool   bPageflip;			// allow page flipping in fullscreen mode (disabling can fix flicker problem)
+*/
 	int  WinW;				// window width (pixel) for windowed mode
 	int  WinH;				// window height (pixel) for windowed mode
 };
