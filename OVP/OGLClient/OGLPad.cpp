@@ -199,7 +199,7 @@ int OGLPad::GetCharSize ()
 {
 	int height;
 	if (cfont) {
-		if(nvgFindFont(s_nvg, cfont->m_facename.c_str()) == -1) nvgCreateFont(s_nvg, cfont->m_facename.c_str(), cfont->m_fontfile.c_str());
+		if(nvgFindFont(s_nvg, cfont->m_facename.c_str()) == -1) nvgCreateFont(s_nvg, cfont->m_facename.c_str(), cfont->m_fontfile.c_str(), cfont->antialiased);
 		nvgFontSize(s_nvg, cfont->m_Height);
 		nvgFontFace(s_nvg, cfont->m_facename.c_str());
 		nvgTextAlign(s_nvg, NVGalign::NVG_ALIGN_TOP|NVGalign::NVG_ALIGN_LEFT);
@@ -219,7 +219,7 @@ int OGLPad::GetTextWidth (const char *str, int len)
 	}
 
 	if (cfont) {
-		if(nvgFindFont(s_nvg, cfont->m_facename.c_str()) == -1) nvgCreateFont(s_nvg, cfont->m_facename.c_str(), cfont->m_fontfile.c_str());
+		if(nvgFindFont(s_nvg, cfont->m_facename.c_str()) == -1) nvgCreateFont(s_nvg, cfont->m_facename.c_str(), cfont->m_fontfile.c_str(), cfont->antialiased);
 		nvgFontSize(s_nvg, cfont->m_Height);
 		nvgFontFace(s_nvg, cfont->m_facename.c_str());
 		nvgTextAlign(s_nvg, NVGalign::NVG_ALIGN_TOP|NVGalign::NVG_ALIGN_LEFT);
@@ -245,7 +245,7 @@ void OGLPad::GetOrigin (int *x, int *y) const
 bool OGLPad::Text (int x, int y, const char *str, int len)
 {
 	if(nvgFindFont(s_nvg, cfont->m_facename.c_str()) == -1) {
-		nvgCreateFont(s_nvg, cfont->m_facename.c_str(), cfont->m_fontfile.c_str());
+		nvgCreateFont(s_nvg, cfont->m_facename.c_str(), cfont->m_fontfile.c_str(), cfont->antialiased);
 	}
     nvgFontSize(s_nvg, cfont->m_Height);
     nvgFontFace(s_nvg, cfont->m_facename.c_str());
@@ -386,11 +386,12 @@ void OGLPad::PolyPolyline (const oapi::IVECTOR2 *pt, const int *npt, const int n
 	}
 }
 
-OGLFont::OGLFont (int height, bool prop, const char *face, Style style, int orientation): oapi::Font (height, prop, face, style, orientation)
+OGLFont::OGLFont (int height, bool prop, const char *face, Style style, int orientation, bool aa): oapi::Font (height, prop, face, style, orientation)
 {
 	rotationRadians = -3.1415926535898/180.0 * (orientation * 0.1f);
     m_facename = face;
     m_Height = height;
+	antialiased = aa;
 
 	//fontconfig fails to deliver a mono font if the family is not found -> force default font for monospace
 	if(!prop) m_facename="monospace";

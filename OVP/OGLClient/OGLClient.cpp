@@ -913,9 +913,9 @@ void OGLClient::clbkReleasePen (Pen *pen) const
  *   \ref oapi::Font::Font
  * \sa clbkReleaseFont, oapi::Font
  */
-Font *OGLClient::clbkCreateFont (int height, bool prop, const char *face, Font::Style style, int orientation) const
+Font *OGLClient::clbkCreateFont (int height, bool prop, const char *face, Font::Style style, int orientation, bool antialiased) const
 {
-	OGLFont *font = new OGLFont (height, prop, face, style, orientation);
+	OGLFont *font = new OGLFont (height, prop, face, style, orientation, antialiased);
 	return font;
 }
 

@@ -1790,19 +1790,19 @@ DLLEXPORT void oapiReleaseSketchpad (oapi::Sketchpad *skp)
 	if (gc && skp) gc->clbkReleaseSketchpad (skp);
 }
 
-DLLEXPORT oapi::Font *oapiCreateFont (int height, bool prop, const char *face, FontStyle style)
+DLLEXPORT oapi::Font *oapiCreateFont (int height, bool prop, const char *face, FontStyle style, bool antialiased)
 {
 	oapi::GraphicsClient *gc = g_pOrbiter->GetGraphicsClient();
 	oapi::Font *font = NULL;
-	if (gc) font = gc->clbkCreateFont (height, prop, face, (oapi::Font::Style)style);
+	if (gc) font = gc->clbkCreateFont (height, prop, face, (oapi::Font::Style)style, 0, antialiased);
 	return font;
 }
 
-DLLEXPORT oapi::Font *oapiCreateFont (int height, bool prop, const char *face, FontStyle style, int orientation)
+DLLEXPORT oapi::Font *oapiCreateFont (int height, bool prop, const char *face, FontStyle style, int orientation, bool antialiased)
 {
 	oapi::GraphicsClient *gc = g_pOrbiter->GetGraphicsClient();
 	oapi::Font *font = NULL;
-	if (gc) font = gc->clbkCreateFont (height, prop, face, (oapi::Font::Style)style, orientation);
+	if (gc) font = gc->clbkCreateFont (height, prop, face, (oapi::Font::Style)style, orientation, antialiased);
 	return font;
 }
 

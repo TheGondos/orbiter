@@ -100,13 +100,14 @@ private:
 // ======================================================================
 class OGLCLIENTEXPORT OGLFont: public oapi::Font {
 public:
-	OGLFont (int height, bool prop, const char *face, Style style=NORMAL, int orientation=0);
+	OGLFont (int height, bool prop, const char *face, Style style=NORMAL, int orientation=0, bool antialiased = true);
 	~OGLFont ();
 
 	int m_Height;
     float rotationRadians = 0;
     std::string m_facename;
     std::string m_fontfile;
+	bool antialiased = true;
 };
 
 

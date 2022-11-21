@@ -5332,7 +5332,7 @@ enum FontStyle {
  * \note After use, the font should be deallocated with oapiReleaseFont.
  * \sa oapiReleaseFont
  */
-OAPIFUNC oapi::Font *oapiCreateFont (int height, bool prop, const char *face, FontStyle style = FONT_NORMAL);
+OAPIFUNC oapi::Font *oapiCreateFont (int height, bool prop, const char *face, FontStyle style = FONT_NORMAL, bool antialiased = true);
 
 /**
  * \brief Creates a font resource for drawing text into surfaces.
@@ -5345,7 +5345,7 @@ OAPIFUNC oapi::Font *oapiCreateFont (int height, bool prop, const char *face, Fo
  * \note Identical to oapiCreateFont(int,bool,char*,FontStyle), but
  *   contains the additional orientation parameter.
  */
-OAPIFUNC oapi::Font *oapiCreateFont (int height, bool prop, const char *face, FontStyle style, int orientation);
+OAPIFUNC oapi::Font *oapiCreateFont (int height, bool prop, const char *face, FontStyle style, int orientation, bool antialiased = true);
 
 /**
  * \brief Release a font resource.

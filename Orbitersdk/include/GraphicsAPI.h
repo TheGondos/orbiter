@@ -1212,7 +1212,7 @@ public:
 	 *   \ref oapi::Font::Font
 	 * \sa clbkReleaseFont, oapi::Font
 	 */
-	virtual Font *clbkCreateFont (int height, bool prop, const char *face, oapi::Font::Style style = oapi::Font::NORMAL, int orientation = 0) const { return NULL; }
+	virtual Font *clbkCreateFont (int height, bool prop, const char *face, oapi::Font::Style style = oapi::Font::NORMAL, int orientation = 0, bool antialiased = true) const { return NULL; }
 
 	/**
 	 * \brief De-allocate a font resource.
