@@ -39,8 +39,10 @@ class GUIManager {
 		void EnableMouseCursor() { glfwSetInputMode(hRenderWnd, GLFW_CURSOR, GLFW_CURSOR_NORMAL); }
 		void SetupCallbacks();
         void ToggleFullscreen();
-        void PollEvents() { glfwPollEvents(); }
+        void PollEvents(bool splashScreen = false);
         void Terminate() { glfwTerminate(); }
+        bool splashScreen = false;
+        bool splashResize = false;
 
         GUIManager();
 		void RenderGUI();

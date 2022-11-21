@@ -595,7 +595,11 @@ void GUIManager::framebuffer_size_callback(GLFWwindow *window, int width, int he
 	if(g_camera) g_camera->ResizeViewport(width, height);
 	g_pOrbiter->GetGraphicsClient()->clbkSetViewportSize(width, height);
 	g_pOrbiter->GetRenderParameters();
-	if(g_pane) g_pane->Resize(width, height);
+	if(!splashScreen) {
+		if(g_pane) g_pane->Resize(width, height);
+	} else {
+		splashResize = true;
+	}
 }
 
 static GUIManager *s_GUIManager;
@@ -624,6 +628,17 @@ void GUIManager::SetupCallbacks()
 	prev_scroll_callback = glfwSetScrollCallback(hRenderWnd, g_scroll_callback);
 	glfwSetFramebufferSizeCallback(hRenderWnd, g_framebuffer_size_callback);
 	glfwSetJoystickCallback(InputController::JoystickCallback);
+}
+
+void GUIManager::PollEvents(bool sp) { 
+	splashScreen = sp;
+	glfwPollEvents();
+	if(!splashScreen && splashResize) {
+		splashResize = false;
+		int width, height;
+		oapiGetViewportSize(&width, &height);
+		if(g_pane) g_pane->Resize(width, height);
+	}
 }
 
 // Video tab

@@ -27,6 +27,7 @@
 using namespace oapi;
 
 OGLClient *g_client = 0;
+constexpr int splashSize = 21;
 
 // ==============================================================
 // Initialise module
@@ -66,6 +67,9 @@ OGLClient::~OGLClient ()
 	vStar::GlobalExit ();
 	TileManager2Base::GlobalExit();
 	TileManager::GlobalExit();
+
+	oapiReleaseFont(splashFont);
+	oapiReleaseTexture(splashTex);
 }
 
 /**
@@ -468,6 +472,12 @@ GLFWwindow *OGLClient::clbkCreateRenderWindow ()
 	mMeshManager = std::make_unique<OGLMeshManager>();
 	mScene = std::make_unique<Scene>(m_width, m_height);
 	mTextureManager = std::make_unique<TextureManager>();
+
+	splashFont = oapiCreateFont(splashSize, true, "Tahoma", FONT_NORMAL);
+	splashTex = clbkLoadTexture ("Images/Splash.jpg", 4);
+
+
+
 	Renderer::GlobalInit(m_width, m_height);
 	TileManager::GlobalInit();
 	HazeManager::GlobalInit();
@@ -1236,6 +1246,33 @@ void OGLClient::clbkImGuiRenderDrawData ()
  */
 bool OGLClient::clbkSplashLoadMsg (const char *msg, int line)
 {
+	if (line == 0) {
+		splashLabel = msg;
+		splashItem.clear();
+	} else if (line == 1) {
+		splashItem = msg;
+	}
+
+	if(!splashTex) return false;
+
+	clbkClearFrame();
+
+	int w,h;
+	clbkGetSurfaceSize(splashTex, &w, &h);
+	clbkScaleBlt(nullptr, 0, 0, m_width, m_height, splashTex, 0, 0, w, h);
+
+	auto skp = clbkGetSketchpad(nullptr);
+
+	skp->SetBackgroundColor(0);
+	skp->SetTextColor(0xE0A0A0);
+	skp->SetFont(splashFont);
+	skp->SetTextAlign(oapi::Sketchpad::CENTER);
+	skp->Text(m_width / 2,m_height - splashSize * 2 - 20, splashLabel.c_str(), splashLabel.length());
+	skp->Text(m_width / 2,m_height - splashSize * 1 - 20, splashItem.c_str(),  splashItem.length());
+
+	clbkReleaseSketchpad(skp);
+
+	clbkDisplayFrame();
     return false;
 }
 

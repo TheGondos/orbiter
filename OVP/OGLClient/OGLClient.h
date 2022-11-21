@@ -1044,7 +1044,6 @@ protected:
 
 protected:
 	SURFHANDLE surfBltTgt;  ///< target surface for a blitting group (-1=none, NULL=main window render surface)
-	oapi::Font *splashFont; // font for splash screen displays
 
 private:
 	/**
@@ -1062,6 +1061,13 @@ private:
 	GLFWwindow *hRenderWnd;        // render window handle
 
 	uint32_t m_width, m_height;
+
+	// Splash screen
+	SURFHANDLE splashTex;
+	std::string splashItem;
+	std::string splashLabel;
+	oapi::Font *splashFont;
+
 
 	//FIXME : replace with STB image
 //	IWICImagingFactory *m_pIWICFactory; // Windows Image Component factory instance

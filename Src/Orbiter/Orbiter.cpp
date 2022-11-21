@@ -1382,6 +1382,7 @@ void Orbiter::OutputLoadStatus (const char *msg, int line)
 	if (gclient) {
 		strncpy (linebuf[line], msg, 64); linebuf[line][63] = '\0';
 		gclient->clbkSplashLoadMsg (linebuf[line], line);
+		m_pGUIManager->PollEvents(true);
 	}
 }
 
@@ -1392,6 +1393,7 @@ void Orbiter::OutputLoadTick (int line, bool ok)
 		strcpy (cbuf, linebuf[line]);
 		strcat (cbuf, ok ? " ok" : " xx");
 		gclient->clbkSplashLoadMsg (cbuf, line);
+		m_pGUIManager->PollEvents(true);
 	}
 }
 
