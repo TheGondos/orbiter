@@ -57,7 +57,8 @@ struct my_markdown : public imgui_md
 		if(m_textureCache.count(m_href)) {
 			s = m_textureCache[m_href];
 		} else {
-			s = oapiLoadTexture(m_href.c_str());
+			oapi::GraphicsClient *gc = g_pOrbiter->GetGraphicsClient();
+			s = gc->clbkLoadTexture (m_href.c_str(), 4);
 			if(!s) return false;
 			m_textureCache[m_href] = s;
 		}
