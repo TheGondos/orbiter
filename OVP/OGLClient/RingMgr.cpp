@@ -114,7 +114,7 @@ bool RingManager::Render (OGLCamera *c, glm::mat4 &mWorld, bool front)
 		{0.5,0.5,0.5,1},0
 	};
 
-	meshShader->Bind();
+	Renderer::Bind(meshShader);
 
 	const VECTOR3 &sd = g_client->GetScene()->GetSunDir();
 	glm::vec3 sundir;
@@ -144,7 +144,7 @@ bool RingManager::Render (OGLCamera *c, glm::mat4 &mWorld, bool front)
 
 	Renderer::PopBool();
 
-	meshShader->UnBind();
+	Renderer::Unbind(meshShader);
 	return true;
 }
 

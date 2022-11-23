@@ -612,7 +612,7 @@ void TileManager::RenderSimple (int level, TILEDESC *tile)
 	extern OGLMaterial def_mat;
 	int idx, npatch = patchidx[level] - patchidx[level-1];
 
-	tileShader->Bind();
+	Renderer::Bind(tileShader);
 	OGLCamera *c = g_client->GetScene()->GetCamera();
 	auto *vpm = c->GetViewProjectionMatrix();
 	tileShader->SetMat4("u_ViewProjection",*vpm);
@@ -699,7 +699,7 @@ void TileManager::RenderSimple (int level, TILEDESC *tile)
 		}
 		*/
 	}
-	tileShader->UnBind();
+	Renderer::Unbind(tileShader);
 }
 
 // =======================================================================

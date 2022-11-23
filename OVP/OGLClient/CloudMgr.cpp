@@ -129,7 +129,7 @@ void CloudManager::RenderTile (int lvl, int hemisp, int ilat, int nlat, int ilng
 		exit(-1);
 	}
 	
-	tileShader->Bind();
+	Renderer::Bind(tileShader);
 	OGLCamera *c = g_client->GetScene()->GetCamera();
 	auto *vpm = c->GetViewProjectionMatrix();
 	tileShader->SetMat4("u_ViewProjection",*vpm);
@@ -167,7 +167,7 @@ void CloudManager::RenderTile (int lvl, int hemisp, int ilat, int nlat, int ilng
 	mesh.va->Bind();
 	glDrawElements(GL_TRIANGLES, mesh.ib->GetCount(), GL_UNSIGNED_SHORT, 0);
 	mesh.va->UnBind();
-	tileShader->UnBind();
+	Renderer::Unbind(tileShader);
     glBindTexture(GL_TEXTURE_2D,  0);
 
 	return;

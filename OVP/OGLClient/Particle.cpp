@@ -567,7 +567,7 @@ void OGLParticleStream::RenderDiffuse (OGLCamera *c)
 	//dev->SetTextureStageState (0, D3DTSS_ALPHAOP, D3DTOP_MODULATE);
 	//dev->SetTextureStageState (0, D3DTSS_ALPHAARG2, D3DTA_DIFFUSE);
 	Renderer::PushDepthMask(false);
-	particleShader->Bind();
+	Renderer::Bind(particleShader);
 	auto vp = c->GetViewProjectionMatrix();
 	particleShader->SetMat4("u_ViewProjection", *vp);
 	particleShader->SetMat4("u_Model", mModel);
@@ -601,7 +601,7 @@ void OGLParticleStream::RenderDiffuse (OGLCamera *c)
 	glDrawElements(GL_TRIANGLES, cnt*6, GL_UNSIGNED_SHORT, 0);
 
 	dVBA->UnBind();
-	particleShader->UnBind();
+	Renderer::Unbind(particleShader);
 
 	//dev->SetTextureStageState (0, D3DTSS_ALPHAOP, D3DTOP_SELECTARG1);
 	//dev->SetTextureStageState (0, D3DTSS_ALPHAARG2, D3DTA_CURRENT);
@@ -620,7 +620,7 @@ void OGLParticleStream::RenderEmissive (OGLCamera *c)
     //glEnable(GL_BLEND);
     //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	particleShader->Bind();
+	Renderer::Bind(particleShader);
 	auto vp = c->GetViewProjectionMatrix();
 	particleShader->SetMat4("u_ViewProjection", *vp);
 	particleShader->SetMat4("u_Model", mModel);
@@ -649,7 +649,7 @@ void OGLParticleStream::RenderEmissive (OGLCamera *c)
 	glDrawElements(GL_TRIANGLES, cnt*6, GL_UNSIGNED_SHORT, 0);
 
 	eVBA->UnBind();
-	particleShader->UnBind();
+	Renderer::Unbind(particleShader);
 	Renderer::PopDepthMask();
 	//glDisable(GL_DEPTH_TEST);
 	//glBindTexture(GL_TEXTURE_2D, 0);

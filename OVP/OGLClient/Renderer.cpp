@@ -46,16 +46,16 @@ bool current_depthmask;
 std::vector<bool> lastDepthmasks;
 GLint current_shader;
 
-void BindShader(Shader *shader) {
+void Bind(Shader *shader) {
     if(current_shader != shader->ShaderID) {
         current_shader = shader->ShaderID;
         glUseProgram(current_shader);
     }
 }
 
-void UnbindShader() {
-//    glUseProgram(0);
-//    current_shader = 0;
+void Unbind(Shader *shader) {
+    //glUseProgram(0);
+    //current_shader = 0;
 }
 
 void PushDepthMask(bool value) {
@@ -168,6 +168,7 @@ void Sync() {
     glDepthMask(current_depthmask ? GL_TRUE : GL_FALSE);
     glFrontFace(current_frontface);
     glBlendFunc(current_blendfunc.a, current_blendfunc.b);
+    glUseProgram(current_shader);
 }
 
 void PushBool(enum BoolParam param, bool value) {

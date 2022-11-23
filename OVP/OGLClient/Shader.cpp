@@ -104,7 +104,7 @@ Shader::~Shader()
 {
     glDeleteProgram(ShaderID);
 }
-
+/*
 void Shader::Bind() const
 {
     glUseProgram(ShaderID);
@@ -117,7 +117,6 @@ void Shader::Bind() const
         exit(-1);
 	}
 }
-
 void Shader::UnBind() const
 {
     glUseProgram(0);
@@ -130,6 +129,7 @@ void Shader::UnBind() const
         exit(-1);
 	}
 }
+*/
 
 void Shader::SetMat4(const std::string& name, const glm::mat4& value) const
 {

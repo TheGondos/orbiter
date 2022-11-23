@@ -304,7 +304,7 @@ void vBase::RenderGroundShadow (float depth)
 {
 	if (!nshmesh) return; // nothing to do
 
-	shadowShader->Bind();
+	Renderer::Bind(shadowShader);
 	shadowShader->SetMat4("u_ViewProjection", *scn->GetCamera()->GetViewProjectionMatrix());
 
 	static const double shadow_elev_limit = 0.07;
@@ -383,7 +383,7 @@ void vBase::RenderGroundShadow (float depth)
 		shmesh[i].va->UnBind();
 	}
 
-	shadowShader->UnBind();
+	Renderer::Unbind(shadowShader);
 }
 
 /*

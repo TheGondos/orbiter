@@ -453,7 +453,7 @@ void OGLMesh::Render (OGLCamera *c, glm::fmat4 &model)
 	sundir.y = sd.y;
 	sundir.z = sd.z;
 
-    meshShader->Bind();
+    Renderer::Bind(meshShader);
 
 	auto vp = c->GetViewProjectionMatrix();
 	meshShader->SetMat4("u_ViewProjection", *vp);
@@ -607,7 +607,7 @@ void OGLMesh::Render (OGLCamera *c, glm::fmat4 &model)
 	Renderer::PopFrontFace();
 	Renderer::PopBool(2);
 
-	meshShader->UnBind();
+	Renderer::Unbind(meshShader);
 }
 
 void OGLMesh::TransformGroup (int n, const glm::fmat4 *mm)

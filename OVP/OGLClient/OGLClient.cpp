@@ -257,7 +257,7 @@ void OGLClient::clbkRender2DPanel (SURFHANDLE *hSurf, MESHHANDLE hMesh, MATRIX3 
 
 		glBindVertexArray(0);
 	}
-	mOverlayShader->Bind();
+	Renderer::Bind(mOverlayShader);
 	mOverlayShader->SetMat4("projection", ortho_proj);
 	mOverlayShader->SetFloat("color_keyed", 0.0);
 
@@ -348,7 +348,7 @@ void OGLClient::clbkRender2DPanel (SURFHANDLE *hSurf, MESHHANDLE hMesh, MATRIX3 
 
 
 	}
-	mOverlayShader->UnBind();
+	Renderer::Unbind(mOverlayShader);
 	glBindTexture(GL_TEXTURE_2D, 0);
 
 	//if (transparent)
@@ -1448,7 +1448,7 @@ bool OGLClient::clbkFillSurface (SURFHANDLE surf, int tgtx, int tgty, int w, int
 	glEnableVertexAttribArray(0);
 	glBindVertexArray(0);
 
-	mUntexturedShader->Bind();
+	Renderer::Bind(mUntexturedShader);
 	mUntexturedShader->SetMat4("projection", ortho_proj);
 	glm::vec3 color;
 	color.r = (float)((col>>16)&0xff)/255.0;
@@ -1464,7 +1464,7 @@ bool OGLClient::clbkFillSurface (SURFHANDLE surf, int tgtx, int tgty, int w, int
 
 	glBindVertexArray(0);
 
-	mUntexturedShader->UnBind();
+	Renderer::Unbind(mUntexturedShader);
 
 	if(surf) {
 		Renderer::PopRenderTarget();
@@ -1571,7 +1571,7 @@ bool OGLClient::clbkScaleBlt (SURFHANDLE tgt, int tgtx, int tgty, int tgtw, int 
 	//CheckError("OGLPad::Text glEnableVertexAttribArray0");
 	glBindVertexArray(0);
 
-	mOverlayShader->Bind();
+	Renderer::Bind(mOverlayShader);
 	mOverlayShader->SetMat4("projection", ortho_proj);
 
 	bool hasck = key_tex->m_colorkey != SURF_NO_CK && key_tex->m_colorkey != 0;
@@ -1604,7 +1604,7 @@ bool OGLClient::clbkScaleBlt (SURFHANDLE tgt, int tgtx, int tgty, int tgtw, int 
 
 	glBindVertexArray(0);
 	glBindTexture(GL_TEXTURE_2D, 0);
-	mOverlayShader->UnBind();
+	Renderer::Unbind(mOverlayShader);
 
 	if(tgt)
     {
@@ -1721,7 +1721,7 @@ bool OGLClient::clbkBlt (SURFHANDLE tgt, int tgtx, int tgty, SURFHANDLE src, int
 	//CheckError("OGLPad::Text glEnableVertexAttribArray0");
 	glBindVertexArray(0);
 
-	mOverlayShader->Bind();
+	Renderer::Bind(mOverlayShader);
 	mOverlayShader->SetMat4("projection", ortho_proj);
 
 	OGLTexture *key_tex = (OGLTexture *)src;
@@ -1755,7 +1755,7 @@ bool OGLClient::clbkBlt (SURFHANDLE tgt, int tgtx, int tgty, SURFHANDLE src, int
 
 	glBindVertexArray(0);
 	glBindTexture(GL_TEXTURE_2D, 0);
-	mOverlayShader->UnBind();
+	Renderer::Unbind(mOverlayShader);
 
 	Renderer::PopRenderTarget();
 	Renderer::PopBool(2);
@@ -1853,7 +1853,7 @@ bool OGLClient::clbkBlt (SURFHANDLE tgt, int tgtx, int tgty, SURFHANDLE src, int
 		glEnableVertexAttribArray(0);
 		glBindVertexArray(0);
 
-		mOverlayShader->Bind();
+		Renderer::Bind(mOverlayShader);
 		mOverlayShader->SetMat4("projection", ortho_proj);
 
 		OGLTexture *key_tex = (OGLTexture *)src;
@@ -1886,7 +1886,7 @@ bool OGLClient::clbkBlt (SURFHANDLE tgt, int tgtx, int tgty, SURFHANDLE src, int
 
 		glBindVertexArray(0);
 		glBindTexture(GL_TEXTURE_2D, 0);
-		mOverlayShader->UnBind();
+		Renderer::Unbind(mOverlayShader);
 
 		Renderer::PopRenderTarget();
 	} else {
@@ -1949,7 +1949,7 @@ bool OGLClient::clbkBlt (SURFHANDLE tgt, int tgtx, int tgty, SURFHANDLE src, int
 	//CheckError("OGLPad::Text glEnableVertexAttribArray0");
 		glBindVertexArray(0);
 
-		mOverlayShader->Bind();
+		Renderer::Bind(mOverlayShader);
 		mOverlayShader->SetMat4("projection", ortho_proj);
 
 		OGLTexture *key_tex = (OGLTexture *)src;
@@ -1988,7 +1988,7 @@ bool OGLClient::clbkBlt (SURFHANDLE tgt, int tgtx, int tgty, SURFHANDLE src, int
 
 		glBindVertexArray(0);
 		glBindTexture(GL_TEXTURE_2D, 0);
-		mOverlayShader->UnBind();
+		Renderer::Unbind(mOverlayShader);
 
 
 	}

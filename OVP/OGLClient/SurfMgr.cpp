@@ -94,7 +94,7 @@ if (range.tumin != 0 || range.tumax != 1) {
 	exit(-1);
 }
 
-	tileShader->Bind();
+	Renderer::Bind(tileShader);
 	OGLCamera *c = g_client->GetScene()->GetCamera();
 	auto *vpm = c->GetViewProjectionMatrix();
 	tileShader->SetMat4("u_ViewProjection",*vpm);
@@ -139,7 +139,7 @@ if (range.tumin != 0 || range.tumax != 1) {
 	glDrawElements(GL_TRIANGLES, mesh.ib->GetCount(), GL_UNSIGNED_SHORT, 0);
 	Renderer::CheckError("SurfaceManager::RenderTile glDrawElements");
 	mesh.va->UnBind();
-	tileShader->UnBind();
+	Renderer::Unbind(tileShader);
     glBindTexture(GL_TEXTURE_2D,  0);
 	Renderer::CheckError("SurfaceManager::RenderTile glBindTexture0");
 	//glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );

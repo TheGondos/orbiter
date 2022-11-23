@@ -38,6 +38,6 @@ namespace Renderer
     void PopBlendFunc();
     void Sync();
     Shader *GetShader(std::string name);
-    void BindShader(Shader *shader);
-    void UnbindShader();
+    void Bind(Shader *shader);
+    void Unbind(Shader *shader);
 };

@@ -11,8 +11,8 @@ public:
     Shader(const std::string& vertexFile, const std::string& fragmentFile);
     ~Shader();
 
-    void Bind() const;
-    void UnBind() const;
+//    void Bind() const;
+//    void UnBind() const;
 
     void SetMat4(const std::string& name, const glm::mat4& value) const;
     void SetVec3(const std::string& name, const glm::vec3& value) const;

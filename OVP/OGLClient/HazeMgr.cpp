@@ -220,7 +220,7 @@ void HazeManager::Render (OGLCamera *c, glm::mat4 &wmat, bool dual)
 	}
 	VBO->UnMap();
 
-	hazeShader->Bind();
+	Renderer::Bind(hazeShader);
 	auto *vp = c->GetViewProjectionMatrix();
 	hazeShader->SetMat4("u_ViewProjection",*vp);
 	hazeShader->SetMat4("u_Model",transm);
@@ -255,7 +255,7 @@ void HazeManager::Render (OGLCamera *c, glm::mat4 &wmat, bool dual)
 		VBA->UnBind();
 	}
 
-	hazeShader->UnBind();
+	Renderer::Unbind(hazeShader);
 
 //	dev->SetTextureStageState (0, D3DTSS_ADDRESS, D3DTADDRESS_WRAP);
 //	dev->SetRenderState (D3DRENDERSTATE_LIGHTING, TRUE);

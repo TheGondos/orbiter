@@ -196,24 +196,24 @@ void CelestialSphere::RenderStars (OGLCamera *c, VECTOR3 &bgcol)
 	int ns = std::min ((int)nstars, lvlid[bglvl]);
 
 	auto vp = c->GetViewProjectionMatrix();
-	m_starsShader->Bind();
+	Renderer::Bind(m_starsShader);
 	m_starsShader->SetMat4("u_ViewProjection", *vp);
 	m_starsVAO->Bind();
 	glDrawArrays(GL_POINTS, 0, ns);
 	Renderer::CheckError("glDrawArrays");
 	m_starsVAO->UnBind();
-	m_starsShader->UnBind();
+	Renderer::Unbind(m_starsShader);
 }
 void CelestialSphere::RenderConstellations (VECTOR3 &col, OGLCamera *c)
 {
 	auto vp = c->GetViewProjectionMatrix();
-	m_constellationsShader->Bind();
+	Renderer::Bind(m_constellationsShader);
 	m_constellationsShader->SetMat4("u_ViewProjection", *vp);
 	m_constellationsVAO->Bind();
 	glDrawArrays(GL_LINES, 0, ncline * 2); // Starting from vertex 0; 3 vertices total -> 1 triangle
 	Renderer::CheckError("glDrawArrays");
 	m_constellationsVAO->UnBind();
-	m_constellationsShader->UnBind();
+	Renderer::Unbind(m_constellationsShader);
 }
 
 void CelestialSphere::CreateEcliptic()
@@ -248,11 +248,11 @@ void CelestialSphere::CreateEcliptic()
 void CelestialSphere::RenderEcliptic(OGLCamera *c)
 {
 	auto vp = c->GetViewProjectionMatrix();
-	m_eclShader->Bind();
+	Renderer::Bind(m_eclShader);
 	m_eclShader->SetMat4("u_ViewProjection", *vp);
 	m_eclVAO->Bind();
 	glDrawArrays(GL_LINE_STRIP, 0, necl);
 	Renderer::CheckError("glDrawArrays");
 	m_eclVAO->UnBind();
-	m_eclShader->UnBind();
+	Renderer::Unbind(m_eclShader);
 }

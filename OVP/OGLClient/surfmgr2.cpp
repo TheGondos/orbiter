@@ -527,7 +527,7 @@ void SurfTile::Render ()
 */
 
 	//glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
-	tileShader->Bind();
+	Renderer::Bind(tileShader);
 	OGLCamera *c = g_client->GetScene()->GetCamera();
 	auto *vp = c->GetViewProjectionMatrix();
 	tileShader->SetMat4("u_ViewProjection",*vp);
@@ -572,7 +572,7 @@ void SurfTile::Render ()
 	glDrawElements(GL_TRIANGLES, mesh->IBO->GetCount(), GL_UNSIGNED_SHORT, 0);
 	Renderer::CheckError("SurfTile::Render glDrawElements");
 	mesh->VAO->UnBind();
-	tileShader->UnBind();
+	Renderer::Unbind(tileShader);
     glBindTexture(GL_TEXTURE_2D,  0);
 	Renderer::CheckError("SurfTile::Render glBindTexture0");
 	//glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );

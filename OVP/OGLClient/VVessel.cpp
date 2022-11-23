@@ -59,7 +59,7 @@ void vVessel::GlobalInit ()
 
 	exhaustShader   = Renderer::GetShader("Exhaust");
 	meshUnlitShader = Renderer::GetShader("MeshUnlit");
-	shadowShader    = Renderer::GetShader("GroundShadow");
+	shadowShader    = Renderer::GetShader("VesselShadow");
 
 }
 
@@ -359,7 +359,7 @@ bool vVessel::Render (bool internalpass)
 
 			// render VC HUD
 			if (sHUD && hudspec->nmesh == i) {
-				meshUnlitShader->Bind();
+				Renderer::Bind(meshUnlitShader);
 				auto vp = scn->GetCamera()->GetViewProjectionMatrix();
 				meshUnlitShader->SetMat4("u_ViewProjection", *vp);
 				meshUnlitShader->SetMat4("u_Model", mWorldTrans);
@@ -450,7 +450,7 @@ bool vVessel::RenderExhaust ()
 		VBA->UnBind();
 	}
 
-	exhaustShader->Bind();
+	Renderer::Bind(exhaustShader);
 	auto vp = scn->GetCamera()->GetViewProjectionMatrix();
 	exhaustShader->SetMat4("u_ViewProjection", *vp);
 	exhaustShader->SetMat4("u_Model", mWorld);
@@ -506,7 +506,7 @@ bool vVessel::RenderExhaust ()
 		*/
 	}
 
-	exhaustShader->UnBind();
+	Renderer::Unbind(exhaustShader);
 
 	Renderer::PopDepthMask();
 
@@ -620,7 +620,7 @@ void vVessel::RenderGroundShadow (OBJHANDLE hPlanet, float depth)
 		}
 	//}
 
-	shadowShader->Bind();
+	Renderer::Bind(shadowShader);
 	shadowShader->SetMat4("u_ViewProjection", *scn->GetCamera()->GetViewProjectionMatrix());
 	shadowShader->SetFloat("u_ShadowDepth", depth);
 
@@ -644,7 +644,7 @@ void vVessel::RenderGroundShadow (OBJHANDLE hPlanet, float depth)
 		}
 	}
 
-	shadowShader->UnBind();
+	Renderer::Unbind(shadowShader);
 }
 
 void vVessel::SetExhaustVertices (const VECTOR3 &edir, const VECTOR3 &cdir, const VECTOR3 &ref,

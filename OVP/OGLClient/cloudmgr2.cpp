@@ -105,7 +105,7 @@ void CloudTile::Render ()
 //	TileManager2<CloudTile>::Dev()->DrawIndexedPrimitiveVB (D3DPT_TRIANGLELIST, vb, 0,
 //		mesh->nv, mesh->idx, mesh->ni, 0);
 
-	cloudShader->Bind();
+	Renderer::Bind(cloudShader);
 	OGLCamera *c = g_client->GetScene()->GetCamera();
 	auto *vp = c->GetViewProjectionMatrix();
 	cloudShader->SetMat4("u_ViewProjection",*vp);
@@ -123,7 +123,7 @@ void CloudTile::Render ()
 	mesh->VAO->Bind();
 	glDrawElements(GL_TRIANGLES, mesh->IBO->GetCount(), GL_UNSIGNED_SHORT, 0);
 	mesh->VAO->UnBind();
-	cloudShader->UnBind();
+	Renderer::Unbind(cloudShader);
     glBindTexture(GL_TEXTURE_2D,  0);
 }
 
