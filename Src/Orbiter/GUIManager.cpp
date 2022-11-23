@@ -265,7 +265,7 @@ GUIManager::GUIManager()
 //	io.Fonts->AddFontFromMemoryTTF((void*)fa_solid_900, sizeof(fa_solid_900), 18.0, &icons_config, icons_ranges);
 
 	fontH2 = io.Fonts->AddFontFromFileTTF("Roboto-Medium.ttf", 24.0f, &config, GetGlyphRangesOrbiter());
-//	io.Fonts->AddFontFromMemoryTTF((void*)fa_solid_900, sizeof(fa_solid_900), 24.0, &icons_config, icons_ranges);
+	io.Fonts->AddFontFromMemoryTTF((void*)fa_solid_900, sizeof(fa_solid_900), 24.0, &icons_config, icons_ranges);
 
 	fontH3 = io.Fonts->AddFontFromFileTTF("Roboto-Medium.ttf", 30.0f, &config, GetGlyphRangesOrbiter());
 //	io.Fonts->AddFontFromMemoryTTF((void*)fa_solid_900, sizeof(fa_solid_900), 30.0, &icons_config, icons_ranges);
@@ -318,11 +318,13 @@ void GUIManager::RenderGUI()
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
 
+	ImGui::PushFont(fontH2);
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 5.f); // Round borders
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(43.f / 255.f, 43.f / 255.f, 43.f / 255.f, 100.f / 255.f)); // Background color
 	ImGui::RenderNotifications(toast2icon); // <-- Here we render all notifications
 	ImGui::PopStyleVar(1); // Don't forget to Pop()
 	ImGui::PopStyleColor(1);
+	ImGui::PopFont();
 
 	for(auto &ctrl: m_GUICtrls) {
 		if(ctrl->show) {
