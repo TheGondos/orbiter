@@ -152,7 +152,10 @@ void DlgLaunchpad::Show() {
 
         ImGui::SetNextWindowPos(ImVec2(170, 100), ImGuiCond_FirstUseEver);
         ImGui::SetNextWindowSize(ImVec2(870, 540), ImGuiCond_FirstUseEver);
-        ImGui::Begin("Launchpad", &show);
+		ImGui::SetNextWindowViewport(ImGui::GetMainViewport()->ID);
+        ImGui::Begin("Launchpad", &show, ImGuiWindowFlags_NoCollapse);
+		if(!show)
+			g_pOrbiter->m_pGUIManager->CloseWindow();
 
         ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_None;
         if (ImGui::BeginTabBar("MyTabBar", tab_bar_flags))
