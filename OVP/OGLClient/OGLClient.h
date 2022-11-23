@@ -28,7 +28,9 @@ class OAPIFUNC OGLClient: public oapi::GraphicsClient {
 	std::unique_ptr<Scene> mScene;
 	std::unique_ptr<OGLMeshManager> mMeshManager;
 	std::unique_ptr<TextureManager> mTextureManager;
-	std::unique_ptr<Shader> mBlitShader;
+	Shader *mBlitShader;
+	Shader *mOverlayShader;
+	Shader *mUntexturedShader;
 public:
 	struct RenderContext {
 		bool normalizeNormals;
@@ -1067,7 +1069,6 @@ private:
 	std::string splashItem;
 	std::string splashLabel;
 	oapi::Font *splashFont;
-
 
 	//FIXME : replace with STB image
 //	IWICImagingFactory *m_pIWICFactory; // Windows Image Component factory instance

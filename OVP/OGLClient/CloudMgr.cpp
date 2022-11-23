@@ -19,6 +19,7 @@
 #include "Texture.h"
 #include "OGLCamera.h"
 #include "Scene.h"
+#include "Renderer.h"
 #include <cstring>
 
 using namespace oapi;
@@ -52,6 +53,11 @@ CloudManager::CloudManager (const vPlanet *vplanet)
 	for (int i = 0; i < patchidx[maxbaselvl]; i++)
 		tiledesc[i].flag = 1;
 	LoadTextures ();
+}
+
+void CloudManager::GlobalInit()
+{
+	tileShader = Renderer::GetShader("Tile");
 }
 
 // =======================================================================
@@ -118,24 +124,22 @@ void CloudManager::RenderTile (int lvl, int hemisp, int ilat, int nlat, int ilng
 {
 	VBMESH &mesh = PATCH_TPL[lvl][ilat]; // patch template
 
-if (range.tumin != 0 && range.tumax != 1) {
-	printf("tumin=%f tumax=%f tvmin=%f tvmax=%f\n",range.tumin,range.tumax,range.tvmin,range.tvmax);
-	exit(-1);
-}
+	if (range.tumin != 0 && range.tumax != 1) {
+		printf("tumin=%f tumax=%f tvmin=%f tvmax=%f\n",range.tumin,range.tumax,range.tvmin,range.tvmax);
+		exit(-1);
+	}
 	
-	static Shader s("Tile.vs","Tile.fs");
-	
-	s.Bind();
+	tileShader->Bind();
 	OGLCamera *c = g_client->GetScene()->GetCamera();
 	auto *vpm = c->GetViewProjectionMatrix();
-	s.SetMat4("u_ViewProjection",*vpm);
-	s.SetMat4("u_Model",RenderParam.wtrans);
+	tileShader->SetMat4("u_ViewProjection",*vpm);
+	tileShader->SetMat4("u_Model",RenderParam.wtrans);
 	const VECTOR3 &sd = g_client->GetScene()->GetSunDir();
 	glm::vec3 sundir;
 	sundir.x = sd.x;
 	sundir.y = sd.y;
 	sundir.z = sd.z;
-	s.SetVec3("u_SunDir", sundir);
+	tileShader->SetVec3("u_SunDir", sundir);
 
 	if(vp->prm.bAddBkg) {
 		VECTOR3 v3bgcol = g_client->GetScene()->SkyColour();
@@ -143,27 +147,27 @@ if (range.tumin != 0 && range.tumax != 1) {
 		bgcol.x = v3bgcol.x;
 		bgcol.y = v3bgcol.y;
 		bgcol.z = v3bgcol.z;
-		s.SetVec3("u_bgcol", bgcol);
+		tileShader->SetVec3("u_bgcol", bgcol);
 	} else {
 		glm::vec3 bgcol(0,0,0);
-		s.SetVec3("u_bgcol", bgcol);
+		tileShader->SetVec3("u_bgcol", bgcol);
 	}
 	if(vp->prm.bFog && g_client->mRenderContext.bFog) {
 		glm::vec4 fogColor;
 		fogColor.x = g_client->mRenderContext.fogColor.x;
 		fogColor.y = g_client->mRenderContext.fogColor.y;
 		fogColor.z = g_client->mRenderContext.fogColor.z;
-		s.SetVec4("u_FogColor", fogColor);
-		s.SetFloat("u_FogDensity", g_client->mRenderContext.fogDensity);
+		tileShader->SetVec4("u_FogColor", fogColor);
+		tileShader->SetFloat("u_FogDensity", g_client->mRenderContext.fogDensity);
 	} else {
-		s.SetFloat("u_FogDensity", 0);
+		tileShader->SetFloat("u_FogDensity", 0);
 	}
 
     glBindTexture(GL_TEXTURE_2D, tex->m_TexId);
 	mesh.va->Bind();
 	glDrawElements(GL_TRIANGLES, mesh.ib->GetCount(), GL_UNSIGNED_SHORT, 0);
 	mesh.va->UnBind();
-	s.UnBind();
+	tileShader->UnBind();
     glBindTexture(GL_TEXTURE_2D,  0);
 
 	return;

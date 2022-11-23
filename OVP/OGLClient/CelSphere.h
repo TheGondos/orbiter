@@ -48,19 +48,19 @@ protected:
 private:
 	// Constellations
 	size_t ncline;         // number of constellation lines
-	std::unique_ptr<Shader> m_constellationsShader;
+	Shader *m_constellationsShader;
 	std::unique_ptr<VertexBuffer> m_constellationsVBO;
 	std::unique_ptr<VertexArray> m_constellationsVAO;
 
 	// Stars
 	size_t nstars;         // number of constellation lines
-	std::unique_ptr<Shader> m_starsShader;
+	Shader *m_starsShader;
 	std::unique_ptr<VertexBuffer> m_starsVBO;
 	std::unique_ptr<VertexArray> m_starsVAO;
 
 	// Ecliptic
 	size_t necl;         // number of constellation lines
-	std::unique_ptr<Shader> m_eclShader;
+	Shader *m_eclShader;
 	std::unique_ptr<VertexBuffer> m_eclVBO;
 	std::unique_ptr<VertexArray> m_eclVAO;
 

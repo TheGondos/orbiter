@@ -32,6 +32,8 @@ public:
 	inline void SetNode (QuadTreeNode<SurfTile> *_node) { node = _node; }
 	// Register the tile to a quad tree node
 
+	static void GlobalInit();
+
 protected:
 	virtual Tile *getParent() { return node && node->Parent() ? node->Parent()->Entry() : NULL; }
 	inline SurfTile *getSurfParent() { return node && node->Parent() ? node->Parent()->Entry() : NULL; }
@@ -71,6 +73,8 @@ private:
 	bool has_elevfile;			// true if the elevation data for this tile were read from file
 
 	TileLabel *label;			// surface labels associated with this tile
+
+	static inline Shader *tileShader;
 };
 
 #endif // !__SURFMGR2_H

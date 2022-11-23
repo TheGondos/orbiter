@@ -50,6 +50,8 @@ private:
 	OGLTexture * tex[MAXRINGRES];
 	unsigned int rres, tres, ntex;
 	double irad, orad;
+
+	static inline Shader *meshShader;
 };
 
 #endif // !__RINGMGR_H

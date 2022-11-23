@@ -155,6 +155,7 @@ public:
 	 * \param enable flag for enabling/disabling specular reflections
 	 */
 	static void GlobalEnableSpecular (bool enable);
+	static void GlobalInit();
 
 protected:
 	bool CopyGroup (GROUPREC *tgt, const GROUPREC *src);
@@ -175,6 +176,7 @@ private:
 
 	// global mesh flags
 	static bool bEnableSpecular;   // enable specular reflection
+	static inline Shader *meshShader;
 };
 
 #endif // !__OGLMESH_H

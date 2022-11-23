@@ -147,6 +147,10 @@ private:
 	double tCheckLight;    // time for next lighting check
 	bool bLocalLight;      // modified local lighting parameters?
 	//D3DLIGHT7 localLight;  // current local lighting parameters
+
+	static inline Shader *exhaustShader;
+	static inline Shader *meshUnlitShader;
+	static inline Shader *shadowShader;
 };
 
 #endif // !__vVessel_H

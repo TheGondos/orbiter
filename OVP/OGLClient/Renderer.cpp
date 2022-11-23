@@ -1,10 +1,13 @@
 #include "glad.h"
 #include "Renderer.h"
 #include "Texture.h"
+#include "Shader.h"
 #include <vector>
 #include <cassert>
 #include <cstring>
 #include <stdio.h>
+#include <unordered_map>
+#include <memory>
 
 namespace Renderer
 {
@@ -37,9 +40,23 @@ std::vector<FBParamSave> lastFBParams;
 bool boolParams[LAST_BOOL_PARAM];
 GLint current_fb;
 GLint current_viewport[4];
+static std::unordered_map<std::string, std::unique_ptr<Shader>> g_shaderCache;
 
 bool current_depthmask;
 std::vector<bool> lastDepthmasks;
+GLint current_shader;
+
+void BindShader(Shader *shader) {
+    if(current_shader != shader->ShaderID) {
+        current_shader = shader->ShaderID;
+        glUseProgram(current_shader);
+    }
+}
+
+void UnbindShader() {
+//    glUseProgram(0);
+//    current_shader = 0;
+}
 
 void PushDepthMask(bool value) {
     lastDepthmasks.push_back(current_depthmask);
@@ -113,6 +130,18 @@ void GlobalInit(int w, int h) {
     current_viewport[1] = 0;
     current_viewport[2] = w;
     current_viewport[3] = h;
+    current_shader = 0;
+}
+
+void GlobalExit() {
+    g_shaderCache.clear();
+}
+
+Shader *GetShader(std::string name) {
+    auto f = g_shaderCache.find(name);
+    if(f != g_shaderCache.end()) return f->second.get();
+
+    return (g_shaderCache[name] = std::make_unique<Shader>(name + ".vs", name + ".fs")).get();
 }
 
 static GLenum bpToGL(enum BoolParam param) {

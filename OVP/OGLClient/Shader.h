@@ -6,6 +6,7 @@
 
 class  Shader
 {
+    using location = GLint;
 public:
     Shader(const std::string& vertexFile, const std::string& fragmentFile);
     ~Shader();
@@ -35,6 +36,5 @@ public:
     void UploadUniformMat3(const std::string& name, const glm::mat3& matrix);
     void UploadUniformMat4(const std::string& name, const glm::mat4& matrix);
 */
-private:
     GLuint ShaderID;
 };

@@ -86,6 +86,11 @@ vBase::~vBase ()
 	}
 }
 
+void vBase::GlobalInit()
+{
+	shadowShader = Renderer::GetShader("GroundShadow");
+}
+
 void vBase::SetupShadowMeshes ()
 {
 	nshmesh = 0;
@@ -299,9 +304,8 @@ void vBase::RenderGroundShadow (float depth)
 {
 	if (!nshmesh) return; // nothing to do
 
-	static Shader s("GroundShadow.vs","GroundShadow.fs");
-	s.Bind();
-	s.SetMat4("u_ViewProjection", *scn->GetCamera()->GetViewProjectionMatrix());
+	shadowShader->Bind();
+	shadowShader->SetMat4("u_ViewProjection", *scn->GetCamera()->GetViewProjectionMatrix());
 
 	static const double shadow_elev_limit = 0.07;
 	double d, csun, nr0;
@@ -360,7 +364,7 @@ void vBase::RenderGroundShadow (float depth)
 		}
 //	}
 
-	s.SetFloat("u_ShadowDepth", depth);
+	shadowShader->SetFloat("u_ShadowDepth", depth);
 
 	for (int i = 0; i < nshmesh; i++) {
 
@@ -370,7 +374,7 @@ void vBase::RenderGroundShadow (float depth)
 		mProjWorldShift[3][1] = mProjWorld[3][1] + (float)(nr0*(sdvs.x*mWorld[0][1] + sdvs.y*mWorld[1][1] + sdvs.z*mWorld[2][1]));
 		mProjWorldShift[3][2] = mProjWorld[3][2] + (float)(nr0*(sdvs.x*mWorld[0][2] + sdvs.y*mWorld[1][2] + sdvs.z*mWorld[2][2]));
 
-		s.SetMat4("u_Model", mProjWorldShift);
+		shadowShader->SetMat4("u_Model", mProjWorldShift);
 
 		shmesh[i].va->Bind();
 
@@ -379,7 +383,7 @@ void vBase::RenderGroundShadow (float depth)
 		shmesh[i].va->UnBind();
 	}
 
-	s.UnBind();
+	shadowShader->UnBind();
 }
 
 /*

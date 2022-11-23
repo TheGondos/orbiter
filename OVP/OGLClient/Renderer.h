@@ -1,6 +1,9 @@
 #pragma once
+#include <string>
 
 class OGLTexture;
+class Shader;
+
 namespace Renderer
 {
     enum BoolParam {
@@ -21,6 +24,7 @@ namespace Renderer
     inline void CheckError(const char *s) {}
 #endif
     void GlobalInit(int w, int h);
+    void GlobalExit();
     void PushBool(BoolParam param, bool value);
     void PopBool(int num = 1);
     void PushDepthMask(bool);
@@ -33,4 +37,7 @@ namespace Renderer
     void PushBlendFunc(GLenum a, GLenum b);
     void PopBlendFunc();
     void Sync();
+    Shader *GetShader(std::string name);
+    void BindShader(Shader *shader);
+    void UnbindShader();
 };

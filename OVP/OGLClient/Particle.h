@@ -130,6 +130,7 @@ protected:
 protected:
 	static OGLTexture *deftex; // default particle texture
 	static bool bShadows;               // render particle shadows
+	static inline Shader *particleShader;
 };
 
 class ExhaustStream: public OGLParticleStream {

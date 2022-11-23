@@ -56,6 +56,11 @@ void vVessel::GlobalInit ()
 {
 	if (defexhausttex) defexhausttex->Release();
 	g_client->GetTexMgr()->LoadTexture ("Exhaust.dds", &defexhausttex, 0);
+
+	exhaustShader   = Renderer::GetShader("Exhaust");
+	meshUnlitShader = Renderer::GetShader("MeshUnlit");
+	shadowShader    = Renderer::GetShader("GroundShadow");
+
 }
 
 void vVessel::GlobalExit ()
@@ -354,11 +359,10 @@ bool vVessel::Render (bool internalpass)
 
 			// render VC HUD
 			if (sHUD && hudspec->nmesh == i) {
-				static Shader s("MeshUnlit.vs", "MeshUnlit.fs");
-				s.Bind();
+				meshUnlitShader->Bind();
 				auto vp = scn->GetCamera()->GetViewProjectionMatrix();
-				s.SetMat4("u_ViewProjection", *vp);
-				s.SetMat4("u_Model", mWorldTrans);
+				meshUnlitShader->SetMat4("u_ViewProjection", *vp);
+				meshUnlitShader->SetMat4("u_Model", mWorldTrans);
 
 				glBindTexture(GL_TEXTURE_2D,  ((OGLTexture *)sHUD)->m_TexId);
 				Renderer::PushBool(Renderer::DEPTH_TEST, false);
@@ -445,12 +449,11 @@ bool vVessel::RenderExhaust ()
 
 		VBA->UnBind();
 	}
-	static Shader s("Exhaust.vs","Exhaust.fs");
 
-	s.Bind();
+	exhaustShader->Bind();
 	auto vp = scn->GetCamera()->GetViewProjectionMatrix();
-	s.SetMat4("u_ViewProjection", *vp);
-	s.SetMat4("u_Model", mWorld);
+	exhaustShader->SetMat4("u_ViewProjection", *vp);
+	exhaustShader->SetMat4("u_Model", mWorld);
 
 	Renderer::PushDepthMask(false);
 	for (i = 0; i < nexhaust; i++) {
@@ -503,7 +506,7 @@ bool vVessel::RenderExhaust ()
 		*/
 	}
 
-	s.UnBind();
+	exhaustShader->UnBind();
 
 	Renderer::PopDepthMask();
 
@@ -617,10 +620,9 @@ void vVessel::RenderGroundShadow (OBJHANDLE hPlanet, float depth)
 		}
 	//}
 
-	static Shader s("VesselShadow.vs","VesselShadow.fs");
-	s.Bind();
-	s.SetMat4("u_ViewProjection", *scn->GetCamera()->GetViewProjectionMatrix());
-	s.SetFloat("u_ShadowDepth", depth);
+	shadowShader->Bind();
+	shadowShader->SetMat4("u_ViewProjection", *scn->GetCamera()->GetViewProjectionMatrix());
+	shadowShader->SetFloat("u_ShadowDepth", depth);
 
 	// project all vessel meshes. This should be replaced by a dedicated shadow mesh
 	for (unsigned int i = 0; i < nmesh; i++) {
@@ -630,9 +632,9 @@ void vVessel::RenderGroundShadow (OBJHANDLE hPlanet, float depth)
 		if (meshlist[i].trans) {
 			// add mesh offset to transformation
 			mProjWorldShift = mProjWorld * *(meshlist[i].trans);
-			s.SetMat4("u_Model", mProjWorldShift);
+			shadowShader->SetMat4("u_Model", mProjWorldShift);
 		} else {
-			s.SetMat4("u_Model", mProjWorld);
+			shadowShader->SetMat4("u_Model", mProjWorld);
 		}
 
 		for (int j = 0; j < mesh->GroupCount(); j++) {
@@ -642,7 +644,7 @@ void vVessel::RenderGroundShadow (OBJHANDLE hPlanet, float depth)
 		}
 	}
 
-	s.UnBind();
+	shadowShader->UnBind();
 }
 
 void vVessel::SetExhaustVertices (const VECTOR3 &edir, const VECTOR3 &cdir, const VECTOR3 &ref,

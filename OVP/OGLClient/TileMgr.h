@@ -183,6 +183,7 @@ protected:
 	static int NLAT[9];
 	static int NLNG5[1], NLNG6[2], NLNG7[4], NLNG8[8], *NLNG[9];
 	static uint32_t vpX0, vpX1, vpY0, vpY1; // viewport boundaries
+	static inline Shader *tileShader;
 
 	struct RENDERPARAM {
 		glm::mat4 wmat;              // world matrix

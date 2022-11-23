@@ -49,6 +49,11 @@ SurfaceManager::SurfaceManager (const vPlanet *vplanet)
 
 // =======================================================================
 
+void SurfaceManager::GlobalInit()
+{
+	tileShader = Renderer::GetShader("Tile");
+}
+
 void SurfaceManager::SetMicrotexture (const char *fname)
 {
 	TileManager::SetMicrotexture (fname);
@@ -89,32 +94,30 @@ if (range.tumin != 0 || range.tumax != 1) {
 	exit(-1);
 }
 
-	static Shader s("Tile.vs","Tile.fs");
-
-	s.Bind();
+	tileShader->Bind();
 	OGLCamera *c = g_client->GetScene()->GetCamera();
 	auto *vpm = c->GetViewProjectionMatrix();
-	s.SetMat4("u_ViewProjection",*vpm);
-	s.SetMat4("u_Model",RenderParam.wtrans);
+	tileShader->SetMat4("u_ViewProjection",*vpm);
+	tileShader->SetMat4("u_Model",RenderParam.wtrans);
 	const VECTOR3 &sd = g_client->GetScene()->GetSunDir();
 	glm::vec3 sundir;
 	sundir.x = sd.x;
 	sundir.y = sd.y;
 	sundir.z = sd.z;
-	s.SetVec3("u_SunDir", sundir);
+	tileShader->SetVec3("u_SunDir", sundir);
 
 	auto *view = c->GetViewMatrix();
 
-	s.SetMat4("u_View", *view);
+	tileShader->SetMat4("u_View", *view);
 	if(vp->prm.bFog && g_client->mRenderContext.bFog) {
 		glm::vec4 fogColor;
 		fogColor.x = g_client->mRenderContext.fogColor.x;
 		fogColor.y = g_client->mRenderContext.fogColor.y;
 		fogColor.z = g_client->mRenderContext.fogColor.z;
-		s.SetVec4("u_FogColor", fogColor);
-		s.SetFloat("u_FogDensity", g_client->mRenderContext.fogDensity);
+		tileShader->SetVec4("u_FogColor", fogColor);
+		tileShader->SetFloat("u_FogDensity", g_client->mRenderContext.fogDensity);
 	} else {
-		s.SetFloat("u_FogDensity", 0);
+		tileShader->SetFloat("u_FogDensity", 0);
 	}
 
 	if(vp->prm.bAddBkg) {
@@ -123,10 +126,10 @@ if (range.tumin != 0 || range.tumax != 1) {
 		bgcol.x = v3bgcol.x;
 		bgcol.y = v3bgcol.y;
 		bgcol.z = v3bgcol.z;
-		s.SetVec3("u_bgcol", bgcol);
+		tileShader->SetVec3("u_bgcol", bgcol);
 	} else {
 		glm::vec3 bgcol(0,0,0);
-		s.SetVec3("u_bgcol", bgcol);
+		tileShader->SetVec3("u_bgcol", bgcol);
 	}
 
 
@@ -136,7 +139,7 @@ if (range.tumin != 0 || range.tumax != 1) {
 	glDrawElements(GL_TRIANGLES, mesh.ib->GetCount(), GL_UNSIGNED_SHORT, 0);
 	Renderer::CheckError("SurfaceManager::RenderTile glDrawElements");
 	mesh.va->UnBind();
-	s.UnBind();
+	tileShader->UnBind();
     glBindTexture(GL_TEXTURE_2D,  0);
 	Renderer::CheckError("SurfaceManager::RenderTile glBindTexture0");
 	//glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );

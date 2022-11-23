@@ -24,10 +24,12 @@ public:
 	SurfaceManager (const vPlanet *vplanet);
 	void SetMicrotexture (const char *fname) override;
 	void Render (glm::mat4 &wmat, double scale, int level, double viewap = 0.0, bool bfog = false) override;
+	static void GlobalInit();
 
 protected:
 	void RenderTile (int lvl, int hemisp, int ilat, int nlat, int ilng, int nlng, double sdist,
 		TILEDESC *tile, const TEXCRDRANGE &range, OGLTexture *tex, OGLTexture *ltex, uint32_t flag) override;
+	static inline Shader *tileShader;
 
 };
 

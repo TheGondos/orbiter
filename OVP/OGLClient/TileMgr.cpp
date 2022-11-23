@@ -19,7 +19,7 @@
 #include "Texture.h"
 #include <cstring>
 #include "OGLCamera.h"
-//#include "D3D7Config.h"
+#include "Renderer.h"
 
 using namespace oapi;
 
@@ -612,29 +612,28 @@ void TileManager::RenderSimple (int level, TILEDESC *tile)
 	extern OGLMaterial def_mat;
 	int idx, npatch = patchidx[level] - patchidx[level-1];
 
-	static Shader s("Tile.vs","Tile.fs");
-	s.Bind();
+	tileShader->Bind();
 	OGLCamera *c = g_client->GetScene()->GetCamera();
 	auto *vpm = c->GetViewProjectionMatrix();
-	s.SetMat4("u_ViewProjection",*vpm);
-	s.SetMat4("u_Model",RenderParam.wmat);
+	tileShader->SetMat4("u_ViewProjection",*vpm);
+	tileShader->SetMat4("u_Model",RenderParam.wmat);
 	const VECTOR3 &sd = g_client->GetScene()->GetSunDir();
 	glm::vec3 sundir;
 	sundir.x = sd.x;
 	sundir.y = sd.y;
 	sundir.z = sd.z;
 
-	s.SetVec3("u_SunDir", sundir);
+	tileShader->SetVec3("u_SunDir", sundir);
 	if(vp->prm.bAddBkg) {
 		VECTOR3 v3bgcol = g_client->GetScene()->SkyColour();
 		glm::vec3 bgcol;
 		bgcol.x = v3bgcol.x;
 		bgcol.y = v3bgcol.y;
 		bgcol.z = v3bgcol.z;
-		s.SetVec3("u_bgcol", bgcol);
+		tileShader->SetVec3("u_bgcol", bgcol);
 	} else {
 		glm::vec3 bgcol(0,0,0);
-		s.SetVec3("u_bgcol", bgcol);
+		tileShader->SetVec3("u_bgcol", bgcol);
 	}
 
 	if(vp->prm.bFog && g_client->mRenderContext.bFog) {
@@ -642,14 +641,14 @@ void TileManager::RenderSimple (int level, TILEDESC *tile)
 		fogColor.x = g_client->mRenderContext.fogColor.x;
 		fogColor.y = g_client->mRenderContext.fogColor.y;
 		fogColor.z = g_client->mRenderContext.fogColor.z;
-		s.SetVec4("u_FogColor", fogColor);
-		s.SetFloat("u_FogDensity", g_client->mRenderContext.fogDensity);
+		tileShader->SetVec4("u_FogColor", fogColor);
+		tileShader->SetFloat("u_FogDensity", g_client->mRenderContext.fogDensity);
 	} else {
-		s.SetFloat("u_FogDensity", 0);
+		tileShader->SetFloat("u_FogDensity", 0);
 	}
 	auto *view = c->GetViewMatrix();
 
-	s.SetMat4("u_View", *view);
+	tileShader->SetMat4("u_View", *view);
 
 
 	for (idx = 0; idx < npatch; idx++) {
@@ -700,7 +699,7 @@ void TileManager::RenderSimple (int level, TILEDESC *tile)
 		}
 		*/
 	}
-	s.UnBind();
+	tileShader->UnBind();
 }
 
 // =======================================================================
@@ -824,6 +823,8 @@ bool TileManager::SpecularColour (glm::vec4 *col)
 
 void TileManager::GlobalInit ()
 {
+	tileShader = Renderer::GetShader("Tile");
+
 	bGlobalSpecular = *(bool*)g_client->GetConfigParam (CFGPRM_SURFACEREFLECT);
 	bGlobalRipple   = bGlobalSpecular && *(bool*)g_client->GetConfigParam (CFGPRM_SURFACERIPPLE);
 	bGlobalLights   = *(bool*)g_client->GetConfigParam (CFGPRM_SURFACELIGHTS);

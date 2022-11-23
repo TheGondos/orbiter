@@ -34,6 +34,7 @@ public:
 	bool RenderSurface ();
 	bool RenderStructures ();
 	void RenderGroundShadow (float depth);
+	static void GlobalInit();
 
 private:
 	void SetupShadowMeshes ();
@@ -70,6 +71,7 @@ private:
 		double ecorr;
 	} *shmesh;
 	int nshmesh;
+	static inline Shader *shadowShader;
 };
 
 #endif // !__vBase_H

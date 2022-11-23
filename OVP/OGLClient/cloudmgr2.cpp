@@ -16,6 +16,7 @@
 #include "Texture.h"
 #include "OGLCamera.h"
 #include "Scene.h"
+#include "Renderer.h"
 
 // =======================================================================
 // =======================================================================
@@ -34,6 +35,11 @@ CloudTile::CloudTile (TileManager2Base *_mgr, int _lvl, int _ilat, int _ilng)
 
 CloudTile::~CloudTile ()
 {
+}
+
+void CloudTile::GlobalInit()
+{
+	cloudShader = Renderer::GetShader("Cloud");
 }
 
 // -----------------------------------------------------------------------
@@ -99,27 +105,25 @@ void CloudTile::Render ()
 //	TileManager2<CloudTile>::Dev()->DrawIndexedPrimitiveVB (D3DPT_TRIANGLELIST, vb, 0,
 //		mesh->nv, mesh->idx, mesh->ni, 0);
 
-	static Shader s("Cloud.vs","Cloud.fs");
-	
-	s.Bind();
+	cloudShader->Bind();
 	OGLCamera *c = g_client->GetScene()->GetCamera();
 	auto *vp = c->GetViewProjectionMatrix();
-	s.SetMat4("u_ViewProjection",*vp);
-	s.SetMat4("u_Model",cmgr->wtrans);
+	cloudShader->SetMat4("u_ViewProjection",*vp);
+	cloudShader->SetMat4("u_Model",cmgr->wtrans);
 	const VECTOR3 &sd = g_client->GetScene()->GetSunDir();
 	glm::vec3 sundir;
 	sundir.x = sd.x;
 	sundir.y = sd.y;
 	sundir.z = sd.z;
-	s.SetVec3("u_SunDir", sundir);
-	s.SetFloat("u_ShadowPass", bCloudShadowPass?1.0:0.0);
+	cloudShader->SetVec3("u_SunDir", sundir);
+	cloudShader->SetFloat("u_ShadowPass", bCloudShadowPass?1.0:0.0);
 	
 	glBindTexture(GL_TEXTURE_2D,  tex->m_TexId);
 
 	mesh->VAO->Bind();
 	glDrawElements(GL_TRIANGLES, mesh->IBO->GetCount(), GL_UNSIGNED_SHORT, 0);
 	mesh->VAO->UnBind();
-	s.UnBind();
+	cloudShader->UnBind();
     glBindTexture(GL_TEXTURE_2D,  0);
 }
 

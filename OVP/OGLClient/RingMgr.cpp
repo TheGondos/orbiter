@@ -45,6 +45,7 @@ RingManager::~RingManager ()
 
 void RingManager::GlobalInit ()
 {
+	meshShader = Renderer::GetShader("Mesh");
 }
 
 void RingManager::SetMeshRes (unsigned int res)
@@ -113,8 +114,7 @@ bool RingManager::Render (OGLCamera *c, glm::mat4 &mWorld, bool front)
 		{0.5,0.5,0.5,1},0
 	};
 
-	static Shader s("Mesh.vs","Mesh.fs");
-	s.Bind();
+	meshShader->Bind();
 
 	const VECTOR3 &sd = g_client->GetScene()->GetSunDir();
 	glm::vec3 sundir;
@@ -123,18 +123,18 @@ bool RingManager::Render (OGLCamera *c, glm::mat4 &mWorld, bool front)
 	sundir.z = sd.z;
 
 	auto *vp = c->GetViewProjectionMatrix();
-	s.SetMat4("u_ViewProjection",*vp);
-	s.SetMat4("u_Model",World);
-	s.SetVec3("u_SunDir", sundir);
-    s.SetFloat("u_Textured", 1.0);
-    s.SetFloat("u_MatAlpha", 1.0);
-	s.SetFloat("u_ModulateAlpha", 0.0);
+	meshShader->SetMat4("u_ViewProjection",*vp);
+	meshShader->SetMat4("u_Model",World);
+	meshShader->SetVec3("u_SunDir", sundir);
+    meshShader->SetFloat("u_Textured", 1.0);
+    meshShader->SetFloat("u_MatAlpha", 1.0);
+	meshShader->SetFloat("u_ModulateAlpha", 0.0);
 
-	s.SetVec4("u_Material.ambient", defmat.ambient);
-	s.SetVec4("u_Material.diffuse", defmat.diffuse);
-	s.SetVec4("u_Material.specular", defmat.specular);
-	s.SetVec4("u_Material.emissive", defmat.emissive);
-	s.SetFloat("u_Material.specular_power", defmat.specular_power);
+	meshShader->SetVec4("u_Material.ambient", defmat.ambient);
+	meshShader->SetVec4("u_Material.diffuse", defmat.diffuse);
+	meshShader->SetVec4("u_Material.specular", defmat.specular);
+	meshShader->SetVec4("u_Material.emissive", defmat.emissive);
+	meshShader->SetFloat("u_Material.specular_power", defmat.specular_power);
 
 	glBindTexture(GL_TEXTURE_2D, tex[tres]->m_TexId);
     
@@ -144,7 +144,7 @@ bool RingManager::Render (OGLCamera *c, glm::mat4 &mWorld, bool front)
 
 	Renderer::PopBool();
 
-	s.UnBind();
+	meshShader->UnBind();
 	return true;
 }
 

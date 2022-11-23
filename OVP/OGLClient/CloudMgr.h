@@ -24,6 +24,7 @@ public:
 	CloudManager (const vPlanet *vplanet);
 
 	void Render (glm::mat4 &wmat, double scale, int level, double viewap = 0.0);
+	static void GlobalInit();
 
 protected:
 	void RenderTile (int lvl, int hemisp, int ilat, int nlat, int ilng, int nlng, double sdist,
@@ -31,6 +32,7 @@ protected:
 
 private:
 	int cloudtexidx;
+	static inline Shader *tileShader;
 };
 
 #endif // !__CLOUDMGR_H

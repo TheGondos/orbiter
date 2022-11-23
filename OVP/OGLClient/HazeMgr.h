@@ -53,6 +53,7 @@ private:
 	static std::unique_ptr<VertexBuffer> VBO;
 	static std::unique_ptr<IndexBuffer> IBO;
 	static std::unique_ptr<VertexArray> VBA;
+	static inline Shader *hazeShader;
 };
 
 #endif // !__HAZEMGR_H

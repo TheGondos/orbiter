@@ -33,9 +33,9 @@ const float sphere_r = 1e4f; // the actual render distance for the celestial sph
 
 CelestialSphere::CelestialSphere ()
 {
-	m_constellationsShader = std::make_unique<Shader>("Constellations.vs","Constellations.fs");
-	m_starsShader = std::make_unique<Shader>("Stars.vs","Stars.fs");
-	m_eclShader = std::make_unique<Shader>("Ecliptic.vs","Ecliptic.fs");
+	m_constellationsShader = Renderer::GetShader("Constellations");
+	m_starsShader = Renderer::GetShader("Stars");
+	m_eclShader = Renderer::GetShader("Ecliptic");
 
 	LoadStars ();
 	LoadConstellationLines ();

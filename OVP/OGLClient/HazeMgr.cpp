@@ -106,6 +106,8 @@ void HazeManager::GlobalInit ()
         Renderer::CheckError("glEnableVertexAttribArray2");
 
 	VBA->UnBind();
+
+	hazeShader = Renderer::GetShader("Haze");
 }
 
 void HazeManager::Render (OGLCamera *c, glm::mat4 &wmat, bool dual)
@@ -218,11 +220,10 @@ void HazeManager::Render (OGLCamera *c, glm::mat4 &wmat, bool dual)
 	}
 	VBO->UnMap();
 
-static Shader s("Haze.vs","Haze.fs");
-	s.Bind();
+	hazeShader->Bind();
 	auto *vp = c->GetViewProjectionMatrix();
-	s.SetMat4("u_ViewProjection",*vp);
-	s.SetMat4("u_Model",transm);
+	hazeShader->SetMat4("u_ViewProjection",*vp);
+	hazeShader->SetMat4("u_Model",transm);
 	VBA->Bind();
 	glDrawElements(GL_TRIANGLE_STRIP, IBO->GetCount(), GL_UNSIGNED_SHORT, 0);
 	VBA->UnBind();
@@ -254,7 +255,7 @@ static Shader s("Haze.vs","Haze.fs");
 		VBA->UnBind();
 	}
 
-	s.UnBind();
+	hazeShader->UnBind();
 
 //	dev->SetTextureStageState (0, D3DTSS_ADDRESS, D3DTADDRESS_WRAP);
 //	dev->SetRenderState (D3DRENDERSTATE_LIGHTING, TRUE);

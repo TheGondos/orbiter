@@ -28,6 +28,8 @@ public:
 	inline void SetNode (QuadTreeNode<CloudTile> *_node) { node = _node; }
 	// Register the tile to a quad tree node
 
+	static void GlobalInit();
+
 protected:
 	virtual Tile *getParent() { return (node && node->Parent()) ? node->Parent()->Entry() : NULL; }
 	// Return pointer to parent tile, if exists
@@ -37,6 +39,8 @@ protected:
 
 	TileManager2<CloudTile> *cmgr;	// cloud tile manager interface
 	QuadTreeNode<CloudTile> *node;	// my node in the quad tree, if I'm part of a tree
+
+	static inline Shader *cloudShader;
 };
 
 #endif // !__CLOUDMGR2_H

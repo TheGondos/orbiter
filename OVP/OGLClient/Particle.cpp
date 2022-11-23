@@ -85,6 +85,8 @@ OGLParticleStream::~OGLParticleStream()
 
 void OGLParticleStream::GlobalInit ()
 {
+	particleShader = Renderer::GetShader("Particle");
+
 	g_client->GetTexMgr()->LoadTexture ("Contrail1.dds", &deftex, 0);
 	bShadows = *(bool*)g_client->GetConfigParam (CFGPRM_VESSELSHADOWS);
 
@@ -565,14 +567,13 @@ void OGLParticleStream::RenderDiffuse (OGLCamera *c)
 	//dev->SetTextureStageState (0, D3DTSS_ALPHAOP, D3DTOP_MODULATE);
 	//dev->SetTextureStageState (0, D3DTSS_ALPHAARG2, D3DTA_DIFFUSE);
 	Renderer::PushDepthMask(false);
-	static Shader s("Particle.vs","Particle.fs");
-	s.Bind();
+	particleShader->Bind();
 	auto vp = c->GetViewProjectionMatrix();
-	s.SetMat4("u_ViewProjection", *vp);
-	s.SetMat4("u_Model", mModel);
+	particleShader->SetMat4("u_ViewProjection", *vp);
+	particleShader->SetMat4("u_Model", mModel);
 	glm::vec4 color = {0.2f,0.2f,0.2f,1};
 	SetMaterial (color);
-	s.SetVec4("u_Color", color);
+	particleShader->SetVec4("u_Color", color);
 
 	CalcNormals (plast->pos - cam_ref, dvtx);
 	int cnt=0;
@@ -600,7 +601,7 @@ void OGLParticleStream::RenderDiffuse (OGLCamera *c)
 	glDrawElements(GL_TRIANGLES, cnt*6, GL_UNSIGNED_SHORT, 0);
 
 	dVBA->UnBind();
-	s.UnBind();
+	particleShader->UnBind();
 
 	//dev->SetTextureStageState (0, D3DTSS_ALPHAOP, D3DTOP_SELECTARG1);
 	//dev->SetTextureStageState (0, D3DTSS_ALPHAARG2, D3DTA_CURRENT);
@@ -619,14 +620,13 @@ void OGLParticleStream::RenderEmissive (OGLCamera *c)
     //glEnable(GL_BLEND);
     //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	static Shader s("Particle.vs","Particle.fs");
-	s.Bind();
+	particleShader->Bind();
 	auto vp = c->GetViewProjectionMatrix();
-	s.SetMat4("u_ViewProjection", *vp);
-	s.SetMat4("u_Model", mModel);
+	particleShader->SetMat4("u_ViewProjection", *vp);
+	particleShader->SetMat4("u_Model", mModel);
 	glm::vec4 color;
 	SetMaterial (color);
-	s.SetVec4("u_Color", color);
+	particleShader->SetVec4("u_Color", color);
 	int cnt=0;
 	for (p = pfirst, vtx = evtx; p; p = p->next) {
 		cnt++;
@@ -649,7 +649,7 @@ void OGLParticleStream::RenderEmissive (OGLCamera *c)
 	glDrawElements(GL_TRIANGLES, cnt*6, GL_UNSIGNED_SHORT, 0);
 
 	eVBA->UnBind();
-	s.UnBind();
+	particleShader->UnBind();
 	Renderer::PopDepthMask();
 	//glDisable(GL_DEPTH_TEST);
 	//glBindTexture(GL_TEXTURE_2D, 0);

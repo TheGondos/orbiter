@@ -486,6 +486,10 @@ double SurfTile::GetMeanElevation (const int16_t *elev) const
 
 // -----------------------------------------------------------------------
 
+void SurfTile::GlobalInit() {
+	tileShader = Renderer::GetShader("Tile");
+}
+
 void SurfTile::Render ()
 {
 	//bool render_lights = mgr->Cprm().bLights;
@@ -522,33 +526,31 @@ void SurfTile::Render ()
 		mesh->nv, mesh->idx, mesh->ni, 0);
 */
 
-	static Shader s("Tile.vs","Tile.fs");
-	
 	//glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
-	s.Bind();
+	tileShader->Bind();
 	OGLCamera *c = g_client->GetScene()->GetCamera();
 	auto *vp = c->GetViewProjectionMatrix();
-	s.SetMat4("u_ViewProjection",*vp);
-	s.SetMat4("u_Model",smgr->wtrans);
+	tileShader->SetMat4("u_ViewProjection",*vp);
+	tileShader->SetMat4("u_Model",smgr->wtrans);
 	const VECTOR3 &sd = g_client->GetScene()->GetSunDir();
 	glm::vec3 sundir;
 	sundir.x = sd.x;
 	sundir.y = sd.y;
 	sundir.z = sd.z;
-	s.SetVec3("u_SunDir", sundir);
+	tileShader->SetVec3("u_SunDir", sundir);
 
 	auto *view = c->GetViewMatrix();
 
-	s.SetMat4("u_View", *view);
+	tileShader->SetMat4("u_View", *view);
 	if(mgr->prm.fog && g_client->mRenderContext.bFog) {
 		glm::vec4 fogColor;
 		fogColor.x = g_client->mRenderContext.fogColor.x;
 		fogColor.y = g_client->mRenderContext.fogColor.y;
 		fogColor.z = g_client->mRenderContext.fogColor.z;
-		s.SetVec4("u_FogColor", fogColor);
-		s.SetFloat("u_FogDensity", g_client->mRenderContext.fogDensity);
+		tileShader->SetVec4("u_FogColor", fogColor);
+		tileShader->SetFloat("u_FogDensity", g_client->mRenderContext.fogDensity);
 	} else {
-		s.SetFloat("u_FogDensity", 0);
+		tileShader->SetFloat("u_FogDensity", 0);
 	}
 
 	if(mgr->prm.rprm->bAddBkg) {
@@ -557,10 +559,10 @@ void SurfTile::Render ()
 		bgcol.x = v3bgcol.x;
 		bgcol.y = v3bgcol.y;
 		bgcol.z = v3bgcol.z;
-		s.SetVec3("u_bgcol", bgcol);
+		tileShader->SetVec3("u_bgcol", bgcol);
 	} else {
 		glm::vec3 bgcol(0,0,0);
-		s.SetVec3("u_bgcol", bgcol);
+		tileShader->SetVec3("u_bgcol", bgcol);
 	}
 
     glBindTexture(GL_TEXTURE_2D,  tex->m_TexId);
@@ -570,7 +572,7 @@ void SurfTile::Render ()
 	glDrawElements(GL_TRIANGLES, mesh->IBO->GetCount(), GL_UNSIGNED_SHORT, 0);
 	Renderer::CheckError("SurfTile::Render glDrawElements");
 	mesh->VAO->UnBind();
-	s.UnBind();
+	tileShader->UnBind();
     glBindTexture(GL_TEXTURE_2D,  0);
 	Renderer::CheckError("SurfTile::Render glBindTexture0");
 	//glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );

@@ -134,6 +134,11 @@ OGLMesh::~OGLMesh ()
 	if (nMtrl) delete []Mtrl;
 }
 
+void OGLMesh::GlobalInit()
+{
+	meshShader = Renderer::GetShader("Mesh");
+}
+
 void OGLMesh::GlobalEnableSpecular (bool enable)
 {
 	bEnableSpecular = enable;
@@ -448,19 +453,17 @@ void OGLMesh::Render (OGLCamera *c, glm::fmat4 &model)
 	sundir.y = sd.y;
 	sundir.z = sd.z;
 
-    static Shader mShader("Mesh.vs", "Mesh.fs");
-
-    mShader.Bind();
+    meshShader->Bind();
 
 	auto vp = c->GetViewProjectionMatrix();
-	mShader.SetMat4("u_ViewProjection", *vp);
-	mShader.SetMat4("u_Model", model);
-	mShader.SetVec3("u_SunDir", sundir);
+	meshShader->SetMat4("u_ViewProjection", *vp);
+	meshShader->SetMat4("u_Model", model);
+	meshShader->SetVec3("u_SunDir", sundir);
 
 	if (bModulateMatAlpha) {
-		mShader.SetFloat("u_ModulateAlpha", 1.0);
+		meshShader->SetFloat("u_ModulateAlpha", 1.0);
 	} else {
-		mShader.SetFloat("u_ModulateAlpha", 0.0);
+		meshShader->SetFloat("u_ModulateAlpha", 0.0);
 	}
 
 	int g, j, n, mi, pmi, ti, pti, uflag, wrap, zb = 0, owrap = 0;
@@ -498,12 +501,12 @@ void OGLMesh::Render (OGLCamera *c, glm::fmat4 &model)
 			pmi = mi;
 		} 
 
-		mShader.SetVec4("u_Material.ambient", mat->ambient);
-		mShader.SetVec4("u_Material.diffuse", mat->diffuse);
-		mShader.SetVec4("u_Material.specular", mat->specular);
-		mShader.SetVec4("u_Material.emissive", mat->emissive);
-		mShader.SetFloat("u_Material.specular_power", mat->specular_power);
-		mShader.SetFloat("u_MatAlpha", mat->diffuse.a);
+		meshShader->SetVec4("u_Material.ambient", mat->ambient);
+		meshShader->SetVec4("u_Material.diffuse", mat->diffuse);
+		meshShader->SetVec4("u_Material.specular", mat->specular);
+		meshShader->SetVec4("u_Material.emissive", mat->emissive);
+		meshShader->SetFloat("u_Material.specular_power", mat->specular_power);
+		meshShader->SetFloat("u_MatAlpha", mat->diffuse.a);
 
 		// set primary texture
 		if ((ti = Grp[g]->TexIdx) == SPEC_INHERIT && skipped) // find last valid texture
@@ -516,12 +519,12 @@ void OGLMesh::Render (OGLCamera *c, glm::fmat4 &model)
 			} else tx = nullptr;
             if(tx == nullptr) {
                 glBindTexture(GL_TEXTURE_2D,  0);
-                mShader.SetFloat("u_Textured", 0.0);
+                meshShader->SetFloat("u_Textured", 0.0);
             } else {
                 glBindTexture(GL_TEXTURE_2D,  tx->m_TexId);
 				Renderer::CheckError("glBindTexture");
-                mShader.SetFloat("u_Textured", 1.0);
-                mShader.SetFloat("u_MatAlpha", 1.0);
+                meshShader->SetFloat("u_Textured", 1.0);
+                meshShader->SetFloat("u_MatAlpha", 1.0);
             }
 			pti = ti;
 		}
@@ -603,6 +606,8 @@ void OGLMesh::Render (OGLCamera *c, glm::fmat4 &model)
     Renderer::PopBlendFunc();
 	Renderer::PopFrontFace();
 	Renderer::PopBool(2);
+
+	meshShader->UnBind();
 }
 
 void OGLMesh::TransformGroup (int n, const glm::fmat4 *mm)
