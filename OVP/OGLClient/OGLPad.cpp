@@ -197,16 +197,24 @@ void OGLPad::SetBackgroundMode (BkgMode mode)
 
 int OGLPad::GetCharSize ()
 {
-	int height;
+	//int height;
 	if (cfont) {
 		if(nvgFindFont(s_nvg, cfont->m_facename.c_str()) == -1) nvgCreateFont(s_nvg, cfont->m_facename.c_str(), cfont->m_fontfile.c_str(), cfont->antialiased);
 		nvgFontSize(s_nvg, cfont->m_Height);
 		nvgFontFace(s_nvg, cfont->m_facename.c_str());
+
+		float ascender, descender, lineh, acw;
+		nvgTextMetrics(s_nvg, &ascender, &descender, &lineh, &acw);
+//		uint32_t height = ascender - descender;
+		uint32_t height = lineh - (lineh - ascender + descender)/2.0;
+
+
 		nvgTextAlign(s_nvg, NVGalign::NVG_ALIGN_TOP|NVGalign::NVG_ALIGN_LEFT);
 		float bounds[4];
-		nvgTextBounds(s_nvg, 0, 0, "A", nullptr, bounds);
-		height = bounds[3];
-		return ((uint32_t)(bounds[3]-bounds[1]) + ((uint32_t)(bounds[2]-bounds[0])<<16));
+		nvgTextBounds(s_nvg, 0, 0, "x", nullptr, bounds);
+		//height = bounds[3];
+		return ((uint32_t)(height) + ((uint32_t)(acw)<<16));
+//		return ((uint32_t)(bounds[3]-bounds[1]) + ((uint32_t)(bounds[2]-bounds[0])<<16));
 	} else {
 		return (10<<16) + 7;
 	}
