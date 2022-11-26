@@ -151,12 +151,17 @@ void DlgLaunchpad::Show() {
             &DlgLaunchpad::DrawVideo, &DlgLaunchpad::DrawJoystick, &DlgLaunchpad::DrawExtra, &DlgLaunchpad::DrawAbout
         };
 
-        ImGui::SetNextWindowPos(ImVec2(170, 100), ImGuiCond_FirstUseEver);
-        ImGui::SetNextWindowSize(ImVec2(870, 540), ImGuiCond_FirstUseEver);
-		ImGui::SetNextWindowViewport(ImGui::GetMainViewport()->ID);
-        ImGui::Begin("Launchpad", &show, ImGuiWindowFlags_NoCollapse);
-		if(!show)
-			g_pOrbiter->m_pGUIManager->CloseWindow();
+        auto *viewport = ImGui::GetMainViewport();
+        ImVec2 s = viewport->Size;
+        ImVec2 size{s.x * 0.8f, s.y * 0.8f};
+        ImGui::SetNextWindowSize(size);
+        ImGui::SetNextWindowViewport(viewport->ID);
+        ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+        ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.55f));
+
+        ImGui::Begin("Launchpad", &show, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
+        if(!show)
+            g_pOrbiter->m_pGUIManager->CloseWindow();
 
         ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_None;
         if (ImGui::BeginTabBar("MyTabBar", tab_bar_flags))
