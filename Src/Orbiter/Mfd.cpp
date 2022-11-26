@@ -722,6 +722,7 @@ bool Instrument::Update (double upDTscale)
 	bool tstep = (td.SimT1 >= updT && td.SysT1 >= updSysT);
 	if (tstep && !showmenu && modepage < 0) {
 		dT = td.SimT1 - pT; // actual update interval
+		if(dT == 0.0) return false;
 		pT = td.SimT1;
 		blink = !blink;
 		ClearSurface ();
