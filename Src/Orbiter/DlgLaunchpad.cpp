@@ -101,7 +101,10 @@ void DlgLaunchpad::DrawVideo() {
 
 void DlgLaunchpad::DrawExtra() {
     ImGuiWindowFlags window_flags = ImGuiWindowFlags_HorizontalScrollbar;
-    ImGui::BeginChild("ChildL", ImVec2(ImGui::GetContentRegionAvail().x * 0.3f, ImGui::GetContentRegionAvail().y), true, window_flags);
+    static float sz1 = 0.0;
+    float sz2;
+    ImGui::Splitter(true, 0.3f, 8.0f, &sz1, &sz2, 8, 8, ImGui::GetContentRegionAvail().y);
+    ImGui::BeginChild("ChildL", ImVec2(sz1, ImGui::GetContentRegionAvail().y), true, window_flags);
 
 	LaunchpadItem *lpi = nullptr;
 
@@ -128,7 +131,7 @@ void DlgLaunchpad::DrawExtra() {
 	}
     ImGui::EndChild();
     ImGui::SameLine();
-    ImGui::BeginChild("ChildR", ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y), true, window_flags);
+    ImGui::BeginChild("ChildR", ImVec2(sz2, ImGui::GetContentRegionAvail().y), true, window_flags);
 	if(lpi) {
 		lpi->Draw();
 		if(ImGui::Button("Save"))
@@ -181,11 +184,14 @@ void DlgLaunchpad::Show() {
 void DlgLaunchpad::DrawScenarios() {
     auto pCfg = g_pOrbiter->Cfg();
     ImGuiWindowFlags window_flags = ImGuiWindowFlags_HorizontalScrollbar;
-    ImGui::BeginChild("ChildL", ImVec2(ImGui::GetContentRegionAvail().x * 0.3f, ImGui::GetContentRegionAvail().y), true, window_flags);
+    static float sz1 = 0.0;
+    float sz2;
+    ImGui::Splitter(true, 0.3f, 8.0f, &sz1, &sz2, 8, 8, ImGui::GetContentRegionAvail().y);
+    ImGui::BeginChild("ChildL", ImVec2(sz1, ImGui::GetContentRegionAvail().y), true, window_flags);
     DrawDir(pCfg->CfgDirPrm.ScnDir);
     ImGui::EndChild();
     ImGui::SameLine();
-    ImGui::BeginChild("ChildR", ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y), true, window_flags);
+    ImGui::BeginChild("ChildR", ImVec2(sz2, ImGui::GetContentRegionAvail().y), true, window_flags);
     if(!m_SelectedScenario.empty()) {
         if(ImGui::Button(ICON_FA_PLAY_CIRCLE" Launch scenario")) {
             char cbuf[256];

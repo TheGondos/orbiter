@@ -870,10 +870,13 @@ void DlgInfo::Show() {
 	if(show) {
         ImGui::SetNextWindowPos(ImVec2(880, 145), ImGuiCond_FirstUseEver);
         ImGui::SetNextWindowSize(ImVec2(340, 290), ImGuiCond_FirstUseEver);
-		ImGui::Begin(name.c_str(), &show);
+        ImGui::Begin(name.c_str(), &show);
+        static float sz1 = 0.0;
+        float sz2;
+        ImGui::Splitter(true, 0.3f, 8.0f, &sz1, &sz2, 8, 8, ImGui::GetContentRegionAvail().y);
 
         ImGuiWindowFlags window_flags = ImGuiWindowFlags_HorizontalScrollbar;
-        ImGui::BeginChild("ChildL", ImVec2(ImGui::GetContentRegionAvail().x * 0.3f, ImGui::GetContentRegionAvail().y), true, window_flags);
+        ImGui::BeginChild("ChildL", ImVec2(sz1, ImGui::GetContentRegionAvail().y), true, window_flags);
         {
             ImVec2 button_sz(ImVec2(ImGui::GetContentRegionAvail().x/2, 20));
 
@@ -884,7 +887,7 @@ void DlgInfo::Show() {
         }
         ImGui::EndChild();
         ImGui::SameLine();
-        ImGui::BeginChild("ChildR", ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y), true, window_flags);
+        ImGui::BeginChild("ChildR", ImVec2(sz2, ImGui::GetContentRegionAvail().y), true, window_flags);
             ImVec2 button_sz(ImVec2(ImGui::GetContentRegionAvail().x, 20));
             ImGui::Text("Object: %s", m_SelectedTarget.c_str());
 

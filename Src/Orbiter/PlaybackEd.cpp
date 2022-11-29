@@ -35,8 +35,11 @@ void DlgPlaybackEditor::Show() {
 		ImGuiWindowFlags window_flags = ImGuiWindowFlags_HorizontalScrollbar;
 
 		ImGui::Text("Playback Editor - Simulation time : %f", td.SimT0);
+		static float sz1 = 0.0;
+		float sz2;
+		ImGui::Splitter(true, 0.5f, 8.0f, &sz1, &sz2, 8, 8, ImGui::GetContentRegionAvail().y);
 
-		ImGui::BeginChild("ChildL", ImVec2(ImGui::GetContentRegionAvail().x * 0.5f, ImGui::GetContentRegionAvail().y), true, window_flags);
+		ImGui::BeginChild("ChildL", ImVec2(sz1, ImGui::GetContentRegionAvail().y), true, window_flags);
 
         static ImGuiTableFlags flags = ImGuiTableFlags_ScrollY | ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV | ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable;
 
@@ -132,8 +135,8 @@ void DlgPlaybackEditor::Show() {
 
 		ImGui::EndChild();
 		ImGui::SameLine();
-		ImGui::BeginChild("ChildR", ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y), false, window_flags);
-		ImGui::BeginChild("ChildRT", ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y - 30), true, window_flags);
+		ImGui::BeginChild("ChildR", ImVec2(sz2, ImGui::GetContentRegionAvail().y), false, window_flags);
+		ImGui::BeginChild("ChildRT", ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y - 35), true, window_flags);
 		if(m_SelectedEvent) {
 			m_SelectedEvent->DrawEdit();
 			if(ImGui::Button("Apply")) {

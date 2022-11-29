@@ -48,7 +48,11 @@ void DlgFocus::Show() {
 void DlgFocus::DrawAll() {
     ImGuiWindowFlags window_flags = ImGuiWindowFlags_HorizontalScrollbar;
     ImGui::Text("Spacecraft : %s", m_SelectedShip.c_str());
-    ImGui::BeginChild("ChildL", ImVec2(ImGui::GetContentRegionAvail().x * 0.7f, ImGui::GetContentRegionAvail().y), true, window_flags);
+    static float sz1 = 0.0;
+    float sz2;
+    ImGui::Splitter(true, 0.7f, 8.0f, &sz1, &sz2, 8, 8, ImGui::GetContentRegionAvail().y);
+
+    ImGui::BeginChild("ChildL", ImVec2(sz1, ImGui::GetContentRegionAvail().y), true, window_flags);
 
     for (int i = 0; i < g_psys->nVessel(); i++) {
         Vessel *vessel = g_psys->GetVessel(i);
@@ -66,7 +70,7 @@ void DlgFocus::DrawAll() {
 
     ImGui::EndChild();
     ImGui::SameLine();
-    ImGui::BeginChild("ChildR", ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y), false, window_flags);
+    ImGui::BeginChild("ChildR", ImVec2(sz2, ImGui::GetContentRegionAvail().y), false, window_flags);
     ImVec2 button_sz(ImVec2(ImGui::GetContentRegionAvail().x, 20));
     if(ImGui::Button("Select", button_sz)) {
         Vessel *vessel = g_psys->GetVessel (m_SelectedShip.c_str(), true);
@@ -84,7 +88,11 @@ void DlgFocus::DrawAll() {
 void DlgFocus::DrawNearby() {
     ImGuiWindowFlags window_flags = ImGuiWindowFlags_HorizontalScrollbar;
     ImGui::Text("Spacecraft : %s", m_SelectedShip.c_str());
-    ImGui::BeginChild("ChildL", ImVec2(ImGui::GetContentRegionAvail().x * 0.7f, ImGui::GetContentRegionAvail().y), true, window_flags);
+    static float sz1 = 0.0;
+    float sz2;
+    ImGui::Splitter(true, 0.7f, 8.0f, &sz1, &sz2, 8, 8, ImGui::GetContentRegionAvail().y);
+
+    ImGui::BeginChild("ChildL", ImVec2(sz1, ImGui::GetContentRegionAvail().y), true, window_flags);
 
     const Vector &campos = g_camera->GPos();
     for (int i = 0; i < g_psys->nVessel(); i++) {
@@ -108,7 +116,7 @@ void DlgFocus::DrawNearby() {
 
     ImGui::EndChild();
     ImGui::SameLine();
-    ImGui::BeginChild("ChildR", ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y), false, window_flags);
+    ImGui::BeginChild("ChildR", ImVec2(sz2, ImGui::GetContentRegionAvail().y), false, window_flags);
     ImVec2 button_sz(ImVec2(ImGui::GetContentRegionAvail().x, 20));
     if(ImGui::Button("Select", button_sz)) {
         Vessel *vessel = g_psys->GetVessel (m_SelectedShip.c_str(), true);
@@ -140,7 +148,10 @@ void DlgFocus::DrawLocation() {
 
     ImGuiWindowFlags window_flags = ImGuiWindowFlags_HorizontalScrollbar;
     ImGui::Text("Spacecraft : %s", m_SelectedShip.c_str());
-    ImGui::BeginChild("ChildL", ImVec2(ImGui::GetContentRegionAvail().x * 0.7f, ImGui::GetContentRegionAvail().y), true, window_flags);
+    static float sz1 = 0.0;
+    float sz2;
+    ImGui::Splitter(true, 0.7f, 8.0f, &sz1, &sz2, 8, 8, ImGui::GetContentRegionAvail().y);
+    ImGui::BeginChild("ChildL", ImVec2(sz1, ImGui::GetContentRegionAvail().y), true, window_flags);
 
     for(auto &kw : vesselMap) {
         if(ImGui::TreeNodeEx(kw.first)) {
@@ -159,7 +170,7 @@ void DlgFocus::DrawLocation() {
     }
     ImGui::EndChild();
     ImGui::SameLine();
-    ImGui::BeginChild("ChildR", ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y), false, window_flags);
+    ImGui::BeginChild("ChildR", ImVec2(sz2, ImGui::GetContentRegionAvail().y), false, window_flags);
     ImVec2 button_sz(ImVec2(ImGui::GetContentRegionAvail().x, 20));
     if(ImGui::Button("Select", button_sz)) {
         Vessel *vessel = g_psys->GetVessel (m_SelectedShip.c_str(), true);
@@ -186,7 +197,10 @@ void DlgFocus::DrawClass() {
 
     ImGuiWindowFlags window_flags = ImGuiWindowFlags_HorizontalScrollbar;
     ImGui::Text("Spacecraft : %s", m_SelectedShip.c_str());
-    ImGui::BeginChild("ChildL", ImVec2(ImGui::GetContentRegionAvail().x * 0.7f, ImGui::GetContentRegionAvail().y), true, window_flags);
+    static float sz1 = 0.0;
+    float sz2;
+    ImGui::Splitter(true, 0.7f, 8.0f, &sz1, &sz2, 8, 8, ImGui::GetContentRegionAvail().y);
+    ImGui::BeginChild("ChildL", ImVec2(sz1, ImGui::GetContentRegionAvail().y), true, window_flags);
 
     for(auto &kw : vesselMap) {
         if(ImGui::TreeNodeEx(kw.first.c_str())) {
@@ -205,7 +219,7 @@ void DlgFocus::DrawClass() {
     }
     ImGui::EndChild();
     ImGui::SameLine();
-    ImGui::BeginChild("ChildR", ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y), false, window_flags);
+    ImGui::BeginChild("ChildR", ImVec2(sz2, ImGui::GetContentRegionAvail().y), false, window_flags);
     ImVec2 button_sz(ImVec2(ImGui::GetContentRegionAvail().x, 20));
     if(ImGui::Button("Select", button_sz)) {
         Vessel *vessel = g_psys->GetVessel (m_SelectedShip.c_str(), true);

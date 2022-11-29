@@ -192,11 +192,15 @@ void ScnEditor::VesselCreatePopup() {
 	ImGui::Text("New vessel");
 	ImGui::InputText("Name", m_newVesselName, IM_ARRAYSIZE(m_newVesselName));
 
-    ImGui::BeginChild("ChildL", ImVec2(ImGui::GetContentRegionAvail().x / 2, ImGui::GetContentRegionAvail().y - 30), true);
+	static float sz1 = 0.0;
+	float sz2;
+	ImGui::Splitter(true, 0.5f, 8.0f, &sz1, &sz2, 8, 8, ImGui::GetContentRegionAvail().y - 30);
+
+    ImGui::BeginChild("ChildL", ImVec2(sz1, ImGui::GetContentRegionAvail().y - 30), true);
 	DrawConfigs("Config/Vessels");
     ImGui::EndChild();
 	ImGui::SameLine();
-    ImGui::BeginChild("ChildR", ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y - 30), true);
+    ImGui::BeginChild("ChildR", ImVec2(sz2, ImGui::GetContentRegionAvail().y - 30), true);
 	if(m_preview) {
         const ImVec2 uv_min = ImVec2(0.0f, 0.0f);                 // Top-left
         const ImVec2 uv_max = ImVec2(1.0f, 1.0f);                 // Lower-right
@@ -1064,7 +1068,11 @@ void ScnEditor::Show ()
 {
     if(!show) return;
 	if(ImGui::Begin("Scenario Editor", &show)) {
-	    ImGui::BeginChild("ChildL", ImVec2(ImGui::GetContentRegionAvail().x / 3, ImGui::GetContentRegionAvail().y), true);
+		static float sz1 = 0.0;
+		float sz2;
+		ImGui::Splitter(true, 0.3f, 8.0f, &sz1, &sz2, 8, 8, ImGui::GetContentRegionAvail().y);
+
+	    ImGui::BeginChild("ChildL", ImVec2(sz1, ImGui::GetContentRegionAvail().y), true);
 		if(ImGui::CollapsingHeader("Date")) {
 			int year = date.tm_year + 1900;
 			int month = date.tm_mon;
@@ -1235,7 +1243,7 @@ void ScnEditor::Show ()
 		}
 	    ImGui::EndChild();
 		ImGui::SameLine();
-	    ImGui::BeginChild("ChildR", ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y), true);
+	    ImGui::BeginChild("ChildR", ImVec2(sz2, ImGui::GetContentRegionAvail().y), true);
 		DrawTabs();
 	    ImGui::EndChild();
 	}

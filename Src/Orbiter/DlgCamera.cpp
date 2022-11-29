@@ -152,7 +152,11 @@ void DlgCamera::AddCbodyNode(const CelestialBody *cbody) {
 
 void DlgCamera::DrawTarget() {
     ImGuiWindowFlags window_flags = ImGuiWindowFlags_HorizontalScrollbar;
-    ImGui::BeginChild("ChildL", ImVec2(ImGui::GetContentRegionAvail().x * 0.5f, ImGui::GetContentRegionAvail().y), true, window_flags);
+    static float sz1 = 0.0;
+    float sz2;
+    ImGui::Splitter(true, 0.5f, 8.0f, &sz1, &sz2, 8, 8, ImGui::GetContentRegionAvail().y);
+
+    ImGui::BeginChild("ChildL", ImVec2(sz1, ImGui::GetContentRegionAvail().y), true, window_flags);
         for (int i = 0; i < g_psys->nStar(); i++)
             AddCbodyNode (g_psys->GetStar(i));
 
@@ -189,7 +193,7 @@ void DlgCamera::DrawTarget() {
         }
     ImGui::EndChild();
     ImGui::SameLine();
-    ImGui::BeginChild("ChildR", ImVec2(0, 260), false, window_flags);
+    ImGui::BeginChild("ChildR", ImVec2(sz2, ImGui::GetContentRegionAvail().y), false, window_flags);
         ImVec2 button_sz(ImVec2(ImGui::GetContentRegionAvail().x, 20));
         ImGui::Text("Target : %s", m_SelectedTarget.c_str());
         if(ImGui::Button("Apply", button_sz)) {
@@ -207,7 +211,10 @@ void DlgCamera::DrawTarget() {
 }
 void DlgCamera::DrawTrack() {
     ImGuiWindowFlags window_flags = ImGuiWindowFlags_HorizontalScrollbar;
-    ImGui::BeginChild("ChildL", ImVec2(ImGui::GetContentRegionAvail().x * 0.5f, ImGui::GetContentRegionAvail().y), true, window_flags);
+    static float sz1 = 0.0;
+    float sz2;
+    ImGui::Splitter(true, 0.5f, 8.0f, &sz1, &sz2, 8, 8, ImGui::GetContentRegionAvail().y);
+    ImGui::BeginChild("ChildL", ImVec2(sz1, ImGui::GetContentRegionAvail().y), true, window_flags);
     {
         ImGui::Text("Moveable modes");
         ImVec2 button_sz(ImVec2(ImGui::GetContentRegionAvail().x, 20));
@@ -224,7 +231,7 @@ void DlgCamera::DrawTrack() {
     }
     ImGui::EndChild();
     ImGui::SameLine();
-    ImGui::BeginChild("ChildR", ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y), true, window_flags);
+    ImGui::BeginChild("ChildR", ImVec2(sz2, ImGui::GetContentRegionAvail().y), true, window_flags);
         ImGui::Text("Fixed modes");
         ImVec2 button_sz(ImVec2(ImGui::GetContentRegionAvail().x, 20));
 
@@ -278,7 +285,10 @@ void DlgCamera::DrawTrack() {
 }
 void DlgCamera::DrawGround() {
     ImGuiWindowFlags window_flags = ImGuiWindowFlags_HorizontalScrollbar;
-    ImGui::BeginChild("ChildL", ImVec2(ImGui::GetContentRegionAvail().x * 0.5f, ImGui::GetContentRegionAvail().y), true, window_flags);
+    static float sz1 = 0.0;
+    float sz2;
+    ImGui::Splitter(true, 0.5f, 8.0f, &sz1, &sz2, 8, 8, ImGui::GetContentRegionAvail().y);
+    ImGui::BeginChild("ChildL", ImVec2(sz1, ImGui::GetContentRegionAvail().y), true, window_flags);
     {
         for (int i = 0; i < g_psys->nGrav(); i++) {
             Body *obj = g_psys->GetGravObj (i);
@@ -307,7 +317,7 @@ void DlgCamera::DrawGround() {
     }
     ImGui::EndChild();
     ImGui::SameLine();
-    ImGui::BeginChild("ChildR", ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y), true, window_flags);
+    ImGui::BeginChild("ChildR", ImVec2(sz2, ImGui::GetContentRegionAvail().y), true, window_flags);
         ImVec2 button_sz(ImVec2(ImGui::GetContentRegionAvail().x, 20));
         ImGui::InputText("Longitude", longitude, 64, ImGuiInputTextFlags_CharsDecimal);
         ImGui::InputText("Latitude",  latitude,  64, ImGuiInputTextFlags_CharsDecimal);
@@ -382,7 +392,10 @@ void DlgCamera::DrawFoV() {
 }
 void DlgCamera::DrawPreset() {
     ImGuiWindowFlags window_flags = ImGuiWindowFlags_HorizontalScrollbar;
-    ImGui::BeginChild("ChildL", ImVec2(ImGui::GetContentRegionAvail().x * 0.5f, ImGui::GetContentRegionAvail().y), true, window_flags);
+    static float sz1 = 0.0;
+    float sz2;
+    ImGui::Splitter(true, 0.5f, 8.0f, &sz1, &sz2, 8, 8, ImGui::GetContentRegionAvail().y);
+    ImGui::BeginChild("ChildL", ImVec2(sz1, ImGui::GetContentRegionAvail().y), true, window_flags);
     {
         if (ImGui::BeginListBox("##listbox preset", ImVec2(ImGui::GetContentRegionAvail().x*0.99, ImGui::GetContentRegionAvail().y*0.99)))
         {
@@ -405,7 +418,7 @@ void DlgCamera::DrawPreset() {
     }
     ImGui::EndChild();
     ImGui::SameLine();
-    ImGui::BeginChild("ChildR", ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y), true, window_flags);
+    ImGui::BeginChild("ChildR", ImVec2(sz2, ImGui::GetContentRegionAvail().y), true, window_flags);
         ImVec2 button_sz(ImVec2(ImGui::GetContentRegionAvail().x, 20));
         if(ImGui::Button("Add", button_sz)) {
             g_camera->AddPreset();
