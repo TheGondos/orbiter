@@ -260,10 +260,10 @@ bool TextureManager::LoadTexture (const char *fname, OGLTexture **ppdds, uint32_
     }
 
 
-    unsigned int SOILFlags = SOIL_FLAG_MIPMAPS;// SOIL_FLAG_TEXTURE_REPEATS;
+    unsigned int SOILFlags = SOIL_FLAG_MIPMAPS | SOIL_FLAG_TEXTURE_REPEATS;
 
     if(flags & 4) {
-        SOILFlags = 0;
+        SOILFlags = SOIL_FLAG_TEXTURE_REPEATS;
     }
 
     if(!(flags & 2)) {
@@ -297,10 +297,10 @@ bool TextureManager::LoadTexture (const char *fname, OGLTexture **ppdds, uint32_
 // =======================================================================
 bool TextureManager::LoadTexture (const char *fname, long ofs, OGLTexture **ppdds, uint32_t flags)
 {
-    unsigned int SOILFlags = SOIL_FLAG_MIPMAPS;// SOIL_FLAG_TEXTURE_REPEATS;
+    unsigned int SOILFlags = SOIL_FLAG_MIPMAPS | SOIL_FLAG_TEXTURE_REPEATS;
 
     if(flags & 4) {
-        SOILFlags = 0;
+        SOILFlags = SOIL_FLAG_TEXTURE_REPEATS;
     }
 
     if(!(flags & 2)) {
@@ -348,8 +348,8 @@ int TextureManager::LoadTextures (const char *fname, OGLTexture **ppdds, uint32_
             cpath,
             (int *)tmp,
             n,
-//            SOIL_FLAG_DDS_LOAD_DIRECT | SOIL_FLAG_TEXTURE_REPEATS);
-            SOIL_FLAG_DDS_LOAD_DIRECT);
+            SOIL_FLAG_DDS_LOAD_DIRECT | SOIL_FLAG_TEXTURE_REPEATS);
+            //SOIL_FLAG_DDS_LOAD_DIRECT);
 
 	} else if (g_client->TexturePath(fname, cpath)) {
 		ftex = fopen(cpath, "rb");
@@ -360,8 +360,8 @@ int TextureManager::LoadTextures (const char *fname, OGLTexture **ppdds, uint32_
                 cpath,
                 (int *)tmp,
                 n,
-//                SOIL_FLAG_DDS_LOAD_DIRECT | SOIL_FLAG_TEXTURE_REPEATS);
-                SOIL_FLAG_DDS_LOAD_DIRECT);
+                SOIL_FLAG_DDS_LOAD_DIRECT | SOIL_FLAG_TEXTURE_REPEATS);
+                //SOIL_FLAG_DDS_LOAD_DIRECT);
 		}
 	} else {
 //        printf("failed to open %s\n", fname);
