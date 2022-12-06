@@ -47,7 +47,7 @@ private:
 	 * \return \e true if lighting modifications should be applied, \e false
 	 *   if global lighting conditions apply.
 	 */
-	//bool ModLighting (LPD3DLIGHT7 light, double &nextcheck);
+	bool ModLighting (OGLLight *light, double &nextcheck);
 
 	double Tchk;               // next update
 	double Tlghtchk;           // next lighting update
@@ -61,7 +61,7 @@ private:
 	int nstructure_bs, nstructure_as;
 	bool lights;               // use nighttextures for base objects
 	bool bLocalLight;          // true if lighting is modified
-	//D3DLIGHT7 localLight;      // current local lighting parameters
+	OGLLight localLight;      // current local lighting parameters
 
 	struct ShadowMesh {
 		VertexBuffer *vbuf;

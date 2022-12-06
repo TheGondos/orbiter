@@ -297,7 +297,7 @@ void PushRenderTarget(OGLTexture *tex) {
 
 static bool g_lighting = false;
 // Lights
-void SetLight(OGLLight *light) {
+void SetLight(const OGLLight *light) {
     g_lights[light->idx] = *light;
 }
 void GetLight(int idx, OGLLight *light) {

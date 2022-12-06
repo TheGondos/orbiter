@@ -52,7 +52,7 @@ vBase::vBase (OBJHANDLE _hObj, const Scene *scene): vObject (_hObj, scene)
 		for (i = 0; i < nsas; i++) structure_as[i] = new OGLMesh (sas[i]);
 	}
 	SetupShadowMeshes ();
-	//localLight = *scene->GetLight();
+	localLight = *scene->GetLight();
 	bLocalLight = false;
 	lights = false;
 	Tchk = Tlghtchk = oapiGetSimTime()-1.0;
@@ -214,7 +214,7 @@ bool vBase::Update ()
 
 	if (simt > Tlghtchk) {
 		double intv;
-		//bLocalLight = ModLighting (&localLight, intv);
+		bLocalLight = ModLighting (&localLight, intv);
 		Tlghtchk = simt+intv;
 	}
 
@@ -250,7 +250,7 @@ bool vBase::RenderSurface ()
 	// render tiles
 	if (ntile) {
 		if (bLocalLight && !modlight) {
-			//dev->SetLight (0, &localLight);
+			Renderer::SetLight (&localLight);
 			modlight = true;
 		}
 		//dev->SetTextureStageState (0, D3DTSS_ADDRESS, D3DTADDRESS_CLAMP);
@@ -286,16 +286,16 @@ bool vBase::RenderStructures ()
 
 	if (!active) return false;
 
-	//if (bLocalLight) // modify lighting
-	//	dev->SetLight (0, &localLight);
-
+	if (bLocalLight) // modify lighting
+		Renderer::SetLight (&localLight);
+	
 	// render generic objects above shadows
 	for (int i = 0; i < nstructure_as; i++)
 		structure_as[i]->Render (scn->GetCamera(), mWorld);
-/*
+
 	if (bLocalLight) { // restore lighting
-		dev->SetLight (0, (LPD3DLIGHT7)scn->GetLight());
-	}*/
+		Renderer::SetLight (scn->GetLight());
+	}
 
 	return true;
 }
@@ -386,8 +386,7 @@ void vBase::RenderGroundShadow (float depth)
 	Renderer::Unbind(shadowShader);
 }
 
-/*
-bool vBase::ModLighting (LPD3DLIGHT7 light, double &nextcheck)
+bool vBase::ModLighting (OGLLight *light, double &nextcheck)
 {
 	VECTOR3 GB, GS, GP, S, P;
 	VECTOR3 lcol = {1,1,1};
@@ -467,20 +466,21 @@ bool vBase::ModLighting (LPD3DLIGHT7 light, double &nextcheck)
 	}
 
 	if (lightmod) {
-		D3DCOLORVALUE starcol = {1,1,1,1}; // for now
-		light->dcvDiffuse.r = light->dcvSpecular.r = starcol.r * (float)lcol.x;
-		light->dcvDiffuse.g = light->dcvSpecular.g = starcol.g * (float)lcol.y;
-		light->dcvDiffuse.b = light->dcvSpecular.b = starcol.b * (float)lcol.z;
-		light->dcvAmbient.r = (float)amb;
-		light->dcvAmbient.g = (float)amb;
-		light->dcvAmbient.b = (float)amb;
+		//D3DCOLORVALUE starcol = sun->GetLightColor();
+		glm::vec4 starcol = {1,1,1,1}; // for now
+		light->light.dcvDiffuse.r = light->light.dcvSpecular.r = starcol.r * (float)lcol.x;
+		light->light.dcvDiffuse.g = light->light.dcvSpecular.g = starcol.g * (float)lcol.y;
+		light->light.dcvDiffuse.b = light->light.dcvSpecular.b = starcol.b * (float)lcol.z;
+		light->light.dcvAmbient.r = (float)amb;
+		light->light.dcvAmbient.g = (float)amb;
+		light->light.dcvAmbient.b = (float)amb;
 		S /= s;
-		light->dvDirection.x = -(float)S.x;
-		light->dvDirection.y = -(float)S.y;
-		light->dvDirection.z = -(float)S.z;
+		light->light.dvDirection.x = -(float)S.x;
+		light->light.dvDirection.y = -(float)S.y;
+		light->light.dvDirection.z = -(float)S.z;
 	}
 
 	nextcheck = std::max (1.0, 50.0*(sqrt(fabs(phi-PI05)))); // next test
 	return lightmod;
 }
-*/
+

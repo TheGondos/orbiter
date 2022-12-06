@@ -8,7 +8,7 @@ class Shader;
 class OGLLight;
 namespace Renderer
 {
-    void SetLight(OGLLight *);
+    void SetLight(const OGLLight *);
     void GetLight(int idx, OGLLight *);
     void LightEnable(int, bool);
     enum BoolParam {
