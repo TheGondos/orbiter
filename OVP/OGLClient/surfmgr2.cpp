@@ -532,13 +532,14 @@ void SurfTile::Render ()
 	auto *vp = c->GetViewProjectionMatrix();
 	tileShader->SetMat4("u_ViewProjection",*vp);
 	tileShader->SetMat4("u_Model",smgr->wtrans);
+	/*
 	const VECTOR3 &sd = g_client->GetScene()->GetSunDir();
 	glm::vec3 sundir;
 	sundir.x = sd.x;
 	sundir.y = sd.y;
 	sundir.z = sd.z;
 	tileShader->SetVec3("u_SunDir", sundir);
-
+*/
 	auto *view = c->GetViewMatrix();
 
 	tileShader->SetMat4("u_View", *view);
@@ -568,6 +569,7 @@ void SurfTile::Render ()
     glBindTexture(GL_TEXTURE_2D,  tex->m_TexId);
 	Renderer::CheckError("SurfTile::Render glBindTexture");
 	mesh->VAO->Bind();
+	Renderer::PushLights();
 
 	glDrawElements(GL_TRIANGLES, mesh->IBO->GetCount(), GL_UNSIGNED_SHORT, 0);
 	Renderer::CheckError("SurfTile::Render glDrawElements");

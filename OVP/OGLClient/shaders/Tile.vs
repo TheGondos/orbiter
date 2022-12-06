@@ -12,12 +12,14 @@ uniform vec3 sundir;
 out vec2 TexCoord;
 out vec3 Normal;
 out vec4 eyeSpacePosition;
+out vec3 FragPos;
 
 void main()
 {
 	gl_Position =  u_ViewProjection * u_Model * vec4(a_Position, 1.0);
 	TexCoord = a_TexCoord1;
 	Normal = mat3(transpose(inverse(u_Model))) * a_Normal;
+    FragPos = vec3(u_Model * vec4(a_Position, 1.0));
 
 	eyeSpacePosition = u_View * u_Model * vec4(a_Position, 1.0);;
 }

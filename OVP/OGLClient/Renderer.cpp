@@ -8,6 +8,8 @@
 #include <stdio.h>
 #include <unordered_map>
 #include <memory>
+#include <glm/gtc/type_ptr.hpp>
+#include "Light.h"
 
 namespace Renderer
 {
@@ -23,6 +25,8 @@ void CheckError(const char *s) {
     }
 }
 #endif
+
+OGLLight g_lights[MAX_LIGHTS];
 
 struct FBParamSave {
     GLint fb;
@@ -291,5 +295,81 @@ void PushRenderTarget(OGLTexture *tex) {
     glViewport(0,0,tex->m_Width,tex->m_Height);
 }
 
+static bool g_lighting = false;
+// Lights
+void SetLight(OGLLight *light) {
+    g_lights[light->idx] = *light;
+}
+void GetLight(int idx, OGLLight *light) {
+    *light = g_lights[idx];
+}
+
+void LightEnable(int idx, bool en) {
+    g_lights[idx].light.enabled = en;
+}
+
+void EnableLighting(bool en) {
+    g_lighting = en;
+}
+
+static GLuint GetLightUniform(int idx, const char *member) {
+    char buf[256];
+    sprintf(buf, "lights[%d].%s", idx, member);
+    return glGetUniformLocation(current_shader, buf);
+}
+
+void PushLights() {
+    GLint location = glGetUniformLocation(current_shader, "u_lighting");;
+    if(g_lighting) {
+        glUniform1i(location, 1);
+        char buf[256];
+        //printf("PushLights:");
+        for(int i=0;i<MAX_LIGHTS;i++) {
+            /*
+            if(g_lights[i].light.enabled) {
+                printf(" %d (%f %f %f)", i, g_lights[i].light.dvAttenuation0,g_lights[i].light.dvAttenuation1,g_lights[i].light.dvAttenuation2);
+
+                if(g_lights[i].light.dltType == OGLLight::LTYPE::Spot) {
+                    printf(" (%f %f)", g_lights[i].light.dvTheta, g_lights[i].light.dvPhi);
+                }
+            }*/
+            location = GetLightUniform(i, "enabled");
+            glUniform1iv(location, 1, &g_lights[i].light.enabled);
+            location = GetLightUniform(i, "dltType");
+            glUniform1iv(location, 1, (int *)&g_lights[i].light.dltType);
+
+            location = GetLightUniform(i, "dcvDiffuse");
+            glUniform4fv(location, 1, glm::value_ptr(g_lights[i].light.dcvDiffuse));
+            location = GetLightUniform(i, "dcvSpecular");
+            glUniform4fv(location, 1, glm::value_ptr(g_lights[i].light.dcvSpecular));
+            location = GetLightUniform(i, "dcvAmbient");
+            glUniform4fv(location, 1, glm::value_ptr(g_lights[i].light.dcvAmbient));
+
+            location = GetLightUniform(i, "dvPosition");
+            glUniform3fv(location, 1, glm::value_ptr(g_lights[i].light.dvPosition));
+            location = GetLightUniform(i, "dvDirection");
+            glUniform3fv(location, 1, glm::value_ptr(g_lights[i].light.dvDirection));
+
+            location = GetLightUniform(i, "dvAttenuation0");
+            glUniform1fv(location, 1, &g_lights[i].light.dvAttenuation0);
+            location = GetLightUniform(i, "dvAttenuation1");
+            glUniform1fv(location, 1, &g_lights[i].light.dvAttenuation1);
+            location = GetLightUniform(i, "dvAttenuation2");
+            glUniform1fv(location, 1, &g_lights[i].light.dvAttenuation2);
+
+            location = GetLightUniform(i, "dvRange");
+            glUniform1fv(location, 1, &g_lights[i].light.dvRange);
+            location = GetLightUniform(i, "dvFalloff");
+            glUniform1fv(location, 1, &g_lights[i].light.dvFalloff);
+            location = GetLightUniform(i, "dvTheta");
+            glUniform1fv(location, 1, &g_lights[i].light.dvTheta);
+            location = GetLightUniform(i, "dvPhi");
+            glUniform1fv(location, 1, &g_lights[i].light.dvPhi);
+        }
+        //printf("\n");
+    } else {
+        glUniform1i(location, 0);
+    }
+}
 
 };

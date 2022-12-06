@@ -617,6 +617,7 @@ void TileManager::RenderSimple (int level, TILEDESC *tile)
 	auto *vpm = c->GetViewProjectionMatrix();
 	tileShader->SetMat4("u_ViewProjection",*vpm);
 	tileShader->SetMat4("u_Model",RenderParam.wmat);
+	/*
 	const VECTOR3 &sd = g_client->GetScene()->GetSunDir();
 	glm::vec3 sundir;
 	sundir.x = sd.x;
@@ -624,6 +625,7 @@ void TileManager::RenderSimple (int level, TILEDESC *tile)
 	sundir.z = sd.z;
 
 	tileShader->SetVec3("u_SunDir", sundir);
+	*/
 	if(vp->prm.bAddBkg) {
 		VECTOR3 v3bgcol = g_client->GetScene()->SkyColour();
 		glm::vec3 bgcol;

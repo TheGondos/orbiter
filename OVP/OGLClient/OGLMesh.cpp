@@ -446,19 +446,20 @@ void OGLMesh::Render (OGLCamera *c, glm::fmat4 &model)
 	Renderer::PushBool(Renderer::CULL_FACE, true);
 	Renderer::PushFrontFace(Renderer::CW);
 	Renderer::PushBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
+/*
 	const VECTOR3 &sd = g_client->GetScene()->GetSunDir();
     glm::vec3 sundir;
 	sundir.x = sd.x;
 	sundir.y = sd.y;
 	sundir.z = sd.z;
-
+*/
     Renderer::Bind(meshShader);
+	Renderer::PushLights();
 
 	auto vp = c->GetViewProjectionMatrix();
 	meshShader->SetMat4("u_ViewProjection", *vp);
 	meshShader->SetMat4("u_Model", model);
-	meshShader->SetVec3("u_SunDir", sundir);
+//	meshShader->SetVec3("u_SunDir", sundir);
 
 	if (bModulateMatAlpha) {
 		meshShader->SetFloat("u_ModulateAlpha", 1.0);
@@ -470,7 +471,7 @@ void OGLMesh::Render (OGLCamera *c, glm::fmat4 &model)
 	bool skipped = false;
 	bool texstage[MAXTEX] = {false};
 //	bool specular = false;
-//	bool lighting = true;
+	bool lighting = true;
 
 	OGLMaterial *mat = &defmat;
 	for (g = 0; g < nGrp; g++) {
@@ -553,10 +554,10 @@ void OGLMesh::Render (OGLCamera *c, glm::fmat4 &model)
 		}
 		if (wrap != owrap)
 			dev->SetRenderState (D3DRENDERSTATE_WRAP0, owrap = wrap);
+*/
 
 		if (!(uflag & 0x4) != lighting)
-			dev->SetRenderState (D3DRENDERSTATE_LIGHTING, lighting = !lighting);
-*/
+			Renderer::EnableLighting (lighting = !lighting);
 /*
 		if(Grp[g]->zBias) {
 			glEnable( GL_POLYGON_OFFSET_FILL );
@@ -565,7 +566,6 @@ void OGLMesh::Render (OGLCamera *c, glm::fmat4 &model)
 		}
 */
 		if (uflag & 0x8) { // brighten
-            //glEnable(GL_BLEND);
 			Renderer::PushBlendFunc(GL_SRC_ALPHA, GL_ONE);
 		}
 
@@ -595,7 +595,9 @@ void OGLMesh::Render (OGLCamera *c, glm::fmat4 &model)
 	if (owrap)     dev->SetRenderState (D3DRENDERSTATE_WRAP0, 0);
 	if (zb)        dev->SetRenderState (D3DRENDERSTATE_ZBIAS, 0);
 	if (specular)  dev->SetRenderState (D3DRENDERSTATE_SPECULARENABLE, FALSE);
-	if (!lighting) dev->SetRenderState (D3DRENDERSTATE_LIGHTING, TRUE);
+*/
+	if (!lighting) Renderer::EnableLighting(true);
+/*
 	for (n = 0; n < MAXTEX; n++) {
 		if (texstage[n]) 
 			dev->SetTextureStageState (n+1, D3DTSS_COLOROP, D3DTOP_DISABLE);

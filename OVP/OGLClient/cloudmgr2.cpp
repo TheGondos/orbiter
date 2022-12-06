@@ -110,12 +110,15 @@ void CloudTile::Render ()
 	auto *vp = c->GetViewProjectionMatrix();
 	cloudShader->SetMat4("u_ViewProjection",*vp);
 	cloudShader->SetMat4("u_Model",cmgr->wtrans);
+	Renderer::PushLights();
+	/*
 	const VECTOR3 &sd = g_client->GetScene()->GetSunDir();
 	glm::vec3 sundir;
 	sundir.x = sd.x;
 	sundir.y = sd.y;
 	sundir.z = sd.z;
 	cloudShader->SetVec3("u_SunDir", sundir);
+	*/
 	cloudShader->SetFloat("u_ShadowPass", bCloudShadowPass?1.0:0.0);
 	
 	glBindTexture(GL_TEXTURE_2D,  tex->m_TexId);

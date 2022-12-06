@@ -99,13 +99,14 @@ if (range.tumin != 0 || range.tumax != 1) {
 	auto *vpm = c->GetViewProjectionMatrix();
 	tileShader->SetMat4("u_ViewProjection",*vpm);
 	tileShader->SetMat4("u_Model",RenderParam.wtrans);
+	/*
 	const VECTOR3 &sd = g_client->GetScene()->GetSunDir();
 	glm::vec3 sundir;
 	sundir.x = sd.x;
 	sundir.y = sd.y;
 	sundir.z = sd.z;
 	tileShader->SetVec3("u_SunDir", sundir);
-
+*/
 	auto *view = c->GetViewMatrix();
 
 	tileShader->SetMat4("u_View", *view);

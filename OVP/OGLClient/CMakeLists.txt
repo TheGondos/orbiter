@@ -4,14 +4,14 @@ find_package(OpenGL REQUIRED)
 find_package(Fontconfig)
 find_package(Freetype REQUIRED)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${ORBITER_BINARY_PLUGIN_DIR})
-file(GLOB OGL_SHADERS ${CMAKE_CURRENT_SOURCE_DIR}/*.vs ${CMAKE_CURRENT_SOURCE_DIR}/*.fs)
+file(GLOB OGL_SHADERS ${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.vs ${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.fs ${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.inc)
 
 install(FILES ${OGL_SHADERS}
     DESTINATION ${ORBITER_INSTALL_ROOT_DIR}/Modules/OGLClient
 )
 #
 add_library(OGLClient SHARED
-Shader.cpp CelSphere.cpp Renderer.cpp VertexBuffer.cpp Scene.cpp imgui_impl_opengl3.cpp
+Shader.cpp CelSphere.cpp Renderer.cpp VertexBuffer.cpp Scene.cpp imgui_impl_opengl3.cpp Light.cpp
 OGLCamera.cpp OGLMesh.cpp MeshManager.cpp VObject.cpp VVessel.cpp Texture.cpp VPlanet.cpp VStar.cpp ztreemgr.cpp
 TileMgr.cpp SurfMgr.cpp RingMgr.cpp HazeMgr.cpp CloudMgr.cpp tilemgr2.cpp surfmgr2.cpp tilelabel.cpp
 VBase.cpp cloudmgr2.cpp OGLClient.cpp Particle.cpp CSphereMgr.cpp spherepatch.cpp OGLPad.cpp  nanovg/src/nanovg.c

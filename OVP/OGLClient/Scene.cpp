@@ -27,7 +27,23 @@
 #include "Particle.h"
 #include "Renderer.h"
 #include <cstring>
+#include "Light.h"
 //#include "CSphereMgr.h"
+
+static bool Vector3Matrix4Multiply (glm::fvec3 *res, const glm::fvec3 *v, const glm::fmat4 &mat)
+{
+    float x = v->x* mat[0][0] + v->y*mat[1][0] + v->z* mat[2][0] + mat[3][0];
+    float y = v->x* mat[0][1] + v->y*mat[1][1] + v->z* mat[2][1] + mat[3][1];
+    float z = v->x* mat[0][2] + v->y*mat[1][2] + v->z* mat[2][2] + mat[3][2];
+    float w = v->x* mat[0][3] + v->y*mat[1][3] + v->z* mat[2][3] + mat[3][3];
+
+    if (fabs (w) < 1e-5f) return false;
+
+    res->x = x/w;
+    res->y = y/w;
+    res->z = z/w;
+    return true;
+}
 
 using namespace oapi;
 /*
@@ -62,6 +78,7 @@ Scene::Scene (int w, int h)
 	int maxlight_request = *(int*)g_client->GetConfigParam (CFGPRM_MAXLIGHT);
 	if (maxlight_request) maxlight = std::min (maxlight, maxlight_request);
 	locallight = *(bool*)g_client->GetConfigParam (CFGPRM_LOCALLIGHT);
+	locallight = true;
 	if (locallight)
 		lightlist = new LIGHTLIST[maxlight];
 	memset (&bg_rgba, 0, sizeof (VECTOR3));
@@ -76,7 +93,7 @@ Scene::~Scene ()
 	}
 	delete cam;
 	delete csphere;
-	//delete light;
+	delete light;
 	//delete cspheremgr;
 	if (nstream) {
 		for (int j = 0; j < nstream; j++)
@@ -90,7 +107,8 @@ Scene::~Scene ()
 void Scene::Initialise ()
 {
 	OBJHANDLE hSun = oapiGetGbodyByIndex(0); // generalise later
-	//light = new D3D7Light (hSun, D3D7Light::Directional, this, 0);	
+	light = new OGLLight (hSun, OGLLight::Directional, this, 0);
+	light->light.enabled = 1;	
 
 	glEnable(GL_DEPTH_TEST);
 	glDisable(GL_BLEND);
@@ -150,12 +168,12 @@ void Scene::CheckVisual (OBJHANDLE hObj)
 	// the range check has a small hysteresis to avoid continuous
 	// creation/deletion for objects at the edge of visibility
 }
-/*
-const D3DLIGHT7 *Scene::GetLight () const
+
+const OGLLight *Scene::GetLight () const
 {
-	return light->GetLight();
+	return light;
 }
-*/
+
 Scene::VOBJREC *Scene::FindVisual (OBJHANDLE hObj)
 {
 	VOBJREC *pv;
@@ -195,76 +213,79 @@ Scene::VOBJREC *Scene::AddVisualRec (OBJHANDLE hObj)
 	vobjLast = pv;
 	return pv;
 }
-/*
-void Scene::AddLocalLight (const LightEmitter *le, const vObject *vo, DWORD idx)
+
+void Scene::AddLocalLight (const LightEmitter *le, const vObject *vo, int idx)
 {
-	D3DLIGHT7 lght;
+	OGLLight lght;
 	switch (le->GetType()) {
 	case LightEmitter::LT_POINT: {
-		lght.dltType = D3DLIGHT_POINT;
-		lght.dvRange = (float)((PointLight*)le)->GetRange();
+		lght.light.dltType = OGLLight::Point;
+		lght.light.dvRange = (float)((PointLight*)le)->GetRange();
 		const double *att = ((PointLight*)le)->GetAttenuation();
-		lght.dvAttenuation0 = (float)att[0];
-		lght.dvAttenuation1 = (float)att[1];
-		lght.dvAttenuation2 = (float)att[2];
+		lght.light.dvAttenuation0 = (float)att[0];
+		lght.light.dvAttenuation1 = (float)att[1];
+		lght.light.dvAttenuation2 = (float)att[2];
 		} break;
 	case LightEmitter::LT_SPOT: {
-		lght.dltType = D3DLIGHT_SPOT;
-		lght.dvRange = (float)((SpotLight*)le)->GetRange();
+		lght.light.dltType = OGLLight::Spot;
+		lght.light.dvRange = (float)((SpotLight*)le)->GetRange();
 		const double *att = ((SpotLight*)le)->GetAttenuation();
-		lght.dvAttenuation0 = (float)att[0];
-		lght.dvAttenuation1 = (float)att[1];
-		lght.dvAttenuation2 = (float)att[2];
-		lght.dvFalloff = 1.0f;
-		lght.dvTheta = (float)((SpotLight*)le)->GetUmbra();
-		lght.dvPhi = (float)((SpotLight*)le)->GetPenumbra();
+		lght.light.dvAttenuation0 = (float)att[0];
+		lght.light.dvAttenuation1 = (float)att[1];
+		lght.light.dvAttenuation2 = (float)att[2];
+
+
+		float P = float(((SpotLight*)le)->GetPenumbra());
+		float U = float(((SpotLight*)le)->GetUmbra());
+		if (P > 3.05f) P = 3.05f;
+		if (U > 2.96f) U = 2.96f;
+		float cosp = cos(P * 0.5f);
+		float cosu = cos(U * 0.5f);
+		float tanp = tan(P * 0.5f);
+
+		lght.light.dvFalloff = 1.0f;
+		lght.light.dvTheta = 1.0f / (cosu - cosp);
+		lght.light.dvPhi = cosp;
 		} break;
 	}
 	double intens = le->GetIntensity();
 	const COLOUR4 &col_d = le->GetDiffuseColour();
-	lght.dcvDiffuse.dvR = (float)(col_d.r*intens);
-	lght.dcvDiffuse.dvG = (float)(col_d.g*intens);
-	lght.dcvDiffuse.dvB = (float)(col_d.b*intens);
-	lght.dcvDiffuse.dvA = (float)(col_d.a*intens);
+	lght.light.dcvDiffuse = { (float)(col_d.r*intens),
+						(float)(col_d.g*intens),
+						(float)(col_d.b*intens),
+						(float)(col_d.a*intens)};
 	const COLOUR4 &col_s = le->GetSpecularColour();
-	lght.dcvSpecular.dvR = (float)(col_s.r*intens);
-	lght.dcvSpecular.dvG = (float)(col_s.g*intens);
-	lght.dcvSpecular.dvB = (float)(col_s.b*intens);
-	lght.dcvSpecular.dvA = (float)(col_s.a*intens);
+	lght.light.dcvSpecular = {(float)(col_s.r*intens),
+						(float)(col_s.g*intens),
+						(float)(col_s.b*intens),
+						(float)(col_s.a*intens)};
 	const COLOUR4 &col_a = le->GetAmbientColour();
-	lght.dcvAmbient.dvR = (float)(col_a.r*intens);
-	lght.dcvAmbient.dvG = (float)(col_a.g*intens);
-	lght.dcvAmbient.dvB = (float)(col_a.b*intens);
-	lght.dcvAmbient.dvA = (float)(col_a.a*intens);
-	if (lght.dltType != D3DLIGHT_DIRECTIONAL) {
+	lght.light.dcvAmbient = { (float)(col_a.r*intens),
+						(float)(col_a.g*intens),
+						(float)(col_a.b*intens),
+						(float)(col_a.a*intens)};
+	if (lght.light.dltType != OGLLight::Directional) {
 		const VECTOR3 pos = le->GetPosition();
-		D3DVECTOR p = { (float)pos.x, (float)pos.y, (float)pos.z }; 
-		D3DMAT_VectorMatrixMultiply (&lght.dvPosition, &p, &vo->MWorld());
+		glm::vec3 p = { (float)pos.x, (float)pos.y, (float)pos.z }; 
+		Vector3Matrix4Multiply (&lght.light.dvPosition, &p, vo->MWorld());
 	}
-	if (lght.dltType != D3DLIGHT_POINT) {
+	if (lght.light.dltType != OGLLight::Point) {
 		MATRIX3 grot;
 		oapiGetRotationMatrix (vo->Object(), &grot);
 		VECTOR3 d = mul (grot, le->GetDirection());
-		lght.dvDirection.dvX = (float)d.x;
-		lght.dvDirection.dvY = (float)d.y;
-		lght.dvDirection.dvZ = (float)d.z;
+		lght.light.dvDirection = {(float)d.x, (float)d.y, (float)d.z};
 	}
-	dev->SetLight (idx, &lght);
-	dev->LightEnable (idx, TRUE);
+	lght.idx = idx;
+	Renderer::SetLight (&lght);
+	Renderer::LightEnable (idx, true);
 }
-*/
+
 void Scene::Update ()
 {
 	cam->Update (); // update camera parameters
 	Renderer::SetViewPort(cam->GetWidth(),cam->GetHeight());
 
-	//light->Update (); // update light sources
-
-	OBJHANDLE hSun = oapiGetGbodyByIndex(0);
-	oapiGetGlobalPos (hSun, &sundir);
-	VECTOR3 gpos = *cam->GetGPos();
-	sundir -= gpos; // object position rel. to camera
-	sundir /= -length(sundir); // normalise
+	light->Update (); // update light sources
 
 	// check object visibility (one object per frame in the interest
 	// of scalability)
@@ -340,9 +361,9 @@ void Scene::Render ()
 
 	//if (FAILED (dev->BeginScene ())) return;
 
-	//light->SetLight (dev);
+	Renderer::SetLight(light);
 	int nlight = 1;
-	/*
+	
 	if (locallight) {
 		int j, k;
 		for (pv = vobjFirst; pv; pv = pv->next) {
@@ -363,8 +384,8 @@ void Scene::Render ()
 							continue;
 					}
 					const VECTOR3 *pos = em->GetPositionRef();
-					D3DVECTOR q, p = {(float)pos->x, (float)pos->y, (float)pos->z};
-					D3DMAT_VectorMatrixMultiply (&q, &p, &pv->vobj->MWorld());
+					glm::fvec3 q, p = {(float)pos->x, (float)pos->y, (float)pos->z};
+					Vector3Matrix4Multiply(&q, &p, pv->vobj->MWorld());
 					double dst2 = q.x*q.x + q.y*q.y + q.z*q.z;
 					for (k = nlight-1; k >= 1; k--) {
 						if (lightlist[k].camdist2 < dst2) {
@@ -385,7 +406,7 @@ void Scene::Render ()
 		for (i = 1; i < nlight; i++)
 			if (lightlist[i].plight->GetVisibility() & LightEmitter::VIS_EXTERNAL)
 				AddLocalLight (lightlist[i].plight, lightlist[i].vobj, i);
-	}*/
+	}
 
 	//dev->SetMaterial (&def_mat);
 	glBindTexture(GL_TEXTURE_2D, 0);
@@ -398,7 +419,7 @@ void Scene::Render ()
 	//dev->SetTexture (0,0);
 	Renderer::PushBool(Renderer::DEPTH_TEST, false);
 	Renderer::PushDepthMask(false);
-	//dev->SetRenderState (D3DRENDERSTATE_LIGHTING, FALSE);
+	Renderer::EnableLighting(false);
 
 	// use explicit colours
 	//dev->SetTextureStageState (0, D3DTSS_COLORARG1, D3DTA_TFACTOR);
@@ -485,7 +506,7 @@ void Scene::Render ()
 	//cspheremgr->Render (dev, 8, bglvl);
 
 	// turn on lighting
-	//dev->SetRenderState (D3DRENDERSTATE_LIGHTING, TRUE);
+	Renderer::EnableLighting(true);
 
 	// render solar system celestial objects (planets and moons)
 	// we render without z-buffer, so need to distance-sort the objects
@@ -624,8 +645,30 @@ void Scene::Render ()
 	}
 
 	// render exhaust particle system
+
+		if (locallight) {
+			for (i = 1; i < nlight; i++) {
+				switch (lightlist[i].plight->GetVisibility()) {
+				case LightEmitter::VIS_EXTERNAL:
+					Renderer::LightEnable (i, true);
+					break;
+				case LightEmitter::VIS_COCKPIT:
+					AddLocalLight (lightlist[i].plight, lightlist[i].vobj, i);
+					break;
+				}
+			}
+		}
+
+
+
 	for (n = 0; n < nstream; n++)
 		pstream[n]->Render (cam);
+
+
+	if (locallight)
+		for (i = 1; i < nlight; i++)
+			Renderer::LightEnable (i, false);
+
 	glBindTexture(GL_TEXTURE_2D, 0);
 
 	Renderer::PopBool();
@@ -633,19 +676,19 @@ void Scene::Render ()
 	// render the internal parts of the focus object in a separate render pass
 	if (oapiCameraInternal() && vFocus) {
 		// switch cockpit lights on, external-only lights off
-		/*
+		
 		if (locallight) {
 			for (i = 1; i < nlight; i++) {
 				switch (lightlist[i].plight->GetVisibility()) {
 				case LightEmitter::VIS_EXTERNAL:
-					dev->LightEnable (i, FALSE);
+					Renderer::LightEnable (i, false);
 					break;
 				case LightEmitter::VIS_COCKPIT:
 					AddLocalLight (lightlist[i].plight, lightlist[i].vobj, i);
 					break;
 				}
 			}
-		}*/
+		}
 		// should also check for internal meshes
 		glClear(GL_DEPTH_BUFFER_BIT); // clear z-buffer
 		double nearp = cam->GetNearlimit();
@@ -654,11 +697,11 @@ void Scene::Render ()
 		vFocus->Render (true);
 		cam->SetFrustumLimits (nearp, farp);
 	}
-/*
+
 	if (locallight)
 		for (i = 1; i < nlight; i++)
-			dev->LightEnable (i, FALSE);
-*/
+			Renderer::LightEnable (i, false);
+
 	// render 2D panel and HUD
 	g_client->Render2DOverlay();
 

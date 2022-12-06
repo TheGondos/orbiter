@@ -28,7 +28,6 @@ class OAPIFUNC OGLClient: public oapi::GraphicsClient {
 	std::unique_ptr<Scene> mScene;
 	std::unique_ptr<OGLMeshManager> mMeshManager;
 	std::unique_ptr<TextureManager> mTextureManager;
-	Shader *mBlitShader;
 	Shader *mOverlayShader;
 	Shader *mUntexturedShader;
 public:

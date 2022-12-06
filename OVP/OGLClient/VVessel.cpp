@@ -40,7 +40,7 @@ vVessel::vVessel (OBJHANDLE _hObj, const Scene *scene): vObject (_hObj, scene)
 	nmesh = 0;
 	nanim = 0;
 	bLocalLight = false;
-	//localLight = *scene->GetLight();
+	localLight = *scene->GetLight();
 	tCheckLight = oapiGetSimTime()-1.0;
 	LoadMeshes ();
 	InitAnimations ();
@@ -127,8 +127,8 @@ bool vVessel::Update ()
 	vObject::Update ();
 	UpdateAnimations ();
 
-//	if (oapiGetSimTime() > tCheckLight)
-//		bLocalLight = ModLighting (&localLight);
+	if (oapiGetSimTime() > tCheckLight)
+		bLocalLight = ModLighting (&localLight);
 
 	return true;
 }
@@ -306,14 +306,14 @@ bool vVessel::Render (bool internalpass)
 	const VCHUDSPEC *hudspec;
 	const VCMFDSPEC *mfdspec[MAXMFD];
 	SURFHANDLE sHUD;//, sMFD[MAXMFD];
-/*
-	D3DLIGHT7 globalLight;
+
+	OGLLight globalLight;
 
 	if (bLocalLight) {
-		dev->GetLight (0, &globalLight);
-		dev->SetLight (0, &localLight);
+		Renderer::GetLight (0, &globalLight);
+		Renderer::SetLight (&localLight);
 	}
-*/
+
 	if (bVC) {
 		sHUD = g_client->GetVCHUDSurface (&hudspec);
 		for (mfd = 0; mfd < MAXMFD; mfd++)
@@ -375,10 +375,10 @@ bool vVessel::Render (bool internalpass)
 			}
 		}
 	}
-/*
+
 	if (bLocalLight)
-		dev->SetLight (0, &globalLight);
-*/
+		Renderer::SetLight (&globalLight);
+
 	return true;
 }
 
@@ -492,7 +492,6 @@ bool vVessel::RenderExhaust ()
 		VBO->UnBind();
 		VBA->Bind();
 		glBindTexture(GL_TEXTURE_2D, tex->m_TexId);
-
 		glDrawElements(GL_TRIANGLES, IBO->GetCount(), GL_UNSIGNED_SHORT, 0);
 
 		VBA->UnBind();
@@ -678,8 +677,8 @@ void vVessel::SetExhaustVertices (const VECTOR3 &edir, const VECTOR3 &cdir, cons
 	ev[6].y = ry - sy - ty;   ev[7].y = ry + sy - ty;
 	ev[6].z = rz - sz - tz;   ev[7].z = rz + sz - tz;
 }
-/*
-bool vVessel::ModLighting (LPD3DLIGHT7 light)
+
+bool vVessel::ModLighting (OGLLight *light)
 {
 	VECTOR3 GV, GS, GP, S, P;
 
@@ -812,17 +811,17 @@ bool vVessel::ModLighting (LPD3DLIGHT7 light)
 
 	if (lightmod) {
 		//D3DCOLORVALUE starcol = sun->GetLightColor();
-		D3DCOLORVALUE starcol = {1,1,1,1}; // for now
-		light->dcvDiffuse.r = light->dcvSpecular.r = starcol.r * (float)lcol.x;
-		light->dcvDiffuse.g = light->dcvSpecular.g = starcol.g * (float)lcol.y;
-		light->dcvDiffuse.b = light->dcvSpecular.b = starcol.b * (float)lcol.z;
-		light->dcvAmbient.r = (float)amb;
-		light->dcvAmbient.g = (float)amb;
-		light->dcvAmbient.b = (float)amb;
+		glm::vec4 starcol = {1,1,1,1}; // for now
+		light->light.dcvDiffuse.r = light->light.dcvSpecular.r = starcol.r * (float)lcol.x;
+		light->light.dcvDiffuse.g = light->light.dcvSpecular.g = starcol.g * (float)lcol.y;
+		light->light.dcvDiffuse.b = light->light.dcvSpecular.b = starcol.b * (float)lcol.z;
+		light->light.dcvAmbient.r = (float)amb;
+		light->light.dcvAmbient.g = (float)amb;
+		light->light.dcvAmbient.b = (float)amb;
 		S /= s;
-		light->dvDirection.x = -(float)S.x;
-		light->dvDirection.y = -(float)S.y;
-		light->dvDirection.z = -(float)S.z;
+		light->light.dvDirection.x = -(float)S.x;
+		light->light.dvDirection.y = -(float)S.y;
+		light->light.dvDirection.z = -(float)S.z;
 	}
 
 	tCheckLight = oapiGetSimTime() + dt;
@@ -832,7 +831,7 @@ bool vVessel::ModLighting (LPD3DLIGHT7 light)
 
 	return lightmod;
 }
-*/
+
 void vVessel::Animate (UINT an, double state, UINT mshidx)
 {
 	double s0, s1, ds;

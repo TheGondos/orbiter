@@ -115,17 +115,17 @@ bool RingManager::Render (OGLCamera *c, glm::mat4 &mWorld, bool front)
 	};
 
 	Renderer::Bind(meshShader);
-
+/*
 	const VECTOR3 &sd = g_client->GetScene()->GetSunDir();
 	glm::vec3 sundir;
 	sundir.x = sd.x;
 	sundir.y = sd.y;
 	sundir.z = sd.z;
-
+*/
 	auto *vp = c->GetViewProjectionMatrix();
 	meshShader->SetMat4("u_ViewProjection",*vp);
 	meshShader->SetMat4("u_Model",World);
-	meshShader->SetVec3("u_SunDir", sundir);
+//	meshShader->SetVec3("u_SunDir", sundir);
     meshShader->SetFloat("u_Textured", 1.0);
     meshShader->SetFloat("u_MatAlpha", 1.0);
 	meshShader->SetFloat("u_ModulateAlpha", 0.0);

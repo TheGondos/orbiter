@@ -1,4 +1,5 @@
 #version 330 core
+#include Common.inc
 
 layout(location = 0) out vec4 color;
 
@@ -7,7 +8,7 @@ in vec3 FragPos;
 in vec3 Normal;
 in float Alpha;
 in vec4 texCol;
-uniform sampler2D ourTexture;
+//uniform sampler2D ourTexture;
 //uniform vec4 u_Color;
 
 void main()

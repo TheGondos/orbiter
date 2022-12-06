@@ -496,7 +496,6 @@ GLFWwindow *OGLClient::clbkCreateRenderWindow ()
 	vVessel::GlobalInit();
 	OGLPad::OGLPad::GlobalInit();
 	RingManager::GlobalInit();
-	mBlitShader = Renderer::GetShader("Blit");
 	mOverlayShader = Renderer::GetShader("Overlay");
 	mUntexturedShader = Renderer::GetShader("Untextured");
 	glEnable( GL_LINE_SMOOTH );

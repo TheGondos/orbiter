@@ -1,11 +1,16 @@
 #pragma once
 #include <string>
+#include <glm/glm.hpp>
 
 class OGLTexture;
 class Shader;
 
+class OGLLight;
 namespace Renderer
 {
+    void SetLight(OGLLight *);
+    void GetLight(int idx, OGLLight *);
+    void LightEnable(int, bool);
     enum BoolParam {
         DEPTH_TEST,
         BLEND,
@@ -40,4 +45,6 @@ namespace Renderer
     Shader *GetShader(std::string name);
     void Bind(Shader *shader);
     void Unbind(Shader *shader);
+    void PushLights();
+    void EnableLighting(bool);
 };

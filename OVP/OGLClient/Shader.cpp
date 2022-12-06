@@ -1,5 +1,6 @@
 #include "glad.h"
 #include "Shader.h"
+#include "Shadinclude.hpp"
 #include <vector>
 #include <sstream>
 #include <fstream>
@@ -9,6 +10,7 @@
 
 Shader::Shader(const std::string& vertexFile, const std::string& fragmentFile)
 {
+    /*
     std::string vf = std::string("Modules/OGLClient/") + vertexFile;
     std::ifstream isv(vf);
     std::stringstream bufv;
@@ -18,10 +20,12 @@ Shader::Shader(const std::string& vertexFile, const std::string& fragmentFile)
     std::ifstream isf(ff);
     std::stringstream buff;
     buff << isf.rdbuf();
-
+*/
     GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
+ 
+    std::string tmp = Shadinclude::load(std::string("Modules/OGLClient/") + vertexFile);
 
-    std::string tmp = bufv.str();
+//    std::string tmp = bufv.str();
     const GLchar* source = tmp.c_str();
 
     glShaderSource(vertexShader, 1, &source, 0);
@@ -46,7 +50,9 @@ Shader::Shader(const std::string& vertexFile, const std::string& fragmentFile)
     }
 
     GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    tmp = buff.str();
+    //tmp = buff.str();
+    tmp = Shadinclude::load(std::string("Modules/OGLClient/") + fragmentFile);
+
     source = tmp.c_str();
     glShaderSource(fragmentShader, 1, &source, 0);
     glCompileShader(fragmentShader);

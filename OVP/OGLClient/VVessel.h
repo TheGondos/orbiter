@@ -125,7 +125,7 @@ protected:
 	 * \return \e true if lighting modifications should be applied, \e false
 	 *   if global lighting conditions apply.
 	 */
-	//bool ModLighting (LPD3DLIGHT7 light);
+	bool ModLighting (OGLLight *light);
 
 	void Animate (unsigned int an, double state, unsigned int mshidx);
 	void AnimateComponent (ANIMATIONCOMP *comp, const glm::mat4 &T);
@@ -146,7 +146,7 @@ private:
 	static OGLTexture *defexhausttex; // default exhaust texture
 	double tCheckLight;    // time for next lighting check
 	bool bLocalLight;      // modified local lighting parameters?
-	//D3DLIGHT7 localLight;  // current local lighting parameters
+	OGLLight localLight;  // current local lighting parameters
 
 	static inline Shader *exhaustShader;
 	static inline Shader *meshUnlitShader;

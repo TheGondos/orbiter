@@ -24,7 +24,7 @@
 #include "OGLClient.h"
 #include "CelSphere.h"
 #include "VObject.h"
-//#include "Light.h"
+#include "Light.h"
 
 class CSphereManager;
 class vObject;
@@ -43,7 +43,7 @@ public:
 	inline OGLCamera *GetCamera() const { return cam; }
 	// return associated camera
 
-	//const D3DLIGHT7 *GetLight() const;
+	const OGLLight *GetLight() const;
 
 	inline int GetStencilDepth() const { return stencilDepth; }
 
@@ -92,7 +92,7 @@ public:
 	void AddParticleStream (OGLParticleStream *_pstream);
 	void DelParticleStream (int idx);
 
-	const VECTOR3 &GetSunDir() { return sundir; }
+	//const VECTOR3 &GetSunDir() { return sundir; }
 	VECTOR3 SkyColour ();
 	// Sky background colour based on atmospheric parameters of closest planet
 
@@ -127,7 +127,7 @@ protected:
 	 */
 	void RenderObjectMarker (oapi::Sketchpad *skp, const VECTOR3 &gpos, const char *label1, const char *label2, int mode, int scale);
 
-	//void AddLocalLight (const LightEmitter *le, const vObject *vo, DWORD idx);
+	void AddLocalLight (const LightEmitter *le, const vObject *vo, int idx);
 
 private:
 	int viewW, viewH;        // render viewport size
@@ -140,7 +140,7 @@ private:
 	OGLParticleStream **pstream; // list of particle streams
 	int                nstream; // number of streams
 
-	//D3D7Light *light;          // only one for now
+	OGLLight *light;          // only one for now
 	VECTOR3 bg_rgba;          // ambient background colour
 	bool locallight;           // enable local light sources
 	bool surfLabelsActive;     // v.2 surface labels activated?
