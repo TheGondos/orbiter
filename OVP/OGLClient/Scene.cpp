@@ -638,7 +638,7 @@ void Scene::Render ()
 
 	for (pv = vobjFirst; pv; pv = pv->next) {
 		if (!pv->vobj->IsActive()) continue;
-		//pv->vobj->RenderBeacons (dev);
+		pv->vobj->RenderBeacons ();
 		if (oapiGetObjectType (pv->vobj->Object()) == OBJTP_VESSEL) {
 			((vVessel*)(pv->vobj))->RenderExhaust ();
 		}

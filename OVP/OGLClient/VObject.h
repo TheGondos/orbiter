@@ -166,13 +166,15 @@ public:
 	 * \param dev render device
 	 * \default None.
 	 */
-	//virtual void RenderBeacons (LPDIRECT3DDEVICE7 dev) {}
+	virtual void RenderBeacons () {}
 
 protected:
-//	void RenderSpot (LPDIRECT3DDEVICE7 dev, const VECTOR3 *ofs, float size, const VECTOR3 &col, bool lighting, int shape);
+	void RenderSpot (const VECTOR3 *ofs, float size, const VECTOR3 &col, bool lighting, int shape);
 
 //	static const oapi::D3D7Client *gc; // graphics client instance pointer
 	static OGLTexture *blobtex[3]; // beacon textures
+	static inline Shader *spotShader;
+
 
 	bool active;       // visual is active (within camera range)
 	OBJHANDLE hObj;    // handle for the "logical" object
@@ -182,6 +184,10 @@ protected:
 	double size;       // object radius [m]
 	double cdist;      // current camera distance
 	VECTOR3 cpos;      // camera-relative object position
+
+	static inline VertexArray  *spotVBA;
+	static inline VertexBuffer *spotVBO;
+	static inline IndexBuffer  *spotIBO;
 };
 
 #endif // !__VOBJECT_H

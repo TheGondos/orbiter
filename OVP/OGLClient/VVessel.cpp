@@ -514,14 +514,13 @@ bool vVessel::RenderExhaust ()
 
 void vVessel::RenderBeacons ()
 {
-	/*
 	int idx = 0;
 	const BEACONLIGHTSPEC *bls = vessel->GetBeacon(idx);
 	if (!bls) return; // nothing to do
-	bool need_setup = true;
+//	bool need_setup = true;
 	double simt = oapiGetSimTime();
-	DWORD doalpha;
-	dev->GetRenderState (D3DRENDERSTATE_ALPHABLENDENABLE, &doalpha);
+	Renderer::PushBool(Renderer::BLEND, true);
+	Renderer::PushDepthMask(false);
 	for (; bls; bls = vessel->GetBeacon (++idx)) {
 		if (bls->active) {
 			if (bls->period && (fmod(simt+bls->tofs, bls->period) > bls->duration))
@@ -529,22 +528,23 @@ void vVessel::RenderBeacons ()
 			double size = bls->size;
 			if (cdist > 50.0)
 				size *= pow (cdist/50.0, bls->falloff);
-			if (need_setup) {
-				dev->SetRenderState (D3DRENDERSTATE_ALPHABLENDENABLE, TRUE);
-				dev->SetRenderState (D3DRENDERSTATE_ZWRITEENABLE, FALSE);
-				dev->SetRenderState (D3DRENDERSTATE_ZBIAS, 5);
-				need_setup = false;
-			}
-			RenderSpot (dev, bls->pos, (float)size, *bls->col, false, bls->shape);
+//			if (need_setup) {
+//				dev->SetRenderState (D3DRENDERSTATE_ALPHABLENDENABLE, TRUE);
+//				dev->SetRenderState (D3DRENDERSTATE_ZWRITEENABLE, FALSE);
+//				dev->SetRenderState (D3DRENDERSTATE_ZBIAS, 5);
+//				need_setup = false;
+//			}
+			RenderSpot (bls->pos, (float)size, *bls->col, false, bls->shape);
 		}
 	}
 	// undo device modifications
-	if (!need_setup) {
-		if (!doalpha) dev->SetRenderState (D3DRENDERSTATE_ALPHABLENDENABLE, FALSE);
-		dev->SetRenderState (D3DRENDERSTATE_ZWRITEENABLE, TRUE);
-		dev->SetRenderState (D3DRENDERSTATE_ZBIAS, 0);
-	}
-	*/
+//	if (!need_setup) {
+//		if (!doalpha) dev->SetRenderState (D3DRENDERSTATE_ALPHABLENDENABLE, FALSE);
+//		dev->SetRenderState (D3DRENDERSTATE_ZWRITEENABLE, TRUE);
+//		dev->SetRenderState (D3DRENDERSTATE_ZBIAS, 0);
+//	}
+	Renderer::PopBool(1);
+	Renderer::PopDepthMask();
 }
 
 void vVessel::RenderGroundShadow (OBJHANDLE hPlanet, float depth)

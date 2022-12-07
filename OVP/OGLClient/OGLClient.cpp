@@ -74,6 +74,7 @@ OGLClient::~OGLClient ()
 	TileManager2Base::GlobalExit();
 	TileManager::GlobalExit();
 	Renderer::GlobalExit();
+	vObject::GlobalExit();
 
 	oapiReleaseFont(splashFont);
 	oapiReleaseTexture(splashTex);
@@ -489,6 +490,7 @@ GLFWwindow *OGLClient::clbkCreateRenderWindow ()
 	OGLMesh::GlobalInit();
 	CloudTile::GlobalInit();
 	CloudManager::GlobalInit();
+	vObject::GlobalInit();
 
 	TileManager2Base::GlobalInit();
 	vStar::GlobalInit ();
