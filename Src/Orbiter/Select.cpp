@@ -76,21 +76,25 @@ void Select::DrawMenu(std::list<SelectEntry> &entries) {
 
 void Select::Show() {
     if(!show) return;
+    auto &io = ImGui::GetIO();
+
+    if(io.MouseDown[0] && m_Opened) {
+        return;
+    }
 
     if(m_Opened) {
         ImGui::OpenPopup(m_Title.c_str());
         m_Opened = false;
     }
     
-    bool unused_open = true;
-    if (ImGui::BeginPopupModal(m_Title.c_str(), &unused_open))
+//    auto *viewport = ImGui::GetMainViewport();
+//    ImGui::SetNextWindowViewport(viewport->ID);
+    if (ImGui::BeginPopup(m_Title.c_str()))
     {
         DrawMenu(m_RootMenu);
         ImGui::EndPopup();
     }
 }
-
-
 
 const std::string InputBox::etype = "InputBox";
 
@@ -138,12 +142,8 @@ void InputBox::Show() {
         m_Opened = false;
         firstTime = true;
     }
-    bool unused_open = true;
-    bool *ptr = &unused_open;
-    if(m_cbCancel)
-        ptr = nullptr;
 
-    if (ImGui::BeginPopupModal(buf, ptr))
+    if (ImGui::BeginPopup(buf))
     {
         ImGui::SetNextItemWidth(-FLT_MIN);
         if(firstTime)
