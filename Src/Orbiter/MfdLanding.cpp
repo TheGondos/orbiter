@@ -198,7 +198,7 @@ void Instrument_Landing::UpdateDraw (oapi::Sketchpad *skp)
 	// vertical velocity bar
 	static double lvel_min = -1.0;
 	static double lvel_max =  3.0;
-	double lvel = log10(fabs(hvel.y));
+	double lvel = log10(fabs(hvel.y)>0.1 ? fabs(hvel.y):0.1);
 	if (lvel < lvel_min) lvel = lvel_min;
 	else if (lvel > lvel_max) lvel = lvel_max;
 	dx = (IW*11)/12-barw;

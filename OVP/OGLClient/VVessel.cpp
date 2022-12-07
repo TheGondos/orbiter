@@ -686,6 +686,7 @@ bool vVessel::ModLighting (OGLLight *light)
 	OBJHANDLE hP = vessel->GetSurfaceRef();
 	OBJHANDLE hS = oapiGetGbodyByIndex(0); // the central star
 	CELBODY *cb = oapiGetCelbodyInterface(hP);
+	if(!cb) return false;
 	CELBODY2 *cb2 = (cb->Version() >= 2 ? (CELBODY2*)cb : NULL);
 	vessel->GetGlobalPos(GV);
 	oapiGetGlobalPos (hS, &GS);

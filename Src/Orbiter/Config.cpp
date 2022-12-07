@@ -1399,6 +1399,8 @@ char *Config::MeshPath (const char *name)
 	for(int i = 0; i < strlen(mshpath); i++) {
 		if(mshpath[i] == '\\') mshpath[i]='/';
 	}
+	std::string path = oapiGetFilePath(mshpath);
+	strcpy(mshpath, path.c_str());
 	return mshpath;
 }
 
