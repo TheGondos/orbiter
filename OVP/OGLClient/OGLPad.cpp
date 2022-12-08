@@ -98,6 +98,7 @@ OGLPad::OGLPad (SURFHANDLE s, bool antialiased):oapi::Sketchpad(s)
 //	m_TextAlign = NVGalign::NVG_ALIGN_BOTTOM|NVGalign::NVG_ALIGN_LEFT;
 //	m_TextAlign = NVGalign::NVG_ALIGN_BASELINE|NVGalign::NVG_ALIGN_LEFT;
 	m_tex = (OGLTexture *)s;
+	
 	if(s)
 	{
 		Renderer::PushRenderTarget(m_tex);
@@ -112,7 +113,7 @@ OGLPad::OGLPad (SURFHANDLE s, bool antialiased):oapi::Sketchpad(s)
 		width = g_client->GetScene()->GetCamera()->GetWidth();
 		Renderer::PushBool(Renderer::CULL_FACE, false);
 	}
-
+	glClear(GL_STENCIL_BUFFER_BIT);
     nvgBeginFrame(s_nvg, width, height, /* pxRatio */ 1.0);
 }
 OGLPad::~OGLPad ()

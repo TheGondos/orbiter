@@ -673,7 +673,7 @@ void Instrument::AllocSurface (int w, int h)
 {
 	if (!gc) return;
 
-	int attrib = OAPISURFACE_SKETCHPAD | OAPISURFACE_NOALPHA | OAPISURFACE_RENDERTARGET;
+	int attrib = OAPISURFACE_SKETCHPAD | OAPISURFACE_NOALPHA | OAPISURFACE_RENDERTARGET | OAPISURFACE_MIPMAPS;
 
 	m_surf = gc->clbkCreateSurfaceEx (w, h, attrib);
 	if (m_surf) ClearSurface();

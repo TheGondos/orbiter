@@ -1219,7 +1219,7 @@ bool OGLClient::clbkClearFrame ()
 {
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	Renderer::CheckError("glClearColor");
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	Renderer::CheckError("glClear");
 	return true;
 }

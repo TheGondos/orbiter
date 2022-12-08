@@ -944,15 +944,18 @@ OGLTexture *TextureManager::GetTextureForRendering(int w, int h, int attrib)
     glBindTexture(GL_TEXTURE_2D, tex->m_TexId);
 
     // Give an empty image to OpenGL ( the last "0" )
-    glTexImage2D(GL_TEXTURE_2D, 0,format, w, h, 0,format, GL_UNSIGNED_BYTE, 0);
+    glTexImage2D(GL_TEXTURE_2D, 0, format, w, h, 0, format, GL_UNSIGNED_BYTE, 0);
 
     // Poor filtering. Needed !
 //    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 //    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-//    glGenerateMipmap(GL_TEXTURE_2D);
+    if(attrib & OAPISURFACE_MIPMAPS) {
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glGenerateMipmap(GL_TEXTURE_2D);
+    } else {
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    }
 
     // Set "renderedTexture" as our colour attachement #0
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex->m_TexId, 0);
@@ -961,14 +964,21 @@ OGLTexture *TextureManager::GetTextureForRendering(int w, int h, int attrib)
     GLenum DrawBuffers[1] = {GL_COLOR_ATTACHMENT0};
     glDrawBuffers(1, DrawBuffers); // "1" is the size of DrawBuffers
 
+    glGenRenderbuffers(1, &tex->m_RBO);
+    glBindRenderbuffer(GL_RENDERBUFFER, tex->m_RBO);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, w, h);
+    glBindRenderbuffer(GL_RENDERBUFFER, 0);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_RENDERBUFFER, tex->m_RBO);
+
     if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
     {
-        printf("glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE\n");
+        GLenum t = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+        printf("glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE (0x%x)\n", t);
         abort();
         exit(-1);
     }
 	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT);
+	glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, oldFB);
 	Renderer::CheckError("!GetTextureForRendering");
@@ -1047,6 +1057,8 @@ uint16_t GetNumberOfBits (uint32_t dwMask)
 
 OGLTexture::OGLTexture() {
     m_colorkey = SURF_NO_CK;
+    m_FBO = 0;
+    m_RBO = 0;
 }
 
 bool OGLTexture::Release()
@@ -1065,7 +1077,10 @@ bool OGLTexture::Release()
         }
 
         if(m_FBO) {
-            //TODO delete FBO
+            glDeleteFramebuffers(1, &m_FBO);
+        }
+        if(m_RBO) {
+            glDeleteRenderbuffers(1, &m_RBO);
         }
         delete this;
         return true;
