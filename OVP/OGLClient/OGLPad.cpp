@@ -149,7 +149,6 @@ void OGLPad::nvgStrokeFromPen()
 	if(cpen) {
 		nvgStrokeWidth(s_nvg, std::max(1, cpen->m_Width));
 		nvgStrokeColor(s_nvg, nvgCol(cpen->m_Color));
-		nvgStrokeColor(s_nvg, nvgCol(cpen->m_Color));
 		nvgStrokeDash(s_nvg, cpen->m_Style == 2?1:0);
 		nvgStroke(s_nvg);
 	}
@@ -298,9 +297,12 @@ bool OGLPad::TextW (int x, int y, const wchar_t *str, int len)
  */
 void OGLPad::Pixel (int x, int y, uint32_t col)
 {
-	printf("OGLPad::Pixel unimpl\n");
-	abort();
-	exit(EXIT_FAILURE);
+    nvgBeginPath(s_nvg);
+    nvgRect(s_nvg, x - m_xOrigin, y - m_yOrigin, 0.1, 0.1);
+	nvgStrokeWidth(s_nvg, 1.0);
+	nvgStrokeColor(s_nvg, nvgCol(col));
+	nvgStrokeDash(s_nvg, 0);
+	nvgStroke(s_nvg);
 }
 
 void OGLPad::MoveTo (int x, int y)
