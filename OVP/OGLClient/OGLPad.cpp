@@ -260,7 +260,7 @@ bool OGLPad::Text (int x, int y, const char *str, int len)
     nvgTextAlign(s_nvg, m_TextAlign);
 
     nvgResetTransform(s_nvg);
-    nvgTranslate(s_nvg, x - m_xOrigin, y - m_yOrigin);
+    nvgTranslate(s_nvg, x + m_xOrigin, y + m_yOrigin);
     nvgRotate(s_nvg, cfont->rotationRadians);
 
     if (m_TextBackgroundMode == BkgMode::BK_OPAQUE)
@@ -298,7 +298,7 @@ bool OGLPad::TextW (int x, int y, const wchar_t *str, int len)
 void OGLPad::Pixel (int x, int y, uint32_t col)
 {
     nvgBeginPath(s_nvg);
-    nvgRect(s_nvg, x - m_xOrigin, y - m_yOrigin, 0.1, 0.1);
+    nvgRect(s_nvg, x + m_xOrigin, y + m_yOrigin, 0.1, 0.1);
 	nvgStrokeWidth(s_nvg, 1.0);
 	nvgStrokeColor(s_nvg, nvgCol(col));
 	nvgStrokeDash(s_nvg, 0);
@@ -322,8 +322,8 @@ void OGLPad::LineTo (int x, int y)
 {
 	if(cpen->m_Style != 0) {
 	    nvgBeginPath(s_nvg);
-	    nvgMoveTo(s_nvg, m_curX - m_xOrigin, m_curY - m_yOrigin);
-	    nvgLineTo(s_nvg, x - m_xOrigin, y - m_yOrigin);
+	    nvgMoveTo(s_nvg, m_curX + m_xOrigin, m_curY + m_yOrigin);
+	    nvgLineTo(s_nvg, x + m_xOrigin, y + m_yOrigin);
 	    nvgStrokeFromPen();
 	}
 
@@ -334,7 +334,7 @@ void OGLPad::LineTo (int x, int y)
 void OGLPad::Rectangle (int x0, int y0, int x1, int y1)
 {
     nvgBeginPath(s_nvg);
-    nvgRect(s_nvg, x0 - m_xOrigin, y0 - m_yOrigin, std::abs(x1-x0), std::abs(y1-y0));
+    nvgRect(s_nvg, x0 + m_xOrigin, y0 + m_yOrigin, std::abs(x1-x0), std::abs(y1-y0));
 	nvgStrokeFromBrush();
 	nvgStrokeFromPen();
 }
@@ -344,7 +344,7 @@ void OGLPad::Ellipse (int x0, int y0, int x1, int y1)
     nvgBeginPath(s_nvg);
     float xcenter = (x0+x1)/2;
     float ycenter = (y0+y1)/2;
-    nvgEllipse(s_nvg, xcenter - m_xOrigin, ycenter - m_yOrigin, std::abs(x1-x0)/2, std::abs(y1-y0)/2);
+    nvgEllipse(s_nvg, xcenter + m_xOrigin, ycenter + m_yOrigin, std::abs(x1-x0)/2, std::abs(y1-y0)/2);
 	nvgStrokeFromBrush();
 	nvgStrokeFromPen();
 }
@@ -352,12 +352,12 @@ void OGLPad::Ellipse (int x0, int y0, int x1, int y1)
 void OGLPad::Polygon (const oapi::IVECTOR2 *pt, int npt)
 {
     nvgBeginPath(s_nvg);
-    nvgMoveTo(s_nvg, pt->x - m_xOrigin, pt->y - m_yOrigin);
+    nvgMoveTo(s_nvg, pt->x + m_xOrigin, pt->y + m_yOrigin);
 
     for (int i = 1; i < npt; ++i)
     {
         auto point = pt[i];
-        nvgLineTo(s_nvg, point.x - m_xOrigin, point.y - m_yOrigin);
+        nvgLineTo(s_nvg, point.x + m_xOrigin, point.y + m_yOrigin);
     }
 
     nvgClosePath(s_nvg);
@@ -368,12 +368,12 @@ void OGLPad::Polygon (const oapi::IVECTOR2 *pt, int npt)
 void OGLPad::Polyline (const oapi::IVECTOR2 *pt, int npt)
 {
     nvgBeginPath(s_nvg);
-    nvgMoveTo(s_nvg, pt->x - m_xOrigin, pt->y - m_yOrigin);
+    nvgMoveTo(s_nvg, pt->x + m_xOrigin, pt->y + m_yOrigin);
 
     for (int i = 1; i < npt; ++i)
     {
         auto point = pt[i];
-        nvgLineTo(s_nvg, point.x - m_xOrigin, point.y - m_yOrigin);
+        nvgLineTo(s_nvg, point.x + m_xOrigin, point.y + m_yOrigin);
     }
 
     nvgStrokeFromPen();
