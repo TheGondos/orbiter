@@ -240,7 +240,10 @@ void Instrument_Landing::UpdateDraw (oapi::Sketchpad *skp)
 
 	// velocity vector
 	double sinv = sin(vdir), cosv = cos(vdir);
-	lhspd = log10(hspd) + 1.0;
+	if(hspd > 1.0)
+		lhspd = log10(hspd) + 1.0;
+	else
+		lhspd = 0;
 	if (lhspd < 0.0) lhspd = 0.0;
 	else if (lhspd > 6.0) lhspd = 6.0;
 	r = lhspd * circr * 0.25;
