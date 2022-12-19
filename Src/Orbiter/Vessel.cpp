@@ -5827,6 +5827,8 @@ bool Vessel::RegisterModule (const char *dllname)
 	hMod = oapiModuleLoad(cbuf2);
 	if(!hMod) {
 		fprintf(stderr, "Vessel::RegisterModule failed\n");
+		char *code = dlerror();
+		fprintf(stderr, "Could not load vessel module: %s (code %s)\n", cbuf, code);
 		exit(EXIT_FAILURE);
 		return false;
 	}
@@ -6079,6 +6081,7 @@ const Elements *Vessel::Els() const
 	const Vessel *els_obj = this;
 	while(els_obj->isAttached()) {
 		AttachmentSpec *as = const_cast<Vessel *>(els_obj)->GetAttachmentFromIndex (true, 0);
+		if(!as->mate) return RigidBody::Els();;
 		els_obj = as->mate;
 		assert(els_obj != nullptr);
 	}
