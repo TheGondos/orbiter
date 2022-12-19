@@ -94,6 +94,7 @@ public:
 	 * \param dev render device
 	 */
 	void RenderBeacons ();
+	void RenderGrapplePoints();
 
 	void RenderGroundShadow (OBJHANDLE hPlanet, float depth);
 
@@ -139,10 +140,7 @@ private:
 	} *meshlist;          // list of associated meshes
 	UINT nmesh;           // number of meshes
 
-	ANIMATION *anim;      // list of animations (defined in the vessel object)
-	double *animstate;    // list of visual animation states
-	unsigned int nanim;           // number of animations
-//	static LPDIRECTDRAWSURFACE7 mfdsurf; // texture for rendering MFDs and HUDs
+	std::vector<double> prevAnimState;  // list of visual animation states
 	static OGLTexture *defexhausttex; // default exhaust texture
 	double tCheckLight;    // time for next lighting check
 	bool bLocalLight;      // modified local lighting parameters?

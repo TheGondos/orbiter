@@ -38,7 +38,6 @@ vVessel::vVessel (OBJHANDLE _hObj, const Scene *scene): vObject (_hObj, scene)
 {
 	vessel = oapiGetVesselInterface (_hObj);
 	nmesh = 0;
-	nanim = 0;
 	bLocalLight = false;
 	localLight = *scene->GetLight();
 	tCheckLight = oapiGetSimTime()-1.0;
@@ -112,6 +111,28 @@ void vVessel::clbkEvent (visevent msg, visevent_data content)
 	case EVENT_VESSEL_MODMESHGROUP:
 		//MessageBeep (-1);
 		break;
+	case EVENT_VESSEL_RESETANIM:
+		printf("unimplemented EVENT_VESSEL_RESETANIM %d\n", content.animidx);
+		assert(false);
+		break;
+
+	case EVENT_VESSEL_CLEARANIM:
+		printf("unimplemented EVENT_VESSEL_CLEARANIM %d\n", content.animidx);
+		assert(false);
+		break;
+
+	case EVENT_VESSEL_DELANIM:
+		printf("unimplemented EVENT_VESSEL_DELANIM %d\n", content.animidx);
+		assert(false);
+		break;
+
+	case EVENT_VESSEL_NEWANIM:
+		{
+		ANIMATION *anim;
+		unsigned int nanim = vessel->GetAnimPtr (&anim);
+		prevAnimState.push_back(anim[content.animidx].defstate);
+		break;
+		}
 	}
 }
 
@@ -255,32 +276,29 @@ void vVessel::DelMesh (UINT idx)
 
 void vVessel::InitAnimations ()
 {
-	if (nanim) ClearAnimations();
-	nanim = vessel->GetAnimPtr (&anim);
-	if (nanim) {
-		UINT i;
-		animstate = new double[nanim];
-		for (i = 0; i < nanim; i++)
-			animstate[i] = anim[i].defstate; // reset to default mesh states
-	}
+	ClearAnimations();
+	ANIMATION *anim;
+	unsigned int nanim = vessel->GetAnimPtr (&anim);
+	for (unsigned int i = 0; i < nanim; i++)
+		prevAnimState.push_back(anim[i].defstate);
 }
 
 void vVessel::ClearAnimations ()
 {
-	if (nanim) {
-		delete []animstate;
-		nanim = 0;
-	}
+	prevAnimState.clear();
 }
 
 void vVessel::UpdateAnimations (UINT mshidx)
 {
+	ANIMATION *anim;
+	unsigned int nanim = vessel->GetAnimPtr (&anim);
+
 	double newstate;
 	for (UINT i = 0; i < nanim; i++) {
 		if (!anim[i].ncomp) continue;
-		if (animstate[i] != (newstate = anim[i].state)) {
+		if (prevAnimState[i] != (newstate = anim[i].state)) {
 			Animate (i, newstate, mshidx);
-			animstate[i] = newstate;
+			prevAnimState[i] = newstate;
 		}
 	}
 }
@@ -326,6 +344,12 @@ bool vVessel::Render (bool internalpass)
 
 		// check if mesh should be rendered in this pass
 		uint16_t vismode = meshlist[i].vismode;
+
+		if(vismode == 0) {
+			continue;
+		}
+
+
 		if (bCockpit) {
 			if (internalpass && (vismode & MESHVIS_EXTPASS)) continue;
 			if (!(vismode & MESHVIS_COCKPIT)) {
@@ -512,8 +536,44 @@ bool vVessel::RenderExhaust ()
 	return true;
 }
 
+
+void vVessel::RenderGrapplePoints()
+{
+	if (!oapiGetShowGrapplePoints()) return; // nothing to do
+
+	const OBJHANDLE hVessel = vessel->GetHandle();
+	VECTOR3 pos, dir, rot;
+	double size = 0.1;
+	int shape = 0;
+
+	double simt = oapiGetSysTime();
+	float fParent = fabs(fmod(simt * 0.5f, 1.0) * 2.0 - 1.0);
+	float fChild = fabs(fmod(simt * 0.5f + 0.5, 1.0) * 2.0 - 1.0);
+
+	VECTOR3 colParent{fParent,0,0};
+	VECTOR3 colChildren{0,0.5 * fChild,fChild};
+	// attachment points to parent
+	for (int i = 0; i < vessel->AttachmentCount(true); ++i)
+	{
+		ATTACHMENTHANDLE hAtt = vessel->GetAttachmentHandle(true, i);
+		vessel->GetAttachmentParams(hAtt, pos, dir, rot);
+		RenderSpot (&pos, (float)size, colParent, false, shape);
+		//D3D9Effect::RenderArrow(hVessel, &pos, &dir, &rot, size, &D3DXCOLOR(1,0,0,alpha));
+	}
+
+	// attachment points to children
+	for (int i = 0; i < vessel->AttachmentCount(false); ++i)
+	{
+		ATTACHMENTHANDLE hAtt = vessel->GetAttachmentHandle(false, i);
+		vessel->GetAttachmentParams(hAtt, pos, dir, rot);
+		RenderSpot (&pos, (float)size, colChildren, false, shape);
+		//D3D9Effect::RenderArrow(hVessel, &pos, &dir, &rot, size, &D3DXCOLOR(0,0.5,1,alpha));
+	}
+}
+
 void vVessel::RenderBeacons ()
 {
+	RenderGrapplePoints();
 	int idx = 0;
 	const BEACONLIGHTSPEC *bls = vessel->GetBeacon(idx);
 	if (!bls) return; // nothing to do
@@ -838,12 +898,16 @@ void vVessel::Animate (UINT an, double state, UINT mshidx)
 	double s0, s1, ds;
 	unsigned int i, ii;
 	glm::mat4 T;
+
+	ANIMATION *anim;
+	unsigned int nanim = vessel->GetAnimPtr (&anim);
+
 	ANIMATION *A = anim+an;
 	for (ii = 0; ii < A->ncomp; ii++) {
-		i = (state > animstate[an] ? ii : A->ncomp-ii-1);
+		i = (state > prevAnimState[an] ? ii : A->ncomp-ii-1);
 		ANIMATIONCOMP *AC = A->comp[i];
 		if (mshidx != (unsigned int)-1 && mshidx != AC->trans->mesh) continue;
-		s0 = animstate[an]; // current animation state in the visual
+		s0 = prevAnimState[an]; // current animation state in the visual
 		if      (s0 < AC->state0) s0 = AC->state0;
 		else if (s0 > AC->state1) s0 = AC->state1;
 		s1 = state;           // required animation state
