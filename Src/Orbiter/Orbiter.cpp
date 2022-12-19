@@ -849,13 +849,9 @@ void Orbiter::ScreenToClient (POINT *pt) const
 void Orbiter::KeyCallback(int key, char state) {
 	if(key && bSession) {
 		simkstate[key] = state;
-		if(state) {
-			BroadcastBufferedKeyboardEvent (simkstate, key);
-			//if (!skipkbd) {
-				KbdInputBuffered_System (simkstate, key);
-				if (bRunning) KbdInputBuffered_OnRunning (simkstate, key);
-			//}
-		}
+		BroadcastBufferedKeyboardEvent (simkstate, key);
+		if (state)    KbdInputBuffered_System (simkstate, key);
+		if (bRunning) KbdInputBuffered_OnRunning (simkstate, key);
 	}
 }
 
