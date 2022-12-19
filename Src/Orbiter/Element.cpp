@@ -384,6 +384,7 @@ void Elements::Calculate (const Vector &R, const Vector &V, double simt)
 	double v2 = V.length2();
 	priv_v    = sqrt (v2);
 	priv_r    = R.length();
+	if(priv_v == 0.0 || priv_r == 0.0) return;
 	priv_H.Set (crossp (V, R)); // left-handed coordinates!
 	double h  = priv_H.length();
 	double rv = dotp (R, V);
