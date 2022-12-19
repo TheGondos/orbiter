@@ -60,6 +60,7 @@ void Select::DrawMenu(std::list<SelectEntry> &entries) {
                 if(ImGui::IsItemHovered(ImGuiHoveredFlags_RectOnly) && !(e.m_Flags & ITEM_NOHILIGHT)) {
                     if(ImGui::IsMouseReleased(0)) {
                         m_cbEnter(this, i, e.m_Text.c_str(), m_UserData);
+                        show = false;
                         ImGui::CloseCurrentPopup();
                     }
                 }
@@ -91,6 +92,8 @@ void Select::Show() {
 //    ImGui::SetNextWindowViewport(viewport->ID);
     if (ImGui::BeginPopup(m_Title.c_str()))
     {
+        ImGui::TextUnformatted(m_Title.c_str());
+        ImGui::Separator();
         DrawMenu(m_RootMenu);
         ImGui::EndPopup();
     }
@@ -145,6 +148,8 @@ void InputBox::Show() {
 
     if (ImGui::BeginPopup(buf))
     {
+        ImGui::TextUnformatted(m_Title.c_str());
+        ImGui::Separator();
         ImGui::SetNextItemWidth(-FLT_MIN);
         if(firstTime)
             ImGui::SetKeyboardFocusHere();
@@ -153,12 +158,14 @@ void InputBox::Show() {
         if(ImGui::Button("OK") || entered) {
             m_cbEnter(this, m_Buf, m_UserData);
             ImGui::CloseCurrentPopup();
+            show = false;
         }
         ImGui::SameLine();
         if(ImGui::Button("Cancel")) {
             if(m_cbCancel)
                 m_cbCancel(this, m_Buf, m_UserData);
             ImGui::CloseCurrentPopup();
+            show = false;
         }
         ImGui::EndPopup();
     }
