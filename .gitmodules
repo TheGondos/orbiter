@@ -24,7 +24,7 @@
 	url = https://github.com/TheGondos/libnsbmp.git
 [submodule "OVP/OGLClient/nanovg"]
 	path = OVP/OGLClient/nanovg
-	url = https://github.com/TheGondos/nanovg.git
+	url = git@github.com:TheGondos/nanovg.git
 
 [submodule "Extern/imgui-node-editor"]
 	path = Extern/imgui-node-editor
