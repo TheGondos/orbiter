@@ -47,18 +47,6 @@
 [submodule "Addons/Orb42S"]
 	path = Addons/Orb42S
 	url = https://github.com/TheGondos/Orb42S.git
-[submodule "Addons/DarkEnergy-Spaceplane"]
-	path = Addons/DarkEnergy-Spaceplane
-	url = git@github.com:TheGondos/DarkEnergy-Spaceplane.git
-[submodule "Addons/Better-ISS"]
-	path = Addons/Better-ISS
-	url = git@github.com:TheGondos/Better-ISS.git
-[submodule "Addons/Ion6"]
-	path = Addons/Ion6
-	url = git@github.com:TheGondos/Ion6.git
 [submodule "Addons/SSRMS"]
 	path = Addons/SSRMS
 	url = git@github.com:TheGondos/SSRMS.git
-[submodule "Addons/Ion4"]
-	path = Addons/Ion4
-	url = git@github.com:TheGondos/Ion4.git
