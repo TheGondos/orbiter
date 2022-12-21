@@ -24,6 +24,7 @@ struct OGLTexture
 {
 	OGLTexture();
 	GLuint m_TexId;
+	GLuint m_NormTexId;
 	GLuint m_FBO;
 	GLuint m_RBO;
 	unsigned int m_RefCnt;

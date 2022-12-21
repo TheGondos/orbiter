@@ -289,6 +289,18 @@ bool TextureManager::LoadTexture (const char *fname, OGLTexture **ppdds, uint32_
         (*ppdds)->m_InCache = false;
         (*ppdds)->m_FBO = 0;
         (*ppdds)->InitSize();
+
+        // look for normal map
+        char buf[260];
+        strcpy(buf, fname);
+        strcpy(&buf[strlen(fname) - 4], "_norm.dds");
+        if (g_client->TexturePath(buf, cpath)) {
+            (*ppdds)->m_NormTexId = SOIL_load_OGL_texture(cpath, SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOILFlags | SOIL_FLAG_DDS_LOAD_DIRECT, 0);
+            if((*ppdds)->m_NormTexId) {
+//                (*ppdds)->m_TexId = (*ppdds)->m_NormTexId;
+                printf("Normal map found for %s\n", fname);
+            }
+        }
         return true;
     }
     return false;
@@ -1059,6 +1071,7 @@ OGLTexture::OGLTexture() {
     m_colorkey = SURF_NO_CK;
     m_FBO = 0;
     m_RBO = 0;
+    m_NormTexId = 0;
 }
 
 bool OGLTexture::Release()
@@ -1074,6 +1087,11 @@ bool OGLTexture::Release()
             glDeleteTextures(1, &m_TexId);
 			Renderer::CheckError("glDeleteTextures");
             m_TexId = 0;
+        }
+        if(m_NormTexId) {
+            glDeleteTextures(1, &m_NormTexId);
+			Renderer::CheckError("glDeleteTextures");
+            m_NormTexId = 0;
         }
 
         if(m_FBO) {

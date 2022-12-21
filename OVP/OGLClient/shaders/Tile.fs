@@ -11,7 +11,7 @@ in vec4 eyeSpacePosition;
 
 void main()
 {
-	vec4 cTex = texture(ourTexture, TexCoord);
+	vec4 cTex = texture(colorTexture, TexCoord);
     if(u_lighting == 1) {
         vec3 norm = normalize(Normal);
         vec3 viewDir = normalize( - FragPos);
@@ -49,7 +49,7 @@ void main()
     float diff = max(dot(norm, -u_SunDir), 0.0);
 //    vec4 diffuse = (diff * u_Material.diffuse);
 
-	color = vec4(diff * texture(ourTexture, TexCoord).rgb, texture(ourTexture, TexCoord).a) + vec4(u_bgcol,0);
+	color = vec4(diff * texture(colorTexture, TexCoord).rgb, texture(colorTexture, TexCoord).a) + vec4(u_bgcol,0);
 
 	if(u_FogDensity != 0.0) {
 		float fogCoordinate = abs(eyeSpacePosition.z / eyeSpacePosition.w);

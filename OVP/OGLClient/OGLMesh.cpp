@@ -168,8 +168,8 @@ int OGLMesh::AddGroup (const MESHGROUPEX *mg)
 bool OGLMesh::CopyGroup (GROUPREC *tgt, const GROUPREC *src)
 {
 	tgt->nVtx = src->nVtx;
-	tgt->Vtx = new NTVERTEX[tgt->nVtx];
-    memcpy (tgt->Vtx, src->Vtx, src->nVtx*sizeof(NTVERTEX));
+	tgt->Vtx = new NTTVERTEX[tgt->nVtx];
+    memcpy (tgt->Vtx, src->Vtx, src->nVtx*sizeof(NTTVERTEX));
 	tgt->nIdx = src->nIdx;
 	tgt->Idx = new uint16_t[tgt->nIdx];
 	memcpy (tgt->Idx, src->Idx, tgt->nIdx*sizeof(uint16_t));
@@ -183,7 +183,7 @@ bool OGLMesh::CopyGroup (GROUPREC *tgt, const GROUPREC *src)
 
     tgt->VBA = std::make_unique<VertexArray>();
     tgt->VBA->Bind();
-    tgt->VBO = std::make_unique<VertexBuffer>(tgt->Vtx, tgt->nVtx * sizeof(NTVERTEX));
+    tgt->VBO = std::make_unique<VertexBuffer>(tgt->Vtx, tgt->nVtx * sizeof(NTTVERTEX));
     tgt->VBO->Bind();
 
     glVertexAttribPointer(
@@ -191,7 +191,7 @@ bool OGLMesh::CopyGroup (GROUPREC *tgt, const GROUPREC *src)
     3,                  // size
     GL_FLOAT,           // type
     GL_FALSE,           // normalized?
-    sizeof(NTVERTEX),                  // stride
+    sizeof(NTTVERTEX),                  // stride
     (void*)0            // array buffer offset
     );
     Renderer::CheckError("glVertexAttribPointer0");
@@ -202,7 +202,7 @@ bool OGLMesh::CopyGroup (GROUPREC *tgt, const GROUPREC *src)
     3,                  // size
     GL_FLOAT,           // type
     GL_FALSE,           // normalized?
-    sizeof(NTVERTEX),                  // stride
+    sizeof(NTTVERTEX),                  // stride
     (void*)12            // array buffer offset
     );
     Renderer::CheckError("glVertexAttribPointer");
@@ -211,14 +211,26 @@ bool OGLMesh::CopyGroup (GROUPREC *tgt, const GROUPREC *src)
 
     glVertexAttribPointer(
     2,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
-    2,                  // size
+    3,                  // size
     GL_FLOAT,           // type
     GL_FALSE,           // normalized?
-    sizeof(NTVERTEX),                  // stride
+    sizeof(NTTVERTEX),                  // stride
     (void*)24            // array buffer offset
     );
     Renderer::CheckError("glVertexAttribPointer");
     glEnableVertexAttribArray(2);
+    Renderer::CheckError("glEnableVertexAttribArray1");
+
+    glVertexAttribPointer(
+    3,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
+    2,                  // size
+    GL_FLOAT,           // type
+    GL_FALSE,           // normalized?
+    sizeof(NTTVERTEX),                  // stride
+    (void*)36            // array buffer offset
+    );
+    Renderer::CheckError("glVertexAttribPointer");
+    glEnableVertexAttribArray(3);
     Renderer::CheckError("glEnableVertexAttribArray2");
 
     tgt->IBO = std::make_unique<IndexBuffer>(tgt->Idx, tgt->nIdx);
@@ -228,11 +240,84 @@ bool OGLMesh::CopyGroup (GROUPREC *tgt, const GROUPREC *src)
 	return true;
 }
 
+void RecomputeTangents(NTTVERTEX *vtx, uint16_t *idx, int nVtx, int nIdx, bool bTextured) {
+	if(bTextured) {
+		for (int i = 0 ; i < nVtx ; i++) {
+			vtx[i].tx = 0.0;
+			vtx[i].ty = 0.0;
+			vtx[i].tz = 0.001;
+		}
+
+		for (int i = 0 ; i < nIdx ; i += 3) {
+			NTTVERTEX& v0 = vtx[idx[i]];
+			NTTVERTEX& v1 = vtx[idx[i+1]];
+			NTTVERTEX& v2 = vtx[idx[i+2]];
+
+			glm::vec3 Edge1{v1.x - v0.x, v1.y - v0.y, v1.z - v0.z};
+			glm::vec3 Edge2{v2.x - v0.x, v2.y - v0.y, v2.z - v0.z};
+
+			float DeltaU1 = v1.tu - v0.tu;
+			float DeltaV1 = v1.tv - v0.tv;
+			float DeltaU2 = v2.tu - v0.tu;
+			float DeltaV2 = v2.tv - v0.tv;
+
+			float q = (DeltaU1 * DeltaV2 - DeltaU2 * DeltaV1);
+			if(q == 0.0) q = 1.0;
+			float f = 1.0f / q;
+
+			glm::vec3 Tangent;//, Bitangent;
+
+			Tangent.x = f * (DeltaV2 * Edge1.x - DeltaV1 * Edge2.x);
+			Tangent.y = f * (DeltaV2 * Edge1.y - DeltaV1 * Edge2.y);
+			Tangent.z = f * (DeltaV2 * Edge1.z - DeltaV1 * Edge2.z);
+
+	//		Bitangent.x = f * (-DeltaU2 * Edge1.x + DeltaU1 * Edge2.x);
+	//		Bitangent.y = f * (-DeltaU2 * Edge1.y + DeltaU1 * Edge2.y);
+	//		Bitangent.z = f * (-DeltaU2 * Edge1.z + DeltaU1 * Edge2.z);
+
+			v0.tx += Tangent.x;
+			v0.ty += Tangent.y;
+			v0.tz += Tangent.z;
+			v1.tx += Tangent.x;
+			v1.ty += Tangent.y;
+			v1.tz += Tangent.z;
+			v2.tx += Tangent.x;
+			v2.ty += Tangent.y;
+			v2.tz += Tangent.z;
+		}
+
+		for (unsigned int i = 0 ; i < nVtx ; i++) {
+			glm::vec3 tangent{vtx[i].tx,vtx[i].ty,vtx[i].tz};
+			tangent = glm::normalize(tangent);
+			vtx[i].tx = tangent.x;
+			vtx[i].ty = tangent.y;
+			vtx[i].tz = tangent.z;
+		}
+	} else {
+		for (unsigned int i = 0 ; i < nVtx ; i++) {
+			vtx[i].tx = 0.0;
+			vtx[i].ty = 0.0;
+			vtx[i].tz = 1.0;
+		}
+	}
+}
+
 bool OGLMesh::CopyGroup (GROUPREC *grp, const MESHGROUPEX *mg)
 {
 	grp->nVtx = mg->nVtx;
-    grp->Vtx = new NTVERTEX[mg->nVtx];
-    memcpy (grp->Vtx, mg->Vtx, grp->nVtx*sizeof(NTVERTEX));
+    grp->Vtx = new NTTVERTEX[mg->nVtx];
+//    memcpy (grp->Vtx, mg->Vtx, grp->nVtx*sizeof(NTTVERTEX));
+	for(int i = 0; i < grp->nVtx; i++) {
+		grp->Vtx[i].x = mg->Vtx[i].x;
+		grp->Vtx[i].y = mg->Vtx[i].y;
+		grp->Vtx[i].z = mg->Vtx[i].z;
+		grp->Vtx[i].nx = mg->Vtx[i].nx;
+		grp->Vtx[i].ny = mg->Vtx[i].ny;
+		grp->Vtx[i].nz = mg->Vtx[i].nz;
+		grp->Vtx[i].tu = mg->Vtx[i].tu;
+		grp->Vtx[i].tv = mg->Vtx[i].tv;
+	}
+	// RecomputeTangents
 	grp->nIdx = mg->nIdx;
 	grp->Idx = new uint16_t[grp->nIdx];
 	memcpy (grp->Idx, mg->Idx, grp->nIdx*sizeof(uint16_t));
@@ -247,9 +332,11 @@ bool OGLMesh::CopyGroup (GROUPREC *grp, const MESHGROUPEX *mg)
 	grp->zBias   = mg->zBias;
 	grp->IntFlag = mg->Flags;
 
+	RecomputeTangents(grp->Vtx, grp->Idx, grp->nVtx, grp->nIdx, grp->TexIdx!=0);
+
     grp->VBA = std::make_unique<VertexArray>();
     grp->VBA->Bind();
-    grp->VBO = std::make_unique<VertexBuffer>(mg->Vtx, mg->nVtx * sizeof(NTVERTEX));
+    grp->VBO = std::make_unique<VertexBuffer>(grp->Vtx, grp->nVtx * sizeof(NTTVERTEX));
     grp->VBO->Bind();
 
     glVertexAttribPointer(
@@ -257,7 +344,7 @@ bool OGLMesh::CopyGroup (GROUPREC *grp, const MESHGROUPEX *mg)
     3,                  // size
     GL_FLOAT,           // type
     GL_FALSE,           // normalized?
-    sizeof(NTVERTEX),                  // stride
+    sizeof(NTTVERTEX),                  // stride
     (void*)0            // array buffer offset
     );
     Renderer::CheckError("glVertexAttribPointer0");
@@ -268,7 +355,7 @@ bool OGLMesh::CopyGroup (GROUPREC *grp, const MESHGROUPEX *mg)
     3,                  // size
     GL_FLOAT,           // type
     GL_FALSE,           // normalized?
-    sizeof(NTVERTEX),                  // stride
+    sizeof(NTTVERTEX),                  // stride
     (void*)12            // array buffer offset
     );
     Renderer::CheckError("glVertexAttribPointer");
@@ -277,14 +364,26 @@ bool OGLMesh::CopyGroup (GROUPREC *grp, const MESHGROUPEX *mg)
 
     glVertexAttribPointer(
     2,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
-    2,                  // size
+    3,                  // size
     GL_FLOAT,           // type
     GL_FALSE,           // normalized?
-    sizeof(NTVERTEX),                  // stride
+    sizeof(NTTVERTEX),                  // stride
     (void*)24            // array buffer offset
     );
     Renderer::CheckError("glVertexAttribPointer");
     glEnableVertexAttribArray(2);
+    Renderer::CheckError("glEnableVertexAttribArray1");
+
+    glVertexAttribPointer(
+    3,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
+    2,                  // size
+    GL_FLOAT,           // type
+    GL_FALSE,           // normalized?
+    sizeof(NTTVERTEX),                  // stride
+    (void*)36            // array buffer offset
+    );
+    Renderer::CheckError("glVertexAttribPointer");
+    glEnableVertexAttribArray(3);
     Renderer::CheckError("glEnableVertexAttribArray2");
 
     grp->IBO = std::make_unique<IndexBuffer>(mg->Idx, mg->nIdx);
@@ -325,7 +424,14 @@ int OGLMesh::GetGroup (int grp, GROUPREQUESTSPEC *grs)
             for (i = 0; i < grs->nVtx; i++) {
                 vi = grs->VtxPerm[i];
                 if (vi < nv) {
-                    grs->Vtx[i] = g->Vtx[vi];
+                    grs->Vtx[i].x = g->Vtx[vi].x;
+                    grs->Vtx[i].y = g->Vtx[vi].y;
+                    grs->Vtx[i].z = g->Vtx[vi].z;
+                    grs->Vtx[i].nx = g->Vtx[vi].nx;
+                    grs->Vtx[i].ny = g->Vtx[vi].ny;
+                    grs->Vtx[i].nz = g->Vtx[vi].nz;
+                    grs->Vtx[i].tu = g->Vtx[vi].tu;
+                    grs->Vtx[i].tv = g->Vtx[vi].tv;
                 } else {
                     grs->Vtx[i] = zero;
                     ret = 1;
@@ -333,7 +439,17 @@ int OGLMesh::GetGroup (int grp, GROUPREQUESTSPEC *grs)
             }
         } else {
             if (grs->nVtx > nv) grs->nVtx = nv;
-            memcpy (grs->Vtx, g->Vtx, grs->nVtx * sizeof(NTVERTEX));
+//			memcpy (grs->Vtx, g->Vtx, grs->nVtx * sizeof(NTTVERTEX));
+            for (i = 0; i < grs->nVtx; i++) {
+				grs->Vtx[i].x = g->Vtx[i].x;
+				grs->Vtx[i].y = g->Vtx[i].y;
+				grs->Vtx[i].z = g->Vtx[i].z;
+				grs->Vtx[i].nx = g->Vtx[i].nx;
+				grs->Vtx[i].ny = g->Vtx[i].ny;
+				grs->Vtx[i].nz = g->Vtx[i].nz;
+				grs->Vtx[i].tu = g->Vtx[i].tu;
+				grs->Vtx[i].tv = g->Vtx[i].tv;
+			}
         }
 	}
 
@@ -374,7 +490,7 @@ int OGLMesh::EditGroup (int grp, GROUPEDITSPEC *ges)
 		g->UsrFlag &= ~ges->UsrFlag;
 
 	if (flag & GRPEDIT_VTXMOD) {
-		NTVERTEX *vtx = g->Vtx;
+		NTTVERTEX *vtx = g->Vtx;
         for (i = 0; i < ges->nVtx; i++) {
             vi = (ges->vIdx ? ges->vIdx[i] : i);
             if (vi < g->nVtx) {
@@ -396,8 +512,11 @@ int OGLMesh::EditGroup (int grp, GROUPEDITSPEC *ges)
                 else if (flag & GRPEDIT_VTXTEXADDV) vtx[vi].tv += ges->Vtx[i].tv;
             }
         }
+
+		RecomputeTangents(g->Vtx, g->Idx, g->nVtx, g->nIdx, g->TexIdx!=0);
+
 		g->VBO->Bind();
-        g->VBO->Update(g->Vtx, g->nVtx * sizeof(NTVERTEX));
+        g->VBO->Update(g->Vtx, g->nVtx * sizeof(NTTVERTEX));
 		g->VBO->UnBind();
 	}
 	return 0;
@@ -522,7 +641,24 @@ void OGLMesh::Render (OGLCamera *c, glm::fmat4 &model)
                 glBindTexture(GL_TEXTURE_2D,  0);
                 meshShader->SetFloat("u_Textured", 0.0);
             } else {
-                glBindTexture(GL_TEXTURE_2D,  tx->m_TexId);
+
+				if(tx->m_NormTexId) {
+					// Bind our normal texture in Texture Unit 1
+					glActiveTexture(GL_TEXTURE1);
+					glBindTexture(GL_TEXTURE_2D, tx->m_NormTexId);
+					meshShader->SetInt("normalMap", 1);
+	                meshShader->SetFloat("u_NormalMap", 1.0);
+				} else {
+	                meshShader->SetFloat("u_NormalMap", 0.0);
+				}
+
+
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, tx->m_TexId);
+				meshShader->SetInt("colorTexture", 0);
+				// Set our "DiffuseTextureSampler" sampler to user Texture Unit 0
+				//glUniform1i(DiffuseTextureID, 0);
+
 				Renderer::CheckError("glBindTexture");
                 meshShader->SetFloat("u_Textured", 1.0);
                 meshShader->SetFloat("u_MatAlpha", 1.0);
@@ -620,7 +756,7 @@ void OGLMesh::TransformGroup (int n, const glm::fmat4 *mm)
     const glm::fmat4 &m=*mm;
 
 	for (i = 0; i < nv; i++) {
-		NTVERTEX &v = grp->Vtx[i];
+		NTTVERTEX &v = grp->Vtx[i];
 		x = v.x*m[0][0] + v.y*m[1][0] + v.z* m[2][0] + m[3][0];
 		y = v.x*m[0][1] + v.y*m[1][1] + v.z* m[2][1] + m[3][1];
 		z = v.x*m[0][2] + v.y*m[1][2] + v.z* m[2][2] + m[3][2];
@@ -643,8 +779,11 @@ void OGLMesh::TransformGroup (int n, const glm::fmat4 *mm)
 		v.nz = z*w;
 	}
 
+	RecomputeTangents(grp->Vtx, grp->Idx, grp->nVtx, grp->nIdx, grp->TexIdx!=0);
+
+
 	grp->VBO->Bind();
-    grp->VBO->Update(grp->Vtx, nv * sizeof(NTVERTEX));
+    grp->VBO->Update(grp->Vtx, nv * sizeof(NTTVERTEX));
 	grp->VBO->UnBind();
 	//if (GrpSetup) SetupGroup (grp);
 }

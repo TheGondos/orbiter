@@ -244,3 +244,29 @@ void Shader::SetFloat(const std::string& name, float value) const
         exit(-1);
 	}
 }
+void Shader::SetInt(const std::string& name, int value)
+{
+    GLint location = glGetUniformLocation(ShaderID, name.c_str());
+    if(location == -1) {
+        printf("glGetUniformLocation failed for %s\n", name.c_str());
+        return;
+        exit(-1);
+    }
+    GLenum err;
+	while((err = glGetError()) != GL_NO_ERROR)
+	{
+	// Process/log the error.
+		printf("GLError: glGetUniformLocation - 0x%04X\n", err);
+        abort();
+        exit(-1);
+	}
+
+    glUniform1i(location, value);
+	while((err = glGetError()) != GL_NO_ERROR)
+	{
+	// Process/log the error.
+		printf("GLError: glUniform1fv - 0x%04X loc=%d %s\n", err, location, name.c_str());
+        abort();
+        exit(-1);
+	}
+}

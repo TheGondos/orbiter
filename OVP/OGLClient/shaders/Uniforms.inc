@@ -6,7 +6,8 @@ uniform Material u_Material;
 uniform vec4 u_FogColor;
 uniform float u_FogDensity;
 
-uniform sampler2D ourTexture;
+uniform sampler2D colorTexture;
+uniform sampler2D normalMap;
 uniform bool u_Textured;
 uniform bool u_ModulateAlpha;
 uniform float u_MatAlpha;

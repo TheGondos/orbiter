@@ -32,12 +32,26 @@ const uint32_t SPEC_INHERIT = (uint32_t)(-2); // "inherit" material/texture flag
  * Meshes consist of one or more vertex groups, and a set of materials and
  * textures.
  */
+typedef struct {
+	float x;     ///< vertex x position
+	float y;     ///< vertex y position
+	float z;     ///< vertex z position
+	float nx;    ///< vertex x normal
+	float ny;    ///< vertex y normal
+	float nz;    ///< vertex z normal
+	float tx;    ///< vertex x tangent
+	float ty;    ///< vertex y tangent
+	float tz;    ///< vertex z tangent
+	float tu;    ///< vertex u texture coordinate
+	float tv;    ///< vertex v texture coordinate
+} NTTVERTEX;
+
 class OGLCamera;
 class OGLMesh {
 public:
 	struct GROUPREC {  // mesh group definition
 		int nVtx;           // number of vertices
-        NTVERTEX *Vtx;
+        NTTVERTEX *Vtx;
 		uint32_t nIdx;           // number of indices
 		uint16_t *Idx;            // vertex index list
         std::unique_ptr<VertexBuffer> VBO;

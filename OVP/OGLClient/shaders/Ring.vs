@@ -7,11 +7,9 @@ layout(location = 3) in vec2 a_TexCoord;
 
 uniform mat4 u_ViewProjection;
 uniform mat4 u_Model;
-uniform bool u_NormalMap;
 out vec2 TexCoord;
 out vec3 FragPos;
 out vec3 Normal;
-out vec3 Tangent;
 
 void main()
 {
@@ -19,7 +17,5 @@ void main()
 
    	TexCoord = a_TexCoord;
     FragPos = vec3(u_Model * vec4(a_Position, 1.0));
-    Normal = mat3(transpose(inverse(u_Model))) * a_Normal;
-    if(u_NormalMap)
-        Tangent = mat3(transpose(inverse(u_Model))) * a_Tangent;  
+    Normal = mat3(transpose(inverse(u_Model))) * a_Normal;  
 }

@@ -6,27 +6,6 @@ layout(location = 0) out vec4 color;
 in vec2 TexCoord;
 in vec3 FragPos;
 in vec3 Normal;
-in vec3 Tangent;
-uniform bool u_NormalMap;
-
-
-vec3 CalcNormal()
-{
-    vec3 N = normalize(Normal);
-    vec3 T = normalize(Tangent);
-    T = normalize(T - dot(T, N) * N);
-    vec3 B = cross(T, N);
-
-    vec3 nMap = 2.0 * texture(normalMap, TexCoord).rgb - 1.0;
-
-//    if (dot(cross(N, T), B) < 0.0f){
-//        T = T * -1.0f;
-//    }
-
-    mat3 TBN = mat3(T, B, N);
-    return normalize(TBN * nMap);
-}
-
 
 void main()
 {
@@ -40,24 +19,10 @@ void main()
     if(u_ModulateAlpha)
         cTex.a *= u_Material.diffuse.a;
 
-    //color.rgb = (normalize(Tangent - Normal) + 1.0)/2.0;
-    //color.rgb = normalize(Bitangent);
-    //color.rgb = normalize(Tangent);
-    //color.rgb = normalize(Normal);
-    //color.rgb = normalize(CalcBumpedNormal());
-    //color.rgb = texture(normalMap, TexCoord).xyz;
-    //color.a = 1.0;
-    //return;
-
     vec3 cDiffLocal = vec3(0);
     vec3 cSpecLocal = vec3(0);
     if(u_lighting == 1) {
-        vec3 norm;
-        if(u_NormalMap)
-            norm = CalcNormal();
-        else
-            norm = normalize(Normal);
-
+        vec3 norm = normalize(Normal);
         vec3 viewDir = normalize( - FragPos);
 
         for(int i = 0; i < NR_LIGHTS; i++) {

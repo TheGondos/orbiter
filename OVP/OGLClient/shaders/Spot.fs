@@ -5,11 +5,11 @@ in vec2 TexCoord;
 
 uniform vec3 u_SpotColor;
 
-uniform sampler2D ourTexture;
+uniform sampler2D colorTexture;
 
 void main()
 {
-	//vec4 c = texture(ourTexture, TexCoord);
-	color = texture(ourTexture, TexCoord) * vec4(u_SpotColor,1.0);
+	//vec4 c = texture(colorTexture, TexCoord);
+	color = texture(colorTexture, TexCoord) * vec4(u_SpotColor,1.0);
     //color = vec4(0.5,0.5,0.5,0.5);
 }

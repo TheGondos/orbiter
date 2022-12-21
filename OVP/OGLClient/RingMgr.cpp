@@ -45,7 +45,7 @@ RingManager::~RingManager ()
 
 void RingManager::GlobalInit ()
 {
-	meshShader = Renderer::GetShader("Mesh");
+	meshShader = Renderer::GetShader("Ring");
 }
 
 void RingManager::SetMeshRes (unsigned int res)
@@ -166,8 +166,8 @@ OGLMesh *RingManager::CreateRing (double irad, double orad, int nsect)
 	grp->nIdx = 6*(count - 1);
 	grp->Idx = new uint16_t[grp->nIdx+12];
 
-	NTVERTEX *Vtx;
-	Vtx = grp->Vtx = new NTVERTEX[grp->nVtx+4];
+	NTTVERTEX *Vtx;
+	Vtx = grp->Vtx = new NTTVERTEX[grp->nVtx+4];
 	uint16_t *Idx = grp->Idx;
 
 	double alpha = PI/(double)nsect;
@@ -200,7 +200,7 @@ OGLMesh *RingManager::CreateRing (double irad, double orad, int nsect)
 
     grp->VBA = std::make_unique<VertexArray>();
     grp->VBA->Bind();
-    grp->VBO = std::make_unique<VertexBuffer>(grp->Vtx, (grp->nVtx+4) * sizeof(NTVERTEX));
+    grp->VBO = std::make_unique<VertexBuffer>(grp->Vtx, (grp->nVtx+4) * sizeof(NTTVERTEX));
     grp->VBO->Bind();
 
     glVertexAttribPointer(
@@ -208,7 +208,7 @@ OGLMesh *RingManager::CreateRing (double irad, double orad, int nsect)
     3,                  // size
     GL_FLOAT,           // type
     GL_FALSE,           // normalized?
-    sizeof(NTVERTEX),                  // stride
+    sizeof(NTTVERTEX),                  // stride
     (void*)0            // array buffer offset
     );
     Renderer::CheckError("glVertexAttribPointer0");
@@ -219,7 +219,7 @@ OGLMesh *RingManager::CreateRing (double irad, double orad, int nsect)
     3,                  // size
     GL_FLOAT,           // type
     GL_FALSE,           // normalized?
-    sizeof(NTVERTEX),                  // stride
+    sizeof(NTTVERTEX),                  // stride
     (void*)12            // array buffer offset
     );
     Renderer::CheckError("glVertexAttribPointer");
@@ -228,14 +228,26 @@ OGLMesh *RingManager::CreateRing (double irad, double orad, int nsect)
 
     glVertexAttribPointer(
     2,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
-    2,                  // size
+    3,                  // size
     GL_FLOAT,           // type
     GL_FALSE,           // normalized?
-    sizeof(NTVERTEX),                  // stride
+    sizeof(NTTVERTEX),                  // stride
     (void*)24            // array buffer offset
     );
     Renderer::CheckError("glVertexAttribPointer");
     glEnableVertexAttribArray(2);
+
+    Renderer::CheckError("glEnableVertexAttribArray2");
+    glVertexAttribPointer(
+    3,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
+    2,                  // size
+    GL_FLOAT,           // type
+    GL_FALSE,           // normalized?
+    sizeof(NTTVERTEX),                  // stride
+    (void*)36            // array buffer offset
+    );
+    Renderer::CheckError("glVertexAttribPointer");
+    glEnableVertexAttribArray(3);
     Renderer::CheckError("glEnableVertexAttribArray2");
 
     grp->IBO = std::make_unique<IndexBuffer>(grp->Idx, grp->nIdx + 12);

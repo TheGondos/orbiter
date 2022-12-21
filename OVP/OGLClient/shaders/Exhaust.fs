@@ -7,11 +7,11 @@ in vec3 FragPos;
 in vec3 Normal;
 in float Alpha;
 in vec4 texCol;
-uniform sampler2D ourTexture;
+uniform sampler2D colorTexture;
 
 void main()
 {
-    vec4 tex = texture(ourTexture, TexCoord);
+    vec4 tex = texture(colorTexture, TexCoord);
 //    vec4 c = texCol;
   //  c.a = Alpha;
 
