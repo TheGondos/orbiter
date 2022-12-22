@@ -49,4 +49,4 @@
 	url = https://github.com/TheGondos/Orb42S.git
 [submodule "Addons/SSRMS"]
 	path = Addons/SSRMS
-	url = git@github.com:TheGondos/SSRMS.git
+	url = https://github.com/TheGondos/SSRMS.git
