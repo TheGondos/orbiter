@@ -1,11 +1,13 @@
 #version 330 core
 #include Common.inc
+#include LogDepth.inc
 
 layout(location = 0) out vec4 color;
 
 in vec2 TexCoord;
 in vec3 Normal;
 in vec3 FragPos;
+in float flogz;
 
 in vec4 eyeSpacePosition;
 
@@ -42,6 +44,7 @@ void main()
 	color.rgb = lumaBasedReinhardToneMapping(cTex.rgb);
 	color.a = cTex.a;
 //    color = min(cTex,1);
+	gl_FragDepth = FS_LOGZ(flogz);
 
 
 	/*

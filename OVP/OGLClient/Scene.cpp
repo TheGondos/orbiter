@@ -283,7 +283,6 @@ void Scene::AddLocalLight (const LightEmitter *le, const vObject *vo, int idx)
 void Scene::Update ()
 {
 	cam->Update (); // update camera parameters
-	Renderer::SetViewPort(cam->GetWidth(),cam->GetHeight());
 
 	light->Update (); // update light sources
 
@@ -345,6 +344,7 @@ void Scene::Render ()
 	VOBJREC *pv;
 
 	Update (); // update camera and visuals
+	Renderer::SetViewPort(cam->GetWidth(),cam->GetHeight());
 
 	VECTOR3 bgcol = SkyColour();
 	double skybrt = (bgcol.x+bgcol.y+bgcol.z)/3.0;
@@ -691,11 +691,7 @@ void Scene::Render ()
 		}
 		// should also check for internal meshes
 		glClear(GL_DEPTH_BUFFER_BIT); // clear z-buffer
-		double nearp = cam->GetNearlimit();
-		double farp  = cam->GetFarlimit ();
-		cam->SetFrustumLimits (0.1, oapiGetSize (hFocus));
 		vFocus->Render (true);
-		cam->SetFrustumLimits (nearp, farp);
 	}
 
 	if (locallight)

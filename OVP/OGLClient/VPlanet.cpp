@@ -291,7 +291,7 @@ void vPlanet::CheckResolution ()
 	int new_patchres;
 	double ntx;
 
-	if (apr < 2.5) { // render planet as 2x2 pixels
+	if (apr < 1) { // render planet as 2x2 pixels
 		renderpix = true;
 		new_patchres = 0;
 		ntx = 0;
@@ -442,8 +442,7 @@ bool vPlanet::Render ()
 			Renderer::CheckError("Render");
 		} else {
 			Renderer::CheckError("Render");
-			bool using_zbuf;
-			RenderSphere (prm, using_zbuf);            // planet surface
+			RenderSphere (prm);            // planet surface
 			Renderer::CheckError("Render");
 		}
 
@@ -505,9 +504,8 @@ void vPlanet::RenderDot ()
 
 // ==============================================================
 
-void vPlanet::RenderSphere (const RenderPrm &prm, bool &using_zbuf)
+void vPlanet::RenderSphere (const RenderPrm &prm)
 {
-	using_zbuf = false;
 /*
 	if (mipmap_mode) {
 		float fBias = (float)g_client->Cfg()->PlanetMipmapBias;
@@ -533,18 +531,12 @@ void vPlanet::RenderSphere (const RenderPrm &prm, bool &using_zbuf)
 
 	//Renderer::PushFrontFace(Renderer::FrontFace::CW);
 	if (surfmgr2) {
-		if (cdist >= 1.3*rad && cdist > 3e6) {
-			surfmgr2->Render (dmWorld, false, prm);
-			Renderer::CheckError("RenderSphere");
-		} else {
-			Renderer::PushBool(Renderer::DEPTH_TEST, true);
-			Renderer::PushDepthMask(true);
-			surfmgr2->Render (dmWorld, true, prm);
-			Renderer::PopDepthMask();
-			Renderer::PopBool();
-			//using_zbuf = true;
-			Renderer::CheckError("RenderSphere");
-		}
+		Renderer::PushBool(Renderer::DEPTH_TEST, true);
+		Renderer::PushDepthMask(true);
+		surfmgr2->Render (dmWorld, prm);
+		Renderer::PopDepthMask();
+		Renderer::PopBool();
+		Renderer::CheckError("RenderSphere");
 	} else {
 		//mercury, venus, saturn, titan, hyperion, uranus, miranda, ariel, umbriel, titan, oberon, neptune, triton, proteus, nereide 
 		surfmgr->Render (mWorld, dist_scale, patchres, 0.0, prm.bFog); // surface
@@ -598,7 +590,7 @@ void vPlanet::RenderCloudLayer (GLenum cullmode, const RenderPrm &prm)
 	Renderer::PushFrontFace((Renderer::FrontFace)cullmode);
 	Renderer::PushBool(Renderer::BLEND, true);
 	if (cloudmgr2)
-		cloudmgr2->Render (dmWorld, false, prm);
+		cloudmgr2->Render (dmWorld, prm);
 	else
 		clouddata->cloudmgr->Render (clouddata->mWorldC, dist_scale, std::min(patchres,8), clouddata->viewap); // clouds
 	Renderer::PopBool();

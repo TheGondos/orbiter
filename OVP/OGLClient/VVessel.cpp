@@ -515,6 +515,7 @@ bool vVessel::RenderExhaust ()
 		VBO->Update(ExhaustVtx, 8 * sizeof(VERTEX_XYZ_TEX));
 		VBO->UnBind();
 		VBA->Bind();
+
 		glBindTexture(GL_TEXTURE_2D, tex->m_TexId);
 		glDrawElements(GL_TRIANGLES, IBO->GetCount(), GL_UNSIGNED_SHORT, 0);
 

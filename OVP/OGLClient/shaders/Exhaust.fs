@@ -1,4 +1,5 @@
 #version 330 core
+#include LogDepth.inc
 
 layout(location = 0) out vec4 color;
 
@@ -7,6 +8,7 @@ in vec3 FragPos;
 in vec3 Normal;
 in float Alpha;
 in vec4 texCol;
+in float flogz;
 uniform sampler2D colorTexture;
 
 void main()
@@ -18,4 +20,5 @@ void main()
 //    color = tex * c;
     //color = vec4(1,1,1,1);
     color = tex;
+	  gl_FragDepth = FS_LOGZ(flogz);
 }

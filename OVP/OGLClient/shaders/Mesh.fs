@@ -1,14 +1,19 @@
 #version 330 core
 #include Common.inc
+#include LogDepth.inc
+
+#extension GL_ARB_conservative_depth : enable
+layout(depth_less) out float gl_FragDepth;
 
 layout(location = 0) out vec4 color;
+
 
 in vec2 TexCoord;
 in vec3 FragPos;
 in vec3 Normal;
 in vec3 Tangent;
+in float flogz;
 uniform bool u_NormalMap;
-
 
 vec3 CalcNormal()
 {
@@ -26,7 +31,6 @@ vec3 CalcNormal()
     mat3 TBN = mat3(T, B, N);
     return normalize(TBN * nMap);
 }
-
 
 void main()
 {
@@ -80,14 +84,7 @@ void main()
 	color.a = cTex.a;
 //    color = min(cTex,1);
 
-
-
-
-
-
-
-
-
+    gl_FragDepth = FS_LOGZ(flogz);
 
 /*
     // ambient

@@ -1002,31 +1002,13 @@ void SurfTile::RenderLabels (oapi::Sketchpad *skp, oapi::Font **labelfont, int *
 // =======================================================================
 
 template<>
-void TileManager2<SurfTile>::Render (MATRIX4 &dwmat, bool use_zbuf, const vPlanet::RenderPrm &rprm)
+void TileManager2<SurfTile>::Render (MATRIX4 &dwmat, const vPlanet::RenderPrm &rprm)
 {
 	// set generic parameters
-	SetRenderPrm (dwmat, 0, use_zbuf, rprm);
+	SetRenderPrm (dwmat, 0, rprm);
 
-	double np = 0.0, fp = 0.0;
 	int i;
 	OGLCamera *camera = g_client->GetScene()->GetCamera();
-
-	// adjust scaling parameters (can only be done if no z-buffering is in use)
-	if (!use_zbuf) {
-		double R = obj_size;
-		double D = prm.cdist*R;
-		double zmax = (D - R*R/D) * 1.5;
-		double zmin = std::max (2.0, std::min (zmax*1e-4, (D-R) * 0.8));
-
-//	zmax = zmax * 2.0 - 1.0;
-//	zmin = zmin * 2.0 - 1.0;
-
-		//double zscale = 1.0;
-
-		np = camera->GetNearlimit();
-		fp = camera->GetFarlimit();
-		camera->SetFrustumLimits (zmin, zmax);
-	}
 
 	if (rprm.bAddBkg)
 		prm.tint = false; // the two effects are not currently compatible
@@ -1087,9 +1069,6 @@ void TileManager2<SurfTile>::Render (MATRIX4 &dwmat, bool use_zbuf, const vPlane
 	//	Dev()->SetTextureStageState (i, D3DTSS_ADDRESS, D3DTADDRESS_WRAP);
 
 	//loader->ReleaseMutex ();
-
-	if (!use_zbuf)
-		camera->SetFrustumLimits(np,fp);
 }
 
 // -----------------------------------------------------------------------

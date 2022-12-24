@@ -711,6 +711,7 @@ void OGLMesh::Render (OGLCamera *c, glm::fmat4 &model)
 //			dev->SetTextureStageState (0, D3DTSS_COLOROP, D3DTOP_SELECTARG2);
 		}
 
+
 		RenderGroup (Grp[g]);
 		/*
 		if(Grp[g]->zBias) {

@@ -133,7 +133,6 @@ if (range.tumin != 0 || range.tumax != 1) {
 		tileShader->SetVec3("u_bgcol", bgcol);
 	}
 
-
     glBindTexture(GL_TEXTURE_2D,  tex->m_TexId);
 	Renderer::CheckError("SurfaceManager::RenderTile glBindTexture");
 	mesh.va->Bind();

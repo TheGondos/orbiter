@@ -135,9 +135,9 @@ void CloudTile::Render ()
 // =======================================================================
 
 template<>
-void TileManager2<CloudTile>::SetRenderPrm(MATRIX4 &dwmat, double prerot, bool use_zbuf, const vPlanet::RenderPrm &rprm)
+void TileManager2<CloudTile>::SetRenderPrm(MATRIX4 &dwmat, double prerot, const vPlanet::RenderPrm &rprm)
 {
-	TileManager2Base::SetRenderPrm(dwmat, prerot, use_zbuf, rprm);
+	TileManager2Base::SetRenderPrm(dwmat, prerot, rprm);
 	double cloudrad = 1.0 + rprm.cloudalt / obj_size;
 	if (prm.cdist < cloudrad) {  // camera is below cloud layer - clouds rendered from below
 		prm.viewap += acos(rprm.horizon_minrad / cloudrad);  // extend visibility radius to planet horizon
@@ -145,38 +145,16 @@ void TileManager2<CloudTile>::SetRenderPrm(MATRIX4 &dwmat, double prerot, bool u
 }
 
 template<>
-void TileManager2<CloudTile>::Render (MATRIX4 &dwmat, bool use_zbuf, const vPlanet::RenderPrm &rprm)
+void TileManager2<CloudTile>::Render (MATRIX4 &dwmat, const vPlanet::RenderPrm &rprm)
 {
 	// set generic parameters
-	SetRenderPrm (dwmat, rprm.cloudrot, use_zbuf, rprm);
-bCloudShadowPass = false;
-	double np = 0.0, fp = 0.0;
+	SetRenderPrm (dwmat, rprm.cloudrot, rprm);
+	bCloudShadowPass = false;
 	int i;
 	OGLCamera *camera = g_client->GetScene()->GetCamera();
 
 	//if (rprm.bCloudBrighten)
 	//	TileManager2Base::Dev()->SetTextureStageState (0, D3DTSS_COLOROP, D3DTOP_MODULATE2X);
-
-	// adjust scaling parameters (can only be done if no z-buffering is in use)
-	if (!use_zbuf) {
-		double R = obj_size;
-		double Rc = R+rprm.cloudalt;
-		R *= rprm.horizon_minrad;
-		double D = prm.cdist*R;
-		double zmin, zmax;
-		if (D > Rc) {
-			zmax = sqrt(D*D-Rc*Rc);
-			zmin = D-Rc;
-		} else {
-			zmax = sqrt(std::fabs(D*D-R*R)) + sqrt(Rc*Rc-R*R);
-			zmin = Rc-D;
-		}
-		zmin = std::max (2.0, std::min (zmax*1e-4, zmin));
-
-		np = camera->GetNearlimit();
-		fp = camera->GetFarlimit();
-		camera->SetFrustumLimits (zmin, zmax);
-	}
 
 	// build a transformation matrix for frustum testing
 /*
@@ -231,9 +209,6 @@ bCloudShadowPass = false;
 
 	//if (rprm.bCloudBrighten)
 	//	TileManager2Base::Dev()->SetTextureStageState (0, D3DTSS_COLOROP, D3DTOP_MODULATE);
-
-	if (!use_zbuf)
-		camera->SetFrustumLimits(np,fp);
 }
 
 // -----------------------------------------------------------------------
@@ -247,9 +222,9 @@ void TileManager2<CloudTile>::RenderFlatCloudShadows (MATRIX4 &dwmat, const vPla
 		dwmat.m21*scale, dwmat.m22*scale, dwmat.m23*scale, dwmat.m24*scale,
 		dwmat.m31*scale, dwmat.m32*scale, dwmat.m33*scale, dwmat.m34*scale,
 		dwmat.m41,       dwmat.m42,       dwmat.m43,       dwmat.m44};
-	SetRenderPrm (dwmat_scaled, rprm.cloudrot, false, rprm);
+	SetRenderPrm (dwmat_scaled, rprm.cloudrot, rprm);
 	prm.grot *= scale;
-bCloudShadowPass = true;
+	bCloudShadowPass = true;
 	//D3DMATERIAL7 pmat;
 	//static D3DMATERIAL7 cloudmat = {{0,0,0,1},{0,0,0,1},{0,0,0,0},{0,0,0,0},0};
 	
@@ -263,16 +238,7 @@ bCloudShadowPass = true;
 	//Dev()->SetRenderState (D3DRENDERSTATE_ALPHABLENDENABLE, TRUE);
 	//Dev()->SetTextureStageState (0, D3DTSS_ALPHAOP, D3DTOP_MODULATE);
 	
-	double np = 0.0, fp = 0.0;
-	int i;
 	OGLCamera *camera = g_client->GetScene()->GetCamera();
-	double R = obj_size;
-	double D = prm.cdist*R;
-	double zmax = sqrt(D*D-R*R);
-	double zmin = std::max (2.0, std::min (zmax*1e-4, (D-R)*0.8));
-	np = camera->GetNearlimit();
-	fp = camera->GetFarlimit();
-	camera->SetFrustumLimits (zmin, zmax);
 
 	// build a transformation matrix for frustum testing
 	/*
@@ -313,14 +279,11 @@ bCloudShadowPass = true;
 
 	// render the tree
 	//Dev()->SetTextureStageState (0, D3DTSS_ADDRESS, D3DTADDRESS_CLAMP);
-	for (i = 0; i < 2; i++)
+	for (int i = 0; i < 2; i++)
 		RenderNode (tiletree+i);
 	//Dev()->SetTextureStageState (0, D3DTSS_ADDRESS, D3DTADDRESS_WRAP);
 
 	//loader->ReleaseMutex ();
-
-	if (np)
-		camera->SetFrustumLimits(np,fp);
 
 	//Dev()->SetRenderState (D3DRENDERSTATE_ALPHABLENDENABLE, FALSE);
 	//Dev()->SetTextureStageState (0, D3DTSS_ALPHAOP, D3DTOP_SELECTARG1);

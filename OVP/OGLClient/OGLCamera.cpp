@@ -31,14 +31,12 @@ OGLCamera::OGLCamera (uint32_t w, uint32_t h)
 	width = w, height = h;
 	aspect = (double)w/(double)h;
 
-	nearplane = 2.5f;
-	farplane = 5e8f;
+	nearplane = 0.0f;
+	farplane = 5e9f;
 
 	mView = glm::fmat4(1.0f);
 	SetAperture (RAD*50.0);
-
-//	SetFrustumLimits (2.5f, 5e8f); // initial limits
-//	SetFrustumLimits (2.5f, 5e9f); // initial limits
+	UpdateProjectionMatrix();
 }
 
 void OGLCamera::SetSize(uint32_t w, uint32_t h)
@@ -51,19 +49,9 @@ void OGLCamera::SetSize(uint32_t w, uint32_t h)
 void OGLCamera::UpdateProjectionMatrix()
 {
 	mProj = glm::perspective (fov, aspect, nearplane, farplane);
-
-	//Convert from directx to opengl reference
-//	glm::mat4 conv = glm::translate(glm::scale(glm::mat4(1.0f),glm::vec3(0.5f,0.5f,-1.0f)), glm::vec3(1.0f,1.0f,0.0f));
 	glm::mat4 conv = glm::translate(glm::scale(glm::mat4(1.0f),glm::vec3(0.5f,0.5f,-1.0f)), glm::vec3(0.0f,0.0f,0.0f));
 	mProj = mProj * conv;
 	mViewProj = mProj * mView;
-}
-
-void OGLCamera::SetFrustumLimits (double nearlimit, double farlimit)
-{
-	nearplane = (float)nearlimit;
-	farplane = (float)farlimit;
-	UpdateProjectionMatrix ();
 }
 
 void OGLCamera::SetAperture (double _ap)

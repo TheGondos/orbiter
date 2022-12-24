@@ -36,7 +36,6 @@ public:
 	inline const glm::fmat4 *GetViewMatrix () const { return &mView; }
 	inline const glm::fmat4 *GetProjectionMatrix () const { return &mProj; }
 
-	void SetFrustumLimits (double nearlimit, double farlimit);
 	void SetAperture (double _ap);
 	void SetSize(uint32_t w, uint32_t h);
 	inline const VECTOR3 *GetGDir () const { return &gdir; }

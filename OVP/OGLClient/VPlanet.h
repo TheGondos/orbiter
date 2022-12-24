@@ -85,7 +85,7 @@ public:
 
 protected:
 	void RenderDot ();
-	void RenderSphere (const RenderPrm &prm, bool &using_zbuf);
+	void RenderSphere (const RenderPrm &prm);
 	void RenderCloudLayer (GLenum cullmode, const RenderPrm &prm);
 	void RenderBaseSurfaces ();
 	void RenderBaseStructures ();

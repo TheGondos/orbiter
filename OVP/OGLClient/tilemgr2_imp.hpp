@@ -254,9 +254,9 @@ TileManager2<TileType>::~TileManager2 ()
 // -----------------------------------------------------------------------
 
 template<class TileType>
-void TileManager2<TileType>::SetRenderPrm(MATRIX4 &dwmat, double prerot, bool use_zbuf, const vPlanet::RenderPrm &prm)
+void TileManager2<TileType>::SetRenderPrm(MATRIX4 &dwmat, double prerot, const vPlanet::RenderPrm &prm)
 {
-	TileManager2Base::SetRenderPrm(dwmat, prerot, use_zbuf, prm);
+	TileManager2Base::SetRenderPrm(dwmat, prerot, prm);
 }
 
 // -----------------------------------------------------------------------

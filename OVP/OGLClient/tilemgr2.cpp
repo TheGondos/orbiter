@@ -813,7 +813,7 @@ void TileManager2Base::GlobalExit ()
 
 // -----------------------------------------------------------------------
 
-void TileManager2Base::SetRenderPrm (MATRIX4 &dwmat, double prerot, bool use_zbuf, const vPlanet::RenderPrm &rprm)
+void TileManager2Base::SetRenderPrm (MATRIX4 &dwmat, double prerot, const vPlanet::RenderPrm &rprm)
 {
 	const double minalt = std::max(0.002,rprm.horizon_excess);
 	VECTOR3 obj_pos, cam_pos;
