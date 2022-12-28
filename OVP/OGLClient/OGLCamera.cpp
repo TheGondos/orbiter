@@ -32,7 +32,7 @@ OGLCamera::OGLCamera (uint32_t w, uint32_t h)
 	aspect = (double)w/(double)h;
 
 	nearplane = 0.0f;
-	farplane = 5e9f;
+	farplane = 1e11f;
 
 	mView = glm::fmat4(1.0f);
 	SetAperture (RAD*50.0);

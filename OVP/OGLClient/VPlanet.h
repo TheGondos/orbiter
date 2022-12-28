@@ -47,7 +47,6 @@ public:
 
 	bool Update ();
 	void CheckResolution ();
-	void RenderZRange (double *nplane, double *fplane);
 	bool Render () override;
 	void RenderLabels(oapi::Sketchpad *skp, oapi::Font **labelfont, int *fontidx);
 
@@ -95,9 +94,6 @@ protected:
 
 private:
 	float rad;                // planet radius [m]
-	float render_rad;         // distance to be rendered past planet centre
-	float dist_scale;         // planet rescaling factor
-	double maxdist, max_centre_dist;
 	float shadowalpha;        // alpha value for surface shadows
 	double cloudrad;          // cloud layer radius [m]
 	int max_patchres;         // max surface LOD level

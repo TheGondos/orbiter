@@ -51,7 +51,7 @@ private:
 	unsigned int rres, tres, ntex;
 	double irad, orad;
 
-	static inline Shader *meshShader;
+	static inline Shader *ringShader;
 };
 
 #endif // !__RINGMGR_H

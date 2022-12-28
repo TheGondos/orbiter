@@ -34,9 +34,6 @@ using namespace oapi;
 
 // ==============================================================
 
-static double farplane = 1e6;
-static double max_surf_dist = 1e4;
-
 extern int SURF_MAX_PATCHLEVEL;
 
 // ==============================================================
@@ -44,10 +41,6 @@ extern int SURF_MAX_PATCHLEVEL;
 vPlanet::vPlanet (OBJHANDLE _hObj, const Scene *scene): vObject (_hObj, scene)
 {
 	rad = (float)size;
-	render_rad = (float)(0.1*rad);
-	dist_scale = 1.0f;
-	max_centre_dist = 0.9*scene->GetCamera()->GetFarlimit();
-	maxdist = std::max (max_centre_dist, max_surf_dist + rad);
 	max_patchres = *(int*)oapiGetObjectParam (_hObj, OBJPRM_PLANET_SURFACEMAXLEVEL);
 	max_patchres = std::min ((int)max_patchres, *(int*)g_client->GetConfigParam (CFGPRM_SURFACEMAXLEVEL));
 	int tilever = *(int*)oapiGetObjectParam (_hObj, OBJPRM_PLANET_TILEENGINE);
@@ -123,7 +116,6 @@ vPlanet::vPlanet (OBJHANDLE _hObj, const Scene *scene): vObject (_hObj, scene)
 		double minrad = *(double*)oapiGetObjectParam (_hObj, OBJPRM_PLANET_RINGMINRAD);
 		double maxrad = *(double*)oapiGetObjectParam (_hObj, OBJPRM_PLANET_RINGMAXRAD);
 		ringmgr = new RingManager (this, minrad, maxrad);
-		render_rad = (float)(rad*maxrad);
 	} else {
 		ringmgr = 0;
 	}
@@ -186,23 +178,6 @@ bool vPlanet::Update ()
 
 	int i, j;
 	float rad_scale = rad;
-	bool rescale = false;
-	dist_scale = 1.0f;
-
-	if (cdist > maxdist) {
-		rescale = true;
-		dist_scale = (float)(max_centre_dist/cdist);
-	}
-	//if (cdist+render_rad > farplane && cdist-rad > 1e4) {
-	//	rescale = true;
-	//	dist_scale = (FLOAT)(farplane/(cdist+render_rad));
-	//}
-	if (rescale) {
-		rad_scale *= dist_scale;
-		mWorld[3][0] *= dist_scale;
-		mWorld[3][1] *= dist_scale;
-		mWorld[3][2] *= dist_scale;
-	}
 
 	// scale up from template sphere radius 1
 	mWorld[0][0] *= rad_scale; mWorld[0][1] *= rad_scale; mWorld[0][2] *= rad_scale;
@@ -317,16 +292,6 @@ void vPlanet::CheckResolution ()
 		}
 		patchres = new_patchres;
 	}
-}
-
-// ==============================================================
-
-void vPlanet::RenderZRange (double *nplane, double *fplane)
-{
-	double d = dotp (*scn->GetCamera()->GetGDir(), cpos);
-	*fplane = std::max (1e3, d+rad*1.2);
-	*nplane = std::max (1e0, d-rad*1.2);
-	*fplane = std::min (*fplane, *nplane*1e5);
 }
 
 // ==============================================================
@@ -539,7 +504,7 @@ void vPlanet::RenderSphere (const RenderPrm &prm)
 		Renderer::CheckError("RenderSphere");
 	} else {
 		//mercury, venus, saturn, titan, hyperion, uranus, miranda, ariel, umbriel, titan, oberon, neptune, triton, proteus, nereide 
-		surfmgr->Render (mWorld, dist_scale, patchres, 0.0, prm.bFog); // surface
+		surfmgr->Render (mWorld, 1.0, patchres, 0.0, prm.bFog); // surface
 		Renderer::CheckError("RenderSphere");
 	}
 	//Renderer::PopFrontFace();
@@ -592,7 +557,7 @@ void vPlanet::RenderCloudLayer (GLenum cullmode, const RenderPrm &prm)
 	if (cloudmgr2)
 		cloudmgr2->Render (dmWorld, prm);
 	else
-		clouddata->cloudmgr->Render (clouddata->mWorldC, dist_scale, std::min(patchres,8), clouddata->viewap); // clouds
+		clouddata->cloudmgr->Render (clouddata->mWorldC, 1.0, std::min(patchres,8), clouddata->viewap); // clouds
 	Renderer::PopBool();
 	Renderer::PopFrontFace();
 	Renderer::CheckError("RenderCloudLayer");

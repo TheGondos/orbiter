@@ -464,6 +464,7 @@ void TileManager::Render (glm::mat4 &wmat, double scale, int level, double viewa
 
 	//dev->SetTextureStageState (0, D3DTSS_ADDRESS, D3DTADDRESS_CLAMP);
 
+
 	if (level <= 4) {
 
 		RenderSimple (level, td);

@@ -1,10 +1,12 @@
 #version 330 core
 #include Common.inc
+#include LogDepth.inc
 
 layout(location = 0) out vec4 color;
 
 in vec2 TexCoord;
 in vec3 Normal;
+in float flogz;
 
 uniform bool u_ShadowPass;
 
@@ -23,4 +25,5 @@ void main()
 	}
 
 	color = cTex;
+	gl_FragDepth = FS_LOGZ(flogz);
 }
