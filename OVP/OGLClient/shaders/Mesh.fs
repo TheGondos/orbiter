@@ -2,8 +2,8 @@
 #include Common.inc
 #include LogDepth.inc
 
-#extension GL_ARB_conservative_depth : enable
-layout(depth_less) out float gl_FragDepth;
+//#extension GL_ARB_conservative_depth : enable
+//layout(depth_less) out float gl_FragDepth;
 
 layout(location = 0) out vec4 color;
 
