@@ -28,6 +28,8 @@ class PlaybackEditor;
 class MemStat;
 class DDEServer;
 class ImageIO;
+class GUIManager;
+
 namespace orbiter {
 	class ConsoleNG;
 	class LaunchpadDialog;

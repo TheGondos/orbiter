@@ -39,6 +39,9 @@
 #include "gcCore.h"
 #include "gcConst.h"
 #include <unordered_map>
+#include "imgui.h"
+#include "imgui_impl_dx9.h"
+#include "imgui_impl_win32.h"
 
 
 #if defined(_MSC_VER) && (_MSC_VER <= 1700 ) // Microsoft Visual Studio Version 2012 and lower
@@ -2646,6 +2649,42 @@ bool D3D9Client::clbkFilterElevation(OBJHANDLE hPlanet, int ilat, int ilng, int 
 	_TRACE;
 	return FilterElevationPhysics(hPlanet, lvl, ilat, ilng, elev_res, elev);
 }
+
+void D3D9Client::clbkImGuiNewFrame()
+{
+	_TRACE;
+	ImGui_ImplDX9_NewFrame();
+}
+void D3D9Client::clbkImGuiRenderDrawData()
+{
+	_TRACE;
+
+	if (pDevice->BeginScene() >= 0)
+	{
+		ImGui::Render();
+		ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
+		pDevice->EndScene();
+	}
+
+	// Update and Render additional Platform Windows
+	ImGuiIO& io = ImGui::GetIO();
+	if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+	{
+		ImGui::UpdatePlatformWindows();
+		ImGui::RenderPlatformWindowsDefault();
+	}
+}
+void D3D9Client::clbkImGuiInit()
+{
+	_TRACE;
+	ImGui_ImplDX9_Init(pDevice);
+}
+void D3D9Client::clbkImGuiShutdown()
+{
+	_TRACE;
+	ImGui_ImplDX9_Shutdown();
+}
+
 
 // =======================================================================
 

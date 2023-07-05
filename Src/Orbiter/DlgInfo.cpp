@@ -208,7 +208,7 @@ void DlgInfo::OpenMap ()
 {
 	if (body) {
 		DlgMap *pMap = g_pOrbiter->DlgMgr()->EnsureEntry<DlgMap> ();
-		pMap->SetSelection (body);
+		pMap->SetBody(body->Name());
 	}
 }
 

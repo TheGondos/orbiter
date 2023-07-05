@@ -525,7 +525,7 @@ void Instrument_Map::UpdateBlt ()
 	}
 #else
 	map->DrawMap ();
-	gc->clbkCopyBitmap (surf, map->GetMap(), 0, 0, IW, IH);
+	oapiBlt (surf, map->GetMap(), 0, 0, 0, 0, IW, IH);
 #endif
 }
 

@@ -1035,7 +1035,10 @@ public:
 	 */
 	bool clbkFilterElevation(OBJHANDLE hPlanet, int ilat, int ilng, int lvl, double elev_res, INT16* elev);
 	// @}
-
+	void clbkImGuiNewFrame();
+	void clbkImGuiRenderDrawData();
+	void clbkImGuiInit();
+	void clbkImGuiShutdown();
 
 	HWND				GetRenderWindow () const { return hRenderWnd; }
 	CD3DFramework9 *    GetFramework() const { return pFramework; }

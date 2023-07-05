@@ -26,6 +26,7 @@
 
 #include "Vesselbase.h"
 #include "Log.h"
+#include "Select.h"
 
 class Elements;
 class CelestialBody;
@@ -41,8 +42,6 @@ class Nav_XPDR;
 class ExhaustStream;
 class oapi::Sketchpad;
 class LightEmitter;
-class Select;
-class InputBox;
 struct MFDMODE;
 
 typedef char Str64[64];

@@ -66,6 +66,7 @@ set(SourceFiles
 	WindowMgr.cpp
 	ZTreeMgr.cpp
 	Tilemgr2_imp.hpp
+	imgui_impl_dx9.cpp
 )
 
 set(IncludeFiles
@@ -170,6 +171,7 @@ add_library(D3D9Client MODULE
 target_include_directories(D3D9Client PUBLIC
 	${ORBITER_SOURCE_SDK_INCLUDE_DIR}
 	${DXSDK_DIR}/Include
+    ${ORBITER_BINARY_SDK_DIR}/include
 )
 
 target_link_directories(D3D9Client PUBLIC
@@ -197,6 +199,7 @@ target_link_libraries(D3D9Client
 	odbccp32.lib
 	version.lib
 	msimg32.lib
+    imgui
 )
 
 set_target_properties(D3D9Client

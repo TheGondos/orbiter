@@ -119,6 +119,7 @@ set(common_src
 # Resources
 	Orbiter.rc
 	Orbiter.ico
+	imgui_impl_win32.cpp
 )
 
 # Sources for DX7 built-in graphics version only
@@ -155,6 +156,8 @@ set(Orbiter_includes
 	${CMAKE_CURRENT_BINARY_DIR}
 	${HTMLHELP_INCLUDE_DIR}
 	${DX7SDK_INCLUDE_DIR}
+	${CMAKE_SOURCE_DIR}/Extern/imgui/imgui
+	${CMAKE_SOURCE_DIR}/Extern/imgui/imgui-notify/example/src
 )
 
 set(Orbiter_common_libs
@@ -260,6 +263,7 @@ if(BUILD_ORBITER_SERVER)
 	target_link_libraries(Orbiter_server
 		${Orbiter_common_libs}
 		${Orbiter_server_libs}
+		imgui
 	)
 
 	add_dependencies(Orbiter_server

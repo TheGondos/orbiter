@@ -2,7 +2,6 @@
 # Licensed under the MIT License
 
 cmake_minimum_required(VERSION 3.19)
-
 # Set the project name
 project (Orbiter VERSION 21.7.24)
 
@@ -129,6 +128,10 @@ add_custom_target(CopyData ALL
 	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/GravityModels/ ${CMAKE_BINARY_DIR}/GravityModels
 	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/Flights/ ${CMAKE_BINARY_DIR}/Flights
 	COMMAND ${CMAKE_COMMAND} -E make_directory ${ORBITER_BINARY_SDK_DIR}/lib/Lua
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/Extern/imgui/imgui/imgui.h ${ORBITER_BINARY_SDK_DIR}/include
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/Extern/imgui/imgui/imconfig.h ${ORBITER_BINARY_SDK_DIR}/include
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/Extern/imgui/imgui/imgui_stacklayout.h ${ORBITER_BINARY_SDK_DIR}/include
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/Extern/imgui/imgui/backends/imgui_impl_win32.h ${ORBITER_BINARY_SDK_DIR}/include
 )
 set_target_properties(CopyData
 	PROPERTIES

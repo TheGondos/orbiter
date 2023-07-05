@@ -1445,6 +1445,12 @@ DLLEXPORT void oapiReleaseTexture (SURFHANDLE hTex)
 	if (gc) gc->clbkReleaseTexture (hTex);
 }
 
+DLLEXPORT void oapiIncrTextureRef(SURFHANDLE hTex)
+{
+	oapi::GraphicsClient* gc = g_pOrbiter->GetGraphicsClient();
+	if (gc) gc->clbkIncrSurfaceRef(hTex);
+}
+
 DLLEXPORT bool oapiSetTexture (MESHHANDLE hMesh, DWORD texidx, SURFHANDLE tex)
 {
 	Mesh *mesh = (Mesh*)hMesh;
@@ -2152,6 +2158,13 @@ DLLEXPORT HWND oapiOpenDialog (HINSTANCE hDLLInst, int resourceId, DLGPROC msgPr
 	return g_pOrbiter->OpenDialog (hDLLInst, resourceId, msgProc, context);
 }
 
+OAPIFUNC void oapiOpenDialog(GUIElement*e)
+{
+	g_pOrbiter->DlgMgr()->AddEntry(e);
+	e->Activate();
+}
+
+
 DLLEXPORT HWND oapiOpenDialogEx (HINSTANCE hDLLInst, int resourceId, DLGPROC msgProc, DWORD flag, void *context)
 {
 	return g_pOrbiter->OpenDialogEx (hDLLInst, resourceId, msgProc, flag, context);
@@ -2165,6 +2178,10 @@ DLLEXPORT HWND oapiFindDialog (HINSTANCE hDLLInst, int resourceId)
 DLLEXPORT void oapiCloseDialog (HWND hDlg)
 {
 	g_pOrbiter->CloseDialog (hDlg);
+}
+OAPIFUNC void oapiCloseDialog(GUIElement* e)
+{
+	g_pOrbiter->DlgMgr()->DelEntry(e);
 }
 
 DLLEXPORT void *oapiGetDialogContext (HWND hDlg)

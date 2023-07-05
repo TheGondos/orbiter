@@ -15,6 +15,27 @@
 #include <stdio.h>
 #include <windows.h>
 
+
+class OAPIFUNC GUIElement {
+public:
+	GUIElement(const std::string& n, const std::string& type) :name(n), type(type) {}
+	virtual ~GUIElement() {}
+	bool IsActive() { return show; }
+	void Activate() { show = true; }
+	void Draw() {
+		Show();
+		if (!show) OnClose();
+	}
+	virtual void OnClose() {};
+	const std::string name;
+	const std::string type;
+private:
+	virtual void Show() = 0;
+protected:
+	bool show = false;
+};
+
+
 #ifndef _WIN32
 typedef void *HDC;
 #endif
@@ -1480,6 +1501,10 @@ public:
 	 *   is loaded in the core, the callback is invoked.
 	 */
 	virtual bool clbkFilterElevation(OBJHANDLE hPlanet, int ilat, int ilng, int lvl, double elev_res, INT16* elev) { return false; }
+	virtual void clbkImGuiNewFrame () = 0;
+	virtual void clbkImGuiRenderDrawData () = 0;
+	virtual void clbkImGuiInit () = 0;
+	virtual void clbkImGuiShutdown() = 0;
 	// @}
 
 protected:

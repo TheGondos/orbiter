@@ -116,6 +116,7 @@ class VESSEL;
 class CELBODY;
 class ExternMFD;
 class Interpreter;
+class GUIElement;
 
 namespace oapi {
 	class Module;
@@ -4655,6 +4656,7 @@ OAPIFUNC SURFHANDLE oapiLoadTexture (const char *fname, bool dynamic = false);
 	*   released automatically.
 	*/
 OAPIFUNC void oapiReleaseTexture (SURFHANDLE hTex);
+OAPIFUNC void oapiIncrTextureRef (SURFHANDLE hTex);
 
 	/**
 	* \brief Replace a mesh texture.
@@ -5968,6 +5970,7 @@ OAPIFUNC bool       oapiUnregisterCustomCmd (int cmdId);
 	* \sa oapiFindDialog, oapiCloseDialog, oapiOpenDialogEx
 	*/
 OAPIFUNC HWND       oapiOpenDialog (HINSTANCE hDLLInst, int resourceId, DLGPROC msgProc, void *context = 0);
+OAPIFUNC void       oapiOpenDialog (GUIElement *);
 
 	/**
 	* \brief Open a dialog box defined as a Windows resource. This version provides additional
@@ -6007,6 +6010,7 @@ OAPIFUNC HWND       oapiFindDialog (HINSTANCE hDLLInst, int resourceId);
 	*  dialog message handler to close a dialog which was opened by oapiOpenDialog().
 	*/
 OAPIFUNC void       oapiCloseDialog (HWND hDlg);
+OAPIFUNC void       oapiCloseDialog (GUIElement *);
 
 	/**
 	* \brief Retrieves the context pointer of a dialog box which has been defined during the call to oapiOpenDialog().

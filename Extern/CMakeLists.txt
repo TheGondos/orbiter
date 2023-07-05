@@ -42,3 +42,7 @@ install(TARGETS zlib RUNTIME DESTINATION ${ORBITER_INSTALL_ROOT_DIR})
 if(ORBITER_MAKE_TESTS)
     add_subdirectory(Catch2)
 endif()
+
+##########################################
+## ImGUI
+add_subdirectory(imgui)
