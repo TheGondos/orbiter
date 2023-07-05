@@ -18,6 +18,7 @@
 #define __ZTREEMGR_H
 
 #include <iostream>
+#include <cstdint>
 
 // =======================================================================
 // Tree node structure
