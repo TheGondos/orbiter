@@ -260,10 +260,9 @@ void DlgMap::DrawMap() {
         ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);   // No tint
         ImVec4 border_col = ImVec4(0.0f, 0.0f, 0.0f, 0.0f); // 50% opaque white
 
-		ImTextureID map = oapiGetImTextureID(vectormap->GetMap());
-		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0,0));
-        ImGui::ImageButton("##VectorMap", map, ImVec2(sz.x, sz.y), uv_min, uv_max, border_col, tint_col);
-		ImGui::PopStyleVar();
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0,0));
+        ImGui::ImageButton("##VectorMap", vectormap->GetMap(), ImVec2(sz.x, sz.y), uv_min, uv_max, border_col, tint_col);
+        ImGui::PopStyleVar();
 
         ImGuiIO& io = ImGui::GetIO();
         bool updateMap = false;

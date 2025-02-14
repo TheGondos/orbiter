@@ -435,10 +435,13 @@ const ImWchar* GetGlyphRangesOrbiter()
 // Styling adapted from https://gist.github.com/dougbinks/8089b4bbaccaaf6fa204236978d165a9
 static void ImGuiSetStyle(bool bStyleDark_,  float alpha_)
 {
+    ImGui::StyleColorsLight();
+    ImGuiStyle& style = ImGui::GetStyle();
+    style.WindowMenuButtonPosition = ImGuiDir_Right;
+    return;
     // Setup Dear ImGui style
     ImGui::StyleColorsClassic();
 	ImGui::StyleColorsLight();
-    ImGuiStyle& style = ImGui::GetStyle();
         
     style.Alpha = 1.0f;
     style.FrameRounding = 3.0f;
@@ -1021,4 +1024,25 @@ namespace ImGui {
         g.LastItemData = last_item_backup;
 		return ret;
 	}
+
+	DLLEXPORT ImTextureID GetImTextureID (SURFHANDLE surf)
+	{
+		oapi::GraphicsClient *gc = g_pOrbiter->GetGraphicsClient();
+		if (gc && surf)
+			return gc->clbkImGuiSurfaceTexture (surf);
+		return 0;
+	}
+
+	DLLEXPORT void Image(SURFHANDLE surf, const ImVec2& image_size, const ImVec2& uv0, const ImVec2& uv1, const ImVec4& tint_col, const ImVec4& border_col)
+	{
+		ImTextureID tex_id = GetImTextureID(surf);
+		Image(tex_id, image_size, uv0, uv1, tint_col, border_col);
+	}
+
+	DLLEXPORT bool ImageButton(const char* str_id, SURFHANDLE surf, const ImVec2& image_size, const ImVec2& uv0, const ImVec2& uv1, const ImVec4& bg_col, const ImVec4& tint_col)
+	{
+		ImTextureID tex_id = GetImTextureID(surf);
+		return ImageButton(str_id, tex_id, image_size, uv0, uv1, bg_col, tint_col);
+	}
+
 }

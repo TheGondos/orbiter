@@ -6162,12 +6162,6 @@ OAPIFUNC void       oapiCloseDialog (ImGuiDialog *dlg);
 OAPIFUNC void      oapiAddNotification(int type, const char *title, const char *content = "");
 
 	/**
-	* \brief Retreives a texture ID for use with ImGui.
-	* \param surf surface handle
-	* \return The value returned can be used where ImGui expects an ImTextureID argument.
-	*/
-OAPIFUNC uint64_t  oapiGetImTextureID (SURFHANDLE surf);
-	/**
 	* \brief Retrieves the context pointer of a dialog box which has been defined during the call to oapiOpenDialog().
 	* \param hDlg dialog window handle
 	* \note  This function returns NULL if no context pointer was specified in oapiOpenDialog().

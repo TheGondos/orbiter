@@ -119,8 +119,7 @@ void DlgExtMFD::OnDraw() {
 		ImVec2 uv_max = ImVec2(1.0f, 1.0f);                 // Lower-right
 		ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);   // No tint
 		ImVec4 border_col = ImVec4(1.0f, 1.0f, 1.0f, 0.0f);
-		ImTextureID txt = oapiGetImTextureID(surf);
-		ImGui::Image(txt, ImVec2(sz.x, sz.y), uv_min, uv_max, tint_col, border_col);
+		ImGui::Image(surf, ImVec2(sz.x, sz.y), uv_min, uv_max, tint_col, border_col);
 	}
 	ImGui::EndChild();
 	ImGui::SameLine();

@@ -1966,14 +1966,6 @@ DLLEXPORT HDC oapiGetDC (SURFHANDLE surf)
 	return hDC;
 }
 
-DLLEXPORT uint64_t oapiGetImTextureID (SURFHANDLE surf)
-{
-	oapi::GraphicsClient *gc = g_pOrbiter->GetGraphicsClient();
-	if (gc && surf)
-		return gc->clbkImGuiSurfaceTexture (surf);
-	return 0;
-}
-
 DLLEXPORT void oapiReleaseDC (SURFHANDLE surf, HDC hDC)
 {
 	oapi::GraphicsClient *gc = g_pOrbiter->GetGraphicsClient();
@@ -2185,7 +2177,9 @@ DLLEXPORT void oapiCloseDialog (HWND hDlg)
 
 DLLEXPORT void oapiCloseDialog(ImGuiDialog *e)
 {
-	g_pOrbiter->DlgMgr()->DelEntry(e);
+	DialogManager *dmgr = g_pOrbiter->DlgMgr();
+	if(dmgr)
+		dmgr->DelEntry(e);
 }
 
 DLLEXPORT void *oapiGetDialogContext (HWND hDlg)
