@@ -199,7 +199,7 @@ void DlgCamera::DrawTrack() {
     ImGuiWindowFlags window_flags = ImGuiChildFlags_ResizeX;
     ImGui::BeginChild("ChildL", ImVec2(250, 0), window_flags);
     {
-        ImGui::BeginGroupPanel("Moveable modes");
+        ImGui::SeparatorText("Moveable modes");
         ImVec2 button_sz(ImVec2(ImGui::GetContentRegionAvail().x, 20));
 
         if(ImGui::Button("Target Relative", button_sz)) {
@@ -211,12 +211,11 @@ void DlgCamera::DrawTrack() {
         if(ImGui::Button("Global Frame", button_sz)) {
             g_camera->SetTrackMode (CAMERA_GLOBALFRAME);
         }
-		ImGui::EndGroupPanel();
     }
     ImGui::EndChild();
     ImGui::SameLine();
     ImGui::BeginChild("ChildR");
-        ImGui::BeginGroupPanel("Fixed modes");
+        ImGui::SeparatorText("Fixed modes");
         ImVec2 button_sz(ImVec2(ImGui::GetContentRegionAvail().x, 20));
 
         if(ImGui::Button("Target From...", button_sz)) {
@@ -268,14 +267,13 @@ void DlgCamera::DrawTrack() {
             }
             ImGui::TreePop();
         }
-		ImGui::EndGroupPanel();
     ImGui::EndChild();
 }
 void DlgCamera::DrawGround() {
     const ImGuiWindowFlags window_flags = ImGuiChildFlags_ResizeX;;
     ImGui::BeginChild("ChildL", ImVec2(250, 0), window_flags);
     {
-		ImGui::BeginGroupPanel("Ground Location");
+        ImGui::SeparatorText("Ground Location");
         for (int i = 0; i < g_psys->nGrav(); i++) {
             Body *obj = g_psys->GetGravObj (i);
             if (obj->Type() != OBJTP_PLANET) continue;
@@ -303,12 +301,11 @@ void DlgCamera::DrawGround() {
 				}
             }
         }
-		ImGui::EndGroupPanel();
     }
     ImGui::EndChild();
     ImGui::SameLine();
     ImGui::BeginChild("ChildR");
-		ImGui::BeginGroupPanel("Coordinates");
+        ImGui::SeparatorText("Coordinates");
         ImVec2 button_sz(ImVec2(ImGui::GetContentRegionAvail().x, 20));
         ImGui::InputText("Longitude", longitude, 64, ImGuiInputTextFlags_CharsDecimal);
         ImGui::InputText("Latitude",  latitude,  64, ImGuiInputTextFlags_CharsDecimal);
@@ -337,7 +334,6 @@ void DlgCamera::DrawGround() {
         }
 
         ImGui::Checkbox("Target lock", &m_TargetLock);
-		ImGui::EndGroupPanel();
     ImGui::EndChild();
 }
 

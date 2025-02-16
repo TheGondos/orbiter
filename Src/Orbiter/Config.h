@@ -142,20 +142,20 @@ struct CFG_INSTRUMENTPRM {
 };
 
 struct CFG_VISHELPPRM {
-	DWORD  flagPlanetarium;		// bitflags for items to be displayed in planetarium mode
+	int    flagPlanetarium;		// bitflags for items to be displayed in planetarium mode
 		// bit 0: enable planetarium mode         bit 5: constellation patterns
 		// bit 1: celestial grid                  bit 6: constellation labels
 		// bit 2: ecliptic grid                   bit 7: long constellation names
 		// bit 3: galactic grid                   bit 8: constellation boundaries
 		// bit 4: equator of current target       bit 9: celestial sphere feature markers
-	DWORD  flagMarkers;         // bitflags for surface and object marker display
+	int    flagMarkers;         // bitflags for surface and object marker display
 	    // bit 0: enable markers                  bit 3: surface bases
 	    // bit 1: solar system bodies             bit 4: VOR transmitters
 	    // bit 2: vessels                         bit 5: surface features
-	DWORD  flagBodyForce;		// body force vector display
+	int    flagBodyForce;		// body force vector display
 	float  scaleBodyForce;		// force vector scaling factor
 	float  opacBodyForce;		// force vector opacity factor
-	DWORD  flagFrameAxes;		// frame axes vector display
+	int    flagFrameAxes;		// frame axes vector display
 	float  scaleFrameAxes;		// frame axes scaling factor
 	float  opacFrameAxes;		// frame axes opacity factor
 };
@@ -219,14 +219,14 @@ struct CFG_DEVPRM {
 
 struct CFG_JOYSTICKPRM {
 	DWORD  Joy_idx;				// joystick device index (0=disabled)
-	DWORD  Deadzone;			// central deadzone range for all axes (0-10000)
+	int    Deadzone;			// central deadzone range for all axes (0-10000)
 	DWORD  ThrottleAxis;		// joystick throttle axis (0=none, 1=z-axis, 2=slider 0, 3=slider 1)
-	DWORD  ThrottleSaturation;	// saturation level for joystick throttle control (0-10000)
+	int    ThrottleSaturation;	// saturation level for joystick throttle control (0-10000)
 	bool   bThrottleIgnore;		// ignore joystick throttle setting on start
 };
 
 struct CFG_UIPRM {              // user interface options
-	DWORD  MouseFocusMode;	    // 0: focus requires click; 1: focus requires click for child windows only; 2: focus follow mouse
+	int    MouseFocusMode;	    // 0: focus requires click; 1: focus requires click for child windows only; 2: focus follow mouse
 	int    MenuMode;            // 0=show, 1=hide, 2=auto-hide
 	bool   bMenuLabelOnly;      // display only menu labels?
 	bool   bWarpAlways;         // always display time acceleration != 1

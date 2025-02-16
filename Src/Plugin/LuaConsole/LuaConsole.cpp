@@ -151,6 +151,7 @@ public:
 			
 			ImGui::SameLine();
 			ImGui::BeginChild("##LuaTermCommands");
+				ImGui::SeparatorText("Execution");
 				if(ImGui::Button(ICON_FA_PLAY)) {
 					ExecuteCommandBuffer();
 				}
@@ -159,27 +160,26 @@ public:
 				ImGui::CheckboxFlags("Single line", &flags, ImGuiInputTextFlags_CtrlEnterForNewLine);
 				
 				ImGui::SetItemTooltip("When checked, the command buffer is sent when pressing Enter\n"
-									"Otherwise, you can enter multiple lines at once and execute\n"
-									"them with Ctrl-Enter or the " ICON_FA_PLAY " button");
+									  "Otherwise, you can enter multiple lines at once and execute\n"
+									  "them with Ctrl-Enter or the " ICON_FA_PLAY " button");
 
-				ImGui::BeginGroupPanel("History", ImVec2(0,0));
-					if(ImGui::Button(ICON_FA_ARROW_UP)) {
-						HistoryPrev();
-					}
-					ImGui::SetItemTooltip("Previous command");
+				ImGui::SeparatorText("History");
+				if(ImGui::Button(ICON_FA_ARROW_UP)) {
+					HistoryPrev();
+				}
+				ImGui::SetItemTooltip("Previous command");
 
-					ImGui::SameLine();
-					if(ImGui::Button(ICON_FA_ARROW_DOWN)) {
-						HistoryNext();
-					}
-					ImGui::SetItemTooltip("Next command");
+				ImGui::SameLine();
+				if(ImGui::Button(ICON_FA_ARROW_DOWN)) {
+					HistoryNext();
+				}
+				ImGui::SetItemTooltip("Next command");
 
-					ImGui::SameLine();
-					if(ImGui::Button(ICON_FA_TRASH)) {
-						HistoryClear();
-					}
-					ImGui::SetItemTooltip("Clear history");
-				ImGui::EndGroupPanel();
+				ImGui::SameLine();
+				if(ImGui::Button(ICON_FA_TRASH)) {
+					HistoryClear();
+				}
+				ImGui::SetItemTooltip("Clear history");
 				
 			ImGui::EndChild();
 			

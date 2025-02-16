@@ -438,7 +438,10 @@ static void ImGuiSetStyle(bool bStyleDark_,  float alpha_)
     ImGui::StyleColorsLight();
     ImGuiStyle& style = ImGui::GetStyle();
     style.WindowMenuButtonPosition = ImGuiDir_Right;
-    return;
+
+    style.Colors[ImGuiCol_Separator] = style.Colors[ImGuiCol_Button];
+
+	return;
     // Setup Dear ImGui style
     ImGui::StyleColorsClassic();
 	ImGui::StyleColorsLight();
@@ -714,8 +717,9 @@ struct Notification
 	time_point_t creation;
 	float height;
 	float speed;
+	uint32_t type;
 
-	Notification(uint32_t type, const char *title_, const char *content_, size_t hash_):title(title_),content(content_),hash(hash_)
+	Notification(uint32_t type_, const char *title_, const char *content_, size_t hash_):title(title_),content(content_),hash(hash_),type(type_)
 	{
 		if(type >= OAPINOTIF_INFO) type = OAPINOTIF_INFO;
 		color = notifcolors[type];
@@ -731,7 +735,7 @@ struct Notification
 	void ReTrigger() {
 		occurrences++;
 		creation = std::chrono::steady_clock::now() - FADE_TIME;
-		duration = 86400.0s;
+		duration = notifduration[type];
 	}
 	void UpdateState(time_point_t now, float h, duration_t dt) {
 		duration_t elapsed = now - creation;
@@ -888,6 +892,37 @@ namespace ImGui {
 		return ret;
 	}
 
+	// Cheap double slider
+	// It's provided only to be able to use sliders where a double is used but a float would have been enough
+	// e.g. the stars brightness configuration
+	DLLEXPORT bool SliderDouble(const char* label, double* v, double v_min, double v_max, const char* display_format)
+	{
+		float tmp = *v;
+		bool ret = ImGui::SliderFloat(label, &tmp, v_min, v_max, display_format);
+		if(ret) *v = tmp;
+		return ret;
+	}
+
+	DLLEXPORT bool InputIntEx(const char* label, int* v, int v_min, int v_max, int step, int step_fast, ImGuiInputTextFlags flags)
+	{
+		bool ret = ImGui::InputInt(label, v, step, step_fast, flags);
+		if(ret) {
+			if(*v < v_min) *v = v_min;
+			else if (*v > v_max) *v = v_max;
+		}
+		return ret;
+	}
+	DLLEXPORT bool InputDoubleEx(const char* label, double* v, double v_min, double v_max, double step, double step_fast, const char *fmt, ImGuiInputTextFlags flags)
+	{
+		bool ret = ImGui::InputDouble(label, v, step, step_fast, fmt, flags);
+		if(ret) {
+			if(*v < v_min) *v = v_min;
+			else if (*v > v_max) *v = v_max;
+		}
+		return ret;
+	}
+
+
 	DLLEXPORT void PushFont(ImGuiFont f)
 	{
 		ImGui::PushFont(g_pOrbiter->DlgMgr()->GetFont(f));
@@ -906,101 +941,6 @@ namespace ImGui {
 			ImGui::PopTextWrapPos();
 			ImGui::EndTooltip();
 		}
-	}
-
-	// Code from thedmd: https://github.com/ocornut/imgui/issues/1496
-	static ImVector<ImRect> s_GroupPanelLabelStack;
-	DLLEXPORT void BeginGroupPanel(const char* name, const ImVec2& size)
-	{
-		ImGui::BeginGroup();
-		auto cursorPos = ImGui::GetCursorScreenPos();
-		auto itemSpacing = ImGui::GetStyle().ItemSpacing;
-		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0.0f, 0.0f));
-		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.0f, 0.0f));
-		auto frameHeight = ImGui::GetFrameHeight();
-    // workaround for incorrect capture of columns/table width by placing
-    // zero-sized dummy element in the same group, this ensure
-    // max X cursor position is updated correctly
-    ImGui::SameLine(0.0f, 0.0f);
-    ImGui::Dummy(ImVec2(0.0f, 0.0f));
-		ImGui::BeginGroup();
-		ImVec2 effectiveSize = size;
-		if (size.x < 0.0f)
-			effectiveSize.x = ImGui::GetContentRegionAvail().x;
-		else
-			effectiveSize.x = size.x;
-		ImGui::Dummy(ImVec2(effectiveSize.x, 0.0f));
-		ImGui::Dummy(ImVec2(frameHeight * 0.5f, 0.0f));
-		ImGui::SameLine(0.0f, 0.0f);
-		ImGui::BeginGroup();
-		ImGui::Dummy(ImVec2(frameHeight * 0.5f, 0.0f));
-		ImGui::SameLine(0.0f, 0.0f);
-		ImGui::TextUnformatted(name);
-		auto labelMin = ImGui::GetItemRectMin();
-		auto labelMax = ImGui::GetItemRectMax();
-		ImGui::SameLine(0.0f, 0.0f);
-		ImGui::Dummy(ImVec2(0.0, frameHeight + itemSpacing.y));
-		ImGui::BeginGroup();
-		//ImGui::GetWindowDrawList()->AddRect(labelMin, labelMax, IM_COL32(255, 0, 255, 255));
-		ImGui::PopStyleVar(2);
-		ImGui::GetCurrentWindow()->ContentRegionRect.Max.x -= frameHeight * 0.5f;
-		ImGui::GetCurrentWindow()->WorkRect.Max.x          -= frameHeight * 0.5f;
-		ImGui::GetCurrentWindow()->InnerRect.Max.x         -= frameHeight * 0.5f;
-		ImGui::GetCurrentWindow()->Size.x                   -= frameHeight;
-		auto itemWidth = ImGui::CalcItemWidth();
-		ImGui::PushItemWidth(ImMax(0.0f, itemWidth - frameHeight));
-		s_GroupPanelLabelStack.push_back(ImRect(labelMin, labelMax));
-	}
-	DLLEXPORT void EndGroupPanel()
-	{
-		ImGui::PopItemWidth();
-		auto itemSpacing = ImGui::GetStyle().ItemSpacing;
-		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0.0f, 0.0f));
-		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.0f, 0.0f));
-		auto frameHeight = ImGui::GetFrameHeight();
-		ImGui::EndGroup();
-		//ImGui::GetWindowDrawList()->AddRectFilled(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), IM_COL32(0, 255, 0, 64), 4.0f);
-		ImGui::EndGroup();
-		ImGui::SameLine(0.0f, 0.0f);
-		ImGui::Dummy(ImVec2(frameHeight * 0.5f, 0.0f));
-		ImGui::Dummy(ImVec2(0.0, frameHeight - frameHeight * 0.5f - itemSpacing.y));
-		ImGui::EndGroup();
-		auto itemMin = ImGui::GetItemRectMin();
-		auto itemMax = ImGui::GetItemRectMax();
-		//ImGui::GetWindowDrawList()->AddRectFilled(itemMin, itemMax, IM_COL32(255, 0, 0, 64), 4.0f);
-		auto labelRect = s_GroupPanelLabelStack.back();
-		s_GroupPanelLabelStack.pop_back();
-		ImVec2 halfFrame = ImVec2(frameHeight * 0.25f, frameHeight) * 0.5f;
-		ImRect frameRect = ImRect(itemMin + halfFrame, itemMax - ImVec2(halfFrame.x, 0.0f));
-		labelRect.Min.x -= itemSpacing.x;
-		labelRect.Max.x += itemSpacing.x;
-		for (int i = 0; i < 4; ++i)
-		{
-			switch (i)
-			{
-				// left half-plane
-				case 0: ImGui::PushClipRect(ImVec2(-FLT_MAX, -FLT_MAX), ImVec2(labelRect.Min.x, FLT_MAX), true); break;
-				// right half-plane
-				case 1: ImGui::PushClipRect(ImVec2(labelRect.Max.x, -FLT_MAX), ImVec2(FLT_MAX, FLT_MAX), true); break;
-				// top
-				case 2: ImGui::PushClipRect(ImVec2(labelRect.Min.x, -FLT_MAX), ImVec2(labelRect.Max.x, labelRect.Min.y), true); break;
-				// bottom
-				case 3: ImGui::PushClipRect(ImVec2(labelRect.Min.x, labelRect.Max.y), ImVec2(labelRect.Max.x, FLT_MAX), true); break;
-			}
-			ImGui::GetWindowDrawList()->AddRect(
-				frameRect.Min, frameRect.Max,
-				ImColor(ImGui::GetStyleColorVec4(ImGuiCol_Border)),
-				halfFrame.x);
-			ImGui::PopClipRect();
-		}
-		ImGui::PopStyleVar(2);
-		ImGui::GetCurrentWindow()->ContentRegionRect.Max.x += frameHeight * 0.5f;
-		ImGui::GetCurrentWindow()->WorkRect.Max.x          += frameHeight * 0.5f;
-		ImGui::GetCurrentWindow()->InnerRect.Max.x         += frameHeight * 0.5f;
-		ImGui::GetCurrentWindow()->Size.x                  += frameHeight;
-		ImGui::Dummy(ImVec2(0.0f, 0.0f));
-		ImGui::EndGroup();
-		//ImGui::Dummy(ImVec2(0.0f, 0.0f));
 	}
 
 	DLLEXPORT bool MenuButton(const char *label, const char *tooltip, float xoffset)
@@ -1045,4 +985,9 @@ namespace ImGui {
 		return ImageButton(str_id, tex_id, image_size, uv0, uv1, bg_col, tint_col);
 	}
 
+	DLLEXPORT bool SliderEnum(const char *label, int *v, const char *values[], int nvalues)
+	{
+        const char* elem_name = (*v >= 0 && *v < nvalues) ? values[*v] : "Unknown";
+        return ImGui::SliderInt(label, v, 0, nvalues - 1, elem_name);
+	}
 }

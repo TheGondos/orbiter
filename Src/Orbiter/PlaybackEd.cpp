@@ -48,6 +48,7 @@ void DlgPlaybackEditor::OnDraw() {
 		int i = 0;
 		bool ts_drawn = false;
 		if(m_Events.size() == 0) {
+			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0,1.0,1.0,1.0));
 			ImGui::TableNextRow();
 			ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, ImColor(1.0,0,0));
 			ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg1, ImColor(1.0,0,0));
@@ -56,6 +57,7 @@ void DlgPlaybackEditor::OnDraw() {
 			ImGui::Text("%0.2f", td.SimT0);
 			ImGui::TableSetColumnIndex(1);
 			ImGui::TextUnformatted("NOW");
+			ImGui::PopStyleColor();
 		}
 		for(auto &e : m_Events) {
 			i++;
@@ -63,6 +65,7 @@ void DlgPlaybackEditor::OnDraw() {
 
 			if(e->T0() > td.SimT0 && !ts_drawn) {
 				ts_drawn = true;
+				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0,1.0,1.0,1.0));
 				ImGui::TableNextRow();
 				ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, ImColor(1.0,0,0));
 				ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg1, ImColor(1.0,0,0));
@@ -71,6 +74,7 @@ void DlgPlaybackEditor::OnDraw() {
 				ImGui::Text("%0.2f", td.SimT0);
 				ImGui::TableSetColumnIndex(1);
 				ImGui::TextUnformatted("NOW");
+				ImGui::PopStyleColor();
 			}
 
 			ImGui::TableNextRow();
@@ -94,38 +98,37 @@ void DlgPlaybackEditor::OnDraw() {
         ImGui::EndTable();
     }
 
-	ImGui::BeginGroupPanel("Insert event");
-		if(ImGui::Button("NOTE")) {
-			InsertEvent(new NoteEvent (td.SimT0, "New note"));
-		}
-		ImGui::SameLine();
-		if(ImGui::Button("NOTEOFF")) {
-			InsertEvent(new NoteoffEvent (td.SimT0));
-		}
-		ImGui::SameLine();
-		if(ImGui::Button("NOTEPOS")) {
-			InsertEvent(new NoteposEvent (td.SimT0, 0.1,0.1,0.9,0.9));
-		}
-		ImGui::SameLine();
-		if(ImGui::Button("NOTECOL")) {
-			InsertEvent(new NotecolEvent (td.SimT0, 1.0, 1.0, 1.0));
-		}
-		ImGui::SameLine();
-		if(ImGui::Button("NOTESIZE")) {
-			InsertEvent(new NotesizeEvent (td.SimT0, 1.0));
-		}
-		if(ImGui::Button("TACC")) {
-			InsertEvent(new TaccEvent (td.SimT0, 1.0, 0.0));
-		}
-		ImGui::SameLine();
-		if(ImGui::Button("CAMERA")) {
-			InsertEvent(new CameraEvent (td.SimT0));
-		}
-		ImGui::SameLine();
-		if(ImGui::Button("<Other>")) {
-			InsertEvent(new GenericEvent (td.SimT0, "<TAG>", ""));
-		}
-	ImGui::EndGroupPanel();
+	ImGui::SeparatorText("Insert event");
+	if(ImGui::Button("NOTE")) {
+		InsertEvent(new NoteEvent (td.SimT0, "New note"));
+	}
+	ImGui::SameLine();
+	if(ImGui::Button("NOTEOFF")) {
+		InsertEvent(new NoteoffEvent (td.SimT0));
+	}
+	ImGui::SameLine();
+	if(ImGui::Button("NOTEPOS")) {
+		InsertEvent(new NoteposEvent (td.SimT0, 0.1,0.1,0.9,0.9));
+	}
+	ImGui::SameLine();
+	if(ImGui::Button("NOTECOL")) {
+		InsertEvent(new NotecolEvent (td.SimT0, 1.0, 1.0, 1.0));
+	}
+	ImGui::SameLine();
+	if(ImGui::Button("NOTESIZE")) {
+		InsertEvent(new NotesizeEvent (td.SimT0, 1.0));
+	}
+	if(ImGui::Button("TACC")) {
+		InsertEvent(new TaccEvent (td.SimT0, 1.0, 0.0));
+	}
+	ImGui::SameLine();
+	if(ImGui::Button("CAMERA")) {
+		InsertEvent(new CameraEvent (td.SimT0));
+	}
+	ImGui::SameLine();
+	if(ImGui::Button("<Other>")) {
+		InsertEvent(new GenericEvent (td.SimT0, "<TAG>", ""));
+	}
 	if(ImGui::Button("Delete")) {
 		DeleteSelectedEvent();
 	}

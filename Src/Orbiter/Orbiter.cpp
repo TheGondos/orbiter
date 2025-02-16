@@ -1507,27 +1507,14 @@ void Orbiter::CaptureVideoFrame ()
 
 void Orbiter::TogglePlanetariumMode()
 {
-	DWORD& plnFlag = pConfig->CfgVisHelpPrm.flagPlanetarium;
-	plnFlag ^= PLN_ENABLE;
-
-	if (pDlgMgr) {
-		DlgOptions* dlg = pDlgMgr->EntryExists<DlgOptions>(hInst);
-		if (dlg) dlg->Update();
-	}
-
+	pConfig->CfgVisHelpPrm.flagPlanetarium ^= PLN_ENABLE;
 }
 
 //-----------------------------------------------------------------------------
 
 void Orbiter::ToggleLabelDisplay()
 {
-	DWORD& mkrFlag = pConfig->CfgVisHelpPrm.flagMarkers;
-	mkrFlag ^= MKR_ENABLE;
-
-	if (pDlgMgr) {
-		DlgOptions* dlg = pDlgMgr->EntryExists<DlgOptions>(hInst);
-		if (dlg) dlg->Update();
-	}
+	pConfig->CfgVisHelpPrm.flagMarkers^= MKR_ENABLE;
 }
 
 //-----------------------------------------------------------------------------

@@ -23,46 +23,43 @@ DlgCapture::DlgCapture() : ImGuiDialog(ICON_FA_VOICEMAIL " Orbiter: Capture fram
 void DlgCapture::OnDraw() {
 	CFG_CAPTUREPRM &prm = g_pOrbiter->Cfg()->CfgCapturePrm;
 
-	ImGui::BeginGroupPanel("Save snapshots");
-		ImGui::RadioButton("To the clipboard", &prm.ImageTgt, 0);
-		ImGui::RadioButton("To file", &prm.ImageTgt, 1);
-		if(prm.ImageTgt == 1) {
-			ImGui::SameLine();
-			ImGui::InputText("##File", prm.ImageFile, 128);
+	ImGui::SeparatorText("Save snapshots");
+	ImGui::RadioButton("To the clipboard", &prm.ImageTgt, 0);
+	ImGui::RadioButton("To file", &prm.ImageTgt, 1);
+	if(prm.ImageTgt == 1) {
+		ImGui::SameLine();
+		ImGui::InputText("##File", prm.ImageFile, 128);
+	}
+	if(ImGui::Button("Take snapshot")) {
+		oapi::GraphicsClient *gclient = g_pOrbiter->GetGraphicsClient();
+		if (prm.ImageTgt) {
+			oapi::ImageFileFormat fmt = (oapi::ImageFileFormat)prm.ImageFormat;
+			float quality = (float)prm.ImageQuality/10.0f;
+			gclient->clbkSaveSurfaceToImage (0, prm.ImageFile, fmt, quality);
+			AutoIncrement (prm.ImageFile);
+		} else {
+			gclient->clbkSaveSurfaceToImage (0, NULL, oapi::IMAGE_BMP);
 		}
-		if(ImGui::Button("Take snapshot")) {
-			oapi::GraphicsClient *gclient = g_pOrbiter->GetGraphicsClient();
-			if (prm.ImageTgt) {
-				oapi::ImageFileFormat fmt = (oapi::ImageFileFormat)prm.ImageFormat;
-				float quality = (float)prm.ImageQuality/10.0f;
-				gclient->clbkSaveSurfaceToImage (0, prm.ImageFile, fmt, quality);
-				AutoIncrement (prm.ImageFile);
-			} else {
-				gclient->clbkSaveSurfaceToImage (0, NULL, oapi::IMAGE_BMP);
-			}
-		}
-	ImGui::EndGroupPanel();
+	}
 
-	ImGui::BeginGroupPanel("Save frame sequence");
-		ImGui::InputText("To directory", prm.SequenceDir, 128);
-		ImGui::InputInt("Counter start", &prm.SequenceStart);
-		ImGui::InputInt("Skip frames", &prm.SequenceSkip);
+	ImGui::SeparatorText("Save frame sequence");
+	ImGui::InputText("To directory", prm.SequenceDir, 128);
+	ImGui::InputInt("Counter start", &prm.SequenceStart);
+	ImGui::InputInt("Skip frames", &prm.SequenceSkip);
 
-		if (g_pOrbiter->IsCapturingFrames()) {
-			if(ImGui::Button("Stop recording"))
-				g_pOrbiter->StopCaptureFrames();
-		} else if (ImGui::Button("Start recording")) {
-			g_pOrbiter->StartCaptureFrames();
-		}
-	ImGui::EndGroupPanel();
+	if (g_pOrbiter->IsCapturingFrames()) {
+		if(ImGui::Button("Stop recording"))
+			g_pOrbiter->StopCaptureFrames();
+	} else if (ImGui::Button("Start recording")) {
+		g_pOrbiter->StartCaptureFrames();
+	}
 
-	ImGui::BeginGroupPanel("File settings");
-		const char* const formats[] = { "BMP", "PNG", "JPG", "TIF" };
-		ImGui::Combo("File format", &prm.ImageFormat, formats, IM_ARRAYSIZE(formats));
-		ImGui::BeginDisabled(prm.ImageFormat != 2);
-		ImGui::SliderInt("Image quality", &prm.ImageQuality, 1, 10);
-		ImGui::EndDisabled();
-	ImGui::EndGroupPanel();
+	ImGui::SeparatorText("File settings");
+	const char* const formats[] = { "BMP", "PNG", "JPG", "TIF" };
+	ImGui::Combo("File format", &prm.ImageFormat, formats, IM_ARRAYSIZE(formats));
+	ImGui::BeginDisabled(prm.ImageFormat != 2);
+	ImGui::SliderInt("Image quality", &prm.ImageQuality, 1, 10);
+	ImGui::EndDisabled();
 
 	if(ImGui::Button("Reset"))
 		g_pOrbiter->Cfg()->SetDefaults_Capture();
