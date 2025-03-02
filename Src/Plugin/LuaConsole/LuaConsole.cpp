@@ -112,7 +112,7 @@ public:
 	void DrawConsole() {
 		ImGui::SetNextWindowSize(ImVec2(0,440));
 		ImGui::BeginChild("##LuaConsole", ImVec2(0.0f, 0.0f), ImGuiChildFlags_ResizeY, ImGuiWindowFlags_AlwaysHorizontalScrollbar | ImGuiWindowFlags_AlwaysVerticalScrollbar);
-			ImGui::PushFont(ImGuiFont::MONO);
+			ImGui::PushFont(ImGuiFont::CONSOLE);
 			ImGuiListClipper clipper;
 			clipper.Begin(lines.size());
 			while (clipper.Step()) {
@@ -124,7 +124,7 @@ public:
 							ImGui::Text("%%%s", lines[line_no].text.c_str());
 							break;
 						case LineType::LUA_OUT:
-							ImGui::TextColored(ImVec4(0,1,0,1), " %s", lines[line_no].text.c_str());
+							ImGui::TextColored(ImVec4(0,0.9,0,1), " %s", lines[line_no].text.c_str());
 							break;
 						case LineType::LUA_OUT_ERROR:
 							ImGui::TextColored(ImVec4(1,0,0,1), " %s", lines[line_no].text.c_str());
@@ -212,6 +212,8 @@ LuaConsole::LuaConsole (HINSTANCE hDLL): Module (hDLL)
 		(char*)"Open a Lua script interpreter window.",
 		OpenDlgClbk, this);
 
+	dwMenuCmd = oapiRegisterCustomMenuCmd ("Lua", "MenuInfoBar/LuaConsole.png", OpenDlgClbk, this);
+
 	hDlg = new LuaConsoleDlg(cConsoleCmd);
 }
 
@@ -222,6 +224,8 @@ LuaConsole::~LuaConsole ()
 	// Unregister the custom function in Orbiter
 	oapiUnregisterCustomCmd (dwCmd);
 
+	oapiUnregisterCustomMenuCmd (dwMenuCmd);
+	
 	// Delete input buffer
 	delete hDlg;
 }

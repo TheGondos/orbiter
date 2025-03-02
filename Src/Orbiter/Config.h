@@ -228,15 +228,15 @@ struct CFG_JOYSTICKPRM {
 struct CFG_UIPRM {              // user interface options
 	int    MouseFocusMode;	    // 0: focus requires click; 1: focus requires click for child windows only; 2: focus follow mouse
 	int    MenuMode;            // 0=show, 1=hide, 2=auto-hide
-	bool   bMenuLabelOnly;      // display only menu labels?
+	int    MenuButtonSize;      // Size of buttons in the menubar (in pixels)
+	int    MenuButtonHoverSize; // Size of buttons in the menubar when hovered (in pixels)
+	bool   bMenuLabelAlways;    // display menu labels when buttons are hidden
 	bool   bWarpAlways;         // always display time acceleration != 1
-	bool   bWarpScientific;     // display time acceleration in scientific notation?
 	int    InfoMode;            // 0=show, 1=hide, 2=auto-hide
-	int    InfoAuxIdx[2];       // index for auxiliary info bars left/right (0=none)
+	int    FPS;					// 0=hidden, 1=on the left, 2=on the right
 	int    MenuOpacity;         // menubar opacity (0-10)
 	int    InfoOpacity;         // infobar opacity (0-20)
 	int    MenuScrollspeed;     // menubar scroll speed (1-20)
-	int    PauseIndMode;        // 0=flash on pause/resume, 1=show on pause, 2=don't show
 	int    SelVesselTab;        // tab to open in vessel selection dialog
  	int    SelVesselRange;      // "nearby" range for vessel selection dialog
 	bool   bSelVesselFlat;      // flat assemblies for vessel selection dialog
@@ -304,7 +304,7 @@ char *readline (std::istream &is);
 bool GetItemString (std::istream &is, const char *label, char *val);
 bool GetItemReal   (std::istream &is, const char *label, double &val);
 bool GetItemInt    (std::istream &is, const char *label, int &val);
-bool GetItemSize   (std::istream& is, const char* label, size_t& val);
+bool GetItemSize   (std::istream &is, const char *label, size_t &val);
 bool GetItemHex    (std::istream &is, const char *label, int &val);
 bool GetItemBool   (std::istream &is, const char *label, bool &val);
 bool GetItemVector (std::istream &is, const char *label, Vector &val);

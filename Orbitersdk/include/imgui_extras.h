@@ -6,7 +6,8 @@
 
 enum class ImGuiFont {
 	DEFAULT,
-	MONO
+	MONO,
+	CONSOLE
 };
 
 

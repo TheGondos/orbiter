@@ -28,55 +28,49 @@ void DlgMenuCfg::OnDraw()
 	CFG_UIPRM &prm = g_pOrbiter->Cfg()->CfgUIPrm;
 	MenuInfoBar *mib = g_pane->MIBar();
 
-	ImGui::SeparatorText("Menu bar");
-	ImGui::PushID(1);
-	ImGui::RadioButton("Show", &prm.MenuMode, 0);
-	ImGui::SameLine();
-	ImGui::RadioButton("Hide", &prm.MenuMode, 1);
-	ImGui::SameLine();
-	ImGui::RadioButton("Auto-hide", &prm.MenuMode, 2);
-	mib->SetMenuMode (prm.MenuMode);
+	if(ImGui::BeginTabBar("##MenuCfgTab")) {
+		if(ImGui::BeginTabItem("Appearance")) {
+			ImGui::SeparatorText("Menu bar");
+			ImGui::PushID(1);
+			ImGui::RadioButton("Show", &prm.MenuMode, 0);
+			ImGui::SameLine();
+			ImGui::RadioButton("Hide", &prm.MenuMode, 1);
+			ImGui::SameLine();
+			ImGui::RadioButton("Auto-hide", &prm.MenuMode, 2);
 
-	if(ImGui::Checkbox("Labels only", &prm.bMenuLabelOnly))
-		mib->SetLabelOnly (prm.bMenuLabelOnly);
+			ImGui::Checkbox("Always show labels", &prm.bMenuLabelAlways);
+			ImGui::SliderInt("Opacity", &prm.MenuOpacity, 0, 10);
+			ImGui::SliderInt("Animation speed", &prm.MenuScrollspeed, 1, 20);
+			ImGui::SliderInt("Button size", &prm.MenuButtonSize, 10, 64);
+			ImGui::SliderInt("Hovered size", &prm.MenuButtonHoverSize, 10, 64);
+			ImGui::PopID();
 
-	if(ImGui::SliderInt("Opacity", &prm.MenuOpacity, 0, 10))
-		mib->SetOpacity (prm.MenuOpacity);
+			ImGui::SeparatorText("Info bars");
+			ImGui::PushID(2);
+			ImGui::RadioButton("Show", &prm.InfoMode, 0);
+			ImGui::SameLine();
+			ImGui::RadioButton("Hide", &prm.InfoMode, 1);
+			ImGui::SameLine();
+			ImGui::RadioButton("Auto-hide", &prm.InfoMode, 2);
+			ImGui::Checkbox("Always show warp factor", &prm.bWarpAlways);
+			ImGui::SliderInt("Opacity", &prm.InfoOpacity, 0, 10);
+			ImGui::PopID();
 
-	if(ImGui::SliderInt("Scroll speed", &prm.MenuScrollspeed, 1, 20))
-		mib->SetScrollspeed (prm.MenuScrollspeed);
-	ImGui::PopID();
+			ImGui::SeparatorText("FPS info bar");
+			const char *fpsmode[]={"None", "On the left", "On the right"};
+			ImGui::Combo("##FPSMode", &prm.FPS, fpsmode, IM_ARRAYSIZE(fpsmode));
 
-	ImGui::SeparatorText("Info bars");
-	ImGui::PushID(2);
-	ImGui::RadioButton("Show", &prm.InfoMode, 0);
-	ImGui::SameLine();
-	ImGui::RadioButton("Hide", &prm.InfoMode, 1);
-	ImGui::SameLine();
-	ImGui::RadioButton("Auto-hide", &prm.InfoMode, 2);
-	mib->SetInfoMode (prm.InfoMode);
-
-	if(ImGui::Checkbox("Always show warp factor", &prm.bWarpAlways))
-		mib->SetWarpAlways (prm.bWarpAlways);
-
-	if(ImGui::Checkbox("Use scientific notation for warp", &prm.bWarpScientific))
-		mib->SetWarpScientific (prm.bWarpScientific);
-
-	if(ImGui::SliderInt("Opacity", &prm.InfoOpacity, 0, 10))
-		mib->SetOpacityInfo (prm.InfoOpacity);
-	ImGui::PopID();
-
-	ImGui::SeparatorText("Auxiliary info bars");
-	const char *auxmode[]={"None", "Frame rate", "Render statistics", "Viewport info"};
-	ImGui::Combo("Left", &prm.InfoAuxIdx[0], auxmode, IM_ARRAYSIZE(auxmode));
-	mib->SetAuxInfobar (0, prm.InfoAuxIdx[0]);
-	ImGui::Combo("Right", &prm.InfoAuxIdx[1], auxmode, IM_ARRAYSIZE(auxmode));
-	mib->SetAuxInfobar (1, prm.InfoAuxIdx[1]);
-
-	ImGui::SeparatorText("Action indicator");
-	const char *actionmode[]={"Flash on action", "Show on pause/record/playback", "Don't show"};
-	ImGui::Combo("Mode", &prm.PauseIndMode, actionmode, IM_ARRAYSIZE(actionmode));
-	mib->SetPauseIndicatorMode (prm.PauseIndMode);
-
-	ImGui::ShowStyleEditor();
+			ImGui::EndTabItem();
+		}
+		if(ImGui::BeginTabItem("Menu items")) {
+			bool changed = false;
+			for(auto &pref: g_pane->MIBar()->GetPreferences()) {
+				changed |= ImGui::Checkbox(pref.label.c_str(), &pref.enabled);
+			}
+			if(changed)
+				g_pane->MIBar()->SyncPreferences();
+			ImGui::EndTabItem();  
+		}
+		ImGui::EndTabBar();
+	}
 }

@@ -342,6 +342,24 @@ Orbiter::Orbiter ()
 
 	memset (simkstate, 0, 256);
 
+
+	RegisterMenuCmd("Ship",     "MenuInfoBar/ship.png",     [](void *) {g_pOrbiter->DlgMgr()->EnsureEntry<DlgFocus>();});
+	RegisterMenuCmd("Camera",   "MenuInfoBar/camera.png",   [](void *) {g_pOrbiter->DlgMgr()->EnsureEntry<DlgCamera>();});
+	RegisterMenuCmd("Speed",    "MenuInfoBar/speed.png",    [](void *) {g_pOrbiter->DlgMgr()->EnsureEntry<DlgTacc>();});
+	RegisterMenuCmd("Pause",    "MenuInfoBar/pause.png",    [](void *) {g_pOrbiter->TogglePause();});
+	RegisterMenuCmd("Function", "MenuInfoBar/function.png", [](void *) {g_pOrbiter->DlgMgr()->EnsureEntry<DlgFunction>();});
+	RegisterMenuCmd("Info",     "MenuInfoBar/info.png",     [](void *) {g_pOrbiter->DlgMgr()->EnsureEntry<DlgInfo>();});
+	RegisterMenuCmd("Options",  "MenuInfoBar/options.png",  [](void *) {g_pOrbiter->DlgMgr()->EnsureEntry<DlgOptions>();});
+	RegisterMenuCmd("Map",      "MenuInfoBar/map.png",      [](void *) {g_pOrbiter->DlgMgr()->EnsureEntry<DlgMap>();});
+	RegisterMenuCmd("Record",   "MenuInfoBar/record.png",   [](void *) {g_pOrbiter->DlgMgr()->EnsureEntry<DlgRecorder>();});
+	RegisterMenuCmd("Help",     "MenuInfoBar/help.png",     [](void *) {
+			extern HELPCONTEXT DefHelpContext;
+			DefHelpContext.topic = (char*)"/mainmenu.htm";
+			g_pOrbiter->OpenHelp (&DefHelpContext);			
+		});
+	RegisterMenuCmd("Save",     "MenuInfoBar/save.png",     [](void *) {g_pOrbiter->Quicksave();});
+	RegisterMenuCmd("Exit",     "MenuInfoBar/exit.png",     [](void *) {PostMessage(g_pOrbiter->GetRenderWnd(), WM_CLOSE, 0, 0);});
+
 }
 
 //-----------------------------------------------------------------------------
@@ -769,7 +787,6 @@ HWND Orbiter::CreateRenderWindow (Config *pCfg, const char *scenario)
 
 	if (g_camera) {
 		g_camera->InitState (scenario, g_focusobj);
-		if (g_pane) g_pane->SetFOV (g_camera->Aperture());
 	}
 	LOGOUT ("Finished initialising camera");
 
@@ -789,7 +806,6 @@ HWND Orbiter::CreateRenderWindow (Config *pCfg, const char *scenario)
 	FRecorder_Reset();
 	if ((g_focusobj) && (bPlayback = g_focusobj->bFRplayback)) {
 		FRecorder_OpenPlayback (pState->PlaybackDir());
-		if (g_pane && g_pane->MIBar()) g_pane->MIBar()->SetPlayback(true);
 	}
 
 	// let plugins read their states from the scenario file
@@ -1397,8 +1413,6 @@ void Orbiter::ApplyWarpFactor ()
 	// notify plugins
 	for (auto it = m_Plugin.begin(); it != m_Plugin.end(); it++)
 		it->pModule->clbkTimeAccChanged(nwarp, td.Warp());
-
-	if (g_pane) g_pane->SetWarp (nwarp);
 }
 
 //-----------------------------------------------------------------------------
@@ -1411,7 +1425,6 @@ VOID Orbiter::SetFOV (double fov, bool limit_range)
 	if (g_camera->Aperture() == fov) return;
 
 	fov = g_camera->SetAperture (fov, limit_range);
-	if (g_pane) g_pane->SetFOV (fov);
 	g_bForceUpdate = true;
 
 	// update Camera dialog
@@ -1428,7 +1441,6 @@ VOID Orbiter::SetFOV (double fov, bool limit_range)
 VOID Orbiter::IncFOV (double dfov)
 {
 	double fov = g_camera->IncrAperture (dfov);
-	if (g_pane) g_pane->SetFOV (fov);
 	g_bForceUpdate = true;
 
 	// update Camera dialog
@@ -1576,7 +1588,6 @@ void Orbiter::EndPlayback ()
 		HWND hDlg = pDlgMgr->IsEntry (hInst, IDD_RECPLAY);
 		if (hDlg) PostMessage (hDlg, WM_USER+1, 0, 0);
 	}
-	if (g_pane && g_pane->MIBar()) g_pane->MIBar()->SetPlayback(false);
 }
 
 oapi::ScreenAnnotation *Orbiter::CreateAnnotation (bool exclusive, double size, COLORREF col)
@@ -1780,7 +1791,6 @@ bool Orbiter::BeginTimeStep (bool running)
 	if (bRequestRunning != running) {
 		running = bRunning = bRequestRunning;
 		bool isPaused = !running;
-		if (g_pane && g_pane->MIBar()) g_pane->MIBar()->SetPaused (isPaused);
 		pDlgMgr->BroadcastMessage (MSG_PAUSE, (void*)isPaused);
 
 		// broadcast pause state to plugins
@@ -1958,6 +1968,25 @@ bool Orbiter::UnregisterCustomCmd (int cmdId)
 	ncustomcmd--;
 	return true;
 }
+
+int Orbiter::RegisterMenuCmd (const char *label, const char *imagepath, CustomFunc func, void *context)
+{
+	// share g_customcmdid for unique id
+	menuitems.emplace_back(label, imagepath, g_customcmdid++, func, context);
+	if(g_pane) {
+		g_pane->MIBar()->RegisterMenuItem(label, imagepath, g_customcmdid, func, context);
+	}
+
+	return g_customcmdid;
+}
+void Orbiter::UnregisterMenuCmd (int cmdId)
+{
+	menuitems.erase(std::remove_if(menuitems.begin(), menuitems.end(), [cmdId](const auto &item) { return item.id == cmdId; }), menuitems.end());
+	if(g_pane) {
+		g_pane->MIBar()->UnregisterMenuItem(cmdId);
+	}
+}
+
 
 //-----------------------------------------------------------------------------
 // Name: ModulePreStep()
@@ -2318,7 +2347,10 @@ void Orbiter::KbdInputBuffered_System (char *kstate, DIDEVICEOBJECTDATA *dod, DW
 		else if (keymap.IsLogicalKey(key, kstate, OAPI_LKEY_Quicksave))            Quicksave();
 		else if (keymap.IsLogicalKey(key, kstate, OAPI_LKEY_StepIncFOV))           SetFOV(ceil((g_camera->Aperture() * DEG + 1e-6) / 5.0) * 5.0 * RAD);
 		else if (keymap.IsLogicalKey(key, kstate, OAPI_LKEY_StepDecFOV))           SetFOV(floor((g_camera->Aperture() * DEG - 1e-6) / 5.0) * 5.0 * RAD);
-		else if (keymap.IsLogicalKey(key, kstate, OAPI_LKEY_MainMenu)) { if (g_pane->MIBar()) g_pane->MIBar()->ToggleAutohide(); }
+		else if (keymap.IsLogicalKey(key, kstate, OAPI_LKEY_MainMenu)) { 
+			CFG_UIPRM &prm = g_pOrbiter->Cfg()->CfgUIPrm;
+			prm.MenuMode = prm.MenuMode == 0 ? 2:0;
+		}
 		else if (keymap.IsLogicalKey(key, kstate, OAPI_LKEY_DlgHelp))              pDlgMgr->EnsureEntry<DlgHelp>();
 		else if (keymap.IsLogicalKey(key, kstate, OAPI_LKEY_DlgCamera))            pDlgMgr->EnsureEntry<DlgCamera>();
 		else if (keymap.IsLogicalKey(key, kstate, OAPI_LKEY_DlgSimspeed))          pDlgMgr->EnsureEntry<DlgTacc>();
@@ -2494,7 +2526,6 @@ bool Orbiter::MouseEvent (UINT event, DWORD state, DWORD x, DWORD y)
 		if (g_camera->ProcessMouse(event, state, x, y, simkstate)) return true;
 	}
 
-	if (g_pane->MIBar() && g_pane->MIBar()->ProcessMouse (event, state, x, y)) return true;
 	if (BroadcastMouseEvent (event, state, x, y)) return true;
 	if (event == WM_MOUSEMOVE) return false; // may be lifted later
 

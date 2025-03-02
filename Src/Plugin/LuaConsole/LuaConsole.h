@@ -44,6 +44,7 @@ private:
 
 	Interpreter *interp; // interpreter instance
 	DWORD dwCmd;    // custom command id
+	int dwMenuCmd;    // custom command id
 	LuaConsoleDlg *hDlg;
 	char cConsoleCmd[4096];
 };

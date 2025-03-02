@@ -184,6 +184,7 @@ private:
 	void InitImGui();
 	void ShutdownImGui();
 	ImFont *defaultFont;
+	ImFont *consoleFont;
 	ImFont *monoFont;
 };
 
