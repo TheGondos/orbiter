@@ -64,12 +64,14 @@ void DlgMenuCfg::OnDraw()
 			ImGui::EndTabItem();
 		}
 		if(ImGui::BeginTabItem("Menu items")) {
+			ImGui::BeginChild("##Child");
 			bool changed = false;
 			for(auto &pref: g_pane->MIBar()->GetPreferences()) {
 				changed |= ImGui::Checkbox(pref.label.c_str(), &pref.enabled);
 			}
 			if(changed)
 				g_pane->MIBar()->SyncPreferences();
+			ImGui::EndChild();
 			ImGui::EndTabItem();  
 		}
 		ImGui::EndTabBar();

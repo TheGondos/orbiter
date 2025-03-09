@@ -201,6 +201,7 @@ public:
 				}
 			}
 		}
+		SavePreferedOrder();
 	}
 	void SavePreferedOrder() {
 		preferedOrder.clear();
