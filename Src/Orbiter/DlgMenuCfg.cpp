@@ -43,6 +43,7 @@ void DlgMenuCfg::OnDraw()
 			ImGui::SliderInt("Animation speed", &prm.MenuScrollspeed, 1, 20);
 			ImGui::SliderInt("Button size", &prm.MenuButtonSize, 10, 64);
 			ImGui::SliderInt("Hovered size", &prm.MenuButtonHoverSize, 10, 64);
+			ImGui::SliderInt("Spacing", &prm.MenuButtonSpacing, 1, 32);
 			ImGui::PopID();
 
 			ImGui::SeparatorText("Info bars");

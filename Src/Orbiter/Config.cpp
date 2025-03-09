@@ -205,6 +205,7 @@ CFG_UIPRM CfgUIPrm_default = {
 	2,          // MenuMode (auto-hide menu bar)
 	35,         // MenuButtonSize
 	35,         // MenuButtonHoverSize
+	18,          // MenuButtonSpacing
 	false,      // bMenuLabelAlways (always display labels)
 	true,       // bWarpAlways (always display time acceleration != 1)
 	0,          // InfoMode (show info bars)
@@ -722,6 +723,8 @@ bool Config::Load(const char *fname)
 		CfgUIPrm.MenuButtonHoverSize = i;
 	if (GetInt (ifs, "MenuButtonSize", i))
 		CfgUIPrm.MenuButtonSize = i;
+	if (GetInt (ifs, "MenuButtonSpacing", i))
+		CfgUIPrm.MenuButtonSpacing = i;
 	GetBool (ifs, "ShowWarpAlways", CfgUIPrm.bWarpAlways);
 	if (GetInt (ifs, "InfobarMode", i) && i >= 0 && i <= 2)
 		CfgUIPrm.InfoMode = i;
@@ -1272,6 +1275,8 @@ BOOL Config::Write (const char *fname) const
 			ofs << "MenuButtonSize = " << CfgUIPrm.MenuButtonSize << '\n';
 		if (CfgUIPrm.MenuButtonHoverSize != CfgUIPrm_default.MenuButtonHoverSize || bEchoAll)
 			ofs << "MenuButtonHoverSize = " << CfgUIPrm.MenuButtonHoverSize << '\n';
+		if (CfgUIPrm.MenuButtonSpacing != CfgUIPrm_default.MenuButtonSpacing || bEchoAll)
+			ofs << "MenuButtonSpacing = " << CfgUIPrm.MenuButtonSpacing << '\n';
 		if (CfgUIPrm.bWarpAlways != CfgUIPrm_default.bWarpAlways || bEchoAll)
 			ofs << "ShowWarpAlways = " << BoolStr (CfgUIPrm.bWarpAlways) << '\n';
 		if (CfgUIPrm.InfoMode != CfgUIPrm_default.InfoMode || bEchoAll)

@@ -230,6 +230,7 @@ struct CFG_UIPRM {              // user interface options
 	int    MenuMode;            // 0=show, 1=hide, 2=auto-hide
 	int    MenuButtonSize;      // Size of buttons in the menubar (in pixels)
 	int    MenuButtonHoverSize; // Size of buttons in the menubar when hovered (in pixels)
+	int    MenuButtonSpacing;   // Size of the padding between buttons in the menubar (in pixels)
 	bool   bMenuLabelAlways;    // display menu labels when buttons are hidden
 	bool   bWarpAlways;         // always display time acceleration != 1
 	int    InfoMode;            // 0=show, 1=hide, 2=auto-hide

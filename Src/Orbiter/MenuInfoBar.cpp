@@ -103,6 +103,7 @@ public:
 	void OnDraw() {}
 	std::vector<MenuItem> items;
 	float animState;
+	float animStateSpacing;
 	std::vector<MenuInfoBar::MenuPreference> preferedOrder;
 
 	// Dragging
@@ -121,6 +122,7 @@ public:
 		isDragging = false;
 		oneDrag = false;
 		isDraggingOutside = false;
+		animStateSpacing = prm.MenuButtonSpacing;
 
 		FILEHANDLE f = oapiOpenFile("MenuInfoBar.cfg", FILE_IN, CONFIG);
 		if(f) {
@@ -345,7 +347,11 @@ public:
 		}
 	}
 	bool MenuInfoBarItem(MenuItem &item) {
-		ImGui::SameLine();
+		// Filter button spacing in time to prevent excessive jittering
+		// when modifying MenuButtonSpacing
+		if(animStateSpacing < prm.MenuButtonSpacing) animStateSpacing+=0.1f;
+		else if(animStateSpacing > prm.MenuButtonSpacing) animStateSpacing-=0.1f;
+		ImGui::SameLine(0.0f, animStateSpacing);
 		ImGuiWindow* window = ImGui::GetCurrentWindow();
 		ImGuiContext& g = *GImGui;
 
@@ -731,6 +737,9 @@ public:
 			if (g_camera->IsExternal()) {
 				ImGui::SameLine();
 				ImGui::TextColored(white, "   Dst %s", DistStr (g_camera->Distance())+1);
+			} else {
+				ImGui::SameLine();
+				ImGui::TextColored(ImVec4(0,0,0,0), "   Dst %s", DistStr (g_camera->Distance())+1);
 			}
 
 			if(prm.FPS == 1)
