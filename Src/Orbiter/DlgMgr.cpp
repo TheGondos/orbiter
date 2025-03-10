@@ -13,6 +13,7 @@
 #include "imgui.h"
 #include "imgui_extras.h"
 #include "imgui_impl_win32.h"
+#include "implot.h"
 #include "IconsFontAwesome6.h"
 #include <chrono>
 #include <algorithm>
@@ -415,6 +416,8 @@ DWORD WINAPI DlgThreadProc (void *data)
 // ====================================================================
 
 DLLEXPORT ImGuiContext* GImGui = NULL;
+DLLEXPORT ImPlotContext* GImPlot = NULL;
+
 
 const ImWchar* GetGlyphRangesOrbiter()
 {
@@ -447,6 +450,7 @@ void DialogManager::InitImGui()
 
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
+	ImPlot::CreateContext();
 	ImGuiIO& io = ImGui::GetIO();
 	// Viewports don't play nice when in full screen mode
 	if(!pOrbiter->IsFullscreen())
@@ -484,6 +488,7 @@ void DialogManager::ShutdownImGui()
 
 	gc->clbkImGuiShutdown();
 	ImGui_ImplWin32_Shutdown();
+	ImPlot::DestroyContext();
 	ImGui::DestroyContext();
 }
 
