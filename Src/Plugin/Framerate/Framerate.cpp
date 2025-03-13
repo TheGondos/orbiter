@@ -23,34 +23,22 @@ namespace oapi {
 	/// \brief Plugin for graphically displaying frame rate and time step length.
 	class Framerate : public Module, ImGuiDialog {
 	public:
-		/// \brief Soliton instance server for Framerate plugin
-		/// \param hDLL nodule instance handle
-		static Framerate* GetInstance(HINSTANCE hDLL);
-
-		/// \brief Soliton instance destructor
-		static void DelInstance();
-
 		/// \brief Entry point for open dialog callback
 		static void hookOpenDlg(void* context);
-
-		/// \brief Open dialog callback
-		void clbkOpenDlg(void* context);
 
 		/// \brief Time step notification callback
 		void clbkPreStep(double simt, double simdt, double mjd);
 
+		void clbkSimulationStart (RenderMode mode);
+
 		void OnDraw();
 
-	protected:
-		/// \brief Protected constructor
 		Framerate(HINSTANCE hDLL);
 
-		/// \brief Protected destructor
 		~Framerate();
 
 		void InsertData(float fps, float dt);
 	private:
-		static Framerate* self;  ///> Soliton instance pointer
 		DWORD m_dwCmd;           ///> Handle for plugin entry in custom command list
 
 		double m_sysT;           ///> current system time
@@ -70,12 +58,15 @@ namespace oapi {
 // API interface
 // ==============================================================
 
+static oapi::Framerate *fr;
+
 /// \brief Module entry point 
 /// \param hDLL module handle
 DLLCLBK void InitModule (HINSTANCE hDLL)
 {
 	// Create and register the module
-	oapiRegisterModule(oapi::Framerate::GetInstance(hDLL));
+	fr = new oapi::Framerate(hDLL);
+	oapiRegisterModule(fr);
 }
 
 /// \brief Module exit point 
@@ -83,33 +74,7 @@ DLLCLBK void InitModule (HINSTANCE hDLL)
 DLLCLBK void ExitModule (HINSTANCE hDLL)
 {
 	// Delete the module
-	oapi::Framerate::DelInstance();
-}
-
-
-// ==============================================================
-// Framerate module interface class
-// ==============================================================
-
-oapi::Framerate* oapi::Framerate::self = nullptr;
-
-// --------------------------------------------------------------
-
-oapi::Framerate* oapi::Framerate::GetInstance(HINSTANCE hDLL)
-{
-	if (!self)
-		self = new Framerate(hDLL);
-	return self;
-}
-
-// --------------------------------------------------------------
-
-void oapi::Framerate::DelInstance()
-{
-	if (self) {
-		delete self;
-		self = nullptr;
-	}
+	delete fr;
 }
 
 // --------------------------------------------------------------
@@ -119,15 +84,15 @@ oapi::Framerate::Framerate(HINSTANCE hDLL)
 {
 	// Register the custom command for the plugin
 	static char* desc = (char*)"Simulation frame rate / time step monitor";
-	m_dwCmd = oapiRegisterCustomCmd((char*)"Performance Meter", desc, hookOpenDlg, NULL);
+	m_dwCmd = oapiRegisterCustomCmd((char*)"Performance Meter", desc, hookOpenDlg, this);
 
 	m_sysT = 0.0;
 	m_simT = 0.0;
 	m_DT = 0.1;
 	m_fcount = 0;
 
-	m_DTPS.resize(NDATA);
-	m_FPS.resize(NDATA);
+	m_DTPS.resize(NDATA, NAN);
+	m_FPS.resize(NDATA, NAN);
 	m_idx = 0;
 }
 
@@ -135,21 +100,24 @@ void oapi::Framerate::InsertData(float fps, float dt)
 {
 	m_FPS[m_idx] = fps;
 	m_DTPS[m_idx] = dt;
-	int idx = (m_idx + 1) % NDATA;
-	m_idx = idx;
+	// Force the axis to include 0
+	m_FPS[(m_idx + 1) % NDATA] = 0.0;
+	m_FPS[(m_idx + 2) % NDATA] = NAN;
+	m_DTPS[(m_idx + 1) % NDATA] = 0.001;
+	m_DTPS[(m_idx + 2) % NDATA] = NAN;
+	m_idx = (m_idx + 1) % NDATA;
 }
 
 void oapi::Framerate::OnDraw()
 {
     if (ImPlot::BeginPlot("Performance Meter", ImVec2(-1,0), ImPlotFlags_NoTitle|ImPlotFlags_NoMenus)) {
-        ImPlot::SetupAxis(ImAxis_X1, NULL, ImPlotAxisFlags_None);
+		ImPlot::SetupAxis(ImAxis_X1, NULL, ImPlotAxisFlags_AutoFit | ImPlotAxisFlags_NoTickLabels);
 		ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, 0, NDATA);
 
-        ImPlot::SetupAxis(ImAxis_Y1, "F/s", ImPlotAxisFlags_None);
+        ImPlot::SetupAxis(ImAxis_Y1, "F/s", ImPlotAxisFlags_AutoFit);
 		ImPlot::SetupAxisLimitsConstraints(ImAxis_Y1, 0, 10000.0);
-        ImPlot::SetupAxis(ImAxis_Y2, "dt/s", ImPlotAxisFlags_AuxDefault);
+        ImPlot::SetupAxis(ImAxis_Y2, "dt/s", ImPlotAxisFlags_AuxDefault | ImPlotAxisFlags_AutoFit);
 		ImPlot::SetupAxisScale(ImAxis_Y2, ImPlotScale_Log10);
-		ImPlot::SetupAxisLimitsConstraints(ImAxis_Y2, 0.0001, 10000.0);
 
 		ImPlot::SetAxes(ImAxis_X1, ImAxis_Y1);
         ImPlot::PlotLine("FPS", m_FPS.data(), NDATA, 1.0, 0.0, ImPlotLineFlags_None, m_idx);
@@ -164,9 +132,6 @@ void oapi::Framerate::OnDraw()
 
 oapi::Framerate::~Framerate()
 {
-	// Unregister the window class for the graph
-	UnregisterClass("PerfGraphWindow", GetModule());
-
 	// Unregister the custom command for calling the plugin
 	oapiUnregisterCustomCmd(m_dwCmd);
 }
@@ -189,16 +154,17 @@ void oapi::Framerate::clbkPreStep(double simt, double simdt, double mjd)
 	}
 }
 
+void oapi::Framerate::clbkSimulationStart (RenderMode mode)
+{
+	m_sysT = 0.0;
+	m_fcount = 0;
+	std::fill(m_FPS.begin(), m_FPS.end(), NAN);
+	std::fill(m_DTPS.begin(), m_DTPS.end(), NAN);
+}
 // --------------------------------------------------------------
 
 void oapi::Framerate::hookOpenDlg(void* context)
 {
-	self->clbkOpenDlg(context);
-}
-
-// --------------------------------------------------------------
-
-void oapi::Framerate::clbkOpenDlg(void* context)
-{
+	Framerate *self = (Framerate *)context;
 	oapiOpenDialog(self);
 }
