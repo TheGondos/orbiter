@@ -731,8 +731,6 @@ HWND Orbiter::CreateRenderWindow (Config *pCfg, const char *scenario)
 	}
 
 	if (gclient) {
-		// GDI resources - NOT VALID FOR ALL CLIENTS!
-		InitializeGDIResources (hRenderWnd);
 		pDlgMgr = new DialogManager (this, hRenderWnd);
 
 		// global dialog resources
@@ -926,7 +924,6 @@ void Orbiter::CloseSession ()
 		if (g_pane) { delete g_pane;   g_pane = 0; }
 		if (pDlgMgr)  { delete pDlgMgr; pDlgMgr = 0; }
 		Instrument::GlobalExit (gclient);
-		ReleaseGDIResources();
 		meshmanager.Flush(); // destroy buffered meshes
 		DestroyWorld ();     // destroy logical objects
 		if (gclient)
@@ -1696,26 +1693,6 @@ void Orbiter::OutputLoadTick (int line, bool ok)
 		strcat (cbuf, ok ? " ok" : " xx");
 		gclient->clbkSplashLoadMsg (cbuf, line);
 	}
-}
-
-//-----------------------------------------------------------------------------
-// Name: InitializeGDIResources()
-// Desc: Allocate resources required for GDI display (HUD, MFD)
-//-----------------------------------------------------------------------------
-void Orbiter::InitializeGDIResources (HWND hWnd)
-{
-	// Allocate global GDI resources
-	if (g_gdires) delete g_gdires;
-	g_gdires = new GDIResources (hWnd, viewW, viewH, *pConfig); TRACENEW
-}
-
-//-----------------------------------------------------------------------------
-// Name: ReleaseGDIResources()
-// Desc: Release resources used by GDI
-//-----------------------------------------------------------------------------
-void Orbiter::ReleaseGDIResources ()
-{
-	if (g_gdires) delete g_gdires, g_gdires = 0;
 }
 
 //-----------------------------------------------------------------------------
