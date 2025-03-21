@@ -345,8 +345,6 @@ DeltaGlider::~DeltaGlider ()
 
 	for (i = 0; i < 3; i++)
 		if (skin[i]) oapiReleaseTexture (skin[i]);
-
-	oapiCloseDialog(dlg_ctrl.get());
 }
 
 // --------------------------------------------------------------

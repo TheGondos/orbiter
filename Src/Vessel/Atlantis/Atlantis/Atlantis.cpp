@@ -296,8 +296,6 @@ Atlantis::Atlantis (OBJHANDLE hObj, int fmodel)
 // --------------------------------------------------------------
 Atlantis::~Atlantis ()
 {
-	oapiCloseDialog(rmsDlg.get());
-	oapiCloseDialog(ctlDlg.get());
 	UnregisterMFDMode (ascapMfdId);
 	delete ascap;
 	delete plop;

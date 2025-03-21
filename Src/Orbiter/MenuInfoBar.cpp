@@ -773,9 +773,6 @@ MenuInfoBar::MenuInfoBar ()
 
 MenuInfoBar::~MenuInfoBar ()
 {
-	oapiCloseDialog(dynMenu.get());
-	oapiCloseDialog(infoTime.get());
-	oapiCloseDialog(infoTgt.get());
 }
 void MenuInfoBar::RegisterMenuItem(const char *label, const char *imagepath, int id, CustomFunc func, void *context)
 {
