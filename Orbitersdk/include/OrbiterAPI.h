@@ -685,7 +685,7 @@ public:
 	ImGuiDialog(const char *n, ImGuiDefaultSize ds = {350.0,280.0}):name(n),defaultSize(ds) {}
 	virtual ~ImGuiDialog();
 	bool IsActive() { return active; }
-	void Activate() { active = true; }
+	void Activate();
 	virtual void Display();
 	void SetHelp(const char *file, const char *topic = NULL) {
 		helpfile = file;

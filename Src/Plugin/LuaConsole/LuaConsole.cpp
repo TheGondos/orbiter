@@ -35,7 +35,7 @@ class LuaConsoleDlg: public ImGuiDialog {
 	ImGuiInputTextFlags flags;
 	char *cConsoleCmd;
 public:
-	LuaConsoleDlg(char *cmdbuf):ImGuiDialog("Lua Terminal"){
+	LuaConsoleDlg(char *cmdbuf):ImGuiDialog(ICON_FA_TERMINAL " Lua Console"){
 		cConsoleCmd = cmdbuf;
 		cmd[0] = '\0';
 		flags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CtrlEnterForNewLine;
@@ -98,7 +98,7 @@ public:
 	}
 	void Display() {
 		ImGui::SetNextWindowSize(ImVec2(800,600));
-		bool visible = ImGui::Begin(ICON_FA_TERMINAL " Lua Console", &active);
+		bool visible = ImGui::Begin(name.c_str(), &active);
 		if(ImGui::MenuButton(ICON_FA_TRASH, "Clear console")) {
 			lines.clear();
 		}

@@ -556,6 +556,11 @@ void ImGuiDialog::Display() {
 	if (!active) OnClose();
 }
 
+void ImGuiDialog::Activate() {
+	active = true;
+	ImGui::SetWindowFocus(name.c_str());
+}
+
 /* 
 Notification handling, borrowed heavily from https://github.com/patrickcjk/imgui-notify
 Added:
