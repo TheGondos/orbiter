@@ -419,22 +419,6 @@ DLLEXPORT ImGuiContext* GImGui = NULL;
 DLLEXPORT ImPlotContext* GImPlot = NULL;
 
 
-const ImWchar* GetGlyphRangesOrbiter()
-{
-	static const ImWchar ranges[] =
-	{
-		0x0020, 0x00FF, // Basic Latin + Latin Supplement
-		0x00A0, 0x02D9, // Polish characters 
-		0x0393, 0x03C2, // Greek characters
-		0x221A, 0x221A, // √
-		0x222B, 0x222B, // ∫
-		0x2260, 0x2264, // ≠ ≤ ≥
-		0x02DD, 0x02DD, // ˝
-		0,
-	};
-	return &ranges[0];
-}
-
 static void ImGuiSetStyle()
 {
     ImGui::StyleColorsDark();
@@ -471,10 +455,10 @@ void DialogManager::InitImGui()
 	
 	const CFG_FONTPRM &prm = g_pOrbiter->Cfg()->CfgFontPrm;
 
-	defaultFont = io.Fonts->AddFontFromFileTTF(prm.ImGui_FontFile, prm.ImGui_FontSize, &config, ImGui::GetIO().Fonts->GetGlyphRangesJapanese());
+	defaultFont = io.Fonts->AddFontFromFileTTF(prm.ImGui_FontFile, prm.ImGui_FontSize);
 	io.Fonts->AddFontFromFileTTF("fa-solid-900.ttf", prm.ImGui_FontSize, &icons_config, icons_ranges);
-	consoleFont = io.Fonts->AddFontFromFileTTF("Cousine-Regular.ttf", prm.ImGui_FontSize, &config, ImGui::GetIO().Fonts->GetGlyphRangesDefault());
-	monoFont = io.Fonts->AddFontFromFileTTF("Lekton-Bold.ttf", prm.ImGui_FontSize, &config, GetGlyphRangesOrbiter());
+	consoleFont = io.Fonts->AddFontFromFileTTF("Cousine-Regular.ttf", prm.ImGui_FontSize);
+	monoFont = io.Fonts->AddFontFromFileTTF("Lekton-Bold.ttf", prm.ImGui_FontSize);
 	
 
 	ImGui_ImplWin32_Init(hWnd);
