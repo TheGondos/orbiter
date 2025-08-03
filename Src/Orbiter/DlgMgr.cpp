@@ -475,7 +475,6 @@ void DialogManager::InitImGui()
 	io.Fonts->AddFontFromFileTTF("fa-solid-900.ttf", prm.ImGui_FontSize, &icons_config, icons_ranges);
 	consoleFont = io.Fonts->AddFontFromFileTTF("Cousine-Regular.ttf", prm.ImGui_FontSize, &config, ImGui::GetIO().Fonts->GetGlyphRangesDefault());
 	monoFont = io.Fonts->AddFontFromFileTTF("Lekton-Bold.ttf", prm.ImGui_FontSize, &config, GetGlyphRangesOrbiter());
-	io.Fonts->Build();
 	
 
 	ImGui_ImplWin32_Init(hWnd);
