@@ -186,6 +186,7 @@ private:
 	ImFont *defaultFont;
 	ImFont *consoleFont;
 	ImFont *monoFont;
+	ImFont *manuscriptFont;
 };
 
 INT_PTR OrbiterDefDialogProc (HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);

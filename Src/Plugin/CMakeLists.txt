@@ -17,6 +17,7 @@ add_subdirectory(ScnEditor)
 add_subdirectory(ScriptMFD)
 add_subdirectory(TrackIR)
 add_subdirectory(TransX)
+add_subdirectory(Notes)
 
 # ==========================================================================
 # SDK Sample Installation

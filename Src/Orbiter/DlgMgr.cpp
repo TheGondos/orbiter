@@ -459,7 +459,7 @@ void DialogManager::InitImGui()
 	io.Fonts->AddFontFromFileTTF("fa-solid-900.ttf", prm.ImGui_FontSize, &icons_config, icons_ranges);
 	consoleFont = io.Fonts->AddFontFromFileTTF("Cousine-Regular.ttf", prm.ImGui_FontSize);
 	monoFont = io.Fonts->AddFontFromFileTTF("Lekton-Bold.ttf", prm.ImGui_FontSize);
-	
+	manuscriptFont = io.Fonts->AddFontFromFileTTF("architext.regular.ttf", prm.ImGui_FontSize);
 
 	ImGui_ImplWin32_Init(hWnd);
 	gc->clbkImGuiInit();
@@ -503,6 +503,7 @@ ImFont *DialogManager::GetFont(ImGuiFont f)
 	case ImGuiFont::MONO: return monoFont;
 	case ImGuiFont::CONSOLE: return consoleFont;
 	case ImGuiFont::DEFAULT: return defaultFont;
+	case ImGuiFont::MANUSCRIPT: return manuscriptFont;
 	default: return defaultFont;
 	}
 }
@@ -825,9 +826,11 @@ namespace ImGui {
 	}
 
 
-	DLLEXPORT void PushFont(ImGuiFont f)
+	DLLEXPORT void PushFont(ImGuiFont f, float scale)
 	{
-		ImGui::PushFont(g_pOrbiter->DlgMgr()->GetFont(f));
+		ImGuiContext& g = *GImGui;
+		const ImGuiStyle& style = g.Style;
+		ImGui::PushFont(g_pOrbiter->DlgMgr()->GetFont(f), style.FontSizeBase * scale);
 	}
 
 	// From imgui_demo.cpp, with added sameline argument
