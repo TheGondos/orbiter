@@ -9,6 +9,7 @@
 #include "Orbiter.h"
 #include "OrbiterAPI.h"
 #include "imgui.h"
+#include "imgui_extras.h"
 #include "IconsFontAwesome6.h"
 
 extern Vessel *g_focusobj;
@@ -60,7 +61,7 @@ void DlgRecorder::DrawNormalRecording(bool recording) {
 
     ImGui::Separator();
     ImGui::InputText("Scenario", m_ScenarioFile, sizeof(m_ScenarioFile));
-    if(ImGui::CollapsingHeader("Advanced")) {
+    if(ImGui::BeginAnimatedCollapsingHeader("Advanced")) {
         ImGui::Checkbox("Record Time Acceleration", &g_pOrbiter->Cfg()->CfgRecPlayPrm.bRecordWarp);
         ImGui::Checkbox("Record Focus Events", &g_pOrbiter->Cfg()->CfgRecPlayPrm.bRecordFocus);
         ImGui::BeginDisabled(recording);
@@ -77,6 +78,7 @@ void DlgRecorder::DrawNormalRecording(bool recording) {
         ImGui::RadioButton("Ecliptic Frame###ef2", &g_pOrbiter->Cfg()->CfgRecPlayPrm.RecordPosFrame, 0);
         ImGui::RadioButton("Equatorial Frame", &g_pOrbiter->Cfg()->CfgRecPlayPrm.RecordPosFrame, 1);
         ImGui::EndDisabled();
+        ImGui::EndAnimatedCollapsingHeader();
     }
 }
 

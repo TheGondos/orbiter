@@ -304,15 +304,15 @@ void DlgMap::DrawMap() {
 
 void DlgMap::DrawMenu() {
 	ImGui::SetNextItemWidth(160.0f);
-	if(ImGui::BeginCombo("##dlgmap_planet", planet.c_str(), ImGuiComboFlags_HeightLargest)) {
+	if(ImGui::BeginAnimatedCombo("##dlgmap_planet", planet.c_str(), ImGuiComboFlags_HeightLargest)) {
         DrawTree();
-		ImGui::EndCombo();
+		ImGui::EndAnimatedCombo();
 	}
 	
     ImGui::SameLine();
 
 	ImGui::SetNextItemWidth(160.0f);
-	if(ImGui::BeginCombo("##dlgmap_options", "Options", ImGuiComboFlags_HeightLargest)) {
+	if(ImGui::BeginAnimatedCombo("##dlgmap_options", "Options", ImGuiComboFlags_HeightLargest)) {
         int df = vectormap->GetDisplayFlags();
 		int olddf = df;
 
@@ -388,7 +388,7 @@ void DlgMap::DrawMenu() {
         ImGui::Text("Other");
         ImGui::CheckboxFlags("Natural Satellites", &df, DISP_MOON);
 
-        ImGui::EndCombo();
+        ImGui::EndAnimatedCombo();
 
         vectormap->SetDisplayFlags(df);
 
@@ -409,7 +409,7 @@ void DlgMap::DrawMenu() {
 	btn_pos.y-=5;
     ImGui::SetNextWindowPos(btn_pos);
 
-    if (ImGui::BeginPopup("dlgmap_search_filter"))
+    if (ImGui::BeginAnimatedPopup("dlgmap_search_filter"))
     {
         ImGui::Text(ICON_FA_FILTER " Search filter");
         ImGui::Separator();
@@ -420,7 +420,7 @@ void DlgMap::DrawMenu() {
 		ImGui::CheckboxFlags("Landmarks", &selectionfilter, DISP_CUSTOMMARKER);
 		ImGui::CheckboxFlags("Bases", &selectionfilter, DISP_BASE);
 
-	    ImGui::EndPopup();
+	    ImGui::EndAnimatedPopup();
 	}
 
 	ImGui::SameLine();

@@ -3,6 +3,7 @@
 
 #include "Select.h"
 #include "imgui.h"
+#include "imgui_extras.h"
 
 Select::Select():ImGuiDialog("Select") {
     active = false;
@@ -99,12 +100,12 @@ void Select::OnDraw() {
         opened = false;
     }
 
-    if (ImGui::BeginPopup(title.c_str()))
+    if (ImGui::BeginAnimatedPopup(title.c_str()))
     {
         ImGui::TextUnformatted(title.c_str());
         ImGui::Separator();
         DrawMenu(rootmenu);
-        ImGui::EndPopup();
+        ImGui::EndAnimatedPopup();
     }
     else {
         active = false;
@@ -155,7 +156,7 @@ void InputBox::OnDraw() {
         firstTime = true;
     }
 
-    if (ImGui::BeginPopup(buf))
+    if (ImGui::BeginAnimatedPopup(buf))
     {
         ImGui::TextUnformatted(title.c_str());
         ImGui::Separator();
@@ -176,7 +177,7 @@ void InputBox::OnDraw() {
             ImGui::CloseCurrentPopup();
             active = false;
         }
-        ImGui::EndPopup();
+        ImGui::EndAnimatedPopup();
     }
     else {
         active = false;

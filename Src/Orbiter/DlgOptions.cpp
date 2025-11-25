@@ -121,14 +121,14 @@ void DlgOptions::DrawInstrument()
 
 	char preview[64];
 	sprintf(preview, "%dx%d", instru.VCMFDSize, instru.VCMFDSize);
-	if(ImGui::BeginCombo("Virtual cockpit MFD texture size", preview)) {
+	if(ImGui::BeginAnimatedCombo("Virtual cockpit MFD texture size", preview)) {
 		bool changed = false;
 		changed |= ImGui::RadioButton("256x256", &instru.VCMFDSize, 256);
 		changed |= ImGui::RadioButton("512x512", &instru.VCMFDSize, 512);
 		changed |= ImGui::RadioButton("1024x1024", &instru.VCMFDSize, 1024);
 		if(changed)
 			g_pOrbiter->OnOptionChanged(OPTCAT_INSTRUMENT, OPTITEM_INSTRUMENT_MFDVCSIZE);
-		ImGui::EndCombo();
+		ImGui::EndAnimatedCombo();
 	}
 	ImGui::SeparatorText("Instrument panels");
 	if(ImGui::InputDoubleEx("Panel scroll speed", &logic.PanelScrollSpeed, -100.0, 100.0, 1.0, 15.0, "%.0f"))
@@ -171,7 +171,7 @@ void DlgOptions::DrawJoystick()
 		preview = joylist[jidx - 1].tszProductName;
 	}
 
-	if(ImGui::BeginCombo("##joydev", preview)) {
+	if(ImGui::BeginAnimatedCombo("##joydev", preview)) {
 		bool selected = jidx == 0;
 		if(ImGui::Selectable("<Disabled>", &selected)) {
 			jidx = 0;
@@ -189,7 +189,7 @@ void DlgOptions::DrawJoystick()
 				ImGui::SetItemDefaultFocus();
 			}
 		}
-		ImGui::EndCombo();
+		ImGui::EndAnimatedCombo();
 	}
 
 	ImGui::BeginDisabled(jidx == 0);
@@ -199,7 +199,7 @@ void DlgOptions::DrawJoystick()
 		const char* axis[] = { "<Keyboard only>", "Z-axis", "Slider 0", "Slider 1" };
 		preview = axis[thaxis];
 
-		if (ImGui::BeginCombo("##joythaxis", preview)) {
+		if (ImGui::BeginAnimatedCombo("##joythaxis", preview)) {
 			for (int n = 0; n < IM_ARRAYSIZE(axis); n++) {
 				const bool is_selected = (thaxis == n);
 				if (ImGui::Selectable(axis[n], is_selected)) {
@@ -210,7 +210,7 @@ void DlgOptions::DrawJoystick()
 				if (is_selected)
 					ImGui::SetItemDefaultFocus();
 			}
-			ImGui::EndCombo();
+			ImGui::EndAnimatedCombo();
 		}
 		ImGui::Checkbox("Ignore throttle setting on launch", &g_pOrbiter->Cfg()->CfgJoystickPrm.bThrottleIgnore);
 
@@ -254,7 +254,7 @@ void DlgOptions::DrawCelSphere()
 		g_pOrbiter->OnOptionChanged(OPTCAT_CELSPHERE, OPTITEM_CELSPHERE_ACTIVATESTARIMAGE);
 
 	ImGui::BeginDisabled(!bUseStarImage);
-		if(ImGui::BeginCombo("##celstarmap", currentstarmap.c_str())) {
+		if(ImGui::BeginAnimatedCombo("##celstarmap", currentstarmap.c_str())) {
 			for(const auto &starmap: m_pathStarmap) {
 				if(ImGui::Selectable(starmap.first.c_str(), starmap.second == g_pOrbiter->Cfg()->CfgVisualPrm.StarImagePath)) {
 					strcpy(g_pOrbiter->Cfg()->CfgVisualPrm.StarImagePath, starmap.second.c_str());
@@ -262,7 +262,7 @@ void DlgOptions::DrawCelSphere()
 					g_pOrbiter->OnOptionChanged(OPTCAT_CELSPHERE, OPTITEM_CELSPHERE_STARIMAGECHANGED);
 				}
 			}
-			ImGui::EndCombo();
+			ImGui::EndAnimatedCombo();
 		}
 	ImGui::EndDisabled();
 
@@ -271,7 +271,7 @@ void DlgOptions::DrawCelSphere()
 		g_pOrbiter->OnOptionChanged(OPTCAT_CELSPHERE, OPTITEM_CELSPHERE_ACTIVATEBGIMAGE);
 
 	ImGui::BeginDisabled(!bUseBgImage);
-		if(ImGui::BeginCombo("##celbgimage", currentbgimage.c_str())) {
+		if(ImGui::BeginAnimatedCombo("##celbgimage", currentbgimage.c_str())) {
 			for(const auto &bgimage: m_pathBgImage) {
 				if(ImGui::Selectable(bgimage.first.c_str(), bgimage.second == g_pOrbiter->Cfg()->CfgVisualPrm.CSphereBgPath)) {
 					strcpy(g_pOrbiter->Cfg()->CfgVisualPrm.CSphereBgPath, bgimage.second.c_str());
@@ -279,7 +279,7 @@ void DlgOptions::DrawCelSphere()
 					g_pOrbiter->OnOptionChanged(OPTCAT_CELSPHERE, OPTITEM_CELSPHERE_BGIMAGECHANGED);
 				}
 			}
-			ImGui::EndCombo();
+			ImGui::EndAnimatedCombo();
 		}
 		if(ImGui::SliderDouble("Brightness", &g_pOrbiter->Cfg()->CfgVisualPrm.CSphereBgIntens, 0.01, 1.0, "%.2f")) {
 			g_pOrbiter->OnOptionChanged(OPTCAT_CELSPHERE, OPTITEM_CELSPHERE_BGIMAGEBRIGHTNESS);
@@ -401,11 +401,11 @@ void DlgOptions::DrawLabels()
 			ImGui::SeparatorText("Surface features");
 			changed |= ImGui::CheckboxFlags("Features", &prm.flagMarkers, MKR_LMARK);
 			ImGui::BeginDisabled(!(prm.flagMarkers & MKR_LMARK));
-				if(ImGui::BeginCombo("##featuretarget", featuretarget.c_str(), ImGuiComboFlags_HeightLarge)) {
+				if(ImGui::BeginAnimatedCombo("##featuretarget", featuretarget.c_str(), ImGuiComboFlags_HeightLarge)) {
 					for (int i = 0; i < g_psys->nStar(); i++)
 						AddCbodyNode (g_psys->GetStar(i));
 
-					ImGui::EndCombo();
+					ImGui::EndAnimatedCombo();
 				}
 
 				Planet* planet = g_psys->GetPlanet(featuretarget.c_str(), true);

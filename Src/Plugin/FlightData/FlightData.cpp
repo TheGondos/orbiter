@@ -16,6 +16,7 @@
 #include <algorithm>
 #include "orbitersdk.h"
 #include "imgui.h"
+#include "imgui_extras.h"
 #include "implot.h"
 #include "IconsFontAwesome6.h"
 
@@ -184,7 +185,7 @@ namespace oapi {
 			mass.AddDataStream("Total",      ImAxis_Y1, lmass, " _TOTMASS", " %8.0f");
 			mass.AddDataStream("Propellant", ImAxis_Y1, lprop, " _PRPMASS", " %8.0f");
 
-			StreamGraph &aoa = CreateGraph("AoA", u8"Angle (°)");
+			StreamGraph &aoa = CreateGraph("AoA", u8"Angle (Â°)");
 			aoa.AddDataStream("AOA",  ImAxis_Y1, laoa,  " ____AOA", " %7.1f");
 			aoa.AddDataStream("Slip", ImAxis_Y1, lslip, " ___SLIP", " %7.1f");
 
@@ -266,7 +267,7 @@ namespace oapi {
 		void OnDraw() override {
 			// vessel
 			ImGui::SetNextItemWidth(160.0f);
-			if(ImGui::BeginCombo("##Vessel", m_vesselName.c_str(), ImGuiComboFlags_HeightLargest)) {
+			if(ImGui::BeginAnimatedCombo("##Vessel", m_vesselName.c_str(), ImGuiComboFlags_HeightLargest)) {
 				for (int i = 0; i < oapiGetVesselCount(); i++) {
 					OBJHANDLE hVessel = oapiGetVesselByIndex(i);
 					VESSEL *vessel = oapiGetVesselInterface(hVessel);
@@ -287,7 +288,7 @@ namespace oapi {
 
 					}
 				}
-				ImGui::EndCombo();
+				ImGui::EndAnimatedCombo();
 			}
 			// sampling period
 			ImGui::SameLine();
@@ -302,12 +303,12 @@ namespace oapi {
 
 			ImGui::SameLine();
 			ImGui::SetNextItemWidth(160.0f);
-			if(ImGui::BeginCombo("##Graphs", "Graphs", ImGuiComboFlags_HeightLargest)) {
+			if(ImGui::BeginAnimatedCombo("##Graphs", "Graphs", ImGuiComboFlags_HeightLargest)) {
 				for(auto &graph: m_graphs) {
 					ImGui::Checkbox(graph.m_title.c_str(), &graph.m_enabled);
 				}
 
-				ImGui::EndCombo();
+				ImGui::EndAnimatedCombo();
 			}
 			
 

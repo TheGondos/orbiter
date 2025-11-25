@@ -15,6 +15,7 @@
 #include "Orbitersdk.h"
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include "imgui.h"
+#include "imgui_extras.h"
 #include "IconsFontAwesome6.h"
 
 // ==============================================================
@@ -128,7 +129,7 @@ void oapi::RControl::OnDraw()
 	char cbuf[128];
 	ImGui::SeparatorText("Vessel");
 	ImGui::SetNextItemWidth(160.0f);
-	if(ImGui::BeginCombo("##Vessel", m_vesselName.c_str(), ImGuiComboFlags_HeightLargest)) {
+	if(ImGui::BeginAnimatedCombo("##Vessel", m_vesselName.c_str(), ImGuiComboFlags_HeightLargest)) {
 		for (int i = 0; i < oapiGetVesselCount(); i++) {
 			OBJHANDLE hVessel = oapiGetVesselByIndex(i);
 			VESSEL *vessel = oapiGetVesselInterface(hVessel);
@@ -142,7 +143,7 @@ void oapi::RControl::OnDraw()
 
 			}
 		}
-		ImGui::EndCombo();
+		ImGui::EndAnimatedCombo();
 	}
 	ImGui::SameLine();
 	if(ImGui::Button("Set focus")) {
