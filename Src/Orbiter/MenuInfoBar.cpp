@@ -1,4 +1,4 @@
-﻿// Copyright (c) Martin Schweiger
+// Copyright (c) Martin Schweiger
 // Licensed under the MIT License
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include "OrbiterAPI.h"
@@ -117,7 +117,7 @@ public:
 	float holePos;
 
 
-	DynamicMenuBar(): ImGuiDialog("DynamicMenu"),prm(g_pOrbiter->Cfg()->CfgUIPrm) {
+	DynamicMenuBar(): ImGuiDialog("DynamicMenu"), prm(g_pOrbiter->Cfg()->CfgUIPrm) {
 		animState = 0.0f;
 		isDragging = false;
 		oneDrag = false;
@@ -308,7 +308,10 @@ public:
 			ImGuiStyle &style = ImGui::GetStyle();
 			ImVec2 bbmin = ImGui::GetCursorScreenPos() - style.WindowPadding;
 			ImVec2 bbmax = bbmin + ImGui::GetContentRegionAvail() + style.WindowPadding * 2.0f;
-			bool isHovering = ImGui::IsMouseHoveringRect(bbmin, bbmax);
+			// Expand the bounding box a bit above the window so that the menubar
+			// doesn't disappear when the user overshoots when the mouse cursor
+			bbmin.y-=100;
+			bool isHovering = ImGui::IsMouseHoveringRect(bbmin, bbmax, false);
 
 			isDraggingOutside = !isHovering && isDragging;
 
