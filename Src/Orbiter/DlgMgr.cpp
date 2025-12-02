@@ -418,11 +418,89 @@ DWORD WINAPI DlgThreadProc (void *data)
 
 DLLEXPORT ImGuiContext* GImGui = NULL;
 DLLEXPORT ImPlotContext* GImPlot = NULL;
+static void ApplyGlowTheme(const ImVec4& accent)
+{
+    ImGuiStyle& style = ImGui::GetStyle();
+    ImVec4* colors = style.Colors;
 
+    // Base backgrounds
+    const ImVec4 bgDark   = ImVec4(0.02f, 0.03f, 0.05f, 1.0f);
+    const ImVec4 bgMed    = ImVec4(0.07f, 0.08f, 0.12f, 1.0f);
+
+    // Glow layers
+    ImVec4 glowSoft   = ImVec4(accent.x, accent.y, accent.z, 0.20f); // halo
+    ImVec4 glowMedium = ImVec4(accent.x, accent.y, accent.z, 0.35f);
+    ImVec4 glowStrong = ImVec4(accent.x * 1.2f, accent.y * 1.2f, accent.z * 1.2f, 1.0f);
+
+    // Neon text: bright foreground + soft glow shadow
+    colors[ImGuiCol_Text]         = ImVec4(1, 1, 1, 1);
+    colors[ImGuiCol_TextDisabled] = ImVec4(0.4f, 0.4f, 0.44f, 1);
+
+    // Window backgrounds
+    colors[ImGuiCol_WindowBg] = bgDark;
+    colors[ImGuiCol_ChildBg]  = bgDark;
+    colors[ImGuiCol_PopupBg]  = bgMed;
+
+    // Glow-ish borders
+    colors[ImGuiCol_Border]       = glowMedium;
+    colors[ImGuiCol_BorderShadow] = ImVec4(0,0,0,0);
+
+    // Frames (inputs, checkboxes, sliders)
+    colors[ImGuiCol_FrameBg]        = bgMed;
+    colors[ImGuiCol_FrameBgHovered] = glowSoft;     // soft halo
+    colors[ImGuiCol_FrameBgActive]  = glowMedium;   // bright glow
+
+    // Buttons
+    colors[ImGuiCol_Button]        = glowSoft;
+    colors[ImGuiCol_ButtonHovered] = glowMedium;
+    colors[ImGuiCol_ButtonActive]  = glowStrong;
+
+    // Headers (collapsing header, tree node)
+    colors[ImGuiCol_Header]        = glowSoft;
+    colors[ImGuiCol_HeaderHovered] = glowMedium;
+    colors[ImGuiCol_HeaderActive]  = glowStrong;
+
+    // Checkmark & sliders use bright neon
+    colors[ImGuiCol_CheckMark]       = glowStrong;
+    colors[ImGuiCol_SliderGrab]      = glowMedium;
+    colors[ImGuiCol_SliderGrabActive]= glowStrong;
+
+    // Scrollbar
+    colors[ImGuiCol_ScrollbarBg]          = bgDark;
+    colors[ImGuiCol_ScrollbarGrab]        = glowSoft;
+    colors[ImGuiCol_ScrollbarGrabHovered] = glowMedium;
+    colors[ImGuiCol_ScrollbarGrabActive]  = glowStrong;
+
+    // Separators: bright neon lines
+    colors[ImGuiCol_Separator]        = glowMedium;
+    colors[ImGuiCol_SeparatorHovered] = glowStrong;
+    colors[ImGuiCol_SeparatorActive]  = glowStrong;
+
+    // Title bar
+    colors[ImGuiCol_TitleBg]          = glowSoft;
+    colors[ImGuiCol_TitleBgActive]    = glowMedium;
+    colors[ImGuiCol_TitleBgCollapsed] = glowSoft;
+
+    // Resize grip
+    colors[ImGuiCol_ResizeGrip]        = glowSoft;
+    colors[ImGuiCol_ResizeGripHovered] = glowMedium;
+    colors[ImGuiCol_ResizeGripActive]  = glowStrong;
+
+    // Sizing for a sleek neon look
+    style.FrameRounding = 6;
+    style.GrabRounding  = 4;
+    style.WindowRounding = 4;
+
+    style.FrameBorderSize = 1.0f;  // Border = glow line
+    style.ChildBorderSize = 1.0f;
+    style.WindowBorderSize = 1.0f;
+}
 
 static void ImGuiSetStyle()
 {
-    ImGui::StyleColorsDark();
+    ImVec4 green = ImVec4(0.0f, 1.0f, 0.0f, 1.0f);
+    ApplyGlowTheme(green);
+
     ImGuiStyle& style = ImGui::GetStyle();
     style.WindowMenuButtonPosition = ImGuiDir_Right;
 
@@ -507,6 +585,12 @@ ImFont *DialogManager::GetFont(ImGuiFont f)
 	case ImGuiFont::MANUSCRIPT: return manuscriptFont;
 	default: return defaultFont;
 	}
+}
+
+void DialogManager::SetMainColor(COLORREF col)
+{
+    ImVec4 color = ImVec4((col & 0xff) / 255.0f, ((col >> 8) & 0xff) / 255.0f, (col >> 16)/255.0f, 1.0f);
+    ApplyGlowTheme(color);
 }
 
 ImGuiDialog::~ImGuiDialog(){

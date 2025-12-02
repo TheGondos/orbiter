@@ -180,6 +180,8 @@ public:
 
 	void ImGuiNewFrame();
 	ImFont *GetFont(ImGuiFont f);
+
+	void SetMainColor(COLORREF col);
 private:
 	void InitImGui();
 	void ShutdownImGui();
