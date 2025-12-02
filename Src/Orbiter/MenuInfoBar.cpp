@@ -593,27 +593,28 @@ public:
 	void OnDraw() {}
 
 	void DrawSymbol(int type) {
+		float alpha = ImGui::GetStyle().Alpha;
 		ImVec2 pos = ImGui::GetCursorScreenPos();
 		ImDrawList* drawList = ImGui::GetWindowDrawList();
 		ImVec2 size = ImGui::CalcTextSize("__");
 		ImVec2 endpos = pos + size;
-		drawList->AddRect(pos, endpos, 0xbfbfbfbf,1.0f);
+		drawList->AddRect(pos, endpos, ImGui::ColorConvertFloat4ToU32(ImVec4(0.75,0.75,0.75,alpha)));
 		switch(type) {
 		case 0: // REC
 			if(fmod (td.SysT1, 1.0) < 0.5) {
 				ImVec2 center = (pos + endpos)/2.0;
-				drawList->AddCircleFilled(center, size.y/4.0, 0xff0000ff);
+				drawList->AddCircleFilled(center, size.y/4.0, ImGui::ColorConvertFloat4ToU32(ImVec4(1.0,0.0,0.0,alpha)));
 			}
 			break;
 		case 1: // Pause
 			{
 				ImVec2 tl = pos + ImVec2(size.x / 4.5f, size.y / 4.0f);
 				ImVec2 br = pos + ImVec2(size.x / 4.5f * 2.0f, size.y / 4.0f * 3.0f);
-				drawList->AddRectFilled(tl, br, 0xff00ffff);
+				drawList->AddRectFilled(tl, br, ImGui::ColorConvertFloat4ToU32(ImVec4(1.0,1.0,0.0,alpha)));
 				tl.x += size.x/4.5f*1.5f;
 				br.x += size.x/4.5f*1.5f;
-				drawList->AddRectFilled(tl, br, 0xff00ffff);
-				drawList->AddText(pos + ImVec2(size.x + 2,0), 0xffffffff, "Pause");
+				drawList->AddRectFilled(tl, br, ImGui::ColorConvertFloat4ToU32(ImVec4(1.0,1.0,0.0,alpha)));
+				drawList->AddText(pos + ImVec2(size.x + 2,0), ImGui::ColorConvertFloat4ToU32(ImVec4(1.0,1.0,1.0,alpha)), "Pause");
 			}
 			break;
 		case 2: // Fast forward
@@ -621,14 +622,14 @@ public:
 				ImVec2 p1 = pos + ImVec2(size.x / 4.5f, size.y / 5.0f);
 				ImVec2 p2 = pos + ImVec2(size.x / 4.5f * 2.0f, size.y / 2.0f);
 				ImVec2 p3 = pos + ImVec2(size.x / 4.5f, size.y / 5.0f * 4.0f);
-				drawList->AddTriangleFilled(p1, p2, p3, 0xffffffff);
+				drawList->AddTriangleFilled(p1, p2, p3, ImGui::ColorConvertFloat4ToU32(ImVec4(1.0,1.0,1.0,alpha)));
 				p1.x += size.x/4.5f*1.5f;
 				p2.x += size.x/4.5f*1.5f;
 				p3.x += size.x/4.5f*1.5f;
-				drawList->AddTriangleFilled(p1, p2, p3, 0xffffffff);
+				drawList->AddTriangleFilled(p1, p2, p3, ImGui::ColorConvertFloat4ToU32(ImVec4(1.0,1.0,1.0,alpha)));
 				char buf[64];
 				sprintf(buf, "%0.*fx", td.Warp() < 9.99 ? 1:0, td.Warp());
-				drawList->AddText(pos + ImVec2(size.x + 2,0), 0xffffffff, buf);
+				drawList->AddText(pos + ImVec2(size.x + 2,0), ImGui::ColorConvertFloat4ToU32(ImVec4(1.0,1.0,1.0,alpha)), buf);
 			}
 			break;
 		case 3: // Playback
@@ -636,7 +637,7 @@ public:
 				ImVec2 p1 = pos + ImVec2(size.x / 4.5f * 2.0f, size.y / 5.0f);
 				ImVec2 p2 = pos + ImVec2(size.x / 4.5f * 3.0f, size.y / 2.0f);
 				ImVec2 p3 = pos + ImVec2(size.x / 4.5f * 2.0f, size.y / 5.0f * 4.0f);
-				drawList->AddTriangleFilled(p1, p2, p3, 0xff00ff00);
+				drawList->AddTriangleFilled(p1, p2, p3, ImGui::ColorConvertFloat4ToU32(ImVec4(1.0,1.0,0.0,alpha)));
 			}
 		}
 		ImGui::NewLine();
@@ -737,7 +738,7 @@ public:
 			} else {
 				ImGui::TextColored(white, "Cam Cockpit");
 			}
-			ImGui::TextColored(white, u8"FoV % 0.0fÂ°", 2.0*Deg(g_camera->Aperture()));
+			ImGui::TextColored(white, u8"FoV % 0.0f°", 2.0*Deg(g_camera->Aperture()));
 			if (g_camera->IsExternal()) {
 				ImGui::SameLine();
 				ImGui::TextColored(white, "   Dst %s", DistStr (g_camera->Distance())+1);
