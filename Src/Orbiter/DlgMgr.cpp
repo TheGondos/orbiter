@@ -945,9 +945,12 @@ namespace ImGui {
 		float offset = titleBarRect.Max.x - width - titleBarRect.Min.x - g.Style.FramePadding.x;
 		offset -= xoffset;
 		ImGui::SetCursorPos( ImVec2( offset, 0.0f ) );
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0,0,0,0));
+		ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.0f);   // no border
+		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0,0,0,0));
+		ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0,0,0,0));    // invisible border color		bool ret = ImGui::Button( label );
 		bool ret = ImGui::Button( label );
-		ImGui::PopStyleColor();
+		ImGui::PopStyleColor(2);
+		ImGui::PopStyleVar();
 		if(tooltip && ImGui::IsItemHovered())
 			ImGui::SetTooltip(tooltip);
 		ImGui::PopClipRect();
