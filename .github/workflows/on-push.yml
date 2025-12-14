@@ -22,3 +22,4 @@ jobs:
     with:
       os: ${{ matrix.os }}
       architecture: ${{ matrix.architecture }}
+      upload: true
