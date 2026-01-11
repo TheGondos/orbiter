@@ -5,9 +5,9 @@
 #define OAPI_IMPLEMENTATION
 #define IMGUI_DEFINE_MATH_OPERATORS
 
-//#define IMGUI_ENABLE_FREETYPE
+#define IMGUI_ENABLE_FREETYPE
 #include "imgui.h"
-//#include "imgui_freetype.h"
+#include "imgui_freetype.h"
 
 #include <stdio.h>
 #include "OrbiterAPI.h"
@@ -15,7 +15,6 @@
 #include "Resource.h"
 #include "Orbiter.h"
 #include "Log.h"
-#include "imgui.h"
 #include "imgui_internal.h"
 #include "imgui_extras.h"
 #include "imgui_impl_win32.h"
