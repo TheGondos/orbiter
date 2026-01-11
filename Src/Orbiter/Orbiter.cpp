@@ -46,6 +46,7 @@
 #include "imgui.h"
 #include "imgui_impl_win32.h"
 #include <filesystem>
+#include "i18n.h"
 
 #include "Tracy.hpp"
 
@@ -184,6 +185,9 @@ INT WINAPI WinMain (HINSTANCE hInstance, HINSTANCE, LPSTR strCmdLine, INT nCmdSh
 	// up to the Orbiter main directory
 	if (strlen(dir) >= 15 && !stricmp (dir+strlen(dir)-15, "\\Modules\\Server"))
 		SetCurrentDirectory("..\\..");
+
+//	I18N::LoadLocale("fr_FR");
+	I18N::LoadLocale("ja_JP");
 
     // If we're not running from actual console, hide the window
     if (ConsoleManager::IsConsoleExclusive())
@@ -346,22 +350,22 @@ Orbiter::Orbiter ()
 	memset (simkstate, 0, 256);
 
 
-	RegisterMenuCmd("Ship",     "MenuInfoBar/ship.png",     [](void *) {g_pOrbiter->DlgMgr()->EnsureEntry<DlgFocus>();});
-	RegisterMenuCmd("Camera",   "MenuInfoBar/camera.png",   [](void *) {g_pOrbiter->DlgMgr()->EnsureEntry<DlgCamera>();});
-	RegisterMenuCmd("Speed",    "MenuInfoBar/speed.png",    [](void *) {g_pOrbiter->DlgMgr()->EnsureEntry<DlgTacc>();});
-	RegisterMenuCmd("Pause",    "MenuInfoBar/pause.png",    [](void *) {g_pOrbiter->TogglePause();});
-	RegisterMenuCmd("Function", "MenuInfoBar/function.png", [](void *) {g_pOrbiter->DlgMgr()->EnsureEntry<DlgFunction>();});
-	RegisterMenuCmd("Info",     "MenuInfoBar/info.png",     [](void *) {g_pOrbiter->DlgMgr()->EnsureEntry<DlgInfo>();});
-	RegisterMenuCmd("Options",  "MenuInfoBar/options.png",  [](void *) {g_pOrbiter->DlgMgr()->EnsureEntry<DlgOptions>();});
-	RegisterMenuCmd("Map",      "MenuInfoBar/map.png",      [](void *) {g_pOrbiter->DlgMgr()->EnsureEntry<DlgMap>();});
-	RegisterMenuCmd("Record",   "MenuInfoBar/record.png",   [](void *) {g_pOrbiter->DlgMgr()->EnsureEntry<DlgRecorder>();});
-	RegisterMenuCmd("Help",     "MenuInfoBar/help.png",     [](void *) {
+	RegisterMenuCmd(_c("MenuInfoBar","Ship"),     "MenuInfoBar/ship.png",     [](void *) {g_pOrbiter->DlgMgr()->EnsureEntry<DlgFocus>();});
+	RegisterMenuCmd(_c("MenuInfoBar","Camera"),   "MenuInfoBar/camera.png",   [](void *) {g_pOrbiter->DlgMgr()->EnsureEntry<DlgCamera>();});
+	RegisterMenuCmd(_c("MenuInfoBar","Speed"),    "MenuInfoBar/speed.png",    [](void *) {g_pOrbiter->DlgMgr()->EnsureEntry<DlgTacc>();});
+	RegisterMenuCmd(_c("MenuInfoBar","Pause"),    "MenuInfoBar/pause.png",    [](void *) {g_pOrbiter->TogglePause();});
+	RegisterMenuCmd(_c("MenuInfoBar","Function"), "MenuInfoBar/function.png", [](void *) {g_pOrbiter->DlgMgr()->EnsureEntry<DlgFunction>();});
+	RegisterMenuCmd(_c("MenuInfoBar","Info"),     "MenuInfoBar/info.png",     [](void *) {g_pOrbiter->DlgMgr()->EnsureEntry<DlgInfo>();});
+	RegisterMenuCmd(_c("MenuInfoBar","Options"),  "MenuInfoBar/options.png",  [](void *) {g_pOrbiter->DlgMgr()->EnsureEntry<DlgOptions>();});
+	RegisterMenuCmd(_c("MenuInfoBar","Map"),      "MenuInfoBar/map.png",      [](void *) {g_pOrbiter->DlgMgr()->EnsureEntry<DlgMap>();});
+	RegisterMenuCmd(_c("MenuInfoBar","Record"),   "MenuInfoBar/record.png",   [](void *) {g_pOrbiter->DlgMgr()->EnsureEntry<DlgRecorder>();});
+	RegisterMenuCmd(_c("MenuInfoBar","Help"),     "MenuInfoBar/help.png",     [](void *) {
 			extern HELPCONTEXT DefHelpContext;
 			DefHelpContext.topic = (char*)"/mainmenu.htm";
 			g_pOrbiter->OpenHelp (&DefHelpContext);			
 		});
-	RegisterMenuCmd("Save",     "MenuInfoBar/save.png",     [](void *) {g_pOrbiter->Quicksave();});
-	RegisterMenuCmd("Exit",     "MenuInfoBar/exit.png",     [](void *) {PostMessage(g_pOrbiter->GetRenderWnd(), WM_CLOSE, 0, 0);});
+	RegisterMenuCmd(_c("MenuInfoBar","Save"),     "MenuInfoBar/save.png",     [](void *) {g_pOrbiter->Quicksave();});
+	RegisterMenuCmd(_c("MenuInfoBar","Exit"),     "MenuInfoBar/exit.png",     [](void *) {PostMessage(g_pOrbiter->GetRenderWnd(), WM_CLOSE, 0, 0);});
 
 }
 

@@ -6,6 +6,7 @@
 #include "imgui.h"
 #include "imgui_extras.h"
 #include "IconsFontAwesome6.h"
+#include "i18n.h"
 
 extern PlanetarySystem *g_psys;
 extern Camera *g_camera;
@@ -13,11 +14,25 @@ extern TimeData td;
 extern Orbiter *g_pOrbiter;
 extern Vessel *g_focusobj;
 
-DlgCamera::DlgCamera() : ImGuiDialog(ICON_FA_VIDEO " Orbiter: Camera", {512,359}) {
+DlgCamera::DlgCamera() : ImGuiDialog(ICON_FA_VIDEO, _c("Camera dialog", "Orbiter: Camera"), {512,359}) {
     m_SelectedPreset = -1;
 }
 
 void DlgCamera::OnDraw() {
+	struct CameraTab {
+		const char *name;
+		const char *helptopic;
+		void (DlgCamera::* func)();
+	};
+
+	CameraTab tabs[] = {
+		{_c("Camera dialog", "Control"), "/cam_control.htm", &DlgCamera::DrawControl},
+		{_c("Camera dialog", "Target"),  "/cam_target.htm",  &DlgCamera::DrawTarget},
+		{_c("Camera dialog", "Track"),   "/cam_track.htm",   &DlgCamera::DrawTrack},
+		{_c("Camera dialog", "Ground"),  "/cam_ground.htm",  &DlgCamera::DrawGround},
+		{_c("Camera dialog", "Preset"),  "/cam_preset.htm",  &DlgCamera::DrawPreset},
+	};
+
 	extmode = g_camera->GetExtMode ();
 	intmode = g_camera->GetIntMode ();
 	extcam = (g_camera->GetMode () != CAM_COCKPIT);
@@ -45,31 +60,32 @@ void DlgCamera::OnDraw() {
 void DlgCamera::DrawControl() {
     ImGuiWindowFlags window_flags = ImGuiChildFlags_ResizeX;
     ImGui::BeginChild("ChildL", ImVec2(250, 0), window_flags);
-        ImGui::SeparatorText("Camera mode");
+        ImGui::SeparatorText(_c("Camera dialog", "Camera mode"));
 
-		const char *cameraMode = "Internal";
+		// TRANSLATORS: camera mode
+		const char *cameraMode = _c("Camera dialog", "Internal");
 		if (extcam) {
 			switch (extmode) {
 			case CAMERA_TARGETRELATIVE:
-				cameraMode = "Target Relative"; break;
+				cameraMode = _c("Camera dialog", "Target Relative"); break;
 			case CAMERA_ABSDIRECTION:
-				cameraMode = "Absolute Direction"; break;
+				cameraMode = _c("Camera dialog", "Absolute Direction"); break;
 			case CAMERA_GLOBALFRAME:
-				cameraMode = "Global Frame"; break;
+				cameraMode = _c("Camera dialog", "Global Frame"); break;
 			case CAMERA_TARGETTOOBJECT:
-				cameraMode = "Target Object"; break;
+				cameraMode = _c("Camera dialog", "Target Object"); break;
 			case CAMERA_TARGETFROMOBJECT:
-				cameraMode = "Target from Object"; break;
+				cameraMode = _c("Camera dialog", "Target from Object"); break;
 			case CAMERA_GROUNDOBSERVER:
 				if (ground_lock) {
-					cameraMode = "Ground Observer (locked)"; break;
+					cameraMode = _c("Camera dialog", "Ground Observer (locked)"); break;
 				} else {
-					cameraMode = "Ground Observer"; break;
+					cameraMode = _c("Camera dialog", "Ground Observer"); break;
 				}
 				break;
 			}
 		}
-		ImGui::Text("Camera mode : %s", cameraMode);
+		ImGui::Text(_c("Camera dialog", "Camera mode : %s"), cameraMode);
 
 		ImVec2 pos;
 		double dt = td.SysDT;
@@ -113,15 +129,15 @@ void DlgCamera::DrawControl() {
 		pos.x = 35;
 		pos.y = 155;
 		ImGui::SetCursorPos(pos); 
-		if(ImGui::Button("Forward")) {
+		if(ImGui::Button(_c("Camera dialog", "Forward"))) {
 			g_camera->ResetCockpitDir();
 		}
     ImGui::EndChild();
     ImGui::SameLine();
     ImGui::BeginChild("ChildR");
-        ImGui::SeparatorText("Field of view");
+        ImGui::SeparatorText(_c("Camera dialog", "Field of view"));
 		float fov=oapiCameraAperture()/RAD/0.5;
-		if(ImGui::SliderFloat("Field of View", &fov, 10.0, 90.0, "%.1f")) {
+		if(ImGui::SliderFloat(_c("Camera dialog", "Field of view"), &fov, 10.0, 90.0, "%.1f")) {
 			if(fov < 10.0f) fov = 10.0f;
 			else if(fov>90.0f) fov = 90.0f;
 			oapiCameraSetAperture(fov*RAD*0.5);
@@ -135,7 +151,7 @@ void DlgCamera::AddCbodyNode(const CelestialBody *cbody) {
     if (is_selected)
         node_flags |= ImGuiTreeNodeFlags_Selected;
     if(cbody->nSecondary()) {
-        bool node_open = ImGui::TreeNodeEx(cbody->Name(), node_flags);
+        bool node_open = ImGui::TreeNodeEx(_c("Proper name", cbody->Name()), node_flags);
         if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen())
             m_SelectedTarget = cbody->Name();
         if(node_open) {
@@ -145,7 +161,7 @@ void DlgCamera::AddCbodyNode(const CelestialBody *cbody) {
             ImGui::TreePop();
         }
     } else {
-        ImGui::TreeNodeEx(cbody->Name(), node_flags | ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen);
+        ImGui::TreeNodeEx(_c("Proper name", cbody->Name()), node_flags | ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen);
         if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen())
             m_SelectedTarget = cbody->Name();
     }
@@ -155,12 +171,12 @@ void DlgCamera::DrawTarget() {
     const ImGuiWindowFlags window_flags = ImGuiChildFlags_ResizeX;
 
 	ImGui::BeginChild("ChildL", ImVec2(250, 0), window_flags);
-        ImGui::SeparatorText("Available targets");
+        ImGui::SeparatorText(_c("Camera dialog", "Available targets"));
 		ImGui::BeginChild("ChildL_inner");
         for (int i = 0; i < g_psys->nStar(); i++)
             AddCbodyNode (g_psys->GetStar(i));
 
-        if (ImGui::TreeNode("Spaceports")) {
+        if (ImGui::TreeNode(_c("Camera dialog", "Spaceports"))) {
                 for (int i = 0; i < g_psys->nGrav(); i++) {
                     Body *obj = g_psys->GetGravObj (i);
                     if (obj->Type() != OBJTP_PLANET) continue;
@@ -182,7 +198,7 @@ void DlgCamera::DrawTarget() {
                 }
                 ImGui::TreePop();
         }
-        if (ImGui::TreeNode("Vessels")) {
+        if (ImGui::TreeNode(_c("Camera dialog", "Vessels"))) {
             for (int i = 0; i < g_psys->nVessel(); i++) {
                 const char *name = g_psys->GetVessel(i)->Name();
                 const bool is_selected = m_SelectedTarget == name;
@@ -198,18 +214,18 @@ void DlgCamera::DrawTarget() {
     ImGui::EndChild();
     ImGui::SameLine();
     ImGui::BeginChild("ChildR");
-        ImGui::SeparatorText("Selected target");
+        ImGui::SeparatorText(_c("Camera dialog", "Selected target"));
         ImVec2 button_sz(ImVec2(ImGui::GetContentRegionAvail().x, 20));
-        ImGui::TextUnformatted(m_SelectedTarget.c_str());
-        if(ImGui::Button("Apply", button_sz)) {
+        ImGui::TextUnformatted(_c("Proper name", m_SelectedTarget.c_str()));
+        if(ImGui::Button(_("Apply"), button_sz)) {
             Body *obj = g_psys->GetObj (m_SelectedTarget.c_str(), true);
             if (!obj) obj = g_psys->GetBase (m_SelectedTarget.c_str(), true);
             if ( obj) g_pOrbiter->SetView (obj, 1);
         }
-        if(ImGui::Button("Focus Cockpit", button_sz)) {
+        if(ImGui::Button(_c("Camera dialog", "Focus Cockpit"), button_sz)) {
             g_pOrbiter->SetView (g_focusobj, 0);
         }
-        if(ImGui::Button("Focus Extern", button_sz)) {
+        if(ImGui::Button(_c("Camera dialog", "Focus Extern"), button_sz)) {
             g_pOrbiter->SetView (g_focusobj, 1);
         }
     ImGui::EndChild();
@@ -218,32 +234,32 @@ void DlgCamera::DrawTrack() {
     ImGuiWindowFlags window_flags = ImGuiChildFlags_ResizeX;
     ImGui::BeginChild("ChildL", ImVec2(250, 0), window_flags);
     {
-        ImGui::SeparatorText("Moveable modes");
+        ImGui::SeparatorText(_c("Camera dialog", "Moveable modes"));
         ImVec2 button_sz(ImVec2(ImGui::GetContentRegionAvail().x, 20));
 
-        if(ImGui::Button("Target Relative", button_sz)) {
+        if(ImGui::Button(_c("Camera dialog", "Target Relative"), button_sz)) {
             g_camera->SetTrackMode (CAMERA_TARGETRELATIVE);
         }
-        if(ImGui::Button("Absolute Direction", button_sz)) {
+        if(ImGui::Button(_c("Camera dialog", "Absolute Direction"), button_sz)) {
             g_camera->SetTrackMode (CAMERA_ABSDIRECTION);
         }
-        if(ImGui::Button("Global Frame", button_sz)) {
+        if(ImGui::Button(_c("Camera dialog", "Global Frame"), button_sz)) {
             g_camera->SetTrackMode (CAMERA_GLOBALFRAME);
         }
     }
     ImGui::EndChild();
     ImGui::SameLine();
     ImGui::BeginChild("ChildR");
-        ImGui::SeparatorText("Fixed modes");
+        ImGui::SeparatorText(_c("Camera dialog", "Fixed modes"));
         ImVec2 button_sz(ImVec2(ImGui::GetContentRegionAvail().x, 20));
 
-        if(ImGui::Button("Target From...", button_sz)) {
+        if(ImGui::Button(_c("Camera dialog", "Target From..."), button_sz)) {
 			Body *obj = g_psys->GetObj (m_SelectedTarget.c_str(), true);
 			if (!obj) obj = g_psys->GetBase (m_SelectedTarget.c_str(), true);
 			if (obj && obj != g_camera->Target())
 				g_camera->SetTrackMode (CAMERA_TARGETFROMOBJECT, obj);
         }
-        if(ImGui::Button("Target To...", button_sz)) {
+        if(ImGui::Button(_c("Camera dialog", "Target To..."), button_sz)) {
 			Body *obj = g_psys->GetObj (m_SelectedTarget.c_str(), true);
 			if (!obj) obj = g_psys->GetBase (m_SelectedTarget.c_str(), true);
 			if (obj && obj != g_camera->Target())
@@ -252,7 +268,7 @@ void DlgCamera::DrawTrack() {
         for (int i = 0; i < g_psys->nStar(); i++)
             AddCbodyNode (g_psys->GetStar(i));
 
-        if (ImGui::TreeNode("Spaceports")) {
+        if (ImGui::TreeNode(_c("Camera dialog", "Spaceports"))) {
             for (int i = 0; i < g_psys->nGrav(); i++) {
                 Body *obj = g_psys->GetGravObj (i);
                 if (obj->Type() != OBJTP_PLANET) continue;
@@ -274,7 +290,7 @@ void DlgCamera::DrawTrack() {
             }
             ImGui::TreePop();
         }
-        if (ImGui::TreeNode("Vessels")) {
+        if (ImGui::TreeNode(_c("Camera dialog", "Vessels"))) {
             for (int i = 0; i < g_psys->nVessel(); i++) {
                 const char *name = g_psys->GetVessel(i)->Name();
                 const bool is_selected = m_SelectedTarget == name;
@@ -292,7 +308,7 @@ void DlgCamera::DrawGround() {
     const ImGuiWindowFlags window_flags = ImGuiChildFlags_ResizeX;;
     ImGui::BeginChild("ChildL", ImVec2(250, 0), window_flags);
     {
-        ImGui::SeparatorText("Ground Location");
+        ImGui::SeparatorText(_c("Camera dialog", "Ground Location"));
         for (int i = 0; i < g_psys->nGrav(); i++) {
             Body *obj = g_psys->GetGravObj (i);
             if (obj->Type() != OBJTP_PLANET) continue;
@@ -300,7 +316,7 @@ void DlgCamera::DrawGround() {
 
 
             if (planet->nGroundObserver() > 0) {
-				if(ImGui::TreeNode(planet->Name())) {
+				if(ImGui::TreeNode(_c("Proper name", planet->Name()))) {
 					for (int j = 0; j < planet->nGroundObserver(); j++) {
 						const GROUNDOBSERVERSPEC *go = planet->GetGroundObserver (j);
 						std::string name = std::string(go->site) + "-" + go->addr;
@@ -324,15 +340,15 @@ void DlgCamera::DrawGround() {
     ImGui::EndChild();
     ImGui::SameLine();
     ImGui::BeginChild("ChildR");
-        ImGui::SeparatorText("Coordinates");
+        ImGui::SeparatorText(_c("Camera dialog", "Coordinates"));
         ImVec2 button_sz(ImVec2(ImGui::GetContentRegionAvail().x, 20));
-        ImGui::InputText("Longitude", longitude, 64, ImGuiInputTextFlags_CharsDecimal);
-        ImGui::InputText("Latitude",  latitude,  64, ImGuiInputTextFlags_CharsDecimal);
-        ImGui::InputText("Altitude",  altitude,  64, ImGuiInputTextFlags_CharsDecimal);
+        ImGui::InputText(_("Longitude"), longitude, 64, ImGuiInputTextFlags_CharsDecimal);
+        ImGui::InputText(_("Latitude"),  latitude,  64, ImGuiInputTextFlags_CharsDecimal);
+        ImGui::InputText(_("Altitude"),  altitude,  64, ImGuiInputTextFlags_CharsDecimal);
 
-        ImGui::InputText("Follow Terrain",  followterrain,  64, ImGuiInputTextFlags_CharsDecimal);
+        ImGui::InputText(_c("Camera dialog", "Follow Terrain"),  followterrain,  64, ImGuiInputTextFlags_CharsDecimal);
         
-        if(ImGui::Button("Current", button_sz)) {
+        if(ImGui::Button(_c("Camera dialog", "Current"), button_sz)) {
             const Planet *planet = g_psys->GetPlanet (m_SitePlanet.c_str());
             if(!planet) {
                 planet = g_camera->ProxyPlanet();
@@ -348,11 +364,11 @@ void DlgCamera::DrawGround() {
             }
             SetCurrentGroundpos();
         }
-        if(ImGui::Button("Apply", button_sz)) {
+        if(ImGui::Button(_("Apply"), button_sz)) {
             ApplyObserver();
         }
 
-        ImGui::Checkbox("Target lock", &m_TargetLock);
+        ImGui::Checkbox(_c("Camera dialog", "Target lock"), &m_TargetLock);
     ImGui::EndChild();
 }
 
@@ -419,16 +435,16 @@ void DlgCamera::DrawPreset() {
     ImGui::SameLine();
     ImGui::BeginChild("ChildR");
         ImVec2 button_sz(ImVec2(ImGui::GetContentRegionAvail().x, 20));
-        if(ImGui::Button("Add", button_sz)) {
+        if(ImGui::Button(_("Add"), button_sz)) {
             g_camera->AddPreset();
         }
-        if(ImGui::Button("Delete", button_sz)) {
+        if(ImGui::Button(_("Delete"), button_sz)) {
             g_camera->DelPreset(m_SelectedPreset);
         }
-        if(ImGui::Button("Clear", button_sz)) {
+        if(ImGui::Button(_("Clear"), button_sz)) {
             g_camera->ClearPresets();
         }
-        if(ImGui::Button("Recall", button_sz)) {
+        if(ImGui::Button(_c("Camera dialog", "Recall"), button_sz)) {
             g_camera->RecallPreset (m_SelectedPreset);
         }
 

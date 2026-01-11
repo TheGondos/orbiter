@@ -7,6 +7,7 @@
 #include "Psys.h"
 #include "Log.h"
 #include "Select.h"
+#include "i18n.h"
 #include <iomanip>
 
 using namespace std;
@@ -15,7 +16,6 @@ extern PlanetarySystem *g_psys;
 extern TimeData td;
 extern InputBox *g_input;
 extern Select *g_select;
-extern char DBG_MSG[256];
 
 static const Body *last_target = 0;
 
@@ -150,29 +150,32 @@ void Instrument_OPlaneAlign::UpdateDraw (oapi::Sketchpad *skp)
 			mode = ORBIT;
 	}
 
-	DisplayTitle (skp, "Align plane");
-	const char *modestr[3] = { "Orbit  ", "Ballist", "Surface" };
+	DisplayTitle (skp, _c("MFD Align", "Align plane"));
+	// TRANSLATORS: Monospaced text, needs to be at most 7 characters long
+	const char *modestr[3] = { _c("MFD Align", "Orbit"), _c("MFD Align", "Ballist"), _c("MFD Align", "Surface") };
 	if (elref) {
-		skp->Text (cw*17, 1, elref->Name(), min ((size_t)16, strlen(elref->Name())));
-		strcpy (cbuf, tgt ? tgt->Name() : customel ? "[Custom]" : "[None]");
-		skp->Text (cw*17, 1+ch, cbuf, strlen (cbuf));
-		skp->Text(cw * 5, 1 + ch, modestr[mode], 7);
+		const char *refname = _c("Proper name", elref->Name());
+		skp->Text (cw*17, 1, refname, I18N::cp2bytes(refname, 16)); // Truncate to 16 characters if needed
+		const char *tgtname = tgt ? _c("Proper name", tgt->Name()) : customel ? _c("MFD Align", "[Custom]") : _c("MFD Align", "[None]");
+		skp->Text (cw*17, 1+ch, tgtname, 0);
+		skp->Text (cw * 5, 1 + ch, modestr[mode], 0);
 		skp->SetTextColor (draw[2][1].col);
-		skp->Text ((cw*27)/2, 1, "Ref", 3);
-		skp->Text ((cw*27)/2, 1+ch, "Tgt", 3);
-		skp->Text(x, 1 + ch, automode ? "Auto" : "Mode", 4);
+		skp->Text ((cw*27)/2, 1, _c("MFD Align", "Ref"), 0);
+		skp->Text ((cw*27)/2, 1+ch, _c("MFD Align", "Tgt"), 0);
+		skp->Text(x, 1 + ch, automode ? _c("MFD Align", "Auto") : _c("MFD Align", "Mode"), 0);
 	} else {
 		skp->SetTextColor (draw[0][0].col);
-		skp->Text (x, y, "No reference body selected.", 27);
+		skp->Text (x, y, _c("MFD Align", "No reference body selected."), 0);
 		return;
 	}
 	skp->SetTextColor (draw[0][0].col);
 
 	if (!(tgt || customel)) {
-		skp->Text (x, y, "No target orbit selected.", 25); y += ch;
-		skp->Text (x, y, "Use Shift-T to select a target", 30); y += ch;
-		skp->Text (x, y, "or Shift-E to define a custom", 29); y+= ch;
-		skp->Text (x, y, "orbit.", 6);
+		// TRANSLATORS: the 4 next entries are for a multiline paragraph split into 4 lines, use empty lines if 4 lines are not required
+		skp->Text (x, y, _c("MFD Align", "No target orbit selected."), 0); y += ch;
+		skp->Text (x, y, _c("MFD Align", "Use Shift-T to select a target"), 0); y += ch;
+		skp->Text (x, y, _c("MFD Align", "or Shift-E to define a custom"), 0); y+= ch;
+		skp->Text (x, y, _c("MFD Align", "orbit."), 0);
 		return;
 	}
 
@@ -278,33 +281,49 @@ void Instrument_OPlaneAlign::UpdateDraw (oapi::Sketchpad *skp)
 	}
 
 	// output relevant elements of current and target orbits, and relative inclination + rate
-	sprintf(cbuf, "Current     Target      Relative");
+	// TRANSLATORS: MFD header, 11 characters max 
+	const char *headers[] = {_c("MFD Align", "Current"), _c("MFD Align", "Target"), _c("MFD Align", "Relative")};
 	skp->SetPen(draw[0][1].solidpen);
-	skp->Text(x, y, cbuf, 32); y += ch+1;
+	skp->Text(x, y, headers[0], 0);
+	skp->Text(x + cw * 12, y, headers[1], 0);
+	skp->Text(x + cw * 24, y, headers[2], 0);
+	y += ch+1;
+
 	skp->Line(x, y, x + cw * 11, y);
 	skp->Line(x + cw * 12, y, x + cw * 23, y);
 	skp->Line(x + cw * 24, y, x + cw * 36, y); y += 1;
-	sprintf (cbuf, "Inc% 7.2f° Inc% 7.2f° RInc%7.2f°", Deg(shpel->i), Deg(tgtel->i), Deg(reli));
-	skp->Text(x, y, cbuf, strlen(cbuf)); y += ch;
-	sprintf (cbuf, "LAN% 7.2f° LAN% 7.2f° R %+7.3f°/s", Deg(shpel->theta), Deg(tgtel->theta), Deg(didt));
-	skp->Text(x, y, cbuf, strlen(cbuf)); y += 2 * ch;
+
+	// TRANSLATORS: abbreviation for Inclination. MUST BE 3 characters long (add spaces if needed)
+	const char *Inc  = _c("MFD Align - abbreviation", "Inc");
+	// TRANSLATORS: abbreviation for Relative Inclination. MUST BE 4 characters long (add spaces if needed)
+	const char *RInc = _c("MFD Align - abbreviation", "RInc");
+	// TRANSLATORS: abbreviation for Longitude of Ascending Node. MUST BE 3 characters long (add spaces if needed)
+	const char *LAN  = _c("MFD Align - abbreviation", "LAN");
+	// TRANSLATORS: abbreviation for Rate. MUST BE 2 characters long (add spaces if needed)
+	const char *rate = _c("MFD Align - abbreviation", "R ");
+
+	sprintf (cbuf, "%s% 7.2f° %s% 7.2f° %s%7.2f°", Inc, Deg(shpel->i), Inc, Deg(tgtel->i), RInc, Deg(reli));
+	skp->Text(x, y, cbuf, 0); y += ch;
+	sprintf (cbuf, "%s% 7.2f° %s% 7.2f° %s%+7.3f°/s", LAN, Deg(shpel->theta), LAN, Deg(tgtel->theta), rate, Deg(didt));
+	skp->Text(x, y, cbuf, 0); y += 2 * ch;
 
 	// node encounter data
-	skp->Text(x, y, "Node encounter", 14); y += ch;
+	// TRANSLATORS: No more than 16 characters long
+	skp->Text(x, y, _c("MFD Align", "Node encounter"), 0); y += ch;
 	skp->Text(x + cw * 3, y, "dA[°] TtN[s]", 13); y += ch + 1;
 	skp->Line(x + cw * 3, y, x + cw * 8, y);
 	skp->Line(x + cw * 9, y, x + cw * 15, y); y += 1;
 	// ascending node
 	if (have_intersection) {
 		sprintf(cbuf, "AN%6.1f%s", Aan*DEG, FloatStr(Tan, 3));
-		skp->Text(x, an_is_next ? y : y + ch, cbuf, strlen(cbuf)); y += ch;
+		skp->Text(x, an_is_next ? y : y + ch, cbuf, 0); y += ch;
 		// descending node
 		sprintf(cbuf, "DN%6.1f%s", Adn*DEG, FloatStr(Tdn, 3));
-		skp->Text(x, an_is_next ? y : y - ch, cbuf, strlen(cbuf)); y += 2 * ch;
+		skp->Text(x, an_is_next ? y : y - ch, cbuf, 0); y += 2 * ch;
 	}
 	else {
 		sprintf(cbuf, "CE%6.1f%s", Aan*DEG, FloatStr(Tan, 3));
-		skp->Text(x, y, cbuf, strlen(cbuf)); y += 3 * ch;
+		skp->Text(x, y, cbuf, 0); y += 3 * ch;
 	}
 
 	// thrust estimates

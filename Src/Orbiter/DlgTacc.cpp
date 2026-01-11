@@ -9,11 +9,12 @@
 #include "Orbiter.h"
 #include "imgui.h"
 #include "IconsFontAwesome6.h"
+#include "i18n.h"
 
 extern TimeData td;
 extern Orbiter *g_pOrbiter;
 
-DlgTacc::DlgTacc() : ImGuiDialog(ICON_FA_CLOCK " Orbiter: Time acceleration",{357,135}) {
+DlgTacc::DlgTacc() : ImGuiDialog(ICON_FA_CLOCK, _c("Time dialog", "Orbiter: Time acceleration"),{357,135}) {
 	SetHelp("html/orbiter.chm", "/timeacc.htm");
 }
 
@@ -53,7 +54,7 @@ void DlgTacc::OnDraw() {
     ImGui::NewLine(); 
 
     ImGui::SetCursorPosX((ImGui::GetWindowSize().x - button_sz.x) * 0.5f);
-    if(ImGui::Button(g_pOrbiter->IsRunning()?"Pause":"Resume", button_sz))
+    if(ImGui::Button(g_pOrbiter->IsRunning()?_c("Time dialog", "Pause"):_c("Time dialog", "Resume"), button_sz))
         g_pOrbiter->TogglePause();
 
 }

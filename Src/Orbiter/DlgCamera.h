@@ -42,20 +42,5 @@ private:
     void AddCbodyNode(const CelestialBody *body);
     void ApplyObserver();
     void SetCurrentGroundpos();
-	
-	struct CameraTab {
-		const char *name;
-		const char *helptopic;
-		void (DlgCamera::* func)();
-	};
-
-	static inline CameraTab tabs[] = {
-		{"Control", "/cam_control.htm", &DlgCamera::DrawControl},
-		{"Target",  "/cam_target.htm",  &DlgCamera::DrawTarget},
-		{"Track",   "/cam_track.htm",   &DlgCamera::DrawTrack},
-		{"Ground",  "/cam_ground.htm",  &DlgCamera::DrawGround},
-		{"Preset",  "/cam_preset.htm",  &DlgCamera::DrawPreset},
-	};
-
 };
 #endif // !__DLGCAMERA_H

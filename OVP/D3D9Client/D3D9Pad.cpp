@@ -968,6 +968,7 @@ DWORD D3D9Pad::GetTextWidth (const char *utf8, int ulen)
 {
 	if (utf8) if (utf8[0] == '_') if (strcmp(utf8, "_SkpVerInfo") == 0) return 2;
 	if (cfont==NULL) return 0;
+	if(!ulen) ulen = strlen(utf8);
 
 	std::string str = UTF8ToCP1252(utf8, ulen);
 
@@ -1099,6 +1100,7 @@ bool D3D9Pad::TextBox (int x1, int y1, int x2, int y2, const char *utf8, int ule
 	// No "Setup" required, done on PrintSkp
 
 	if (cfont==NULL) return false;
+	if(!ulen) ulen = strlen(utf8);
 
 	bool result = true;
 	int lineSpace = static_cast<D3D9PadFont *>(cfont)->pFont->GetLineSpace();
@@ -1128,6 +1130,7 @@ bool D3D9Pad::TextBox (int x1, int y1, int x2, int y2, const char *utf8, int ule
 //
 bool D3D9Pad::Text (int x, int y, const char *utf8, int ulen)
 {
+	if(!ulen) ulen = strlen(utf8);
 	std::string str = UTF8ToCP1252(utf8, ulen);
 
 #ifdef SKPDBG 

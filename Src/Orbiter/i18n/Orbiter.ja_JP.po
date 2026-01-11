@@ -1,0 +1,597 @@
+# This file was auto-generated, DO NOT modify it directly
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"POT-Creation-Date: \n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: ja_JP\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"X-Generator: Poedit 3.8\n"
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:220
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:367
+msgid "Apply"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:345
+msgid "Longitude"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:346
+msgid "Latitude"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:347
+msgid "Altitude"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:438
+msgid "Add"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:441
+msgid "Delete"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:444
+msgid "Clear"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:17
+msgctxt "Camera dialog"
+msgid "Orbiter: Camera"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:29
+msgctxt "Camera dialog"
+msgid "Control"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:30
+msgctxt "Camera dialog"
+msgid "Target"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:31
+msgctxt "Camera dialog"
+msgid "Track"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:32
+msgctxt "Camera dialog"
+msgid "Ground"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:33
+msgctxt "Camera dialog"
+msgid "Preset"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:63
+msgctxt "Camera dialog"
+msgid "Camera mode"
+msgstr ""
+
+#. camera mode
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:66
+msgctxt "Camera dialog"
+msgid "Internal"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:76
+msgctxt "Camera dialog"
+msgid "Target Object"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:78
+msgctxt "Camera dialog"
+msgid "Target from Object"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:81
+msgctxt "Camera dialog"
+msgid "Ground Observer (locked)"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:83
+msgctxt "Camera dialog"
+msgid "Ground Observer"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:88
+msgctxt "Camera dialog"
+msgid "Camera mode : %s"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:132
+msgctxt "Camera dialog"
+msgid "Forward"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:138
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:140
+msgctxt "Camera dialog"
+msgid "Field of view"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:174
+msgctxt "Camera dialog"
+msgid "Available targets"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:179
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:271
+msgctxt "Camera dialog"
+msgid "Spaceports"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:201
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:293
+msgctxt "Camera dialog"
+msgid "Vessels"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:217
+msgctxt "Camera dialog"
+msgid "Selected target"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:225
+msgctxt "Camera dialog"
+msgid "Focus Cockpit"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:228
+msgctxt "Camera dialog"
+msgid "Focus Extern"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:237
+msgctxt "Camera dialog"
+msgid "Moveable modes"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:240
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:70
+msgctxt "Camera dialog"
+msgid "Target Relative"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:243
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:72
+msgctxt "Camera dialog"
+msgid "Absolute Direction"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:246
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:74
+msgctxt "Camera dialog"
+msgid "Global Frame"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:253
+msgctxt "Camera dialog"
+msgid "Fixed modes"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:256
+msgctxt "Camera dialog"
+msgid "Target From..."
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:262
+msgctxt "Camera dialog"
+msgid "Target To..."
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:311
+msgctxt "Camera dialog"
+msgid "Ground Location"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:343
+msgctxt "Camera dialog"
+msgid "Coordinates"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:349
+msgctxt "Camera dialog"
+msgid "Follow Terrain"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:351
+msgctxt "Camera dialog"
+msgid "Current"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:371
+msgctxt "Camera dialog"
+msgid "Target lock"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:447
+msgctxt "Camera dialog"
+msgid "Recall"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/DlgTacc.cpp:17
+msgctxt "Time dialog"
+msgid "Orbiter: Time acceleration"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/DlgTacc.cpp:57
+msgctxt "Time dialog"
+msgid "Pause"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/DlgTacc.cpp:57
+msgctxt "Time dialog"
+msgid "Resume"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/MfdAlign.cpp:153
+msgctxt "MFD Align"
+msgid "Align plane"
+msgstr ""
+
+#. Monospaced text, needs to be at most 7 characters long
+#: C:/github/openorbiter/Src/Orbiter/MfdAlign.cpp:155
+msgctxt "MFD Align"
+msgid "Ballist"
+msgstr ""
+
+#. Monospaced text, needs to be at most 7 characters long
+#: C:/github/openorbiter/Src/Orbiter/MfdAlign.cpp:155
+msgctxt "MFD Align"
+msgid "Surface"
+msgstr ""
+
+#. Monospaced text, needs to be at most 7 characters long
+#: C:/github/openorbiter/Src/Orbiter/MfdAlign.cpp:155
+msgctxt "MFD Align"
+msgid "Orbit"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/MfdAlign.cpp:159
+msgctxt "MFD Align"
+msgid "[Custom]"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/MfdAlign.cpp:159
+msgctxt "MFD Align"
+msgid "[None]"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/MfdAlign.cpp:163
+msgctxt "MFD Align"
+msgid "Ref"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/MfdAlign.cpp:164
+msgctxt "MFD Align"
+msgid "Tgt"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/MfdAlign.cpp:165
+msgctxt "MFD Align"
+msgid "Auto"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/MfdAlign.cpp:165
+msgctxt "MFD Align"
+msgid "Mode"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/MfdAlign.cpp:168
+msgctxt "MFD Align"
+msgid "No reference body selected."
+msgstr ""
+
+#. the 4 next entries are for a multiline paragraph split into 4 lines, use empty lines if 4 lines are not required
+#: C:/github/openorbiter/Src/Orbiter/MfdAlign.cpp:175
+msgctxt "MFD Align"
+msgid "No target orbit selected."
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/MfdAlign.cpp:176
+msgctxt "MFD Align"
+msgid "Use Shift-T to select a target"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/MfdAlign.cpp:177
+msgctxt "MFD Align"
+msgid "or Shift-E to define a custom"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/MfdAlign.cpp:178
+msgctxt "MFD Align"
+msgid "orbit."
+msgstr ""
+
+#. MFD header, 11 characters max
+#: C:/github/openorbiter/Src/Orbiter/MfdAlign.cpp:285
+msgctxt "MFD Align"
+msgid "Relative"
+msgstr ""
+
+#. MFD header, 11 characters max
+#: C:/github/openorbiter/Src/Orbiter/MfdAlign.cpp:285
+msgctxt "MFD Align"
+msgid "Target"
+msgstr ""
+
+#. MFD header, 11 characters max
+#: C:/github/openorbiter/Src/Orbiter/MfdAlign.cpp:285
+msgctxt "MFD Align"
+msgid "Current"
+msgstr ""
+
+#. No more than 16 characters long
+#: C:/github/openorbiter/Src/Orbiter/MfdAlign.cpp:312
+msgctxt "MFD Align"
+msgid "Node encounter"
+msgstr ""
+
+#. abbreviation for Inclination. MUST BE 3 characters long (add spaces if needed)
+#: C:/github/openorbiter/Src/Orbiter/MfdAlign.cpp:297
+msgctxt "MFD Align - abbreviation"
+msgid "Inc"
+msgstr ""
+
+#. abbreviation for Relative Inclination. MUST BE 4 characters long (add spaces if needed)
+#: C:/github/openorbiter/Src/Orbiter/MfdAlign.cpp:299
+msgctxt "MFD Align - abbreviation"
+msgid "RInc"
+msgstr ""
+
+#. abbreviation for Longitude of Ascending Node. MUST BE 3 characters long (add spaces if needed)
+#: C:/github/openorbiter/Src/Orbiter/MfdAlign.cpp:301
+msgctxt "MFD Align - abbreviation"
+msgid "LAN"
+msgstr ""
+
+#. abbreviation for Rate. MUST BE 2 characters long (add spaces if needed)
+#: C:/github/openorbiter/Src/Orbiter/MfdAlign.cpp:303
+msgctxt "MFD Align - abbreviation"
+msgid "R "
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/MfdAlign.cpp:159
+msgctxt "Proper name"
+msgid "[Custom]"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/Orbiter.cpp:352
+msgctxt "MenuInfoBar"
+msgid "Ship"
+msgstr "宇宙船"
+
+#: C:/github/openorbiter/Src/Orbiter/Orbiter.cpp:353
+msgctxt "MenuInfoBar"
+msgid "Camera"
+msgstr "カメラ"
+
+#: C:/github/openorbiter/Src/Orbiter/Orbiter.cpp:354
+msgctxt "MenuInfoBar"
+msgid "Speed"
+msgstr "速度"
+
+#: C:/github/openorbiter/Src/Orbiter/Orbiter.cpp:355
+msgctxt "MenuInfoBar"
+msgid "Pause"
+msgstr "ポーズ"
+
+#: C:/github/openorbiter/Src/Orbiter/Orbiter.cpp:356
+msgctxt "MenuInfoBar"
+msgid "Function"
+msgstr "拡張機能"
+
+#: C:/github/openorbiter/Src/Orbiter/Orbiter.cpp:357
+msgctxt "MenuInfoBar"
+msgid "Info"
+msgstr "情報"
+
+#: C:/github/openorbiter/Src/Orbiter/Orbiter.cpp:358
+msgctxt "MenuInfoBar"
+msgid "Options"
+msgstr "オプション"
+
+#: C:/github/openorbiter/Src/Orbiter/Orbiter.cpp:359
+msgctxt "MenuInfoBar"
+msgid "Map"
+msgstr "マップ"
+
+#: C:/github/openorbiter/Src/Orbiter/Orbiter.cpp:360
+msgctxt "MenuInfoBar"
+msgid "Record"
+msgstr "レコード"
+
+#: C:/github/openorbiter/Src/Orbiter/Orbiter.cpp:361
+msgctxt "MenuInfoBar"
+msgid "Help"
+msgstr "ヘルプ"
+
+#: C:/github/openorbiter/Src/Orbiter/Orbiter.cpp:366
+msgctxt "MenuInfoBar"
+msgid "Save"
+msgstr "セーブ"
+
+#: C:/github/openorbiter/Src/Orbiter/Orbiter.cpp:367
+msgctxt "MenuInfoBar"
+msgid "Exit"
+msgstr "終了"
+
+#: C:/github/openorbiter/Src/Orbiter/ProperNames.h:6
+msgctxt "Proper name"
+msgid "Sun"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/ProperNames.h:7
+msgctxt "Proper name"
+msgid "Sol"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/ProperNames.h:8
+msgctxt "Proper name"
+msgid "Mercury"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/ProperNames.h:9
+msgctxt "Proper name"
+msgid "Venus"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/ProperNames.h:10
+msgctxt "Proper name"
+msgid "Earth"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/ProperNames.h:11
+msgctxt "Proper name"
+msgid "Moon"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/ProperNames.h:12
+msgctxt "Proper name"
+msgid "Mars"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/ProperNames.h:13
+msgctxt "Proper name"
+msgid "Phobos"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/ProperNames.h:14
+msgctxt "Proper name"
+msgid "Deimos"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/ProperNames.h:15
+msgctxt "Proper name"
+msgid "Vesta"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/ProperNames.h:16
+msgctxt "Proper name"
+msgid "Jupiter"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/ProperNames.h:17
+msgctxt "Proper name"
+msgid "Saturn"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/ProperNames.h:18
+msgctxt "Proper name"
+msgid "Uranus"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/ProperNames.h:19
+msgctxt "Proper name"
+msgid "Neptune"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/ProperNames.h:20
+msgctxt "Proper name"
+msgid "Ariel"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/ProperNames.h:21
+msgctxt "Proper name"
+msgid "Miranda"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/ProperNames.h:22
+msgctxt "Proper name"
+msgid "Nereid"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/ProperNames.h:23
+msgctxt "Proper name"
+msgid "Oberon"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/ProperNames.h:24
+msgctxt "Proper name"
+msgid "Proteus"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/ProperNames.h:25
+msgctxt "Proper name"
+msgid "Titania"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/ProperNames.h:26
+msgctxt "Proper name"
+msgid "Triton"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/ProperNames.h:27
+msgctxt "Proper name"
+msgid "Umbriel"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/ProperNames.h:28
+msgctxt "Proper name"
+msgid "Callisto"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/ProperNames.h:29
+msgctxt "Proper name"
+msgid "Europa"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/ProperNames.h:30
+msgctxt "Proper name"
+msgid "Ganymede"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/ProperNames.h:31
+msgctxt "Proper name"
+msgid "Io"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/ProperNames.h:32
+msgctxt "Proper name"
+msgid "Dione"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/ProperNames.h:33
+msgctxt "Proper name"
+msgid "Enceladus"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/ProperNames.h:34
+msgctxt "Proper name"
+msgid "Hyperion"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/ProperNames.h:35
+msgctxt "Proper name"
+msgid "Iapetus"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/ProperNames.h:36
+msgctxt "Proper name"
+msgid "Mimas"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/ProperNames.h:37
+msgctxt "Proper name"
+msgid "Rhea"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/ProperNames.h:38
+msgctxt "Proper name"
+msgid "Tethys"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/ProperNames.h:39
+msgctxt "Proper name"
+msgid "Titan"
+msgstr ""

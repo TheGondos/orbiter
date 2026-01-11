@@ -1137,7 +1137,7 @@ public:
 	/**
 	 * \brief Return the width of a text string in the currently selected font.
 	 * \param str text string in UTF-8
-	 * \param len string length, or 0 for auto (0-terminated string)
+	 * \param len UTF-8 string length in bytes, or 0 for auto (0-terminated string)
 	 * \return width of the string, drawn in the currently selected font [pixel]
 	 * \default None, returns 0.
 	 * \sa SetFont
@@ -1178,7 +1178,7 @@ public:
 	 * \param x reference x position [pixel]
 	 * \param y reference y position [pixel]
 	 * \param str text string in UTF-8
-	 * \param len string length for output
+	 * \param len string length in bytes for output, or 0 for auto (0-terminated string)
 	 * \return \e true on success, \e false on failure.
 	 * \default None, returns false.
 	 */
@@ -1191,7 +1191,7 @@ public:
 	 * \param x2 right edge [pixel]
 	 * \param y2 bottom edge [pixel]
 	 * \param str text string in UTF-8
-	 * \param len string length for output
+	 * \param len string length in bytes for output, or 0 for auto (0-terminated string)
 	 * \return \e true on success, \e false on failure.
 	 * \default Implementation via \ref Text calls.
 	 * \note This method should write the text string into the specified
@@ -1455,7 +1455,7 @@ public:
 	 * \param x reference x position [pixel]
 	 * \param y reference y position [pixel]
 	 * \param str text string
-	 * \param len string length for output
+	 * \param len string length in WCHAR for output, or 0 for auto (0-terminated string)
 	 * \return \e true on success, \e false on failure.
 	 * \default None, returns false.
 	 */

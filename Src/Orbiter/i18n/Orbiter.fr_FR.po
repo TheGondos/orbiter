@@ -1,0 +1,472 @@
+# This file was auto-generated, DO NOT modify it directly
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"POT-Creation-Date: \n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: fr_FR\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"X-Generator: Poedit 3.8\n"
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:154
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:164
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:219
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:319
+msgid "Celestial body"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:220
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:367
+msgid "Apply"
+msgstr "Appliquer"
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:345
+msgid "Longitude"
+msgstr "Longitude"
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:346
+msgid "Latitude"
+msgstr "Latitude"
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:347
+msgid "Altitude"
+msgstr "Altitude"
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:438
+msgid "Add"
+msgstr "Ajouter"
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:441
+msgid "Delete"
+msgstr "Supprimer"
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:444
+msgid "Clear"
+msgstr "Effacer"
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:17
+msgctxt "Camera dialog"
+msgid "Orbiter: Camera"
+msgstr "Orbiter : Caméra"
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:29
+msgctxt "Camera dialog"
+msgid "Control"
+msgstr "Ajustements"
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:30
+msgctxt "Camera dialog"
+msgid "Target"
+msgstr "Cible"
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:31
+msgctxt "Camera dialog"
+msgid "Track"
+msgstr "Poursuite"
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:32
+msgctxt "Camera dialog"
+msgid "Ground"
+msgstr "Sol"
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:33
+msgctxt "Camera dialog"
+msgid "Preset"
+msgstr "Préréglages"
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:63
+msgctxt "Camera dialog"
+msgid "Camera mode"
+msgstr "Mode"
+
+#. camera mode
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:66
+msgctxt "Camera dialog"
+msgid "Internal"
+msgstr "Interne"
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:76
+msgctxt "Camera dialog"
+msgid "Target Object"
+msgstr "Cible"
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:78
+msgctxt "Camera dialog"
+msgid "Target from Object"
+msgstr "Viser depuis la cible"
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:81
+msgctxt "Camera dialog"
+msgid "Ground Observer (locked)"
+msgstr "Au sol (verrouillé)"
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:83
+msgctxt "Camera dialog"
+msgid "Ground Observer"
+msgstr "Au sol"
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:88
+msgctxt "Camera dialog"
+msgid "Camera mode : %s"
+msgstr "Mode de caméra : %s"
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:132
+msgctxt "Camera dialog"
+msgid "Forward"
+msgstr "Vers l'avant"
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:138
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:140
+msgctxt "Camera dialog"
+msgid "Field of view"
+msgstr "Champ de vision (°)"
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:174
+msgctxt "Camera dialog"
+msgid "Available targets"
+msgstr "Cibles disponibles"
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:179
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:271
+msgctxt "Camera dialog"
+msgid "Spaceports"
+msgstr "Spatioports"
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:201
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:293
+msgctxt "Camera dialog"
+msgid "Vessels"
+msgstr "Vaisseaux"
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:217
+msgctxt "Camera dialog"
+msgid "Selected target"
+msgstr "Cible sélectionnée"
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:225
+msgctxt "Camera dialog"
+msgid "Focus Cockpit"
+msgstr "Vue cockpit"
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:228
+msgctxt "Camera dialog"
+msgid "Focus Extern"
+msgstr "Vue externe"
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:237
+msgctxt "Camera dialog"
+msgid "Moveable modes"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:240
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:70
+msgctxt "Camera dialog"
+msgid "Target Relative"
+msgstr "Relatif à la cible"
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:243
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:72
+msgctxt "Camera dialog"
+msgid "Absolute Direction"
+msgstr "Direction absolue"
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:246
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:74
+msgctxt "Camera dialog"
+msgid "Global Frame"
+msgstr "Repère global"
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:253
+msgctxt "Camera dialog"
+msgid "Fixed modes"
+msgstr ""
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:256
+msgctxt "Camera dialog"
+msgid "Target From..."
+msgstr "Cibler depuis..."
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:262
+msgctxt "Camera dialog"
+msgid "Target To..."
+msgstr "Cibler vers..."
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:311
+msgctxt "Camera dialog"
+msgid "Ground Location"
+msgstr "Emplacememts au sol"
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:343
+msgctxt "Camera dialog"
+msgid "Coordinates"
+msgstr "Coordonnées"
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:349
+msgctxt "Camera dialog"
+msgid "Follow Terrain"
+msgstr "Suivre le terrain"
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:351
+msgctxt "Camera dialog"
+msgid "Current"
+msgstr "Position actuelle"
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:371
+msgctxt "Camera dialog"
+msgid "Target lock"
+msgstr "Cible verrouillée"
+
+#: C:/github/openorbiter/Src/Orbiter/DlgCamera.cpp:447
+msgctxt "Camera dialog"
+msgid "Recall"
+msgstr "Charger"
+
+#: C:/github/openorbiter/Src/Orbiter/DlgTacc.cpp:17
+msgctxt "Time dialog"
+msgid "Orbiter: Time acceleration"
+msgstr "Orbiter : Accélération du temps"
+
+#: C:/github/openorbiter/Src/Orbiter/DlgTacc.cpp:57
+msgctxt "Time dialog"
+msgid "Resume"
+msgstr "Reprendre"
+
+#: C:/github/openorbiter/Src/Orbiter/DlgTacc.cpp:57
+msgctxt "Time dialog"
+msgid "Pause"
+msgstr "Pause"
+
+#: C:/github/openorbiter/Src/Orbiter/Orbiter.cpp:352
+msgctxt "MenuInfoBar"
+msgid "Ship"
+msgstr "Vaisseaux"
+
+#: C:/github/openorbiter/Src/Orbiter/Orbiter.cpp:353
+msgctxt "MenuInfoBar"
+msgid "Camera"
+msgstr "Caméra"
+
+#: C:/github/openorbiter/Src/Orbiter/Orbiter.cpp:354
+msgctxt "MenuInfoBar"
+msgid "Speed"
+msgstr "Vitesse"
+
+#: C:/github/openorbiter/Src/Orbiter/Orbiter.cpp:355
+msgctxt "MenuInfoBar"
+msgid "Pause"
+msgstr "Pause"
+
+#: C:/github/openorbiter/Src/Orbiter/Orbiter.cpp:356
+msgctxt "MenuInfoBar"
+msgid "Function"
+msgstr "Fonctions"
+
+#: C:/github/openorbiter/Src/Orbiter/Orbiter.cpp:357
+msgctxt "MenuInfoBar"
+msgid "Info"
+msgstr "Infos"
+
+#: C:/github/openorbiter/Src/Orbiter/Orbiter.cpp:358
+msgctxt "MenuInfoBar"
+msgid "Options"
+msgstr "Options"
+
+#: C:/github/openorbiter/Src/Orbiter/Orbiter.cpp:359
+msgctxt "MenuInfoBar"
+msgid "Map"
+msgstr "Carte"
+
+#: C:/github/openorbiter/Src/Orbiter/Orbiter.cpp:360
+msgctxt "MenuInfoBar"
+msgid "Record"
+msgstr "Enregistrer"
+
+#: C:/github/openorbiter/Src/Orbiter/Orbiter.cpp:361
+msgctxt "MenuInfoBar"
+msgid "Help"
+msgstr "Aide"
+
+#: C:/github/openorbiter/Src/Orbiter/Orbiter.cpp:366
+msgctxt "MenuInfoBar"
+msgid "Save"
+msgstr "Sauver"
+
+#: C:/github/openorbiter/Src/Orbiter/Orbiter.cpp:367
+msgctxt "MenuInfoBar"
+msgid "Exit"
+msgstr "Quitter"
+
+#: C:/github/openorbiter/Src/Orbiter/Translations.h:6
+msgctxt "Celestial body"
+msgid "Sun"
+msgstr "Soleil"
+
+#: C:/github/openorbiter/Src/Orbiter/Translations.h:7
+msgctxt "Celestial body"
+msgid "Sol"
+msgstr "Soleil"
+
+#: C:/github/openorbiter/Src/Orbiter/Translations.h:8
+msgctxt "Celestial body"
+msgid "Mercury"
+msgstr "Mercure"
+
+#: C:/github/openorbiter/Src/Orbiter/Translations.h:9
+msgctxt "Celestial body"
+msgid "Venus"
+msgstr "Vénus"
+
+#: C:/github/openorbiter/Src/Orbiter/Translations.h:10
+msgctxt "Celestial body"
+msgid "Earth"
+msgstr "Terre"
+
+#: C:/github/openorbiter/Src/Orbiter/Translations.h:11
+msgctxt "Celestial body"
+msgid "Moon"
+msgstr "Lune"
+
+#: C:/github/openorbiter/Src/Orbiter/Translations.h:12
+msgctxt "Celestial body"
+msgid "Mars"
+msgstr "Mars"
+
+#: C:/github/openorbiter/Src/Orbiter/Translations.h:13
+msgctxt "Celestial body"
+msgid "Phobos"
+msgstr "Phobos"
+
+#: C:/github/openorbiter/Src/Orbiter/Translations.h:14
+msgctxt "Celestial body"
+msgid "Deimos"
+msgstr "Déimos"
+
+#: C:/github/openorbiter/Src/Orbiter/Translations.h:15
+msgctxt "Celestial body"
+msgid "Vesta"
+msgstr "Vesta"
+
+#: C:/github/openorbiter/Src/Orbiter/Translations.h:16
+msgctxt "Celestial body"
+msgid "Jupiter"
+msgstr "Jupiter"
+
+#: C:/github/openorbiter/Src/Orbiter/Translations.h:17
+msgctxt "Celestial body"
+msgid "Saturn"
+msgstr "Saturne"
+
+#: C:/github/openorbiter/Src/Orbiter/Translations.h:18
+msgctxt "Celestial body"
+msgid "Uranus"
+msgstr "Uranus"
+
+#: C:/github/openorbiter/Src/Orbiter/Translations.h:19
+msgctxt "Celestial body"
+msgid "Neptune"
+msgstr "Neptune"
+
+#: C:/github/openorbiter/Src/Orbiter/Translations.h:20
+msgctxt "Celestial body"
+msgid "Ariel"
+msgstr "Ariel"
+
+#: C:/github/openorbiter/Src/Orbiter/Translations.h:21
+msgctxt "Celestial body"
+msgid "Miranda"
+msgstr "Miranda"
+
+#: C:/github/openorbiter/Src/Orbiter/Translations.h:22
+msgctxt "Celestial body"
+msgid "Nereid"
+msgstr "Néréide"
+
+#: C:/github/openorbiter/Src/Orbiter/Translations.h:23
+msgctxt "Celestial body"
+msgid "Oberon"
+msgstr "Obéron"
+
+#: C:/github/openorbiter/Src/Orbiter/Translations.h:24
+msgctxt "Celestial body"
+msgid "Proteus"
+msgstr "Protée"
+
+#: C:/github/openorbiter/Src/Orbiter/Translations.h:25
+msgctxt "Celestial body"
+msgid "Titania"
+msgstr "Titania"
+
+#: C:/github/openorbiter/Src/Orbiter/Translations.h:26
+msgctxt "Celestial body"
+msgid "Triton"
+msgstr "Triton"
+
+#: C:/github/openorbiter/Src/Orbiter/Translations.h:27
+msgctxt "Celestial body"
+msgid "Umbriel"
+msgstr "Umbriel"
+
+#: C:/github/openorbiter/Src/Orbiter/Translations.h:28
+msgctxt "Celestial body"
+msgid "Callisto"
+msgstr "Callisto"
+
+#: C:/github/openorbiter/Src/Orbiter/Translations.h:29
+msgctxt "Celestial body"
+msgid "Europa"
+msgstr "Europe"
+
+#: C:/github/openorbiter/Src/Orbiter/Translations.h:30
+msgctxt "Celestial body"
+msgid "Ganymede"
+msgstr "Ganymède"
+
+#: C:/github/openorbiter/Src/Orbiter/Translations.h:31
+msgctxt "Celestial body"
+msgid "Io"
+msgstr "Io"
+
+#: C:/github/openorbiter/Src/Orbiter/Translations.h:32
+msgctxt "Celestial body"
+msgid "Dione"
+msgstr "Dioné"
+
+#: C:/github/openorbiter/Src/Orbiter/Translations.h:33
+msgctxt "Celestial body"
+msgid "Enceladus"
+msgstr "Encelade"
+
+#: C:/github/openorbiter/Src/Orbiter/Translations.h:34
+msgctxt "Celestial body"
+msgid "Hyperion"
+msgstr "Hypérion"
+
+#: C:/github/openorbiter/Src/Orbiter/Translations.h:35
+msgctxt "Celestial body"
+msgid "Iapetus"
+msgstr "Japet"
+
+#: C:/github/openorbiter/Src/Orbiter/Translations.h:36
+msgctxt "Celestial body"
+msgid "Mimas"
+msgstr "Mimas"
+
+#: C:/github/openorbiter/Src/Orbiter/Translations.h:37
+msgctxt "Celestial body"
+msgid "Rhea"
+msgstr "Rhéa"
+
+#: C:/github/openorbiter/Src/Orbiter/Translations.h:38
+msgctxt "Celestial body"
+msgid "Tethys"
+msgstr "Téthys"
+
+#: C:/github/openorbiter/Src/Orbiter/Translations.h:39
+msgctxt "Celestial body"
+msgid "Titan"
+msgstr "Titan"
